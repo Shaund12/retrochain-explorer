@@ -1,0 +1,125 @@
+<template>
+  <header class="border-b border-white/5 backdrop-blur-xl bg-[rgba(10,14,39,0.95)] sticky top-0 z-50 shadow-lg shadow-black/20">
+    <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
+      <!-- Logo -->
+      <button
+        class="flex items-center gap-3 group transition-all"
+        @click="router.push({ name: 'home' })"
+      >
+        <div
+          class="h-9 w-9 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center font-black shadow-lg shadow-indigo-500/50 group-hover:shadow-indigo-500/80 transition-all group-hover:scale-105"
+        >
+          <span class="text-white text-sm">RC</span>
+        </div>
+        <div class="font-bold text-base bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+          RetroChain
+        </div>
+      </button>
+
+      <!-- Navigation -->
+      <nav class="hidden lg:flex items-center">
+        <a
+          v-for="item in navItems"
+          :key="item.label"
+          @click.prevent="router.push(item.to)"
+          class="px-4 h-16 flex items-center text-sm font-medium transition-colors cursor-pointer relative"
+          :class="
+            isActive(item.to).value
+              ? 'text-white'
+              : 'text-slate-400 hover:text-white'
+          "
+        >
+          {{ item.label }}
+          <div
+            v-if="isActive(item.to).value"
+            class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
+          ></div>
+        </a>
+      </nav>
+
+      <!-- Wallet Connection -->
+      <div class="flex items-center gap-3">
+        <button
+          v-if="!address"
+          class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white transition-all"
+          :disabled="!isAvailable || connecting"
+          @click="connect"
+        >
+          <span v-if="connecting">Connecting...</span>
+          <span v-else-if="isAvailable">Connect Wallet</span>
+          <span v-else>Install Keplr</span>
+        </button>
+
+        <button
+          v-else
+          class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white transition-all"
+          @click="disconnect"
+        >
+          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
+          <span class="font-mono text-xs">{{ shortAddress }}</span>
+        </button>
+
+        <!-- Mobile menu button -->
+        <button
+          class="lg:hidden p-2 rounded-lg text-slate-400 hover:text-white hover:bg-white/5 transition-all"
+          @click="mobileMenuOpen = !mobileMenuOpen"
+        >
+          <svg class="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+            <path v-if="!mobileMenuOpen" stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M4 6h16M4 12h16M4 18h16"></path>
+            <path v-else stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M6 18L18 6M6 6l12 12"></path>
+          </svg>
+        </button>
+      </div>
+    </div>
+
+    <!-- Mobile Menu -->
+    <div
+      v-if="mobileMenuOpen"
+      class="lg:hidden border-t border-white/5 bg-[rgba(10,14,39,0.98)]"
+    >
+      <nav class="max-w-7xl mx-auto px-4 py-3 flex flex-col">
+        <a
+          v-for="item in navItems"
+          :key="item.label"
+          @click.prevent="router.push(item.to); mobileMenuOpen = false"
+          class="px-4 py-3 text-sm font-medium transition-all cursor-pointer rounded-lg"
+          :class="
+            isActive(item.to).value
+              ? 'text-white bg-white/5'
+              : 'text-slate-400 hover:text-white hover:bg-white/5'
+          "
+        >
+          {{ item.label }}
+        </a>
+      </nav>
+    </div>
+  </header>
+</template>
+
+<script setup lang="ts">
+import { computed, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
+import { useKeplr } from "@/composables/useKeplr";
+
+const route = useRoute();
+const router = useRouter();
+const { isAvailable, address, connecting, connect, disconnect } = useKeplr();
+const mobileMenuOpen = ref(false);
+
+const navItems = [
+  { label: "Overview", to: { name: "home" } },
+  { label: "Blocks", to: { name: "blocks" } },
+  { label: "Transactions", to: { name: "txs" } },
+  { label: "Validators", to: { name: "validators" } },
+  { label: "Governance", to: { name: "governance" } },
+  { label: "Account", to: { name: "account" } }
+];
+
+const isActive = (to: any) =>
+  computed(() => route.name === to.name);
+
+const shortAddress = computed(() => {
+  if (!address.value) return "";
+  return `${address.value.slice(0, 8)}...${address.value.slice(-4)}`;
+});
+</script>
