@@ -1,15 +1,24 @@
 import axios from "axios";
 
-// Choose a base URL that won't trigger mixed-content when the site is served over HTTPS.
-// If running on HTTPS and no explicit HTTPS API is provided, fall back to a same-origin
-// relative path that can be proxied (e.g., via Vite dev proxy or a reverse proxy in prod).
-const inferredHttpsSafeBase =
-  typeof window !== "undefined" && window.location.protocol === "https:" ? "/api" : "http://localhost:1317";
+// Resolve a base URL that avoids mixed content when the app is under HTTPS.
+function resolveBaseUrl() {
+  const envBase = import.meta.env.VITE_REST_API_URL as string | undefined;
+  const isHttps = typeof window !== "undefined" && window.location.protocol === "https:";
 
-const apiBaseURL = import.meta.env.VITE_REST_API_URL || inferredHttpsSafeBase;
+  // If we are on HTTPS and the env base is insecure HTTP, force relative '/api'
+  if (isHttps) {
+    if (!envBase) return "/api";
+    const lower = envBase.toLowerCase();
+    if (lower.startsWith("http://")) return "/api"; // avoid mixed content
+    return envBase; // https:// or relative path
+  }
+
+  // Non-HTTPS page: use env or default local
+  return envBase || "http://localhost:1317";
+}
 
 const api = axios.create({
-  baseURL: apiBaseURL,
+  baseURL: resolveBaseUrl(),
   timeout: 10000
 });
 
