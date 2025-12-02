@@ -1,4 +1,7 @@
 {
+  "env": {
+    "TAILWIND_DISABLE_OXIDE": "1"
+  },
   "rewrites": [
     { "source": "/api", "destination": "/api/index" },
     { "source": "/api/(.*)", "destination": "/api/index" }
