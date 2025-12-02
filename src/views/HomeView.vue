@@ -50,6 +50,10 @@ onMounted(async () => {
 
 const formatTime = (value?: string | null) =>
   value ? dayjs(value).fromNow?.() ?? value : "-";
+
+// Expose environment endpoint values to template without using import.meta inside template expressions
+const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || '/api';
+const RPC_DISPLAY = import.meta.env.VITE_RPC_URL || '/rpc';
 </script>
 
 <template>
@@ -99,10 +103,10 @@ const formatTime = (value?: string | null) =>
           <!-- Network Info Tags -->
           <div class="flex flex-wrap gap-2 text-[11px] text-slate-400">
             <span class="badge">
-              REST: <code>{{ (import.meta as any).env?.VITE_REST_API_URL || '/api' }}</code>
+              REST: <code>{{ REST_DISPLAY }}</code>
             </span>
             <span class="badge">
-              RPC: <code>{{ (import.meta as any).env?.VITE_RPC_URL || '/rpc' }}</code>
+              RPC: <code>{{ RPC_DISPLAY }}</code>
             </span>
             <span class="badge">Token: RETRO / uretro</span>
           </div>
