@@ -1,5 +1,6 @@
 // src/composables/useKeplr.ts
 import { ref } from "vue";
+import { useNetwork } from "./useNetwork";
 
 declare global {
   interface Window {
@@ -15,54 +16,66 @@ const connecting = ref(false);
 const error = ref<string | null>(null);
 
 // ==== RetroChain chain info for Keplr ====
-// Tweak ports / denom / chainId if you changed them in config.yml
-const CHAIN_ID = "retrochain-arcade-1";
+// Dynamic mainnet/testnet configuration
+const { current: net, restBase, rpcBase } = useNetwork();
 
-const CHAIN_INFO = {
-chainId: CHAIN_ID,
-chainName: "RetroChain Arcade Devnet",
-rpc: (import.meta as any).env?.VITE_RPC_URL || "/rpc",
-rest: (import.meta as any).env?.VITE_REST_API_URL || "/api",
-bip44: {
-  coinType: 118
-},
-bech32Config: {
-  bech32PrefixAccAddr: "cosmos",
-  bech32PrefixAccPub: "cosmospub",
-  bech32PrefixValAddr: "cosmosvaloper",
-  bech32PrefixValPub: "cosmosvaloperpub",
-  bech32PrefixConsAddr: "cosmosvalcons",
-  bech32PrefixConsPub: "cosmosvalconspub"
-},
-  currencies: [
-    {
-      coinDenom: "RETRO",
-      coinMinimalDenom: "uretro",
-      coinDecimals: 6,
-      coinGeckoId: undefined
-    }
-  ],
-  feeCurrencies: [
-    {
-      coinDenom: "RETRO",
-      coinMinimalDenom: "uretro",
-      coinDecimals: 6,
-      coinGeckoId: undefined,
-      gasPriceStep: {
-        low: 0.025,
-        average: 0.03,
-        high: 0.04
-      }
-    }
-  ],
-  stakeCurrency: {
-    coinDenom: "RETRO",
-    coinMinimalDenom: "uretro",
-    coinDecimals: 6
-  },
-  features: ["cosmwasm"], // you can trim this if you didn't enable wasm
-  coinType: 118
-};
+function getChainId() {
+  if (net.value === "mainnet") {
+    return (import.meta as any).env?.VITE_CHAIN_ID_MAINNET || "retrochain-1";
+  }
+  return (import.meta as any).env?.VITE_CHAIN_ID_TESTNET || "retrochain-devnet-1";
+}
+
+function getChainName() {
+  return net.value === "mainnet" ? "RetroChain" : "RetroChain Devnet";
+}
+
+function getCurrencies() {
+  if (net.value === "mainnet") {
+    return {
+      stake: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
+      list: [
+        { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 }
+      ],
+      fees: [{
+        coinDenom: "RETRO",
+        coinMinimalDenom: "uretro",
+        coinDecimals: 6,
+        gasPriceStep: { low: 0.001, average: 0.0025, high: 0.004 }
+      }]
+    };
+  }
+  return {
+    stake: { coinDenom: "DRETRO", coinMinimalDenom: "udretro", coinDecimals: 6 },
+    list: [
+      { coinDenom: "DRETRO", coinMinimalDenom: "udretro", coinDecimals: 6 }
+    ],
+    fees: [{ coinDenom: "DRETRO", coinMinimalDenom: "udretro", coinDecimals: 6 }]
+  };
+}
+
+function buildChainInfo() {
+  const currencies = getCurrencies();
+  return {
+    chainId: getChainId(),
+    chainName: getChainName(),
+    rpc: rpcBase.value || "/rpc",
+    rest: restBase.value || "/api",
+    bip44: { coinType: 118 },
+    bech32Config: {
+      bech32PrefixAccAddr: "retro",
+      bech32PrefixAccPub: "retropub",
+      bech32PrefixValAddr: "retrovaloper",
+      bech32PrefixValPub: "retrovaloperpub",
+      bech32PrefixConsAddr: "retrovalcons",
+      bech32PrefixConsPub: "retrovalconspub"
+    },
+    currencies: currencies.list,
+    feeCurrencies: currencies.fees,
+    stakeCurrency: currencies.stake,
+    features: ["stargate", "ibc-transfer", "no-legacy-stdTx", "cosmwasm"]
+  } as any;
+}
 
 export function useKeplr() {
 const checkAvailability = () => {
@@ -84,7 +97,7 @@ const checkAvailability = () => {
       throw new Error("Keplr does not support experimentalSuggestChain.");
     }
 
-    await window.keplr.experimentalSuggestChain(CHAIN_INFO);
+    await window.keplr.experimentalSuggestChain(buildChainInfo());
   };
 
   const connect = async () => {
@@ -99,7 +112,7 @@ const checkAvailability = () => {
 
       // Add chain to Keplr, then enable it
       await suggestChain();
-      await window.keplr.enable(CHAIN_ID);
+      await window.keplr.enable(getChainId());
 
       const offlineSigner =
         (await window.getOfflineSignerAuto?.(CHAIN_ID)) ||
@@ -141,7 +154,6 @@ const checkAvailability = () => {
   }
 
   return {
-    CHAIN_ID,
     isAvailable,
     address,
     connecting,

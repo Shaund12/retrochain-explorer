@@ -61,6 +61,19 @@ const { current: network } = useNetwork();
 
 <template>
   <div class="grid grid-1-3 gap-4">
+    <div v-if="network === 'mainnet'" class="col-span-full">
+      <div class="card-soft border-emerald-500/40">
+        <div class="flex items-center justify-between">
+          <div class="text-sm">
+            <span class="text-emerald-300 font-semibold">Mainnet is live</span> — welcome to RetroChain! 🚀
+          </div>
+          <div class="flex items-center gap-2">
+            <RcAddKeplrButton />
+            <a href="/api/cosmos/base/tendermint/v1beta1/node_info" class="btn text-xs">Node Info</a>
+          </div>
+        </div>
+      </div>
+    </div>
     <section class="flex flex-col gap-3">
       <!-- Hero Welcome Card -->
       <div class="card-soft relative overflow-hidden">
@@ -77,8 +90,9 @@ const { current: network } = useNetwork();
             </span>
           </div>
           <p class="text-sm text-slate-300 mb-4">
-            Custom Cosmos-SDK app chain for arcade-style gaming. Monitor chain health, 
-            blocks, transactions, validators, and governance in real-time.
+            Custom Cosmos-SDK app chain for arcade-style gaming.
+            Now live on <span class="text-emerald-300 font-semibold">{{ network === 'mainnet' ? 'MAINNET' : 'TESTNET' }}</span> —
+            monitor chain health, blocks, transactions, validators, and governance in real-time.
           </p>
           
           <!-- Quick Action Buttons -->
@@ -112,7 +126,7 @@ const { current: network } = useNetwork();
             <span class="badge">
               RPC: <code>{{ RPC_DISPLAY }}</code>
             </span>
-            <span class="badge">Token: RETRO / uretro</span>
+            <span class="badge">Token: {{ network === 'mainnet' ? 'RETRO / uretro' : 'DRETRO / udretro' }}</span>
           </div>
         </div>
       </div>

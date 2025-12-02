@@ -11,8 +11,16 @@
           alt="RetroChain"
           class="h-10 w-10 rounded-lg shadow-lg shadow-indigo-500/40 group-hover:shadow-indigo-500/70 group-hover:scale-105 transition-all object-contain"
         />
-        <div class="font-bold text-base bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
-          RetroChain
+        <div class="flex items-center gap-2">
+          <div class="font-bold text-base bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
+            RetroChain
+          </div>
+          <span
+            class="px-2 py-0.5 rounded-full text-[10px] font-semibold border"
+            :class="net === 'mainnet' ? 'border-emerald-400/60 text-emerald-300 bg-emerald-500/10' : 'border-indigo-400/60 text-indigo-300 bg-indigo-500/10'"
+          >
+            {{ net === 'mainnet' ? 'MAINNET' : 'TESTNET' }}
+          </span>
         </div>
       </button>
 
