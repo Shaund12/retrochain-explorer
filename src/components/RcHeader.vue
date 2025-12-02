@@ -101,6 +101,7 @@ import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useKeplr } from "@/composables/useKeplr";
 import { useNetwork } from "@/composables/useNetwork";
+import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
 
 const route = useRoute();
 const router = useRouter();
