@@ -121,8 +121,6 @@ import { useRoute, useRouter } from "vue-router";
 import { useKeplr } from "@/composables/useKeplr";
 import { useNetwork } from "@/composables/useNetwork";
 import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
-// Import logo asset (ensure RCICOIMAGE.png is placed under src/assets). If kept in public/, fallback to root path.
-import LogoPng from "@/assets/RCICOIMAGE.png";
 
 const route = useRoute();
 const router = useRouter();
