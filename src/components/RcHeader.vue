@@ -91,6 +91,9 @@
         >
           {{ item.label }}
         </a>
+        <div class="mt-3 px-4">
+          <RcAddKeplrButton class="w-full inline-flex justify-center" />
+        </div>
       </nav>
     </div>
   </header>
