@@ -10,6 +10,7 @@ import RcSearchBar from "@/components/RcSearchBar.vue";
 import RcArcadeGameCard from "@/components/RcArcadeGameCard.vue";
 import { useRouter } from "vue-router";
 import dayjs from "dayjs";
+import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
 
 const router = useRouter();
 const { info, loading: loadingInfo, refresh } = useChainInfo();
@@ -98,6 +99,7 @@ const RPC_DISPLAY = import.meta.env.VITE_RPC_URL || '/rpc';
             >
               Account Lookup
             </button>
+            <RcAddKeplrButton />
           </div>
 
           <!-- Network Info Tags -->
