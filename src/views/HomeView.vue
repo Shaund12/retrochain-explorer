@@ -11,6 +11,7 @@ import RcArcadeGameCard from "@/components/RcArcadeGameCard.vue";
 import { useRouter } from "vue-router";
 import dayjs from "dayjs";
 import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
+import { useNetwork } from "@/composables/useNetwork";
 
 const router = useRouter();
 const { info, loading: loadingInfo, refresh } = useChainInfo();
@@ -55,6 +56,7 @@ const formatTime = (value?: string | null) =>
 // Expose environment endpoint values to template without using import.meta inside template expressions
 const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || '/api';
 const RPC_DISPLAY = import.meta.env.VITE_RPC_URL || '/rpc';
+const { current: network } = useNetwork();
 </script>
 
 <template>
@@ -71,7 +73,7 @@ const RPC_DISPLAY = import.meta.env.VITE_RPC_URL || '/rpc';
               </span>
             </h1>
             <span class="badge text-emerald-200 border-emerald-500/40 text-xs">
-              devnet
+              {{ network === 'mainnet' ? 'mainnet' : 'testnet' }}
             </span>
           </div>
           <p class="text-sm text-slate-300 mb-4">
