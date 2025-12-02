@@ -6,11 +6,11 @@
         class="flex items-center gap-3 group transition-all"
         @click="router.push({ name: 'home' })"
       >
-        <div
-          class="h-9 w-9 rounded-lg bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center font-black shadow-lg shadow-indigo-500/50 group-hover:shadow-indigo-500/80 transition-all group-hover:scale-105"
-        >
-          <span class="text-white text-sm">RC</span>
-        </div>
+        <img
+          src="/RCICOIMAGE.png"
+          alt="RetroChain"
+          class="h-10 w-10 rounded-lg shadow-lg shadow-indigo-500/40 group-hover:shadow-indigo-500/70 group-hover:scale-105 transition-all object-contain"
+        />
         <div class="font-bold text-base bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
           RetroChain
         </div>
