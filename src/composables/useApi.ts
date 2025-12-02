@@ -22,6 +22,23 @@ const api = axios.create({
   timeout: 10000
 });
 
+// Intercept requests: if running behind proxy and url starts with a REST root segment
+// (e.g. /cosmos, /ibc, /retrochain) but not already prefixed with /api, add /api.
+api.interceptors.request.use((config) => {
+  if (typeof window !== 'undefined') {
+    const isHttps = window.location.protocol === 'https:';
+    const u = config.url || '';
+    const needsPrefix =
+      isHttps &&
+      (u.startsWith('/cosmos') || u.startsWith('/retrochain') || u.startsWith('/ibc')) &&
+      !u.startsWith('/api/');
+    if (needsPrefix) {
+      config.url = '/api' + u; // prefix
+    }
+  }
+  return config;
+});
+
 export function useApi() {
   return api;
 }
