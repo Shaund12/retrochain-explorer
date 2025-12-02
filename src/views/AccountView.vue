@@ -275,7 +275,7 @@ watch(error, (val) => {
           Use <code class="text-emerald-400">alice</code> and <code class="text-emerald-400">bob</code> accounts from Ignite's default setup
         </li>
         <li>
-          Access the faucet at <code class="text-cyan-400">http://localhost:4500</code> to get test tokens
+          Access the faucet at <code class="text-cyan-400">{{ (import.meta as any).env?.VITE_FAUCET_URL || 'faucet' }}</code> to get test tokens
         </li>
         <li>
           All amounts are shown in micro-units (1 RETRO = 1,000,000 uretro)

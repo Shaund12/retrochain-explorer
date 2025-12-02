@@ -13,8 +13,8 @@ function resolveBaseUrl() {
     return envBase; // https:// or relative path
   }
 
-  // Non-HTTPS page: use env or default local
-  return envBase || "http://localhost:1317";
+  // Non-HTTPS page: use env or default relative path (assumed proxy in front)
+  return envBase || "/api";
 }
 
 const api = axios.create({

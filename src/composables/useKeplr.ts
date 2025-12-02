@@ -21,8 +21,8 @@ const CHAIN_ID = "retrochain-arcade-1";
 const CHAIN_INFO = {
 chainId: CHAIN_ID,
 chainName: "RetroChain Arcade Devnet",
-rpc: (import.meta as any).env?.VITE_RPC_URL || "http://localhost:26657",
-rest: (import.meta as any).env?.VITE_REST_API_URL || "http://localhost:1317",
+rpc: (import.meta as any).env?.VITE_RPC_URL || "/rpc",
+rest: (import.meta as any).env?.VITE_REST_API_URL || "/api",
 bip44: {
   coinType: 118
 },

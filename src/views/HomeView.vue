@@ -99,10 +99,10 @@ const formatTime = (value?: string | null) =>
           <!-- Network Info Tags -->
           <div class="flex flex-wrap gap-2 text-[11px] text-slate-400">
             <span class="badge">
-              REST: <code>http://localhost:1317</code>
+              REST: <code>{{ (import.meta as any).env?.VITE_REST_API_URL || '/api' }}</code>
             </span>
             <span class="badge">
-              Node: <code>http://localhost:26657</code>
+              RPC: <code>{{ (import.meta as any).env?.VITE_RPC_URL || '/rpc' }}</code>
             </span>
             <span class="badge">Token: RETRO / uretro</span>
           </div>
@@ -464,9 +464,7 @@ const formatTime = (value?: string | null) =>
         <ol class="list-decimal list-inside space-y-1">
           <li>Keep <code>ignite chain serve</code> running for RetroChain.</li>
           <li>
-            Ensure REST API is exposed at
-            <code>http://localhost:1317</code>
-            (default).
+            Ensure REST API is reachable at the configured endpoint (default <code>/api</code> when proxied).
           </li>
           <li>
             Start this UI with
@@ -475,8 +473,7 @@ const formatTime = (value?: string | null) =>
             <code>vue/</code>.
           </li>
           <li>
-            Hit the faucet endpoint or use CLI to generate traffic and watch
-            blocks / txs update.
+            Use the faucet or CLI to generate traffic and watch blocks / txs update.
           </li>
           <li class="text-indigo-300">
             🎮 Use arcade module to register games, insert coins, and start sessions!

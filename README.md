@@ -93,10 +93,11 @@ npm run dev
 
 ## ?? Configuration
 
-Edit `.env` to configure your REST API endpoint:
+Edit `.env` to configure endpoints (use relative paths when deploying behind a proxy to avoid mixed content):
 
 ```env
-VITE_REST_API_URL=http://localhost:1317
+VITE_REST_API_URL=/api
+VITE_RPC_URL=/rpc
 ```
 
 ## ?? Quick Start
@@ -112,7 +113,7 @@ VITE_REST_API_URL=http://localhost:1317
    ```
 
 3. **Open your browser**:
-   Navigate to `http://localhost:5173`
+   Navigate to the dev server (default `http://localhost:5173`) or your deployed domain.
 
 ## ?? Views & Routes
 
@@ -130,7 +131,7 @@ VITE_REST_API_URL=http://localhost:1317
 ## ?? Key Components
 
 ### Composables
-- `useApi` - Axios client configuration
+- `useApi` - Axios client configuration (auto selects `/api` on HTTPS)
 - `useBlocks` - Block data fetching
 - `useTxs` - Transaction queries
 - `useAccount` - Account balance queries
