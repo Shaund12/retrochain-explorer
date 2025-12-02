@@ -6,6 +6,7 @@ import { useTxs } from "@/composables/useTxs";
 import { useToast } from "@/composables/useToast";
 import { useKeplr } from "@/composables/useKeplr";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
+import { useFaucet } from "@/composables/useFaucet";
 
 const route = useRoute();
 const router = useRouter();
@@ -13,6 +14,8 @@ const { balances, bech32Address, loading, error, load } = useAccount();
 const { txs, searchByAddress } = useTxs();
 const { notify } = useToast();
 const { address: keplrAddress } = useKeplr();
+const { base: faucetBase, loading: faucetLoading, error: faucetError, requestTokens } = useFaucet();
+const faucetAmount = ref<string>("1000000"); // default 1 RETRO in micro (uretro)
 
 const addressInput = ref<string>((route.params.address as string) || "");
 const loadingTxs = ref(false);
@@ -187,6 +190,31 @@ watch(error, (val) => {
           <div class="text-xs text-slate-400">
             Recent activities
           </div>
+        </div>
+
+        <!-- Faucet Quick Request -->
+        <div class="card">
+          <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">
+            Faucet
+          </div>
+          <div class="text-[11px] text-slate-500 mb-2">Endpoint: <code class="text-[10px]">{{ faucetBase }}/request</code></div>
+          <div class="flex items-center gap-2">
+            <input
+              v-model="faucetAmount"
+              type="number"
+              min="1"
+              class="flex-1 px-3 py-2 rounded bg-slate-900/80 border border-slate-700 text-xs font-mono"
+              placeholder="Amount in uretro"
+            />
+            <button
+              class="btn btn-primary text-xs"
+              :disabled="faucetLoading"
+              @click="requestTokens(bech32Address, faucetAmount, 'uretro').then(()=>notify('Faucet requested')).catch(e=>notify('Faucet failed'))"
+            >
+              {{ faucetLoading ? 'Requesting...' : 'Request Tokens' }}
+            </button>
+          </div>
+          <div v-if="faucetError" class="text-[11px] text-rose-300 mt-2">{{ faucetError }}</div>
         </div>
       </div>
 

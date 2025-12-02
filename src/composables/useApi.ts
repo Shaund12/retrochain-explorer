@@ -1,4 +1,5 @@
 import axios from "axios";
+import { useNetwork } from "./useNetwork";
 
 // Resolve a base URL that avoids mixed content when the app is under HTTPS.
 function resolveBaseUrl() {
@@ -17,10 +18,22 @@ function resolveBaseUrl() {
   return envBase || "/api";
 }
 
+const { restBase } = useNetwork();
 const api = axios.create({
-  baseURL: resolveBaseUrl(),
+  baseURL: restBase.value || resolveBaseUrl(),
   timeout: 10000
 });
+
+// react to network changes
+// Note: axios instance baseURL can be updated
+try {
+  const stopWatch = (() => {
+    const unwatch = (restBase as any).effect?.(() => {
+      api.defaults.baseURL = restBase.value || resolveBaseUrl();
+    }) || null;
+    return () => unwatch && unwatch();
+  })();
+} catch {}
 
 export function useApi() {
   return api;

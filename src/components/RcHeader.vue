@@ -100,11 +100,13 @@
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useKeplr } from "@/composables/useKeplr";
+import { useNetwork } from "@/composables/useNetwork";
 
 const route = useRoute();
 const router = useRouter();
 const { isAvailable, address, connecting, connect, disconnect } = useKeplr();
 const mobileMenuOpen = ref(false);
+const { current: net, setNetwork } = useNetwork();
 
 const navItems = [
   { label: "Overview", to: { name: "home" } },
