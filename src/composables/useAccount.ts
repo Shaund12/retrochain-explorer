@@ -20,18 +20,33 @@ export function useAccount() {
     bech32Address.value = address;
 
     try {
-      const [acc, bal] = await Promise.all([
+      const [accRes, balRes] = await Promise.allSettled([
         api.get(`/cosmos/auth/v1beta1/accounts/${address}`),
         api.get(`/cosmos/bank/v1beta1/balances/${address}`)
       ]);
 
-      const rawBalances = bal.data?.balances ?? [];
-      balances.value = rawBalances.map((b: any) => ({
-        denom: b.denom,
-        amount: b.amount
-      }));
+      if (balRes.status === "fulfilled") {
+        const rawBalances = balRes.value.data?.balances ?? [];
+        balances.value = rawBalances.map((b: any) => ({
+          denom: b.denom,
+          amount: b.amount
+        }));
+      } else {
+        balances.value = [];
+      }
+
+      if (accRes.status === "rejected") {
+        const resp = (accRes.reason?.response?.data) || accRes.reason;
+        const msg = resp?.message || resp?.error || accRes.reason?.message || "Account query failed";
+        // Helpful hint for common bech32/prefix issues
+        const hint = /bech32|prefix|decod/i.test(String(msg))
+          ? "Check the address prefix matches the selected network."
+          : "";
+        error.value = hint ? `${msg} — ${hint}` : msg;
+      }
     } catch (e: any) {
-      error.value = e?.message ?? String(e);
+      const msg = e?.response?.data?.message || e?.message || String(e);
+      error.value = msg;
     } finally {
       loading.value = false;
     }

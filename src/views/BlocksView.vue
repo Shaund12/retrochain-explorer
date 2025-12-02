@@ -3,6 +3,7 @@ import { onMounted, computed, ref } from "vue";
 import { useBlocks } from "@/composables/useBlocks";
 import { useAutoRefresh } from "@/composables/useAutoRefresh";
 import { useRouter } from "vue-router";
+import { useNetwork } from "@/composables/useNetwork";
 
 const router = useRouter();
 const { blocks, loading, error, fetchLatest } = useBlocks();
@@ -29,6 +30,9 @@ const loadMore = () => {
   displayLimit.value += 50;
   refreshBlocks();
 };
+
+const { current: network } = useNetwork();
+const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || "/api";
 </script>
 
 <template>
@@ -37,7 +41,7 @@ const loadMore = () => {
       <div>
         <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Blocks</h1>
         <p class="text-sm text-slate-400 mt-2">
-          Latest RetroChain blocks from your local devnet
+          Latest RetroChain blocks — {{ network === 'mainnet' ? 'mainnet' : 'testnet' }}
         </p>
       </div>
       <div class="flex items-center gap-2">
@@ -70,10 +74,14 @@ const loadMore = () => {
 
     <div v-if="!loading && !error && blocks.length === 0" class="card">
       <p class="text-sm text-slate-400">
-        No blocks found yet. Make sure
-        <code class="text-emerald-400">ignite chain serve</code>
-        is running and the REST API is reachable at
-        <code class="text-emerald-400">http://localhost:1317</code>.
+        No blocks found yet.
+        <span v-if="network !== 'mainnet'">
+          Ensure your node is running and REST API is reachable at
+          <code class="text-emerald-400">{{ REST_DISPLAY }}</code>.
+        </span>
+        <span v-else>
+          The node may be starting or syncing. Please try again shortly.
+        </span>
       </p>
     </div>
 
