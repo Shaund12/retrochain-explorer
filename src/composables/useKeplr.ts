@@ -56,6 +56,12 @@ function getCurrencies() {
 
 function buildChainInfo() {
   const currencies = getCurrencies();
+  const pfx = (() => {
+    if (net.value === "mainnet") {
+      return (import.meta as any).env?.VITE_BECH32_PREFIX_MAINNET || "retro";
+    }
+    return (import.meta as any).env?.VITE_BECH32_PREFIX_TESTNET || "retro";
+  })();
   return {
     chainId: getChainId(),
     chainName: getChainName(),
@@ -63,17 +69,17 @@ function buildChainInfo() {
     rest: restBase.value || "/api",
     bip44: { coinType: 118 },
     bech32Config: {
-      bech32PrefixAccAddr: "retro",
-      bech32PrefixAccPub: "retropub",
-      bech32PrefixValAddr: "retrovaloper",
-      bech32PrefixValPub: "retrovaloperpub",
-      bech32PrefixConsAddr: "retrovalcons",
-      bech32PrefixConsPub: "retrovalconspub"
+      bech32PrefixAccAddr: pfx,
+      bech32PrefixAccPub: `${pfx}pub`,
+      bech32PrefixValAddr: `${pfx}valoper`,
+      bech32PrefixValPub: `${pfx}valoperpub`,
+      bech32PrefixConsAddr: `${pfx}valcons`,
+      bech32PrefixConsPub: `${pfx}valconspub`
     },
     currencies: currencies.list,
     feeCurrencies: currencies.fees,
     stakeCurrency: currencies.stake,
-    features: ["stargate", "ibc-transfer", "no-legacy-stdTx", "cosmwasm"]
+    features: ["ibc-transfer", "cosmwasm"]
   } as any;
 }
 
