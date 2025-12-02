@@ -114,9 +114,10 @@ const checkAvailability = () => {
       await suggestChain();
       await window.keplr.enable(getChainId());
 
+      const chainId = getChainId();
       const offlineSigner =
-        (await window.getOfflineSignerAuto?.(CHAIN_ID)) ||
-        window.getOfflineSigner?.(CHAIN_ID);
+        (await window.getOfflineSignerAuto?.(chainId)) ||
+        window.getOfflineSigner?.(chainId);
 
       if (!offlineSigner) {
         throw new Error("Unable to get offline signer from Keplr.");
