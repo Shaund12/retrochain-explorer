@@ -2,7 +2,18 @@ import { ref, computed } from "vue";
 
 type Network = "testnet" | "mainnet";
 
-const current = ref<Network>((localStorage.getItem("rc.network") as Network) || "testnet");
+function resolveInitialNetwork(): Network {
+  try {
+    const saved = (typeof window !== "undefined"
+      ? (localStorage.getItem("rc.network") as Network | null)
+      : null) as Network | null;
+    if (saved === "mainnet" || saved === "testnet") return saved;
+  } catch {}
+  const envDefault = (import.meta.env.VITE_DEFAULT_NETWORK as string | undefined)?.toLowerCase();
+  return envDefault === "mainnet" ? "mainnet" : "testnet";
+}
+
+const current = ref<Network>(resolveInitialNetwork());
 
 export function useNetwork() {
   const setNetwork = (net: Network) => {

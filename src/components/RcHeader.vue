@@ -91,6 +91,22 @@
         >
           {{ item.label }}
         </a>
+        <div class="mt-3 px-4 flex items-center gap-2">
+          <button
+            class="btn text-[10px] px-2 py-1 flex-1"
+            :class="net === 'testnet' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+            @click="setNetwork('testnet'); mobileMenuOpen = false"
+          >
+            Testnet
+          </button>
+          <button
+            class="btn text-[10px] px-2 py-1 flex-1"
+            :class="net === 'mainnet' ? 'border-indigo-400/70 bg-indigo-500/10' : ''"
+            @click="setNetwork('mainnet'); mobileMenuOpen = false"
+          >
+            Mainnet
+          </button>
+        </div>
         <div class="mt-3 px-4">
           <RcAddKeplrButton class="w-full inline-flex justify-center" />
         </div>
