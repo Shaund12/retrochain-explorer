@@ -56,6 +56,9 @@ const formatAmount = (amount: string, denom: string) => {
   return `${amount} ${denom}`;
 };
 
+// Expose faucet URL for template without inline import.meta in interpolation
+const FAUCET_DISPLAY = import.meta.env.VITE_FAUCET_URL || 'faucet';
+
 onMounted(async () => {
   // If route has an address, use it
   if (addressInput.value) {
@@ -275,7 +278,7 @@ watch(error, (val) => {
           Use <code class="text-emerald-400">alice</code> and <code class="text-emerald-400">bob</code> accounts from Ignite's default setup
         </li>
         <li>
-          Access the faucet at <code class="text-cyan-400">{{ (import.meta as any).env?.VITE_FAUCET_URL || 'faucet' }}</code> to get test tokens
+          Access the faucet at <code class="text-cyan-400">{{ FAUCET_DISPLAY }}</code> to get test tokens
         </li>
         <li>
           All amounts are shown in micro-units (1 RETRO = 1,000,000 uretro)
