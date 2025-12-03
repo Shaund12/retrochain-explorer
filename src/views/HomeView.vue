@@ -63,9 +63,9 @@ const copy = async (text: string) => {
 };
 
 // Production stats and sparklines (no extra libs)
-const recentBlocks = computed(() => blocks.slice(0, 20));
+const recentBlocks = computed(() => blocks.value.slice(0, 20));
 const txsPerBlock = computed(() => recentBlocks.value.map(b => b.txs));
-const blockTimes = computed(() => recentBlocks.value.map(b => b.time ? new Date(b.time).getTime() : 0).filter(v => v));
+const blockTimes = computed(() => recentBlocks.value.map(b => (b.time ? new Date(b.time).getTime() : 0)).filter(v => v));
 const blockTimeDeltas = computed(() => {
   const arr: number[] = [];
   for (let i = 1; i < blockTimes.value.length; i++) {
