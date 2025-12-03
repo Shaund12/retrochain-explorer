@@ -141,6 +141,8 @@ const navItems = [
   { label: "Blocks", to: { name: "blocks" } },
   { label: "Transactions", to: { name: "txs" } },
   { label: "Validators", to: { name: "validators" } },
+  { label: "Staking", to: { name: "staking" } },
+  { label: "Buy", to: { name: "buy" } },
   { label: "Governance", to: { name: "governance" } },
   { label: "Account", to: { name: "account" } }
 ];

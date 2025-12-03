@@ -7,6 +7,8 @@ import TxDetailView from "@/views/TxDetailView.vue";
 import AccountView from "@/views/AccountView.vue";
 import ValidatorsView from "@/views/ValidatorsView.vue";
 import GovernanceView from "@/views/GovernanceView.vue";
+import StakingView from "@/views/StakingView.vue";
+import BuyView from "@/views/BuyView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
 import ApiTestView from "@/views/ApiTestView.vue";
 
@@ -19,6 +21,8 @@ const routes: RouteRecordRaw[] = [
   { path: "/account/:address?", name: "account", component: AccountView, props: true },
   { path: "/validators", name: "validators", component: ValidatorsView },
   { path: "/governance", name: "governance", component: GovernanceView },
+  { path: "/staking", name: "staking", component: StakingView },
+  { path: "/buy", name: "buy", component: BuyView },
   { path: "/api-test", name: "api-test", component: ApiTestView },
   { path: "/:pathMatch(.*)*", name: "not-found", component: NotFoundView }
 ];
