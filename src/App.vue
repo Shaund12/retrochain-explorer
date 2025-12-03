@@ -111,23 +111,23 @@ onMounted(() => {
             <h3 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wider">Community</h3>
             <ul class="space-y-2 text-sm mb-4">
               <li>
-                <a href="https://discord.gg/cosmosnetwork" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
-                  <span></span> Discord
+                <a href="https://discord.gg/h89FnjjnrD" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                  <span>💬</span> Discord
                 </a>
               </li>
               <li>
-                <a href="https://twitter.com/cosmos" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
-                  <span></span> Twitter
+                <a href="https://twitter.com/retrochain" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                  <span>🐦</span> Twitter
                 </a>
               </li>
               <li>
-                <a href="https://github.com/cosmos" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
-                  <span></span> GitHub
+                <a href="https://github.com/retrochain" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                  <span>💻</span> GitHub
                 </a>
               </li>
               <li>
-                <a href="https://forum.cosmos.network" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
-                  <span></span> Forum
+                <a href="https://t.me/retrochain" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                  <span>✈️</span> Telegram
                 </a>
               </li>
             </ul>

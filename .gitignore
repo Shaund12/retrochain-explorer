@@ -1,1 +1,15 @@
 /.vs
+
+# Environment variables
+.env
+.env.local
+.env.*.local
+
+# Node
+node_modules/
+dist/
+*.log
+
+# IDE
+.vscode/
+.idea/
