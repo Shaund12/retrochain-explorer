@@ -11,6 +11,7 @@ const hash = String(route.params.hash);
 const loading = ref(false);
 const error = ref<string | null>(null);
 const tx = ref<any | null>(null);
+const viewMode = ref<"pretty" | "raw">("pretty");
 
 const messages = computed(() => {
   return tx.value?.tx?.body?.messages || [];
@@ -29,6 +30,33 @@ const formatAmount = (amount: any) => {
 const isSuccess = computed(() => {
   return tx.value?.tx_response?.code === 0;
 });
+
+const feeString = computed(() => {
+  const fees = tx.value?.tx?.auth_info?.fee?.amount || [];
+  if (!Array.isArray(fees) || fees.length === 0) return "-";
+  return fees.map((f: any) => `${f.amount} ${f.denom}`).join(", ");
+});
+
+const memo = computed(() => tx.value?.tx?.body?.memo || "");
+
+const signers = computed(() => tx.value?.tx?.auth_info?.signer_infos || []);
+
+const copyToClipboard = async (text: string) => {
+  try {
+    await navigator.clipboard?.writeText?.(text);
+    // no toast system wired here; silent success
+  } catch {}
+};
+
+const downloadJson = (obj: any, filename = "tx.json") => {
+  const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
+  const url = URL.createObjectURL(blob);
+  const a = document.createElement("a");
+  a.href = url;
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(url);
+};
 
 onMounted(async () => {
   loading.value = true;
@@ -85,6 +113,12 @@ onMounted(async () => {
         <h1 class="text-sm font-semibold mb-3 text-slate-100">
           Transaction Details
         </h1>
+        <div class="mb-3 flex items-center gap-2">
+          <button class="btn text-xs" :class="viewMode==='pretty' ? 'border-emerald-400/70 bg-emerald-500/10' : ''" @click="viewMode='pretty'">Pretty</button>
+          <button class="btn text-xs" :class="viewMode==='raw' ? 'border-indigo-400/70 bg-indigo-500/10' : ''" @click="viewMode='raw'">Raw JSON</button>
+          <button class="btn text-xs" @click="copyToClipboard(JSON.stringify(tx, null, 2))">Copy JSON</button>
+          <button class="btn text-xs" @click="downloadJson(tx)">Download</button>
+        </div>
 
         <div v-if="loading" class="text-xs text-slate-400">
           Loading transaction…
@@ -93,13 +127,16 @@ onMounted(async () => {
           {{ error }}
         </div>
 
-        <div v-if="tx" class="space-y-3">
+        <div v-if="tx && viewMode==='pretty'" class="space-y-3">
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
             <div>
               <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">
                 Transaction Hash
               </div>
-              <code class="text-[11px] break-all text-slate-200">{{ hash }}</code>
+              <div class="flex items-center gap-2">
+                <code class="text-[11px] break-all text-slate-200">{{ hash }}</code>
+                <button class="btn text-[10px]" @click="copyToClipboard(hash)">Copy</button>
+              </div>
             </div>
             <div>
               <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">
@@ -126,6 +163,18 @@ onMounted(async () => {
                 {{ tx.tx_response?.gas_used ?? '—' }} / {{ tx.tx_response?.gas_wanted ?? '—' }}
               </div>
             </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">
+                Fee
+              </div>
+              <div class="text-slate-200">{{ feeString }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">
+                Memo
+              </div>
+              <div class="text-slate-300 break-all">{{ memo || '—' }}</div>
+            </div>
           </div>
 
           <!-- Messages -->
@@ -143,6 +192,7 @@ onMounted(async () => {
                   <span class="badge text-xs border-cyan-400/60 text-cyan-200">
                     {{ getMessageType(msg) }}
                   </span>
+                  <button class="btn text-[10px]" @click="copyToClipboard(JSON.stringify(msg, null, 2))">Copy JSON</button>
                 </div>
                 <div class="text-xs text-slate-300 space-y-1">
                   <div v-if="msg.from_address">
@@ -179,6 +229,11 @@ onMounted(async () => {
               class="p-3 rounded bg-slate-900/80 overflow-x-auto max-h-64 text-xs"
             >{{ JSON.stringify(tx.tx_response.logs, null, 2) }}</pre>
           </div>
+        </div>
+
+        <!-- Raw JSON full view -->
+        <div v-else-if="tx && viewMode==='raw'" class="text-xs">
+          <pre class="p-2 rounded bg-slate-900/80 overflow-x-auto max-h-[700px]">{{ JSON.stringify(tx, null, 2) }}</pre>
         </div>
       </div>
 
