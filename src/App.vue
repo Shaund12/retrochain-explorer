@@ -116,18 +116,8 @@ onMounted(() => {
                 </a>
               </li>
               <li>
-                <a href="https://twitter.com/retrochain" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
-                  <span>🐦</span> Twitter
-                </a>
-              </li>
-              <li>
-                <a href="https://github.com/retrochain" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                <a href="https://github.com/Shaund12/RetroChain" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
                   <span>💻</span> GitHub
-                </a>
-              </li>
-              <li>
-                <a href="https://t.me/retrochain" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
-                  <span>✈️</span> Telegram
                 </a>
               </li>
             </ul>
