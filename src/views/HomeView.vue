@@ -337,34 +337,40 @@ function sparkPath(data: number[], width = 160, height = 40) {
           Loading latest blocks...
         </div>
         <table v-else class="table">
+          <colgroup>
+            <col style="width: 120px" />
+            <col />
+            <col style="width: 90px" />
+            <col style="width: 220px" />
+          </colgroup>
           <thead>
             <tr class="text-slate-300 text-xs">
-              <th style="width:100px">Height</th>
+              <th>Height</th>
               <th>Hash</th>
-              <th style="width:80px">Txs</th>
-              <th style="width:180px">Time</th>
+              <th>Txs</th>
+              <th>Time</th>
             </tr>
           </thead>
           <tbody>
             <tr
               v-for="b in blocks"
               :key="b.height"
-              class="cursor-pointer"
+              class="cursor-pointer hover:bg-white/5 transition-colors"
               @click="router.push({ name: 'block-detail', params: { height: b.height } })"
             >
-              <td class="font-mono text-[11px]">{{ b.height }}</td>
-              <td class="font-mono text-[11px]">
-                <div class="flex items-center gap-2">
-                  <span>{{ b.hash.slice(0, 12) }}...</span>
+              <td class="font-mono text-[12px] py-2">{{ b.height }}</td>
+              <td class="font-mono text-[12px] py-2">
+                <div class="flex items-center gap-2 whitespace-nowrap">
+                  <span class="truncate max-w-[180px] inline-block align-middle">{{ b.hash.slice(0, 16) }}...</span>
                   <button class="btn text-[10px]" @click.stop="copy(b.hash)">Copy</button>
                 </div>
               </td>
-              <td class="text-xs">
+              <td class="text-xs py-2">
                 <span class="badge" :class="b.txs > 0 ? 'border-cyan-400/60 text-cyan-200' : ''">
                   {{ b.txs }}
                 </span>
               </td>
-              <td class="text-xs text-slate-300">
+              <td class="text-xs text-slate-300 py-2 whitespace-nowrap">
                 <span v-if="b.time">{{ dayjs(b.time).format('YYYY-MM-DD HH:mm:ss') }}</span>
                 <span v-else>-</span>
               </td>
