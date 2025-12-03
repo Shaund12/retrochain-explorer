@@ -3,16 +3,19 @@ import { onMounted, ref, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useBlocks } from "@/composables/useBlocks";
 import { useToast } from "@/composables/useToast";
+import { useApi } from "@/composables/useApi";
 
 const route = useRoute();
 const router = useRouter();
 const { fetchByHeight } = useBlocks();
 const { notify } = useToast();
+const api = useApi();
 
 const loading = ref(false);
 const error = ref<string | null>(null);
 const block = ref<any | null>(null);
 const commit = ref<any | null>(null);
+const blockTxs = ref<any[]>([]);
 
 const height = ref<number>(Number(route.params.height || 0));
 
@@ -22,6 +25,11 @@ const txCount = computed(() => block.value?.data?.txs?.length ?? 0);
 const blockHash = computed(() => commit.value?.hash ?? "—");
 const proposer = computed(() => header.value.proposer_address ?? "—");
 const time = computed(() => header.value.time ?? "—");
+const base64Txs = computed(() => (block.value?.data?.txs as string[]) || []);
+
+const copy = async (text: string) => {
+  try { await navigator.clipboard?.writeText?.(text); } catch {}
+};
 
 // Navigation helpers
 const goToHeight = (h: number) => {
@@ -39,11 +47,22 @@ const loadBlock = async () => {
   error.value = null;
   block.value = null;
   commit.value = null;
+  blockTxs.value = [];
 
   try {
     const res = await fetchByHeight(height.value);
     block.value = res.block;
     commit.value = res.block_id;
+
+    // Fetch tx hashes for this height
+    try {
+      const txRes = await api.get(`/cosmos/tx/v1beta1/txs`, {
+        params: { events: `tx.height='${height.value}'`, order_by: "ORDER_BY_ASC", "pagination.limit": 100 }
+      });
+      blockTxs.value = txRes.data?.tx_responses || [];
+    } catch (e) {
+      blockTxs.value = [];
+    }
   } catch (e: any) {
     const msg = e?.message ?? String(e);
     error.value = msg;
@@ -179,6 +198,38 @@ watch(
           <pre
             class="mt-1 p-2 rounded bg-slate-900/80 overflow-x-auto max-h-72"
           >{{ JSON.stringify(header, null, 2) }}</pre>
+        </div>
+
+        <div class="mt-3" v-if="base64Txs.length || blockTxs.length">
+          <div class="text-[11px] uppercase tracking-[0.18em] text-slate-400 mb-2">
+            Transactions ({{ blockTxs.length || base64Txs.length }})
+          </div>
+          <div class="space-y-2">
+            <div v-for="(t, i) in blockTxs" :key="t.txhash || i" class="p-2 rounded bg-slate-900/60 border border-slate-700">
+              <div class="text-[11px] text-slate-400 mb-1">Tx #{{ i + 1 }}</div>
+              <div class="flex items-center justify-between gap-2">
+                <code class="text-[11px] break-all">{{ t.txhash }}</code>
+                <router-link class="btn text-[10px]" :to="{ name: 'tx-detail', params: { hash: t.txhash } }">Details</router-link>
+              </div>
+              <div class="mt-1 text-xs text-slate-300">
+                <span class="badge" :class="t.code === 0 ? 'border-emerald-400/60 text-emerald-200' : 'border-rose-400/60 text-rose-200'">code {{ t.code ?? 0 }}</span>
+                <span class="ml-2">height {{ t.height }}</span>
+                <span class="ml-2">gas {{ t.gas_used || '-' }}/{{ t.gas_wanted || '-' }}</span>
+              </div>
+            </div>
+
+            <!-- Fallback: show base64 when tx_responses unavailable -->
+            <div v-if="!blockTxs.length" v-for="(raw, i) in base64Txs" :key="i" class="p-2 rounded bg-slate-900/60 border border-slate-700">
+              <div class="flex items-center justify-between gap-2">
+                <div class="text-xs text-slate-300">Tx {{ i + 1 }} (base64)</div>
+                <button class="btn text-[10px]" @click="copy(raw)">Copy</button>
+              </div>
+              <details class="mt-1 text-[11px] text-slate-300">
+                <summary class="cursor-pointer text-cyan-300">View base64</summary>
+                <pre class="mt-1 p-2 bg-slate-900/80 overflow-x-auto">{{ raw }}</pre>
+              </details>
+            </div>
+          </div>
         </div>
       </div>
 

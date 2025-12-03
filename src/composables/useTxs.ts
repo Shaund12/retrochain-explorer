@@ -50,12 +50,45 @@ export function useTxs() {
       }));
     } catch (e: any) {
       console.error("Failed to fetch transactions:", e);
-      // Don't show error for empty transactions - it's normal for new chains
-      if (e?.response?.status === 500) {
-        error.value = null; // Ignore 500 errors for now
-        txs.value = [];
-      } else {
-        error.value = e?.message ?? String(e);
+      // Fallback: scan recent blocks and query txs by height
+      try {
+        const latestRes = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/latest`);
+        const latest = parseInt(latestRes.data?.block?.header?.height ?? "0", 10);
+        const heights: number[] = [];
+        for (let h = latest; h > 0 && heights.length < Math.max(limit, 10); h--) heights.push(h);
+
+        const results = await Promise.allSettled(
+          heights.map((h) =>
+            api.get(`/cosmos/tx/v1beta1/txs`, {
+              params: { events: `tx.height='${h}'`, order_by: "ORDER_BY_DESC", "pagination.limit": 50 }
+            })
+          )
+        );
+
+        const collected: TxSummary[] = [];
+        for (const r of results) {
+          if (r.status === "fulfilled") {
+            const list = r.value.data?.tx_responses ?? [];
+            for (const t of list) {
+              collected.push({
+                hash: t.txhash,
+                height: parseInt(t.height ?? "0", 10),
+                codespace: t.codespace,
+                code: t.code,
+                gasWanted: t.gas_wanted,
+                gasUsed: t.gas_used,
+                timestamp: t.timestamp
+              });
+              if (collected.length >= limit) break;
+            }
+            if (collected.length >= limit) break;
+          }
+        }
+        txs.value = collected.slice(0, limit);
+        error.value = null;
+      } catch (fallbackErr: any) {
+        // Give up gracefully
+        error.value = fallbackErr?.message ?? e?.message ?? String(e);
         txs.value = [];
       }
     } finally {
