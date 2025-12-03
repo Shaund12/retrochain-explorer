@@ -4,6 +4,8 @@
   },
   "rewrites": [
     { "source": "/api", "destination": "/api/index" },
-    { "source": "/api/(.*)", "destination": "/api/index" }
+    { "source": "/api/(.*)", "destination": "/api/index" },
+    // SPA fallback: rewrite all non-file, non-asset paths to index.html
+    { "source": "/((?!api/|assets/|.*\\..*$).*)", "destination": "/index.html" }
   ]
 }
