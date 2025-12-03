@@ -5,12 +5,13 @@ import { useAccount } from "@/composables/useAccount";
 import { useTxs } from "@/composables/useTxs";
 import { useToast } from "@/composables/useToast";
 import { useKeplr } from "@/composables/useKeplr";
+import { useNetwork } from "@/composables/useNetwork";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import { useFaucet } from "@/composables/useFaucet";
 
 const route = useRoute();
 const router = useRouter();
-const { balances, bech32Address, loading, error, load } = useAccount();
+const { balances, bech32Address, accountInfo, loading, error, load } = useAccount();
 const { txs, searchByAddress } = useTxs();
 const { notify } = useToast();
 const { address: keplrAddress } = useKeplr();
@@ -61,6 +62,7 @@ const formatAmount = (amount: string, denom: string) => {
 
 // Expose faucet URL for template without inline import.meta in interpolation
 const FAUCET_DISPLAY = import.meta.env.VITE_FAUCET_URL || 'faucet';
+const { current: network } = useNetwork();
 
 onMounted(async () => {
   // If route has an address, use it
@@ -192,25 +194,13 @@ watch(error, (val) => {
           </div>
         </div>
 
-        <!-- Faucet Quick Request -->
-        <div class="card">
-          <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">
-            Faucet
-          </div>
+        <!-- Faucet Quick Request (hidden on mainnet) -->
+        <div v-if="network !== 'mainnet'" class="card">
+          <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">Faucet</div>
           <div class="text-[11px] text-slate-500 mb-2">Endpoint: <code class="text-[10px]">{{ faucetBase }}/request</code></div>
           <div class="flex items-center gap-2">
-            <input
-              v-model="faucetAmount"
-              type="number"
-              min="1"
-              class="flex-1 px-3 py-2 rounded bg-slate-900/80 border border-slate-700 text-xs font-mono"
-              placeholder="Amount in uretro"
-            />
-            <button
-              class="btn btn-primary text-xs"
-              :disabled="faucetLoading"
-              @click="requestTokens(bech32Address, faucetAmount, 'uretro').then(()=>notify('Faucet requested')).catch(e=>notify('Faucet failed'))"
-            >
+            <input v-model="faucetAmount" type="number" min="1" class="flex-1 px-3 py-2 rounded bg-slate-900/80 border border-slate-700 text-xs font-mono" placeholder="Amount in uretro" />
+            <button class="btn btn-primary text-xs" :disabled="faucetLoading" @click="requestTokens(bech32Address, faucetAmount, 'uretro').then(()=>notify('Faucet requested')).catch(()=>notify('Faucet failed'))">
               {{ faucetLoading ? 'Requesting...' : 'Request Tokens' }}
             </button>
           </div>
@@ -218,9 +208,24 @@ watch(error, (val) => {
         </div>
       </div>
 
-      <!-- Balances Table -->
+      <!-- Account Meta + Balances Table -->
       <div class="card">
-        <h2 class="text-sm font-semibold text-slate-100 mb-3">Balances</h2>
+        <h2 class="text-sm font-semibold text-slate-100 mb-3">Account</h2>
+        <div v-if="accountInfo" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs mb-3">
+          <div class="p-3 rounded bg-slate-900/60 border border-slate-700">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Account Number</div>
+            <div class="font-mono">{{ accountInfo.account_number || accountInfo.base_account?.account_number || '—' }}</div>
+          </div>
+          <div class="p-3 rounded bg-slate-900/60 border border-slate-700">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Sequence</div>
+            <div class="font-mono">{{ accountInfo.sequence || accountInfo.base_account?.sequence || '—' }}</div>
+          </div>
+          <div class="p-3 rounded bg-slate-900/60 border border-slate-700 overflow-hidden">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">PubKey</div>
+            <code class="text-[10px] break-all">{{ accountInfo.pub_key?.key || accountInfo.base_account?.pub_key?.key || '—' }}</code>
+          </div>
+        </div>
+        <h3 class="text-sm font-semibold text-slate-100 mb-2">Balances</h3>
         
         <div v-if="balances.length === 0" class="text-sm text-slate-400">
           No balances found for this address
@@ -296,24 +301,14 @@ watch(error, (val) => {
       </div>
     </template>
 
-    <!-- Help Section -->
-    <div class="card bg-slate-900/50 border-slate-700">
-      <h2 class="text-sm font-semibold mb-2 text-slate-100">
-        Tips
-      </h2>
+    <!-- Help Section (hidden on mainnet) -->
+    <div v-if="network !== 'mainnet'" class="card bg-slate-900/50 border-slate-700">
+      <h2 class="text-sm font-semibold mb-2 text-slate-100">Tips</h2>
       <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-        <li>
-          Use <code class="text-emerald-400">alice</code> and <code class="text-emerald-400">bob</code> accounts from Ignite's default setup
-        </li>
-        <li>
-          Access the faucet at <code class="text-cyan-400">{{ FAUCET_DISPLAY }}</code> to get test tokens
-        </li>
-        <li>
-          All amounts are shown in micro-units (1 RETRO = 1,000,000 uretro)
-        </li>
-        <li>
-          Validator addresses start with <code class="text-indigo-400">retrovaloper</code>
-        </li>
+        <li>Use <code class="text-emerald-400">alice</code> and <code class="text-emerald-400">bob</code> accounts from Ignite's default setup</li>
+        <li>Access the faucet at <code class="text-cyan-400">{{ FAUCET_DISPLAY }}</code> to get test tokens</li>
+        <li>All amounts are shown in micro-units (1 RETRO = 1,000,000 uretro)</li>
+        <li>Validator addresses start with <code class="text-indigo-400">retrovaloper</code></li>
       </ul>
     </div>
   </div>

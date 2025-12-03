@@ -12,11 +12,13 @@ export function useAccount() {
   const error = ref<string | null>(null);
   const balances = ref<Balance[]>([]);
   const bech32Address = ref<string>("");
+  const accountInfo = ref<any | null>(null);
 
   const load = async (address: string) => {
     loading.value = true;
     error.value = null;
     balances.value = [];
+    accountInfo.value = null;
     bech32Address.value = address;
 
     try {
@@ -35,7 +37,10 @@ export function useAccount() {
         balances.value = [];
       }
 
-      if (accRes.status === "rejected") {
+      if (accRes.status === "fulfilled") {
+        const acc = accRes.value.data?.account ?? null;
+        accountInfo.value = acc;
+      } else {
         const resp = (accRes.reason?.response?.data) || accRes.reason;
         const msg = resp?.message || resp?.error || accRes.reason?.message || "Account query failed";
         // Helpful hint for common bech32/prefix issues
@@ -52,5 +57,5 @@ export function useAccount() {
     }
   };
 
-  return { balances, bech32Address, loading, error, load };
+  return { balances, bech32Address, accountInfo, loading, error, load };
 }
