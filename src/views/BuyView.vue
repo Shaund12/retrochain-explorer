@@ -169,6 +169,10 @@ const estimateSwap = computed(() => {
   const rate = 0.85; // Example: 1 USDC = 0.85 RETRO
   return (parseFloat(swapAmount.value) * rate).toFixed(6);
 });
+
+const openBridge = (url: string) => {
+  window.open(url, '_blank');
+};
 </script>
 
 <template>
@@ -423,7 +427,7 @@ const estimateSwap = computed(() => {
         :key="bridge.name"
         class="card"
         :class="!bridge.instructions ? 'hover:border-indigo-500/50 transition-all cursor-pointer' : ''"
-        @click="!bridge.instructions && window.open(bridge.url, '_blank')"
+        @click="!bridge.instructions && bridge.url && openBridge(bridge.url)"
       >
         <div class="flex items-center gap-4">
           <div class="text-4xl">{{ bridge.icon }}</div>
