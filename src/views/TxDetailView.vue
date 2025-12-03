@@ -101,17 +101,17 @@ onMounted(async () => {
       </div>
     </div>
 
-    <div class="grid gap-3 grid-cols-1 lg:grid-cols-3">
+    <div class="grid gap-3 grid-cols-1 md:grid-cols-3">
       <!-- Overview -->
-      <div class="card lg:col-span-2">
+      <div class="card md:col-span-2">
         <h1 class="text-sm font-semibold mb-3 text-slate-100">
           Transaction Details
         </h1>
         <div class="mb-3 flex items-center gap-2">
-          <button class="btn text-xs" :class="viewMode==='pretty' ? 'border-emerald-400/70 bg-emerald-500/10' : ''" @click="viewMode='pretty'">Pretty</button>
-          <button class="btn text-xs" :class="viewMode==='raw' ? 'border-indigo-400/70 bg-indigo-500/10' : ''" @click="viewMode='raw'">Raw JSON</button>
-          <button class="btn text-xs" @click="copyToClipboard(JSON.stringify(tx, null, 2))">Copy JSON</button>
-          <button class="btn text-xs" @click="downloadJson(tx)">Download</button>
+          <button class="btn text-xs sm:text-[12px]" :class="viewMode==='pretty' ? 'border-emerald-400/70 bg-emerald-500/10' : ''" @click="viewMode='pretty'">Pretty</button>
+          <button class="btn text-xs sm:text-[12px]" :class="viewMode==='raw' ? 'border-indigo-400/70 bg-indigo-500/10' : ''" @click="viewMode='raw'">Raw JSON</button>
+          <button class="btn text-xs sm:text-[12px]" @click="copyToClipboard(JSON.stringify(tx, null, 2))">Copy JSON</button>
+          <button class="btn text-xs sm:text-[12px]" @click="downloadJson(tx)">Download</button>
         </div>
 
         <div v-if="loading" class="text-xs text-slate-400">
@@ -122,14 +122,14 @@ onMounted(async () => {
         </div>
 
         <div v-if="tx && viewMode==='pretty'" class="space-y-3">
-          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs">
+          <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3 text-xs">
             <div>
               <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">
                 Transaction Hash
               </div>
-              <div class="flex items-center gap-2">
-                <code class="text-[11px] break-all text-slate-200">{{ hash }}</code>
-                <button class="btn text-[10px]" @click="copyToClipboard(hash)">Copy</button>
+              <div class="flex items-center gap-2 whitespace-nowrap">
+                <code class="text-[11px] break-words sm:break-all text-slate-200 truncate max-w-[240px] sm:max-w-none">{{ hash }}</code>
+                <button class="btn text-[10px] sm:text-[11px]" @click="copyToClipboard(hash)">Copy</button>
               </div>
             </div>
             <div>
@@ -167,7 +167,7 @@ onMounted(async () => {
               <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">
                 Memo
               </div>
-              <div class="text-slate-300 break-all">{{ memo || '—' }}</div>
+              <div class="text-slate-300 break-words sm:break-all">{{ memo || '—' }}</div>
             </div>
           </div>
 
@@ -186,16 +186,16 @@ onMounted(async () => {
                   <span class="badge text-xs border-cyan-400/60 text-cyan-200">
                     {{ getMessageType(msg) }}
                   </span>
-                  <button class="btn text-[10px]" @click="copyToClipboard(JSON.stringify(msg, null, 2))">Copy JSON</button>
+                  <button class="btn text-[10px] sm:text-[11px]" @click="copyToClipboard(JSON.stringify(msg, null, 2))">Copy JSON</button>
                 </div>
                 <div class="text-xs text-slate-300 space-y-1">
                   <div v-if="msg.from_address">
                     <span class="text-slate-400">From:</span>
-                    <code class="ml-1 text-[10px]">{{ msg.from_address }}</code>
+                    <code class="ml-1 text-[10px] break-words sm:break-all">{{ msg.from_address }}</code>
                   </div>
                   <div v-if="msg.to_address">
                     <span class="text-slate-400">To:</span>
-                    <code class="ml-1 text-[10px]">{{ msg.to_address }}</code>
+                    <code class="ml-1 text-[10px] break-words sm:break-all">{{ msg.to_address }}</code>
                   </div>
                   <div v-if="msg.amount">
                     <span class="text-slate-400">Amount:</span>
@@ -203,11 +203,11 @@ onMounted(async () => {
                   </div>
                   <div v-if="msg.validator_address">
                     <span class="text-slate-400">Validator:</span>
-                    <code class="ml-1 text-[10px]">{{ msg.validator_address }}</code>
+                    <code class="ml-1 text-[10px] break-words sm:break-all">{{ msg.validator_address }}</code>
                   </div>
                   <div v-if="msg.delegator_address">
                     <span class="text-slate-400">Delegator:</span>
-                    <code class="ml-1 text-[10px]">{{ msg.delegator_address }}</code>
+                    <code class="ml-1 text-[10px] break-words sm:break-all">{{ msg.delegator_address }}</code>
                   </div>
                 </div>
               </div>
@@ -227,7 +227,7 @@ onMounted(async () => {
 
         <!-- Raw JSON full view -->
         <div v-else-if="tx && viewMode==='raw'" class="text-xs">
-          <pre class="p-2 rounded bg-slate-900/80 overflow-x-auto max-h-[700px]">{{ JSON.stringify(tx, null, 2) }}</pre>
+          <pre class="p-2 rounded bg-slate-900/80 overflow-auto max-h-[60vh]">{{ JSON.stringify(tx, null, 2) }}</pre>
         </div>
       </div>
 
@@ -238,7 +238,7 @@ onMounted(async () => {
         </h2>
         <div v-if="tx" class="text-xs">
           <pre
-            class="p-2 rounded bg-slate-900/80 overflow-x-auto max-h-[600px]"
+            class="p-2 rounded bg-slate-900/80 overflow-auto max-h-[50vh]"
           >{{ JSON.stringify(tx, null, 2) }}</pre>
         </div>
         <div v-else-if="loading" class="text-xs text-slate-400">

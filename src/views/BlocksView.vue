@@ -4,6 +4,11 @@ import { useBlocks } from "@/composables/useBlocks";
 import { useAutoRefresh } from "@/composables/useAutoRefresh";
 import { useRouter } from "vue-router";
 import { useNetwork } from "@/composables/useNetwork";
+import dayjs from "dayjs";
+
+const copy = async (text: string) => {
+  try { await navigator.clipboard?.writeText?.(text); } catch {}
+};
 
 const router = useRouter();
 const { blocks, loading, error, fetchLatest } = useBlocks();
@@ -88,19 +93,25 @@ const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || "/api";
     <div v-if="blocks.length" class="card">
       <div class="overflow-x-auto">
         <table class="table">
+          <colgroup>
+            <col style="width: 120px" />
+            <col />
+            <col style="width: 90px" />
+            <col style="width: 220px" />
+          </colgroup>
           <thead>
             <tr class="text-xs text-slate-300">
-              <th style="width: 100px">Height</th>
+              <th>Height</th>
               <th>Block Hash</th>
-              <th style="width: 100px">Transactions</th>
-              <th style="width: 200px">Timestamp</th>
+              <th>Transactions</th>
+              <th>Timestamp</th>
             </tr>
           </thead>
           <tbody>
             <tr
               v-for="b in blocks"
               :key="b.height"
-              class="cursor-pointer hover:bg-cyan-500/10 transition-colors animate-fade-in"
+              class="cursor-pointer hover:bg-white/5 transition-colors animate-fade-in"
               @click="
                 router.push({
                   name: 'block-detail',
@@ -108,13 +119,16 @@ const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || "/api";
                 })
               "
             >
-              <td class="font-mono text-sm font-semibold text-emerald-300">
+              <td class="font-mono text-[12px] font-semibold text-emerald-300 py-2">
                 #{{ b.height }}
               </td>
-              <td class="font-mono text-xs text-slate-300">
-                {{ b.hash ? b.hash.slice(0, 32) + "..." : "-" }}
+              <td class="font-mono text-[12px] text-slate-300 py-2">
+                <div class="flex items-center gap-2 whitespace-nowrap">
+                  <span class="truncate max-w-[240px] inline-block align-middle">{{ b.hash ? b.hash.slice(0, 32) : "-" }}</span>
+                  <button v-if="b.hash" class="btn text-[10px]" @click.stop="copy(b.hash)">Copy</button>
+                </div>
               </td>
-              <td class="text-center">
+              <td class="text-center py-2">
                 <span
                   class="badge"
                   :class="b.txs > 0 ? 'border-cyan-400/60 text-cyan-200' : ''"
@@ -122,8 +136,9 @@ const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || "/api";
                   {{ b.txs }}
                 </span>
               </td>
-              <td class="text-xs text-slate-300">
-                {{ b.time || "-" }}
+              <td class="text-xs text-slate-300 py-2 whitespace-nowrap">
+                <span v-if="b.time">{{ dayjs(b.time).format('YYYY-MM-DD HH:mm:ss') }}</span>
+                <span v-else>-</span>
               </td>
             </tr>
           </tbody>

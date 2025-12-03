@@ -12,10 +12,12 @@ onMounted(() => {
 
 const formatTokens = (tokens: string) => {
   const val = parseInt(tokens, 10);
-  if (val >= 1_000_000_000) return `${(val / 1_000_000_000).toFixed(2)}B`;
-  if (val >= 1_000_000) return `${(val / 1_000_000).toFixed(2)}M`;
-  if (val >= 1_000) return `${(val / 1_000).toFixed(2)}K`;
-  return val.toString();
+  const retro = val / 1_000_000;
+  return `${retro.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })} RETRO`;
+};
+
+const copy = async (text: string) => {
+  try { await navigator.clipboard?.writeText?.(text); } catch {}
 };
 
 const getStatusBadge = (status: string, jailed: boolean) => {
@@ -57,6 +59,14 @@ const getStatusBadge = (status: string, jailed: boolean) => {
 
       <div class="overflow-x-auto">
         <table class="table">
+          <colgroup>
+            <col style="width: 60px" />
+            <col />
+            <col style="width: 120px" />
+            <col style="width: 180px" />
+            <col style="width: 140px" />
+            <col style="width: 100px" />
+          </colgroup>
           <thead>
             <tr class="text-slate-300 text-xs">
               <th class="text-center">#</th>
@@ -71,22 +81,25 @@ const getStatusBadge = (status: string, jailed: boolean) => {
             <tr
               v-for="(v, idx) in validators"
               :key="v.operatorAddress"
-              class="cursor-pointer"
+              class="cursor-pointer hover:bg-white/5 transition-colors"
             >
-              <td class="text-center text-slate-400 font-mono text-xs">
+              <td class="text-center text-slate-400 font-mono text-xs py-2">
                 {{ idx + 1 }}
               </td>
-              <td>
+              <td class="py-2">
                 <div class="flex flex-col">
                   <span class="font-medium text-slate-100 text-sm">
                     {{ v.description?.moniker || "Validator" }}
                   </span>
-                  <code class="text-[10px] text-slate-500">
-                    {{ v.operatorAddress.slice(0, 28) }}...
-                  </code>
+                  <div class="flex items-center gap-2 whitespace-nowrap">
+                    <code class="text-[10px] text-slate-500 truncate max-w-[200px] inline-block">
+                      {{ v.operatorAddress }}
+                    </code>
+                    <button class="btn text-[10px]" @click.stop="copy(v.operatorAddress)">Copy</button>
+                  </div>
                 </div>
               </td>
-              <td>
+              <td class="py-2">
                 <span
                   class="badge text-xs"
                   :class="getStatusBadge(v.status, v.jailed).class"
@@ -94,10 +107,10 @@ const getStatusBadge = (status: string, jailed: boolean) => {
                   {{ getStatusBadge(v.status, v.jailed).text }}
                 </span>
               </td>
-              <td class="text-right font-mono text-sm text-slate-200">
+              <td class="text-right font-mono text-sm text-slate-200 py-2">
                 {{ formatTokens(v.tokens) }}
               </td>
-              <td class="text-right text-sm">
+              <td class="text-right py-2">
                 <div class="flex items-center justify-end gap-2">
                   <div class="w-16 h-2 bg-slate-800 rounded-full overflow-hidden">
                     <div
@@ -110,7 +123,7 @@ const getStatusBadge = (status: string, jailed: boolean) => {
                   </span>
                 </div>
               </td>
-              <td class="text-right text-sm text-slate-300">
+              <td class="text-right text-sm text-slate-300 py-2">
                 {{ (parseFloat(v.commission.commission_rates.rate) * 100).toFixed(1) }}%
               </td>
             </tr>
