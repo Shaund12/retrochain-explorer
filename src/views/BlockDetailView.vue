@@ -4,6 +4,7 @@ import { useRoute, useRouter } from "vue-router";
 import { useBlocks } from "@/composables/useBlocks";
 import { useToast } from "@/composables/useToast";
 import { useApi } from "@/composables/useApi";
+import dayjs from "dayjs";
 
 const route = useRoute();
 const router = useRouter();
@@ -26,10 +27,29 @@ const blockHash = computed(() => commit.value?.hash ?? "—");
 const proposer = computed(() => header.value.proposer_address ?? "—");
 const time = computed(() => header.value.time ?? "—");
 const base64Txs = computed(() => (block.value?.data?.txs as string[]) || []);
+const prettyTime = computed(() => (time.value && time.value !== "—" ? dayjs(time.value).format("YYYY-MM-DD HH:mm:ss") : "—"));
+const relativeTime = computed(() => (time.value && time.value !== "—" ? dayjs(time.value).fromNow() : ""));
 
 const copy = async (text: string) => {
   try { await navigator.clipboard?.writeText?.(text); } catch {}
 };
+
+// Compute fallback tx hashes from base64 (when tx_responses not available)
+const fallbackTxs = ref<{ hash: string; raw: string }[]>([]);
+async function computeFallbackHashes(list: string[]) {
+  const result: { hash: string; raw: string }[] = [];
+  for (const raw of list) {
+    try {
+      const bytes = Uint8Array.from(atob(raw), c => c.charCodeAt(0));
+      const digest = await crypto.subtle.digest("SHA-256", bytes);
+      const hex = Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+      result.push({ hash: hex, raw });
+    } catch {
+      result.push({ hash: "", raw });
+    }
+  }
+  fallbackTxs.value = result;
+}
 
 // Navigation helpers
 const goToHeight = (h: number) => {
@@ -63,6 +83,12 @@ const loadBlock = async () => {
     } catch (e) {
       blockTxs.value = [];
     }
+
+    if (!blockTxs.value.length && (block.value?.data?.txs?.length || 0) > 0) {
+      await computeFallbackHashes(block.value.data.txs as string[]);
+    } else {
+      fallbackTxs.value = [];
+    }
   } catch (e: any) {
     const msg = e?.message ?? String(e);
     error.value = msg;
@@ -94,7 +120,7 @@ watch(
             Block #{{ height }}
           </h1>
           <p class="text-xs text-slate-400">
-            RetroChain block details (REST).
+            RetroChain block details
           </p>
         </div>
 
@@ -133,19 +159,28 @@ watch(
             <div class="text-[11px] uppercase tracking-[0.18em] text-slate-400">
               Block hash
             </div>
-            <code class="text-[11px] break-all">{{ blockHash }}</code>
+            <div class="flex items-center gap-2">
+              <code class="text-[11px] break-all">{{ blockHash }}</code>
+              <button class="btn text-[10px]" @click="copy(blockHash)">Copy</button>
+            </div>
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-[0.18em] text-slate-400">
               Time
             </div>
-            <div>{{ time }}</div>
+            <div class="flex items-center gap-2">
+              <span>{{ prettyTime }}</span>
+              <span class="text-slate-400">{{ relativeTime }}</span>
+            </div>
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-[0.18em] text-slate-400">
               Proposer
             </div>
-            <code class="text-[11px] break-all">{{ proposer }}</code>
+            <div class="flex items-center gap-2">
+              <code class="text-[11px] break-all">{{ proposer }}</code>
+              <button class="btn text-[10px]" @click="copy(proposer)">Copy</button>
+            </div>
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-[0.18em] text-slate-400">
@@ -219,14 +254,17 @@ watch(
             </div>
 
             <!-- Fallback: show base64 when tx_responses unavailable -->
-            <div v-if="!blockTxs.length" v-for="(raw, i) in base64Txs" :key="i" class="p-2 rounded bg-slate-900/60 border border-slate-700">
+            <div v-if="!blockTxs.length" v-for="(f, i) in fallbackTxs" :key="i" class="p-2 rounded bg-slate-900/60 border border-slate-700">
               <div class="flex items-center justify-between gap-2">
                 <div class="text-xs text-slate-300">Tx {{ i + 1 }} (base64)</div>
-                <button class="btn text-[10px]" @click="copy(raw)">Copy</button>
+                <div class="flex items-center gap-2">
+                  <router-link v-if="f.hash" class="btn text-[10px]" :to="{ name: 'tx-detail', params: { hash: f.hash } }">Details</router-link>
+                  <button class="btn text-[10px]" @click="copy(f.raw)">Copy</button>
+                </div>
               </div>
               <details class="mt-1 text-[11px] text-slate-300">
                 <summary class="cursor-pointer text-cyan-300">View base64</summary>
-                <pre class="mt-1 p-2 bg-slate-900/80 overflow-x-auto">{{ raw }}</pre>
+                <pre class="mt-1 p-2 bg-slate-900/80 overflow-x-auto">{{ f.raw }}</pre>
               </details>
             </div>
           </div>
