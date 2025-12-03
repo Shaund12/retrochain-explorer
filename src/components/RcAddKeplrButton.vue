@@ -10,8 +10,8 @@ const suggest = async () => {
   }
   const isMainnet = current.value === "mainnet";
   const pfx = isMainnet
-    ? (import.meta.env.VITE_BECH32_PREFIX_MAINNET || "cosmos")
-    : (import.meta.env.VITE_BECH32_PREFIX_TESTNET || "cosmos");
+    ? "cosmos"
+    : "cosmos";
   const cfg = isMainnet
     ? {
         chainId: "retrochain-1",
@@ -35,7 +35,7 @@ const suggest = async () => {
           coinDecimals: 6,
           gasPriceStep: { low: 0.001, average: 0.0025, high: 0.004 }
         }],
-        features: ["ibc-transfer", "cosmwasm"]
+        features: ["ibc-transfer"]
       }
     : {
         chainId: "retrochain-devnet-1",

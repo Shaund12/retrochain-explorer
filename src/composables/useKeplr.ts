@@ -58,9 +58,9 @@ function buildChainInfo() {
   const currencies = getCurrencies();
   const pfx = (() => {
     if (net.value === "mainnet") {
-      return (import.meta as any).env?.VITE_BECH32_PREFIX_MAINNET || "retro";
+      return (import.meta as any).env?.VITE_BECH32_PREFIX_MAINNET || "cosmos";
     }
-    return (import.meta as any).env?.VITE_BECH32_PREFIX_TESTNET || "retro";
+    return (import.meta as any).env?.VITE_BECH32_PREFIX_TESTNET || "cosmos";
   })();
   return {
     chainId: getChainId(),
