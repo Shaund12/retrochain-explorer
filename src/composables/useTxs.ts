@@ -25,9 +25,18 @@ export function useTxs() {
     txs.value = []; // Clear previous data
     
     try {
-      const res = await api.get(
-        `/cosmos/tx/v1beta1/txs?order_by=ORDER_BY_DESC&pagination.limit=${limit}`
-      );
+      // Try fast aggregator first
+      const fast = await api.get(`/recent-txs`, { params: { limit } });
+      if (Array.isArray(fast.data?.txs) && fast.data.txs.length) {
+        txs.value = fast.data.txs.map((t: any) => ({
+          hash: t.hash,
+          height: t.height,
+          timestamp: t.timestamp
+        }));
+        return;
+      }
+
+      const res = await api.get(`/cosmos/tx/v1beta1/txs?order_by=ORDER_BY_DESC&pagination.limit=${limit}`);
       
       console.log("Transactions API Response:", res.data);
       

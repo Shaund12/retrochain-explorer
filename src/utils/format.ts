@@ -1,0 +1,56 @@
+type DenomMeta = { display: string; decimals: number };
+
+const DENOMS: Record<string, DenomMeta> = {
+  uretro: { display: "RETRO", decimals: 6 },
+  udretro: { display: "DRETRO", decimals: 6 },
+  uatom: { display: "ATOM", decimals: 6 }
+};
+
+function splitAmount(amount: string, decimals: number) {
+  if (!/^[0-9]+$/.test(amount)) amount = String(parseInt(amount || "0", 10) || 0);
+  const neg = amount.startsWith("-");
+  if (neg) amount = amount.slice(1);
+  const pad = amount.padStart(decimals + 1, "0");
+  const i = pad.length - decimals;
+  const intPart = pad.slice(0, i);
+  const fracPart = decimals > 0 ? pad.slice(i) : "";
+  return { intPart, fracPart, neg };
+}
+
+function addThousands(intPart: string) {
+  return intPart.replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+}
+
+export function formatNumberSmart(value: string, decimals: number, opts?: { minDecimals?: number; maxDecimals?: number; showZerosForIntegers?: boolean }) {
+  const { intPart, fracPart, neg } = splitAmount(value, decimals);
+  const minD = opts?.minDecimals ?? 2;
+  const maxD = opts?.maxDecimals ?? decimals;
+  const showZerosForIntegers = opts?.showZerosForIntegers ?? true;
+
+  const intFmt = addThousands(intPart);
+  if (!fracPart || /^0+$/.test(fracPart)) {
+    if (!decimals) return (neg ? "-" : "") + intFmt;
+    if (showZerosForIntegers) {
+      return (neg ? "-" : "") + intFmt + "." + "0".repeat(decimals);
+    }
+    return (neg ? "-" : "") + intFmt;
+  }
+
+  // Trim trailing zeros, keep between minD and maxD
+  let trimmed = fracPart.replace(/0+$/, "");
+  if (trimmed.length < minD) trimmed = fracPart.slice(0, minD);
+  if (trimmed.length > maxD) trimmed = trimmed.slice(0, maxD);
+  return (neg ? "-" : "") + intFmt + "." + trimmed;
+}
+
+export function formatAmount(amount: string | number, denom: string, opts?: { minDecimals?: number; maxDecimals?: number; showZerosForIntegers?: boolean }) {
+  const meta = DENOMS[denom] || { display: denom.toUpperCase(), decimals: 6 };
+  const amt = String(amount ?? "0");
+  const out = formatNumberSmart(amt, meta.decimals, opts);
+  return `${out} ${meta.display}`;
+}
+
+export function formatCoins(coins: { amount: string; denom: string }[] | undefined | null, opts?: { minDecimals?: number; maxDecimals?: number; showZerosForIntegers?: boolean }) {
+  if (!Array.isArray(coins) || coins.length === 0) return "-";
+  return coins.map(c => formatAmount(c.amount, c.denom, opts)).join(", ");
+}

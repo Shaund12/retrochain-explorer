@@ -8,6 +8,7 @@ import { useKeplr } from "@/composables/useKeplr";
 import { useNetwork } from "@/composables/useNetwork";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import { useFaucet } from "@/composables/useFaucet";
+import { formatAmount as fmtAmount } from "@/utils/format";
 
 const route = useRoute();
 const router = useRouter();
@@ -22,10 +23,9 @@ const addressInput = ref<string>((route.params.address as string) || "");
 const loadingTxs = ref(false);
 
 const totalBalance = computed(() => {
-  const retroBalance = balances.value.find(b => b.denom === "uretro");
-  if (!retroBalance) return "0 RETRO";
-  const amount = parseInt(retroBalance.amount, 10) / 1_000_000;
-  return `${amount.toFixed(6)} RETRO`;
+  const coin = balances.value.find(b => b.denom === "uretro") || balances.value[0];
+  if (!coin) return "0.000000 RETRO";
+  return fmtAmount(coin.amount, coin.denom, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
 });
 
 const submit = async () => {
@@ -53,12 +53,7 @@ const loadAccount = async () => {
   }
 };
 
-const formatAmount = (amount: string, denom: string) => {
-  if (denom === "uretro") {
-    return `${(parseInt(amount, 10) / 1_000_000).toFixed(6)} RETRO`;
-  }
-  return `${amount} ${denom}`;
-};
+const formatAmount = (amount: string, denom: string) => fmtAmount(amount, denom, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
 
 // Expose faucet URL for template without inline import.meta in interpolation
 const FAUCET_DISPLAY = import.meta.env.VITE_FAUCET_URL || 'faucet';

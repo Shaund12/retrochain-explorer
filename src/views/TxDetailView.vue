@@ -3,6 +3,7 @@ import { onMounted, ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import { useTxs } from "@/composables/useTxs";
 import dayjs from "dayjs";
+import { formatCoins } from "@/utils/format";
 
 const { getTx } = useTxs();
 const route = useRoute();
@@ -22,20 +23,13 @@ const getMessageType = (msg: any) => {
   return type.split(".").pop() || type;
 };
 
-const formatAmount = (amount: any) => {
-  if (!amount || !Array.isArray(amount)) return "-";
-  return amount.map((a: any) => `${a.amount} ${a.denom}`).join(", ");
-};
+const formatAmount = (amount: any) => formatCoins(amount, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
 
 const isSuccess = computed(() => {
   return tx.value?.tx_response?.code === 0;
 });
 
-const feeString = computed(() => {
-  const fees = tx.value?.tx?.auth_info?.fee?.amount || [];
-  if (!Array.isArray(fees) || fees.length === 0) return "-";
-  return fees.map((f: any) => `${f.amount} ${f.denom}`).join(", ");
-});
+const feeString = computed(() => formatCoins(tx.value?.tx?.auth_info?.fee?.amount || [], { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true }));
 
 const memo = computed(() => tx.value?.tx?.body?.memo || "");
 
