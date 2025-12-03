@@ -1,58 +1,74 @@
 <script setup lang="ts">
-import { ref, computed } from "vue";
+import { ref, computed, onMounted } from "vue";
 import { useNetwork } from "@/composables/useNetwork";
 import { useKeplr } from "@/composables/useKeplr";
 
 const { current: network } = useNetwork();
 const { address, connect, isAvailable } = useKeplr();
 
-const selectedMethod = ref<'dex' | 'cex' | 'bridge' | 'fiat'>('dex');
+const selectedMethod = ref<'swap' | 'pool' | 'bridge' | 'faucet'>('swap');
+const swapAmount = ref("");
+const swapFromToken = ref("USDC");
+const poolAmount1 = ref("");
+const poolAmount2 = ref("");
+const selectedPool = ref("RETRO/USDC");
 
-const dexOptions = [
+// Real Osmosis pool IDs (these would be actual pool IDs once RETRO is listed)
+const liquidityPools = [
   {
-    name: "Osmosis",
-    icon: "??",
-    url: "https://app.osmosis.zone",
-    description: "Swap IBC assets for RETRO on Osmosis DEX"
+    id: "TBD",
+    name: "RETRO/USDC",
+    tvl: "$0",
+    apr: "TBD",
+    myLiquidity: "$0",
+    status: "pending"
   },
   {
-    name: "Crescent",
-    icon: "??",
-    url: "https://app.crescent.network",
-    description: "Trade RETRO on Crescent Network"
+    id: "TBD", 
+    name: "RETRO/ATOM",
+    tvl: "$0",
+    apr: "TBD",
+    myLiquidity: "$0",
+    status: "pending"
   }
 ];
 
-const cexOptions = [
+const swapOptions = [
   {
-    name: "Coming Soon",
+    name: "Squid Router",
     icon: "??",
-    url: "#",
-    description: "RETRO will be listed on CEXes soon"
+    description: "Cross-chain swap from any chain to RETRO",
+    url: "https://app.squidrouter.com",
+    widget: true
+  },
+  {
+    name: "Skip Protocol",
+    icon: "?",
+    description: "Fast IBC swaps across Cosmos chains",
+    url: "https://go.skip.build",
+    widget: true
+  },
+  {
+    name: "Osmosis Frontier",
+    icon: "??",
+    description: "Create or join RETRO liquidity pools",
+    url: "https://frontier.osmosis.zone",
+    widget: false
   }
 ];
 
 const bridgeOptions = [
   {
-    name: "IBC Transfer",
+    name: "Axelar Bridge",
     icon: "??",
-    description: "Transfer tokens via IBC from other Cosmos chains",
-    action: "Open IBC"
-  }
-];
-
-const fiatOptions = [
-  {
-    name: "Transak",
-    icon: "??",
-    url: "https://global.transak.com",
-    description: "Buy crypto with credit card or bank transfer"
+    description: "Bridge assets from EVM chains to Cosmos",
+    url: "https://satellite.money"
   },
   {
-    name: "Kado",
+    name: "IBC Transfer",
     icon: "??",
-    url: "https://app.kado.money",
-    description: "On/off ramp for 40+ countries"
+    description: "Native Cosmos IBC transfers",
+    instructions: true
   }
 ];
 
@@ -68,6 +84,87 @@ const copyAddress = async () => {
     await navigator.clipboard?.writeText(address.value);
   }
 };
+
+// Squid Router integration
+const initSquidWidget = () => {
+  if (typeof window !== 'undefined' && (window as any).squid) {
+    (window as any).squid.init({
+      integratorId: 'retrochain-explorer',
+      companyName: 'RetroChain',
+      style: {
+        neutralContent: '#959BB2',
+        baseContent: '#E8ECF2',
+        base100: '#0f1429',
+        base200: '#0a0e27',
+        base300: '#06091a',
+        error: '#ED6A5E',
+        warning: '#FFB155',
+        success: '#2EAEB0',
+        primary: '#6366f1',
+        secondary: '#8b5cf6',
+        secondaryContent: '#F7F7F8',
+        neutral: '#1a1f37',
+        roundedBtn: '26px',
+        roundedCornerBtn: '999px',
+        roundedBox: '1rem',
+        roundedDropDown: '20rem'
+      },
+      slippage: 1.5,
+      infiniteApproval: false,
+      enableExpress: true,
+      apiUrl: 'https://apiplus.squidrouter.com',
+      mainLogoUrl: '/RCICOIMAGE.png',
+      titles: {
+        swap: 'Buy RETRO',
+        settings: 'Settings',
+        wallets: 'Wallets',
+        tokens: 'Select Token',
+        chains: 'Select Chain',
+        history: 'History',
+        transaction: 'Transaction',
+        allTokens: 'Select Token',
+        destination: 'Destination address'
+      }
+    });
+  }
+};
+
+onMounted(() => {
+  // Load Squid widget script
+  const script = document.createElement('script');
+  script.src = 'https://cdn.squidrouter.com/widget/v2/squid.min.js';
+  script.async = true;
+  script.onload = initSquidWidget;
+  document.head.appendChild(script);
+});
+
+const openSkipWidget = () => {
+  const skipUrl = `https://go.skip.build/?src_chain=1&dest_chain=retrochain-1&dest_asset=uretro${address.value ? `&dest_address=${address.value}` : ''}`;
+  window.open(skipUrl, '_blank');
+};
+
+const openOsmosisFrontier = () => {
+  // Osmosis Frontier URL for creating a pool
+  const poolUrl = 'https://frontier.osmosis.zone/pool/create';
+  window.open(poolUrl, '_blank');
+};
+
+const handleAddLiquidity = () => {
+  if (!address.value) {
+    alert('Please connect your wallet first');
+    return;
+  }
+  // This would open Osmosis pool interface
+  const poolUrl = `https://app.osmosis.zone/pool/${liquidityPools.find(p => p.name === selectedPool.value)?.id}`;
+  window.open(poolUrl, '_blank');
+};
+
+const estimateSwap = computed(() => {
+  if (!swapAmount.value) return '0';
+  // Mock calculation - in reality this would call Osmosis or Skip API
+  const rate = 0.85; // Example: 1 USDC = 0.85 RETRO
+  return (parseFloat(swapAmount.value) * rate).toFixed(6);
+});
 </script>
 
 <template>
@@ -79,7 +176,7 @@ const copyAddress = async () => {
           Buy {{ tokenInfo.symbol }}
         </h1>
         <p class="text-sm text-slate-300 mb-4">
-          Multiple ways to acquire RetroChain tokens on {{ network === 'mainnet' ? 'mainnet' : 'testnet' }}
+          Swap any token cross-chain or add liquidity to earn fees
         </p>
 
         <!-- Connect Wallet -->
@@ -88,7 +185,7 @@ const copyAddress = async () => {
             <div class="text-3xl">??</div>
             <div class="flex-1">
               <div class="text-sm font-semibold text-slate-100 mb-1">Connect Your Wallet</div>
-              <div class="text-xs text-slate-400">Connect Keplr to receive tokens and start staking</div>
+              <div class="text-xs text-slate-400">Connect Keplr to swap tokens and provide liquidity</div>
             </div>
             <button v-if="isAvailable" class="btn btn-primary text-xs" @click="connect">
               Connect Keplr
@@ -119,22 +216,22 @@ const copyAddress = async () => {
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
       <button
         class="p-4 rounded-lg border transition-all"
-        :class="selectedMethod === 'dex' ? 'border-indigo-400/70 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600'"
-        @click="selectedMethod = 'dex'"
+        :class="selectedMethod === 'swap' ? 'border-indigo-400/70 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600'"
+        @click="selectedMethod = 'swap'"
       >
         <div class="text-2xl mb-2">??</div>
-        <div class="text-sm font-semibold text-slate-100">DEX</div>
-        <div class="text-xs text-slate-400">Decentralized</div>
+        <div class="text-sm font-semibold text-slate-100">Swap</div>
+        <div class="text-xs text-slate-400">Cross-chain</div>
       </button>
 
       <button
         class="p-4 rounded-lg border transition-all"
-        :class="selectedMethod === 'cex' ? 'border-indigo-400/70 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600'"
-        @click="selectedMethod = 'cex'"
+        :class="selectedMethod === 'pool' ? 'border-indigo-400/70 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600'"
+        @click="selectedMethod = 'pool'"
       >
         <div class="text-2xl mb-2">??</div>
-        <div class="text-sm font-semibold text-slate-100">CEX</div>
-        <div class="text-xs text-slate-400">Exchanges</div>
+        <div class="text-sm font-semibold text-slate-100">Liquidity</div>
+        <div class="text-xs text-slate-400">Earn Fees</div>
       </button>
 
       <button
@@ -144,92 +241,218 @@ const copyAddress = async () => {
       >
         <div class="text-2xl mb-2">??</div>
         <div class="text-sm font-semibold text-slate-100">Bridge</div>
-        <div class="text-xs text-slate-400">IBC Transfer</div>
+        <div class="text-xs text-slate-400">Transfer</div>
       </button>
 
       <button
+        v-if="network !== 'mainnet'"
         class="p-4 rounded-lg border transition-all"
-        :class="selectedMethod === 'fiat' ? 'border-indigo-400/70 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600'"
-        @click="selectedMethod = 'fiat'"
+        :class="selectedMethod === 'faucet' ? 'border-indigo-400/70 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600'"
+        @click="selectedMethod = 'faucet'"
       >
         <div class="text-2xl mb-2">??</div>
-        <div class="text-sm font-semibold text-slate-100">Fiat</div>
-        <div class="text-xs text-slate-400">Card/Bank</div>
+        <div class="text-sm font-semibold text-slate-100">Faucet</div>
+        <div class="text-xs text-slate-400">Test Tokens</div>
       </button>
     </div>
 
-    <!-- DEX Options -->
-    <div v-if="selectedMethod === 'dex'" class="space-y-3">
-      <div
-        v-for="dex in dexOptions"
-        :key="dex.name"
-        class="card hover:border-indigo-500/50 transition-all cursor-pointer"
-      >
-        <a :href="dex.url" target="_blank" class="flex items-center gap-4">
-          <div class="text-4xl">{{ dex.icon }}</div>
+    <!-- Swap Tab -->
+    <div v-if="selectedMethod === 'swap'" class="space-y-3">
+      <!-- Squid Router Widget Embed -->
+      <div class="card">
+        <h2 class="text-sm font-semibold text-slate-100 mb-3">?? Cross-Chain Swap (Squid Router)</h2>
+        <p class="text-xs text-slate-400 mb-4">
+          Swap from <strong>any token on any chain</strong> to RETRO. Supports Ethereum, Polygon, Arbitrum, Optimism, BSC, Avalanche, and all Cosmos chains.
+        </p>
+        
+        <!-- Squid Widget Container -->
+        <div id="squid-widget" class="min-h-[600px] rounded-lg overflow-hidden"></div>
+        
+        <div class="mt-3 p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+          <div class="text-xs text-indigo-300 space-y-1">
+            <div>? Automatic routing across 40+ chains</div>
+            <div>? Best rates via aggregation</div>
+            <div>? Gasless swaps on some chains</div>
+            <div>? No registration required</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Skip Protocol -->
+      <div class="card hover:border-indigo-500/50 transition-all cursor-pointer" @click="openSkipWidget">
+        <div class="flex items-center gap-4">
+          <div class="text-4xl">?</div>
           <div class="flex-1">
-            <div class="text-base font-semibold text-slate-100 mb-1">{{ dex.name }}</div>
-            <div class="text-sm text-slate-400">{{ dex.description }}</div>
+            <div class="text-base font-semibold text-slate-100 mb-1">Skip Protocol</div>
+            <div class="text-sm text-slate-400 mb-2">Fast IBC swaps across Cosmos chains</div>
+            <div class="text-xs text-slate-500">
+              Swap ATOM, OSMO, USDC, or any IBC token to RETRO
+            </div>
           </div>
           <div class="text-slate-400">?</div>
-        </a>
+        </div>
       </div>
-    </div>
 
-    <!-- CEX Options -->
-    <div v-if="selectedMethod === 'cex'" class="space-y-3">
-      <div
-        v-for="cex in cexOptions"
-        :key="cex.name"
-        class="card"
-      >
+      <!-- Osmosis Frontier -->
+      <div class="card hover:border-indigo-500/50 transition-all cursor-pointer" @click="openOsmosisFrontier">
         <div class="flex items-center gap-4">
-          <div class="text-4xl">{{ cex.icon }}</div>
+          <div class="text-4xl">??</div>
           <div class="flex-1">
-            <div class="text-base font-semibold text-slate-100 mb-1">{{ cex.name }}</div>
-            <div class="text-sm text-slate-400">{{ cex.description }}</div>
+            <div class="text-base font-semibold text-slate-100 mb-1">Osmosis Frontier</div>
+            <div class="text-sm text-slate-400 mb-2">Create or join RETRO liquidity pools</div>
+            <div class="text-xs text-slate-500">
+              Bootstrap liquidity for RETRO/USDC, RETRO/ATOM pools
+            </div>
           </div>
+          <div class="text-slate-400">?</div>
         </div>
       </div>
     </div>
 
-    <!-- Bridge Options -->
+    <!-- Liquidity Pool Tab -->
+    <div v-if="selectedMethod === 'pool'" class="space-y-3">
+      <div class="card">
+        <h2 class="text-sm font-semibold text-slate-100 mb-3">?? Liquidity Pools</h2>
+        <p class="text-xs text-slate-400 mb-4">
+          Provide liquidity to earn trading fees and liquidity mining rewards
+        </p>
+
+        <!-- Pool Selection -->
+        <div class="space-y-2 mb-4">
+          <div
+            v-for="pool in liquidityPools"
+            :key="pool.id"
+            class="p-4 rounded-lg border transition-all cursor-pointer"
+            :class="selectedPool === pool.name ? 'border-indigo-400/70 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600'"
+            @click="selectedPool = pool.name"
+          >
+            <div class="flex items-center justify-between mb-2">
+              <div class="text-sm font-semibold text-slate-100">{{ pool.name }}</div>
+              <span class="badge text-xs" :class="pool.status === 'active' ? 'border-emerald-400/60 text-emerald-200' : 'border-amber-400/60 text-amber-200'">
+                {{ pool.status === 'active' ? 'Active' : 'Pending Creation' }}
+              </span>
+            </div>
+            <div class="grid grid-cols-3 gap-3 text-xs">
+              <div>
+                <div class="text-slate-500">TVL</div>
+                <div class="text-slate-300 font-mono">{{ pool.tvl }}</div>
+              </div>
+              <div>
+                <div class="text-slate-500">APR</div>
+                <div class="text-emerald-300 font-mono">{{ pool.apr }}</div>
+              </div>
+              <div>
+                <div class="text-slate-500">My Liquidity</div>
+                <div class="text-slate-300 font-mono">{{ pool.myLiquidity }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <!-- Add Liquidity Form -->
+        <div v-if="address" class="space-y-3 p-4 rounded-lg bg-slate-900/60 border border-slate-700">
+          <h3 class="text-xs font-semibold text-slate-100">Add Liquidity to {{ selectedPool }}</h3>
+          
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">{{ selectedPool.split('/')[0] }} Amount</label>
+            <input 
+              v-model="poolAmount1"
+              type="number"
+              step="0.000001"
+              placeholder="0.000000"
+              class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+            />
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">{{ selectedPool.split('/')[1] }} Amount</label>
+            <input 
+              v-model="poolAmount2"
+              type="number"
+              step="0.000001"
+              placeholder="0.000000"
+              class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+            />
+          </div>
+
+          <button 
+            class="btn btn-primary w-full"
+            @click="handleAddLiquidity"
+            :disabled="!poolAmount1 || !poolAmount2"
+          >
+            Add Liquidity on Osmosis
+          </button>
+        </div>
+
+        <!-- Create Pool CTA -->
+        <div class="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 mt-3">
+          <div class="text-sm text-slate-100 mb-2">?? Bootstrap RETRO Liquidity</div>
+          <div class="text-xs text-slate-400 mb-3">
+            Be among the first liquidity providers and earn maximum fees
+          </div>
+          <button class="btn text-xs" @click="openOsmosisFrontier">
+            Create Pool on Osmosis
+          </button>
+        </div>
+      </div>
+    </div>
+
+    <!-- Bridge Tab -->
     <div v-if="selectedMethod === 'bridge'" class="space-y-3">
       <div
         v-for="bridge in bridgeOptions"
         :key="bridge.name"
         class="card"
+        :class="!bridge.instructions ? 'hover:border-indigo-500/50 transition-all cursor-pointer' : ''"
+        @click="!bridge.instructions && window.open(bridge.url, '_blank')"
       >
         <div class="flex items-center gap-4">
           <div class="text-4xl">{{ bridge.icon }}</div>
           <div class="flex-1">
             <div class="text-base font-semibold text-slate-100 mb-1">{{ bridge.name }}</div>
             <div class="text-sm text-slate-400 mb-3">{{ bridge.description }}</div>
-            <div class="text-xs text-slate-500 space-y-1">
-              <div>1. Send tokens from another Cosmos chain to your {{ tokenInfo.symbol }} address</div>
-              <div>2. Use Keplr's IBC transfer feature</div>
-              <div>3. Tokens will arrive in ~60 seconds</div>
+            
+            <!-- IBC Instructions -->
+            <div v-if="bridge.instructions" class="text-xs text-slate-500 space-y-1">
+              <div>1. Open Keplr wallet extension</div>
+              <div>2. Click "Send" and select "IBC Transfer"</div>
+              <div>3. Choose RetroChain as destination</div>
+              <div>4. Enter amount and confirm</div>
+              <div>5. Tokens arrive in ~60 seconds</div>
             </div>
           </div>
+          <div v-if="!bridge.instructions" class="text-slate-400">?</div>
         </div>
       </div>
     </div>
 
-    <!-- Fiat Options -->
-    <div v-if="selectedMethod === 'fiat'" class="space-y-3">
-      <div
-        v-for="fiat in fiatOptions"
-        :key="fiat.name"
-        class="card hover:border-indigo-500/50 transition-all cursor-pointer"
-      >
-        <a :href="fiat.url" target="_blank" class="flex items-center gap-4">
-          <div class="text-4xl">{{ fiat.icon }}</div>
-          <div class="flex-1">
-            <div class="text-base font-semibold text-slate-100 mb-1">{{ fiat.name }}</div>
-            <div class="text-sm text-slate-400">{{ fiat.description }}</div>
+    <!-- Faucet Tab (Testnet Only) -->
+    <div v-if="selectedMethod === 'faucet' && network !== 'mainnet'" class="card">
+      <h2 class="text-sm font-semibold text-slate-100 mb-3">?? Testnet Faucet</h2>
+      <p class="text-xs text-slate-400 mb-4">
+        Get free {{ tokenInfo.symbol }} tokens for testing purposes
+      </p>
+      
+      <div v-if="!address" class="text-xs text-slate-400 text-center py-8">
+        Connect your wallet to use the faucet
+      </div>
+      
+      <div v-else class="space-y-3">
+        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
+          <div class="text-xs text-slate-400 mb-1">Your Address</div>
+          <div class="flex items-center gap-2">
+            <code class="text-xs text-slate-300 font-mono">{{ address }}</code>
+            <button class="btn text-[10px]" @click="copyAddress">Copy</button>
           </div>
-          <div class="text-slate-400">?</div>
-        </a>
+        </div>
+        
+        <button class="btn btn-primary w-full">
+          Request Testnet Tokens
+        </button>
+        
+        <div class="text-xs text-slate-500 text-center">
+          You can request tokens once every 24 hours
+        </div>
       </div>
     </div>
 
