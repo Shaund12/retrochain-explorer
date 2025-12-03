@@ -83,78 +83,233 @@ onMounted(async () => {
 });
 
 const handleSwap = async () => {
-  if (!address.value) {
-    alert("Please connect your wallet");
-    return;
-  }
+  if (!address.value) return;
+  if (!window.keplr) return;
 
   swapping.value = true;
   try {
-    // Transaction would be signed via Keplr
-    alert(`Swap ${amountIn.value} ${tokenIn.value} for ${amountOut.value} ${tokenOut.value}`);
+    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
     
-    // After successful swap
-    amountIn.value = "";
-    amountOut.value = "";
+    // Get token denoms
+    const tokenInDenom = availableTokens.value.find(t => t.symbol === tokenIn.value)?.denom || tokenDenom.value;
+    const tokenOutDenom = availableTokens.value.find(t => t.symbol === tokenOut.value)?.denom || tokenDenom.value;
+    
+    // Convert to base units (micro tokens)
+    const amountInBase = Math.floor(parseFloat(amountIn.value) * 1_000_000).toString();
+    const minAmountOut = Math.floor(parseFloat(amountOut.value) * (1 - parseFloat(slippage.value) / 100) * 1_000_000).toString();
+
+    const msg = {
+      typeUrl: "/retrochain.dex.v1.MsgSwapExactAmountIn",
+      value: {
+        sender: address.value,
+        routes: [{
+          pool_id: "1", // Would be determined by routing
+          token_out_denom: tokenOutDenom
+        }],
+        token_in: {
+          denom: tokenInDenom,
+          amount: amountInBase
+        },
+        token_out_min_amount: minAmountOut
+      }
+    };
+
+    const fee = {
+      amount: [{ denom: tokenDenom.value, amount: "5000" }],
+      gas: "200000"
+    };
+
+    const result = await window.keplr.signAndBroadcast(
+      chainId,
+      address.value,
+      [msg],
+      fee,
+      "Swap on RetroChain DEX"
+    );
+
+    if (result.code === 0) {
+      console.log("Swap successful!", result);
+      amountIn.value = "";
+      amountOut.value = "";
+      // Refresh pools and balances
+      await fetchPools();
+    } else {
+      throw new Error(`Transaction failed: ${result.rawLog}`);
+    }
   } catch (e: any) {
     console.error("Swap failed:", e);
+    alert(`Swap failed: ${e.message}`);
   } finally {
     swapping.value = false;
   }
 };
 
 const handleAddLiquidity = async () => {
-  if (!address.value) {
-    alert("Please connect your wallet");
-    return;
-  }
+  if (!address.value) return;
+  if (!window.keplr) return;
 
   addingLiquidity.value = true;
   try {
-    alert(`Add ${poolAmountA.value} ${poolTokenA.value} + ${poolAmountB.value} ${poolTokenB.value} to pool`);
+    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
     
-    poolAmountA.value = "";
-    poolAmountB.value = "";
+    const tokenADenom = availableTokens.value.find(t => t.symbol === poolTokenA.value)?.denom || tokenDenom.value;
+    const tokenBDenom = availableTokens.value.find(t => t.symbol === poolTokenB.value)?.denom || tokenDenom.value;
+    
+    const amountABase = Math.floor(parseFloat(poolAmountA.value) * 1_000_000).toString();
+    const amountBBase = Math.floor(parseFloat(poolAmountB.value) * 1_000_000).toString();
+
+    const msg = {
+      typeUrl: "/retrochain.dex.v1.MsgAddLiquidity",
+      value: {
+        sender: address.value,
+        token_a: {
+          denom: tokenADenom,
+          amount: amountABase
+        },
+        token_b: {
+          denom: tokenBDenom,
+          amount: amountBBase
+        }
+      }
+    };
+
+    const fee = {
+      amount: [{ denom: tokenDenom.value, amount: "5000" }],
+      gas: "250000"
+    };
+
+    const result = await window.keplr.signAndBroadcast(
+      chainId,
+      address.value,
+      [msg],
+      fee,
+      "Add liquidity to RetroChain DEX"
+    );
+
+    if (result.code === 0) {
+      console.log("Liquidity added!", result);
+      poolAmountA.value = "";
+      poolAmountB.value = "";
+      await fetchPools();
+    } else {
+      throw new Error(`Transaction failed: ${result.rawLog}`);
+    }
   } catch (e: any) {
     console.error("Add liquidity failed:", e);
+    alert(`Add liquidity failed: ${e.message}`);
   } finally {
     addingLiquidity.value = false;
   }
 };
 
 const handlePlaceLimitOrder = async () => {
-  if (!address.value) {
-    alert("Please connect your wallet");
-    return;
-  }
+  if (!address.value) return;
+  if (!window.keplr) return;
 
   try {
-    alert(`${limitSide.value.toUpperCase()} ${limitAmount.value} ${tokenIn.value} @ ${limitPrice.value} ${tokenOut.value}`);
+    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
     
-    limitPrice.value = "";
-    limitAmount.value = "";
+    const amountBase = Math.floor(parseFloat(limitAmount.value) * 1_000_000).toString();
+    const priceBase = Math.floor(parseFloat(limitPrice.value) * 1_000_000).toString();
+
+    const msg = {
+      typeUrl: "/retrochain.dex.v1.MsgPlaceLimitOrder",
+      value: {
+        creator: address.value,
+        order_type: limitSide.value.toUpperCase(),
+        token_in: tokenIn.value,
+        token_out: tokenOut.value,
+        amount: amountBase,
+        price: priceBase
+      }
+    };
+
+    const fee = {
+      amount: [{ denom: tokenDenom.value, amount: "5000" }],
+      gas: "200000"
+    };
+
+    const result = await window.keplr.signAndBroadcast(
+      chainId,
+      address.value,
+      [msg],
+      fee,
+      "Place limit order on RetroChain DEX"
+    );
+
+    if (result.code === 0) {
+      console.log("Order placed!", result);
+      limitPrice.value = "";
+      limitAmount.value = "";
+    } else {
+      throw new Error(`Transaction failed: ${result.rawLog}`);
+    }
   } catch (e: any) {
     console.error("Place order failed:", e);
+    alert(`Place order failed: ${e.message}`);
   }
 };
 
 const handleBridge = async () => {
-  if (!address.value) {
-    alert("Please connect your wallet");
-    return;
-  }
+  if (!address.value) return;
+  if (!window.keplr) return;
 
   bridging.value = true;
   try {
+    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
+
     if (bridgeChain.value === "Noble") {
-      await bridgeFromNoble(bridgeAmount.value);
+      // IBC Transfer from Noble
+      const sourceChannel = "channel-0"; // Noble -> RetroChain channel
+      const amountBase = Math.floor(parseFloat(bridgeAmount.value) * 1_000_000).toString();
+
+      const msg = {
+        typeUrl: "/ibc.applications.transfer.v1.MsgTransfer",
+        value: {
+          sourcePort: "transfer",
+          sourceChannel: sourceChannel,
+          token: {
+            denom: "uusdc", // Noble's USDC denom
+            amount: amountBase
+          },
+          sender: address.value, // Noble address
+          receiver: address.value, // RetroChain address
+          timeoutHeight: {
+            revisionNumber: "0",
+            revisionHeight: "0"
+          },
+          timeoutTimestamp: (Date.now() + 600000) * 1000000, // 10 min timeout
+          memo: "Bridge to RetroChain"
+        }
+      };
+
+      const fee = {
+        amount: [{ denom: "uusdc", amount: "1000" }],
+        gas: "200000"
+      };
+
+      // Sign on Noble chain
+      const result = await window.keplr.signAndBroadcast(
+        "noble-1",
+        address.value,
+        [msg],
+        fee,
+        "IBC Transfer to RetroChain"
+      );
+
+      if (result.code === 0) {
+        console.log("IBC transfer initiated!", result);
+        bridgeAmount.value = "";
+      } else {
+        throw new Error(`Transaction failed: ${result.rawLog}`);
+      }
     } else {
+      // EVM bridge via Axelar - open Satellite
       await bridgeFromEVM(bridgeChain.value, bridgeAsset.value, bridgeAmount.value);
     }
-    
-    bridgeAmount.value = "";
   } catch (e: any) {
     console.error("Bridge failed:", e);
+    alert(`Bridge failed: ${e.message}`);
   } finally {
     bridging.value = false;
   }

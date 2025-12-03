@@ -82,33 +82,99 @@ const handleConnect = async () => {
 
 const handleDelegate = async () => {
   if (!selectedValidator.value || !amount.value) return;
+  if (!window.keplr) return;
   
   txLoading.value = true;
   try {
-    // Transaction would go here via Keplr signing
-    alert(`Delegate ${amount.value} ${tokenSymbol.value} to validator ${selectedValidator.value}`);
-    // After tx success, refresh data
-    await fetchAll();
-    amount.value = "";
-    selectedValidator.value = "";
+    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
+    const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
+
+    const msg = {
+      typeUrl: "/cosmos.staking.v1beta1.MsgDelegate",
+      value: {
+        delegatorAddress: address.value,
+        validatorAddress: selectedValidator.value,
+        amount: {
+          denom: tokenDenom.value,
+          amount: amountBase
+        }
+      }
+    };
+
+    const fee = {
+      amount: [{ denom: tokenDenom.value, amount: "5000" }],
+      gas: "200000"
+    };
+
+    const result = await window.keplr.signAndBroadcast(
+      chainId,
+      address.value,
+      [msg],
+      fee,
+      "Delegate on RetroChain"
+    );
+
+    if (result.code === 0) {
+      console.log("Delegation successful!", result);
+      await fetchAll();
+      amount.value = "";
+      selectedValidator.value = "";
+    } else {
+      throw new Error(`Transaction failed: ${result.rawLog}`);
+    }
   } catch (e: any) {
     console.error("Delegation failed:", e);
+    alert(`Delegation failed: ${e.message}`);
   } finally {
     txLoading.value = false;
   }
 };
 
 const handleClaimRewards = async (validatorAddress?: string) => {
+  if (!window.keplr) return;
+  
   txLoading.value = true;
   try {
-    if (validatorAddress) {
-      alert(`Claim rewards from ${validatorAddress}`);
+    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
+
+    const msgs = validatorAddress
+      ? [{
+          typeUrl: "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
+          value: {
+            delegatorAddress: address.value,
+            validatorAddress: validatorAddress
+          }
+        }]
+      : rewards.value.map(r => ({
+          typeUrl: "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward",
+          value: {
+            delegatorAddress: address.value,
+            validatorAddress: r.validator_address
+          }
+        }));
+
+    const fee = {
+      amount: [{ denom: tokenDenom.value, amount: "5000" }],
+      gas: (msgs.length * 150000).toString()
+    };
+
+    const result = await window.keplr.signAndBroadcast(
+      chainId,
+      address.value,
+      msgs,
+      fee,
+      "Claim staking rewards"
+    );
+
+    if (result.code === 0) {
+      console.log("Rewards claimed!", result);
+      await fetchAll();
     } else {
-      alert("Claim all rewards");
+      throw new Error(`Transaction failed: ${result.rawLog}`);
     }
-    await fetchAll();
   } catch (e: any) {
     console.error("Claim failed:", e);
+    alert(`Claim failed: ${e.message}`);
   } finally {
     txLoading.value = false;
   }
@@ -116,15 +182,49 @@ const handleClaimRewards = async (validatorAddress?: string) => {
 
 const handleUndelegate = async () => {
   if (!selectedValidator.value || !amount.value) return;
+  if (!window.keplr) return;
   
   txLoading.value = true;
   try {
-    alert(`Undelegate ${amount.value} ${tokenSymbol.value} from validator ${selectedValidator.value}`);
-    await fetchAll();
-    amount.value = "";
-    selectedValidator.value = "";
+    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
+    const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
+
+    const msg = {
+      typeUrl: "/cosmos.staking.v1beta1.MsgUndelegate",
+      value: {
+        delegatorAddress: address.value,
+        validatorAddress: selectedValidator.value,
+        amount: {
+          denom: tokenDenom.value,
+          amount: amountBase
+        }
+      }
+    };
+
+    const fee = {
+      amount: [{ denom: tokenDenom.value, amount: "5000" }],
+      gas: "200000"
+    };
+
+    const result = await window.keplr.signAndBroadcast(
+      chainId,
+      address.value,
+      [msg],
+      fee,
+      "Undelegate from RetroChain"
+    );
+
+    if (result.code === 0) {
+      console.log("Undelegation successful!", result);
+      await fetchAll();
+      amount.value = "";
+      selectedValidator.value = "";
+    } else {
+      throw new Error(`Transaction failed: ${result.rawLog}`);
+    }
   } catch (e: any) {
     console.error("Undelegation failed:", e);
+    alert(`Undelegation failed: ${e.message}`);
   } finally {
     txLoading.value = false;
   }

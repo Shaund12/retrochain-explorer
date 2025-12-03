@@ -4,7 +4,16 @@ import { useNetwork } from "./useNetwork";
 
 declare global {
   interface Window {
-    keplr?: any;
+    keplr?: {
+      enable: (chainId: string) => Promise<void>;
+      experimentalSuggestChain: (chainInfo: any) => Promise<void>;
+      getOfflineSigner: (chainId: string) => any;
+      getOfflineSignerAuto: (chainId: string) => Promise<any>;
+      signAmino: (chainId: string, signer: string, signDoc: any) => Promise<any>;
+      signDirect: (chainId: string, signer: string, signDoc: any) => Promise<any>;
+      signAndBroadcast: (chainId: string, signer: string, msgs: any[], fee: any, memo?: string) => Promise<any>;
+      getKey: (chainId: string) => Promise<any>;
+    };
     getOfflineSigner?: (chainId: string) => any;
     getOfflineSignerAuto?: (chainId: string) => Promise<any>;
   }
@@ -150,6 +159,42 @@ const checkAvailability = () => {
     address.value = null;
   };
 
+  // Helper to sign and broadcast transactions
+  const signAndBroadcast = async (chainId: string, msgs: any[], fee: any, memo = "") => {
+    if (!window.keplr) throw new Error("Keplr not available");
+    if (!address.value) throw new Error("Not connected to Keplr");
+
+    try {
+      // Get offline signer
+      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      const accounts = await offlineSigner.getAccounts();
+      
+      // Use CosmJS to sign and broadcast
+      const { SigningStargateClient } = await import("@cosmjs/stargate");
+      const rpc = rpcBase.value || "/rpc";
+      const client = await SigningStargateClient.connectWithSigner(rpc, offlineSigner);
+      
+      const result = await client.signAndBroadcast(
+        accounts[0].address,
+        msgs,
+        fee,
+        memo
+      );
+
+      return result;
+    } catch (e: any) {
+      console.error("Transaction failed:", e);
+      throw e;
+    }
+  };
+
+  // Extend window.keplr with signAndBroadcast if it doesn't exist
+  if (typeof window !== "undefined" && window.keplr && !window.keplr.signAndBroadcast) {
+    window.keplr.signAndBroadcast = async (chainId: string, signer: string, msgs: any[], fee: any, memo = "") => {
+      return signAndBroadcast(chainId, msgs, fee, memo);
+    };
+  }
+
   // run once on import
   checkAvailability();
 
@@ -167,6 +212,7 @@ const checkAvailability = () => {
     error,
     connect,
     disconnect,
-    checkAvailability
+    checkAvailability,
+    signAndBroadcast
   };
 }
