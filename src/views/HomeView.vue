@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
+import { onMounted, computed } from "vue";
 import { useChainInfo } from "@/composables/useChainInfo";
 import { useBlocks } from "@/composables/useBlocks";
 import { useTxs } from "@/composables/useTxs";
@@ -61,6 +61,38 @@ const { current: network } = useNetwork();
 const copy = async (text: string) => {
   try { await navigator.clipboard?.writeText?.(text); } catch {}
 };
+
+// Production stats and sparklines (no extra libs)
+const recentBlocks = computed(() => blocks.slice(0, 20));
+const txsPerBlock = computed(() => recentBlocks.value.map(b => b.txs));
+const blockTimes = computed(() => recentBlocks.value.map(b => b.time ? new Date(b.time).getTime() : 0).filter(v => v));
+const blockTimeDeltas = computed(() => {
+  const arr: number[] = [];
+  for (let i = 1; i < blockTimes.value.length; i++) {
+    arr.push(Math.max(0, (blockTimes.value[i] - blockTimes.value[i-1]) / 1000));
+  }
+  return arr;
+});
+const avgBlockTime = computed(() => {
+  if (!blockTimeDeltas.value.length) return "—";
+  const avg = blockTimeDeltas.value.reduce((a,b)=>a+b,0) / blockTimeDeltas.value.length;
+  return `${avg.toFixed(2)}s`;
+});
+
+// Sparkline path generator
+function sparkPath(data: number[], width = 160, height = 40) {
+  if (!data || !data.length) return "";
+  const max = Math.max(...data, 1);
+  const min = Math.min(...data, 0);
+  const span = max - min || 1;
+  const step = width / (data.length - 1 || 1);
+  const points = data.map((v, i) => {
+    const x = i * step;
+    const y = height - ((v - min) / span) * height;
+    return `${i === 0 ? 'M' : 'L'}${x},${y}`;
+  });
+  return points.join(" ");
+}
 </script>
 
 <template>
@@ -152,26 +184,25 @@ const copy = async (text: string) => {
       </div>
 
       <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <RcStatCard
-          label="Latest Block"
-          icon=""
-          :value="loadingInfo ? '…' : info.latestBlockHeight ?? '—'"
-          :hint="info.latestBlockTime ? `${info.latestBlockTime}` : 'Syncing...'"
-          trend="up"
-        />
-        <RcStatCard
-          label="Chain ID"
-          icon=""
-          :value="loadingInfo ? '…' : info.chainId ?? 'retrochain-arcade-1'"
-          hint="Network identifier"
-        />
-        <RcStatCard
-          label="Recent Txs"
-          icon=""
-          :value="loadingTxs ? '…' : txs.length"
-          hint="Last 10 transactions"
-          trend="neutral"
-        />
+        <div class="p-4 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+          <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Latest Block</div>
+          <div class="text-2xl font-bold text-indigo-300">{{ loadingInfo ? '…' : info.latestBlockHeight ?? '—' }}</div>
+          <div class="text-[11px] text-slate-500">{{ info.latestBlockTime || 'Syncing...' }}</div>
+        </div>
+        <div class="p-4 rounded-lg bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20">
+          <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Avg Block Time</div>
+          <div class="text-2xl font-bold text-emerald-300">{{ avgBlockTime }}</div>
+          <svg :width="160" :height="40" class="mt-2">
+            <path :d="sparkPath(blockTimeDeltas)" stroke="rgb(16 185 129)" fill="none" stroke-width="2" />
+          </svg>
+        </div>
+        <div class="p-4 rounded-lg bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20">
+          <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Txs per Block</div>
+          <div class="text-2xl font-bold text-blue-300">{{ txsPerBlock[0] ?? 0 }}</div>
+          <svg :width="160" :height="40" class="mt-2">
+            <path :d="sparkPath(txsPerBlock)" stroke="rgb(59 130 246)" fill="none" stroke-width="2" />
+          </svg>
+        </div>
       </div>
 
       <!-- Quick Stats -->
