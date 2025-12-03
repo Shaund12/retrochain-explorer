@@ -50,40 +50,54 @@ export function useTxs() {
       }));
     } catch (e: any) {
       console.error("Failed to fetch transactions:", e);
-      // Fallback: scan recent blocks and query txs by height
+      // Fallback: scan recent blocks, parse base64 txs, compute hash and optionally enrich via /txs/{hash}
       try {
         const latestRes = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/latest`);
-        const latest = parseInt(latestRes.data?.block?.header?.height ?? "0", 10);
-        const heights: number[] = [];
-        for (let h = latest; h > 0 && heights.length < Math.max(limit, 10); h--) heights.push(h);
-
-        const results = await Promise.allSettled(
-          heights.map((h) =>
-            api.get(`/cosmos/tx/v1beta1/txs`, {
-              params: { events: `tx.height='${h}'`, order_by: "ORDER_BY_DESC", "pagination.limit": 50 }
-            })
-          )
-        );
-
+        const latestBlock = latestRes.data?.block;
+        const latest = parseInt(latestBlock?.header?.height ?? "0", 10);
         const collected: TxSummary[] = [];
-        for (const r of results) {
-          if (r.status === "fulfilled") {
-            const list = r.value.data?.tx_responses ?? [];
-            for (const t of list) {
-              collected.push({
-                hash: t.txhash,
-                height: parseInt(t.height ?? "0", 10),
-                codespace: t.codespace,
-                code: t.code,
-                gasWanted: t.gas_wanted,
-                gasUsed: t.gas_used,
-                timestamp: t.timestamp
-              });
+
+        // helper: compute SHA-256 hash (uppercase hex) from base64 tx bytes
+        const hashFromBase64 = async (b64: string) => {
+          const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
+          const digest = await crypto.subtle.digest("SHA-256", bytes);
+          return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
+        };
+
+        for (let h = latest; h > 0 && collected.length < limit; h--) {
+          const bRes = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/${h}`);
+          const blk = bRes.data?.block;
+          const header = blk?.header;
+          const time = header?.time as string | undefined;
+          const txList: string[] = blk?.data?.txs || [];
+          if (!txList.length) continue;
+
+          for (const raw of txList) {
+            try {
+              const hash = await hashFromBase64(raw);
+              let summary: TxSummary = { hash, height: h, timestamp: time };
+              // Enrich from /txs/{hash} if available
+              try {
+                const d = await api.get(`/cosmos/tx/v1beta1/txs/${hash}`);
+                const r = d.data?.tx_response;
+                if (r) {
+                  summary = {
+                    hash: r.txhash || hash,
+                    height: parseInt(r.height ?? String(h), 10),
+                    codespace: r.codespace,
+                    code: r.code,
+                    gasWanted: r.gas_wanted,
+                    gasUsed: r.gas_used,
+                    timestamp: r.timestamp || time
+                  };
+                }
+              } catch {}
+              collected.push(summary);
               if (collected.length >= limit) break;
-            }
-            if (collected.length >= limit) break;
+            } catch {}
           }
         }
+
         txs.value = collected.slice(0, limit);
         error.value = null;
       } catch (fallbackErr: any) {
