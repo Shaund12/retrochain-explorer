@@ -517,7 +517,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
         </div>
       </div>
 
-      <div class="card text-xs text-slate-300 leading-relaxed">
+      <div v-if="network !== 'mainnet'" class="card text-xs text-slate-300 leading-relaxed">
         <h3 class="text-sm font-semibold mb-1 text-slate-100 flex items-center gap-2">
           <span>ℹ️</span>
           How to use this explorer
