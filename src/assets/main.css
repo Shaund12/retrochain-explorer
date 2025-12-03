@@ -210,3 +210,77 @@ body {
   background: linear-gradient(135deg, #7c3aed, #a855f7);
 }
 
+/* ==== Vue Toastification Custom Styles ==== */
+.Vue-Toastification__container {
+  z-index: 99999;
+}
+
+.custom-toast {
+  background: linear-gradient(135deg, rgba(15, 20, 41, 0.98) 0%, rgba(10, 14, 39, 0.98) 100%);
+  border: 1px solid rgba(99, 102, 241, 0.3);
+  border-radius: 1rem;
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.2);
+  backdrop-filter: blur(10px);
+  padding: 1rem 1.25rem;
+  min-height: 64px;
+}
+
+.custom-toast-body {
+  font-size: 0.875rem;
+  line-height: 1.5;
+  color: rgb(226, 232, 240);
+  font-weight: 500;
+}
+
+.Vue-Toastification__toast--success .custom-toast {
+  border-color: rgba(16, 185, 129, 0.4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(16, 185, 129, 0.2);
+}
+
+.Vue-Toastification__toast--error .custom-toast {
+  border-color: rgba(239, 68, 68, 0.4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(239, 68, 68, 0.2);
+}
+
+.Vue-Toastification__toast--warning .custom-toast {
+  border-color: rgba(251, 146, 60, 0.4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(251, 146, 60, 0.2);
+}
+
+.Vue-Toastification__toast--info .custom-toast {
+  border-color: rgba(139, 92, 246, 0.4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(139, 92, 246, 0.2);
+}
+
+.Vue-Toastification__progress-bar {
+  background: linear-gradient(90deg, rgba(99, 102, 241, 0.8) 0%, rgba(139, 92, 246, 0.8) 100%);
+}
+
+.Vue-Toastification__toast--success .Vue-Toastification__progress-bar {
+  background: linear-gradient(90deg, rgba(16, 185, 129, 0.8) 0%, rgba(5, 150, 105, 0.8) 100%);
+}
+
+.Vue-Toastification__toast--error .Vue-Toastification__progress-bar {
+  background: linear-gradient(90deg, rgba(239, 68, 68, 0.8) 0%, rgba(220, 38, 38, 0.8) 100%);
+}
+
+.Vue-Toastification__toast--warning .Vue-Toastification__progress-bar {
+  background: linear-gradient(90deg, rgba(251, 146, 60, 0.8) 0%, rgba(249, 115, 22, 0.8) 100%);
+}
+
+.Vue-Toastification__icon {
+  margin-right: 0.75rem;
+  font-size: 1.5rem;
+}
+
+.Vue-Toastification__close-button {
+  opacity: 0.7;
+  color: rgb(148, 163, 184);
+  transition: opacity 0.2s;
+}
+
+.Vue-Toastification__close-button:hover {
+  opacity: 1;
+  color: rgb(226, 232, 240);
+}
+

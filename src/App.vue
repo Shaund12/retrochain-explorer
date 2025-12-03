@@ -1,7 +1,6 @@
 <script setup lang="ts">
 import { RouterView } from "vue-router";
 import RcHeader from "@/components/RcHeader.vue";
-import RcToastHost from "@/components/RcToastHost.vue";
 import { useNetwork } from "@/composables/useNetwork";
 import { useChainInfo } from "@/composables/useChainInfo";
 import { computed, onMounted } from "vue";
@@ -176,6 +175,5 @@ onMounted(() => {
         </div>
       </div>
     </footer>
-    <RcToastHost />
   </div>
 </template>

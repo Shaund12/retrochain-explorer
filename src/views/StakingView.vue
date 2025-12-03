@@ -6,6 +6,8 @@ import { useStaking } from "@/composables/useStaking";
 import { useValidators } from "@/composables/useValidators";
 import { useNetwork } from "@/composables/useNetwork";
 import { formatAmount } from "@/utils/format";
+import { useToast } from "@/composables/useToast";
+import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import dayjs from "dayjs";
 
 const router = useRouter();
@@ -13,6 +15,7 @@ const { address, connect, isAvailable } = useKeplr();
 const { delegations, rewards, unbonding, loading: stakingLoading, fetchAll } = useStaking();
 const { validators, loading: validatorsLoading, fetchValidators } = useValidators();
 const { current: network } = useNetwork();
+const toast = useToast();
 
 const activeTab = ref<'overview' | 'delegate' | 'redelegate' | 'undelegate' | 'rewards'>('overview');
 const selectedValidator = ref<string>("");
@@ -235,13 +238,32 @@ const formatReward = (amt: number) => {
 };
 
 const copy = async (text: string) => {
-  try { await navigator.clipboard?.writeText?.(text); } catch {}
+  try { 
+    await navigator.clipboard?.writeText?.(text);
+    toast.showSuccess("Address copied to clipboard!");
+  } catch {
+    toast.showError("Failed to copy address");
+  }
 };
 </script>
 
 <template>
-  <div class="space-y-4">
-    <!-- Header -->
+<div class="space-y-4">
+  <!-- DISCLAIMER BANNER -->
+  <RcDisclaimer type="info" title="✅ Staking Integration Active">
+    <p>
+      <strong>Staking functionality is REAL and connected to the blockchain!</strong>
+    </p>
+    <p class="mt-2">
+      All delegation, undelegation, and reward claim transactions are wired to Keplr and will execute on-chain. 
+      However, some features may not work until RetroChain is fully deployed with active validators.
+    </p>
+    <p class="mt-2">
+      Once mainnet launches with validators, you'll be able to stake RETRO tokens, earn rewards, and participate in network security.
+    </p>
+  </RcDisclaimer>
+
+  <!-- Header -->
     <div class="card-soft relative overflow-hidden">
       <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
       <div class="relative">

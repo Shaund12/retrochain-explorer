@@ -2,9 +2,12 @@
 import { ref, computed, onMounted } from "vue";
 import { useNetwork } from "@/composables/useNetwork";
 import { useKeplr } from "@/composables/useKeplr";
+import { useToast } from "@/composables/useToast";
+import RcDisclaimer from "@/components/RcDisclaimer.vue";
 
 const { current: network } = useNetwork();
 const { address, connect, isAvailable } = useKeplr();
+const toast = useToast();
 
 const selectedMethod = ref<'swap' | 'pool' | 'bridge' | 'faucet'>('swap');
 const swapAmount = ref("");
@@ -82,6 +85,7 @@ const tokenInfo = computed(() => ({
 const copyAddress = async () => {
   if (address.value) {
     await navigator.clipboard?.writeText(address.value);
+    toast.showSuccess("Address copied to clipboard!");
   }
 };
 
@@ -168,8 +172,21 @@ const estimateSwap = computed(() => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="card-soft relative overflow-hidden">
+<div class="space-y-4">
+  <!-- DISCLAIMER BANNER -->
+  <RcDisclaimer type="warning" title="🚧 Feature Under Development">
+    <p>
+      <strong>The swap and liquidity features are currently in development and not yet connected to live blockchain transactions.</strong>
+    </p>
+    <p class="mt-2">
+      These interfaces demonstrate the planned functionality. Once the RetroChain DEX module is deployed, all features will be fully operational with real on-chain transactions.
+    </p>
+    <p class="mt-2">
+      <strong>Bridge functionality</strong> via Axelar and IBC will be available once RetroChain mainnet launches and establishes IBC channels with partner chains.
+    </p>
+  </RcDisclaimer>
+
+  <div class="card-soft relative overflow-hidden">
       <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
       <div class="relative">
         <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent mb-2">

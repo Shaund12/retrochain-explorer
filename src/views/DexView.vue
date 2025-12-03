@@ -5,13 +5,16 @@ import { useDex } from "@/composables/useDex";
 import { useBridge } from "@/composables/useBridge";
 import { useNetwork } from "@/composables/useNetwork";
 import { formatAmount } from "@/utils/format";
+import { useToast } from "@/composables/useToast";
+import RcDisclaimer from "@/components/RcDisclaimer.vue";
 
 const { address, connect, isAvailable } = useKeplr();
 const { pools, loading: dexLoading, fetchPools, simulateSwap, calculatePoolPrice } = useDex();
 const { assets: bridgeAssets, bridgeFromNoble, bridgeFromEVM, getEstimatedTime, getBridgeFee } = useBridge();
 const { current: network } = useNetwork();
+const toast = useToast();
 
-const activeTab = ref<'swap' | 'pools' | 'limit' | 'bridge'>('swap');
+const activeTab = ref<'swap' | 'pools' | 'limit' | 'bridge' | 'create'>('swap');
 const swapTab = ref<'market' | 'limit'>('market');
 
 // Swap state
@@ -39,6 +42,14 @@ const bridgeAsset = ref("USDC");
 const bridgeChain = ref("Noble");
 const bridgeAmount = ref("");
 const bridging = ref(false);
+
+// Create pool state
+const createTokenA = ref("RETRO");
+const createTokenB = ref("USDC");
+const createAmountA = ref("");
+const createAmountB = ref("");
+const createSwapFee = ref("0.3");
+const creatingPool = ref(false);
 
 const tokenDenom = computed(() => network.value === 'mainnet' ? 'uretro' : 'udretro');
 const tokenSymbol = computed(() => network.value === 'mainnet' ? 'RETRO' : 'DRETRO');
@@ -87,6 +98,8 @@ const handleSwap = async () => {
   if (!window.keplr) return;
 
   swapping.value = true;
+  toast.showInfo("Preparing swap transaction...");
+  
   try {
     const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
     
@@ -129,6 +142,7 @@ const handleSwap = async () => {
 
     if (result.code === 0) {
       console.log("Swap successful!", result);
+      toast.showTxSuccess(result.transactionHash || "");
       amountIn.value = "";
       amountOut.value = "";
       // Refresh pools and balances
@@ -138,7 +152,7 @@ const handleSwap = async () => {
     }
   } catch (e: any) {
     console.error("Swap failed:", e);
-    alert(`Swap failed: ${e.message}`);
+    toast.showTxError(e.message || "Transaction failed");
   } finally {
     swapping.value = false;
   }
@@ -319,11 +333,93 @@ const swapTokens = () => {
   [tokenIn.value, tokenOut.value] = [tokenOut.value, tokenIn.value];
   [amountIn.value, amountOut.value] = [amountOut.value, amountIn.value];
 };
+
+const initialPrice = computed(() => {
+  if (!createAmountA.value || !createAmountB.value) return "0";
+  const priceA = parseFloat(createAmountB.value) / parseFloat(createAmountA.value);
+  return priceA.toFixed(6);
+});
+
+const handleCreatePool = async () => {
+  if (!address.value) return;
+  if (!window.keplr) return;
+
+  creatingPool.value = true;
+  try {
+    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
+    
+    const tokenADenom = availableTokens.value.find(t => t.symbol === createTokenA.value)?.denom || tokenDenom.value;
+    const tokenBDenom = availableTokens.value.find(t => t.symbol === createTokenB.value)?.denom || tokenDenom.value;
+    
+    const amountABase = Math.floor(parseFloat(createAmountA.value) * 1_000_000).toString();
+    const amountBBase = Math.floor(parseFloat(createAmountB.value) * 1_000_000).toString();
+
+    const msg = {
+      typeUrl: "/retrochain.dex.v1.MsgCreatePool",
+      value: {
+        creator: address.value,
+        token_a: {
+          denom: tokenADenom,
+          amount: amountABase
+        },
+        token_b: {
+          denom: tokenBDenom,
+          amount: amountBBase
+        },
+        swap_fee: (parseFloat(createSwapFee.value) / 100).toString() // Convert % to decimal
+      }
+    };
+
+    const fee = {
+      amount: [{ denom: tokenDenom.value, amount: "10000" }],
+      gas: "300000"
+    };
+
+    const result = await window.keplr.signAndBroadcast(
+      chainId,
+      address.value,
+      [msg],
+      fee,
+      "Create liquidity pool on RetroChain DEX"
+    );
+
+    if (result.code === 0) {
+      console.log("Pool created!", result);
+      createAmountA.value = "";
+      createAmountB.value = "";
+      await fetchPools();
+      // Switch to pools tab to see the new pool
+      activeTab.value = 'pools';
+    } else {
+      throw new Error(`Transaction failed: ${result.rawLog}`);
+    }
+  } catch (e: any) {
+    console.error("Create pool failed:", e);
+    alert(`Create pool failed: ${e.message}`);
+  } finally {
+    creatingPool.value = false;
+  }
+};
 </script>
 
 <template>
-  <div class="space-y-4">
-    <!-- Header -->
+<div class="space-y-4">
+  <!-- DISCLAIMER BANNER -->
+  <RcDisclaimer type="warning" title="🚧 DEX Module Coming Soon">
+    <p>
+      <strong>The Native DEX is ready for deployment once RetroChain's DEX module goes live.</strong>
+    </p>
+    <p class="mt-2">
+      All transactions (swap, add liquidity, limit orders, create pools) are wired to sign with Keplr and broadcast to the blockchain. 
+      The UI is production-ready and waiting for the smart contracts to be deployed.
+    </p>
+    <p class="mt-2">
+      Until the DEX module is deployed, these interfaces serve as a preview of the upcoming functionality. 
+      You can connect your wallet and explore the UI, but actual trades will execute once mainnet is live.
+    </p>
+  </RcDisclaimer>
+
+  <!-- Header -->
     <div class="card-soft relative overflow-hidden">
       <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
       <div class="relative">
@@ -368,6 +464,13 @@ const swapTokens = () => {
         @click="activeTab = 'pools'"
       >
         💧 Pools
+      </button>
+      <button 
+        class="btn text-xs whitespace-nowrap"
+        :class="activeTab === 'create' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+        @click="activeTab = 'create'"
+      >
+        ✨ Create Pool
       </button>
       <button 
         class="btn text-xs whitespace-nowrap"
@@ -710,6 +813,141 @@ const swapTokens = () => {
         >
           {{ bridging ? 'Bridging...' : 'Bridge to RetroChain' }}
         </button>
+      </div>
+    </div>
+
+    <!-- Create Pool Tab -->
+    <div v-if="activeTab === 'create'" class="card max-w-3xl mx-auto">
+      <h2 class="text-sm font-semibold text-slate-100 mb-4">✨ Create New Liquidity Pool</h2>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="space-y-3">
+          <div class="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 mb-3">
+            <div class="text-xs text-purple-300 space-y-1">
+              <div>🚀 Bootstrap a new trading pair!</div>
+              <div>💡 You set the initial price ratio</div>
+              <div>🎯 Be the first liquidity provider</div>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Token A</label>
+            <div class="flex items-center gap-2">
+              <select v-model="createTokenA" class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
+                <option v-for="token in availableTokens" :key="token.symbol" :value="token.symbol">
+                  {{ token.icon }} {{ token.symbol }}
+                </option>
+              </select>
+              <input 
+                v-model="createAmountA"
+                type="number"
+                step="0.000001"
+                placeholder="0.0"
+                class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Token B</label>
+            <div class="flex items-center gap-2">
+              <select v-model="createTokenB" class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
+                <option v-for="token in availableTokens" :key="token.symbol" :value="token.symbol">
+                  {{ token.icon }} {{ token.symbol }}
+                </option>
+              </select>
+              <input 
+                v-model="createAmountB"
+                type="number"
+                step="0.000001"
+                placeholder="0.0"
+                class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Swap Fee (%)</label>
+            <div class="flex items-center gap-2">
+              <button 
+                v-for="fee in ['0.1', '0.3', '0.5', '1.0']" 
+                :key="fee"
+                class="px-3 py-2 rounded border text-xs"
+                :class="createSwapFee === fee ? 'border-indigo-400/70 bg-indigo-500/10 text-indigo-300' : 'border-slate-700 text-slate-400'"
+                @click="createSwapFee = fee"
+              >
+                {{ fee }}%
+              </button>
+              <input 
+                v-model="createSwapFee"
+                type="number"
+                step="0.1"
+                min="0.01"
+                max="10"
+                class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+              />
+            </div>
+          </div>
+
+          <button 
+            class="btn btn-primary w-full"
+            @click="handleCreatePool"
+            :disabled="!address || !createAmountA || !createAmountB || createTokenA === createTokenB || creatingPool"
+          >
+            {{ creatingPool ? 'Creating Pool...' : 'Create Pool' }}
+          </button>
+        </div>
+
+        <div class="space-y-3">
+          <div class="p-4 rounded-lg bg-slate-900/60 border border-slate-700">
+            <h3 class="text-xs font-semibold text-slate-100 mb-3">📊 Pool Details</h3>
+            <div class="space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Pool Pair</span>
+                <span class="text-slate-200 font-mono">{{ createTokenA }}/{{ createTokenB }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Initial Price</span>
+                <span class="text-slate-200 font-mono">1 {{ createTokenA }} = {{ initialPrice }} {{ createTokenB }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Swap Fee</span>
+                <span class="text-emerald-300 font-mono">{{ createSwapFee }}%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Your LP Share</span>
+                <span class="text-indigo-300 font-mono">100%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+            <h3 class="text-xs font-semibold text-slate-100 mb-2">💡 Example Scenarios</h3>
+            <div class="text-xs text-slate-300 space-y-2">
+              <div>
+                <div class="text-indigo-300 font-semibold">Scenario 1: RETRO/USDC</div>
+                <div class="text-slate-400">10,000 RETRO + 1,000 USDC</div>
+                <div class="text-slate-500">= $0.10 per RETRO</div>
+              </div>
+              <div>
+                <div class="text-indigo-300 font-semibold">Scenario 2: RETRO/ATOM</div>
+                <div class="text-slate-400">10,000 RETRO + 100 ATOM</div>
+                <div class="text-slate-500">= 0.01 ATOM per RETRO</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+            <h3 class="text-xs font-semibold text-slate-100 mb-2">⚠️ Important Notes</h3>
+            <ul class="text-xs text-slate-300 space-y-1">
+              <li>• You set the initial price ratio</li>
+              <li>• Requires both tokens in your wallet</li>
+              <li>• You'll be the first LP (100% share)</li>
+              <li>• Can't create duplicate pairs</li>
+              <li>• Minimum liquidity applies</li>
+            </ul>
+          </div>
+        </div>
       </div>
     </div>
   </div>
