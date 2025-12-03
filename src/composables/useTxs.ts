@@ -35,8 +35,8 @@ export function useTxs() {
         }));
         return;
       }
-
-      const res = await api.get(`/cosmos/tx/v1beta1/txs?order_by=ORDER_BY_DESC&pagination.limit=${limit}`);
+      // Skip calling /cosmos/tx/v1beta1/txs without events; many nodes 500 with "query cannot be empty".
+      // We'll drop into the fallback scanner below.
       
       console.log("Transactions API Response:", res.data);
       
