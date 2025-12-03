@@ -36,27 +36,8 @@ export function useTxs() {
         return;
       }
       // Skip calling /cosmos/tx/v1beta1/txs without events; many nodes 500 with "query cannot be empty".
-      // We'll drop into the fallback scanner below.
-      
-      console.log("Transactions API Response:", res.data);
-      
-      const raw = res.data?.tx_responses ?? [];
-      
-      if (raw.length === 0) {
-        // This is OK - chain might not have transactions yet
-        txs.value = [];
-        return;
-      }
-      
-      txs.value = raw.map((r: any) => ({
-        hash: r.txhash,
-        height: parseInt(r.height ?? "0", 10),
-        codespace: r.codespace,
-        code: r.code,
-        gasWanted: r.gas_wanted,
-        gasUsed: r.gas_used,
-        timestamp: r.timestamp
-      }));
+      // Fall through to the catch block to run the block-scan fallback.
+      throw new Error("fallback-scan");
     } catch (e: any) {
       console.error("Failed to fetch transactions:", e);
       // Fallback: scan recent blocks, parse base64 txs, compute hash and optionally enrich via /txs/{hash}
