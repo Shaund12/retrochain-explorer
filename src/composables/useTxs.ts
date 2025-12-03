@@ -39,7 +39,9 @@ export function useTxs() {
       // Fall through to the catch block to run the block-scan fallback.
       throw new Error("fallback-scan");
     } catch (e: any) {
-      console.error("Failed to fetch transactions:", e);
+      if (e?.message !== "fallback-scan") {
+        console.error("Failed to fetch transactions:", e);
+      }
       // Fallback: scan recent blocks, parse base64 txs, compute hash and optionally enrich via /txs/{hash}
       try {
         const latestRes = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/latest`);
