@@ -57,6 +57,10 @@ const formatTime = (value?: string | null) =>
 const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || '/api';
 const RPC_DISPLAY = import.meta.env.VITE_RPC_URL || '/rpc';
 const { current: network } = useNetwork();
+
+const copy = async (text: string) => {
+  try { await navigator.clipboard?.writeText?.(text); } catch {}
+};
 </script>
 
 <template>
@@ -304,10 +308,10 @@ const { current: network } = useNetwork();
         <table v-else class="table">
           <thead>
             <tr class="text-slate-300 text-xs">
-              <th>Height</th>
+              <th style="width:100px">Height</th>
               <th>Hash</th>
-              <th>Txs</th>
-              <th>Time</th>
+              <th style="width:80px">Txs</th>
+              <th style="width:180px">Time</th>
             </tr>
           </thead>
           <tbody>
@@ -319,15 +323,19 @@ const { current: network } = useNetwork();
             >
               <td class="font-mono text-[11px]">{{ b.height }}</td>
               <td class="font-mono text-[11px]">
-                {{ b.hash.slice(0, 10) }}...
+                <div class="flex items-center gap-2">
+                  <span>{{ b.hash.slice(0, 12) }}...</span>
+                  <button class="btn text-[10px]" @click.stop="copy(b.hash)">Copy</button>
+                </div>
               </td>
               <td class="text-xs">
-                <span class="badge">
-                  {{ b.txs }} tx
+                <span class="badge" :class="b.txs > 0 ? 'border-cyan-400/60 text-cyan-200' : ''">
+                  {{ b.txs }}
                 </span>
               </td>
               <td class="text-xs text-slate-300">
-                {{ b.time || "-" }}
+                <span v-if="b.time">{{ dayjs(b.time).format('YYYY-MM-DD HH:mm:ss') }}</span>
+                <span v-else>-</span>
               </td>
             </tr>
           </tbody>
