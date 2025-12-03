@@ -155,7 +155,7 @@ const copy = async (text: string) => {
         <!-- Connect Wallet -->
         <div v-if="!address" class="p-4 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
           <div class="flex items-center gap-3">
-            <div class="text-3xl">??</div>
+            <div class="text-3xl">👛</div>
             <div class="flex-1">
               <div class="text-sm font-semibold text-slate-100 mb-1">Connect Your Wallet</div>
               <div class="text-xs text-slate-400">Connect Keplr to view your staking portfolio and delegate</div>
@@ -203,28 +203,28 @@ const copy = async (text: string) => {
         :class="activeTab === 'overview' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
         @click="activeTab = 'overview'"
       >
-        ?? Overview
+        📊 Overview
       </button>
       <button 
         class="btn text-xs whitespace-nowrap"
         :class="activeTab === 'delegate' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
         @click="activeTab = 'delegate'"
       >
-        ? Delegate
+        ➕ Delegate
       </button>
       <button 
         class="btn text-xs whitespace-nowrap"
         :class="activeTab === 'undelegate' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
         @click="activeTab = 'undelegate'"
       >
-        ? Undelegate
+        ➖ Undelegate
       </button>
       <button 
         class="btn text-xs whitespace-nowrap"
         :class="activeTab === 'rewards' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
         @click="activeTab = 'rewards'"
       >
-        ?? Rewards
+        💰 Rewards
       </button>
     </div>
 
@@ -236,7 +236,7 @@ const copy = async (text: string) => {
         <div v-if="stakingLoading" class="text-xs text-slate-400">Loading...</div>
         
         <div v-else-if="myDelegations.length === 0" class="text-xs text-slate-400 text-center py-8">
-          <div class="text-3xl mb-2">??</div>
+          <div class="text-3xl mb-2">🎯</div>
           <div>No delegations yet</div>
           <div class="text-[11px] mt-1">Start staking to earn rewards!</div>
         </div>
@@ -340,7 +340,7 @@ const copy = async (text: string) => {
       
       <div class="p-3 rounded-lg bg-amber-500/10 border border-amber-500/20 mb-3">
         <div class="text-xs text-amber-300">
-          ?? Unbonding takes 21 days. Tokens will not earn rewards during this period.
+          ⚠️ Unbonding takes 21 days. Tokens will not earn rewards during this period.
         </div>
       </div>
 
@@ -391,7 +391,7 @@ const copy = async (text: string) => {
       </div>
 
       <div v-if="rewards.length === 0" class="text-xs text-slate-400 text-center py-8">
-        <div class="text-3xl mb-2">??</div>
+        <div class="text-3xl mb-2">💰</div>
         <div>No rewards yet</div>
       </div>
 

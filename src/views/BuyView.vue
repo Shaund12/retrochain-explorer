@@ -36,21 +36,21 @@ const liquidityPools = [
 const swapOptions = [
   {
     name: "Squid Router",
-    icon: "??",
+    icon: "🦑",
     description: "Cross-chain swap from any chain to RETRO",
     url: "https://app.squidrouter.com",
     widget: true
   },
   {
     name: "Skip Protocol",
-    icon: "?",
+    icon: "⚡",
     description: "Fast IBC swaps across Cosmos chains",
     url: "https://go.skip.build",
     widget: true
   },
   {
     name: "Osmosis Frontier",
-    icon: "??",
+    icon: "🌊",
     description: "Create or join RETRO liquidity pools",
     url: "https://frontier.osmosis.zone",
     widget: false
@@ -60,13 +60,13 @@ const swapOptions = [
 const bridgeOptions = [
   {
     name: "Axelar Bridge",
-    icon: "??",
+    icon: "🌉",
     description: "Bridge assets from EVM chains to Cosmos",
     url: "https://satellite.money"
   },
   {
     name: "IBC Transfer",
-    icon: "??",
+    icon: "🔗",
     description: "Native Cosmos IBC transfers",
     instructions: true
   }
@@ -182,7 +182,7 @@ const estimateSwap = computed(() => {
         <!-- Connect Wallet -->
         <div v-if="!address" class="p-4 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
           <div class="flex items-center gap-3">
-            <div class="text-3xl">??</div>
+            <div class="text-3xl">👛</div>
             <div class="flex-1">
               <div class="text-sm font-semibold text-slate-100 mb-1">Connect Your Wallet</div>
               <div class="text-xs text-slate-400">Connect Keplr to swap tokens and provide liquidity</div>
@@ -199,7 +199,7 @@ const estimateSwap = computed(() => {
         <!-- Wallet Connected -->
         <div v-else class="p-4 rounded-lg bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20">
           <div class="flex items-center gap-3">
-            <div class="text-3xl">?</div>
+            <div class="text-3xl">✅</div>
             <div class="flex-1">
               <div class="text-sm font-semibold text-slate-100 mb-1">Wallet Connected</div>
               <div class="flex items-center gap-2">
@@ -219,7 +219,7 @@ const estimateSwap = computed(() => {
         :class="selectedMethod === 'swap' ? 'border-indigo-400/70 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600'"
         @click="selectedMethod = 'swap'"
       >
-        <div class="text-2xl mb-2">??</div>
+        <div class="text-2xl mb-2">🔄</div>
         <div class="text-sm font-semibold text-slate-100">Swap</div>
         <div class="text-xs text-slate-400">Cross-chain</div>
       </button>
@@ -229,7 +229,7 @@ const estimateSwap = computed(() => {
         :class="selectedMethod === 'pool' ? 'border-indigo-400/70 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600'"
         @click="selectedMethod = 'pool'"
       >
-        <div class="text-2xl mb-2">??</div>
+        <div class="text-2xl mb-2">💧</div>
         <div class="text-sm font-semibold text-slate-100">Liquidity</div>
         <div class="text-xs text-slate-400">Earn Fees</div>
       </button>
@@ -239,7 +239,7 @@ const estimateSwap = computed(() => {
         :class="selectedMethod === 'bridge' ? 'border-indigo-400/70 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600'"
         @click="selectedMethod = 'bridge'"
       >
-        <div class="text-2xl mb-2">??</div>
+        <div class="text-2xl mb-2">🌉</div>
         <div class="text-sm font-semibold text-slate-100">Bridge</div>
         <div class="text-xs text-slate-400">Transfer</div>
       </button>
@@ -250,7 +250,7 @@ const estimateSwap = computed(() => {
         :class="selectedMethod === 'faucet' ? 'border-indigo-400/70 bg-indigo-500/10' : 'border-slate-700 hover:border-slate-600'"
         @click="selectedMethod = 'faucet'"
       >
-        <div class="text-2xl mb-2">??</div>
+        <div class="text-2xl mb-2">🚰</div>
         <div class="text-sm font-semibold text-slate-100">Faucet</div>
         <div class="text-xs text-slate-400">Test Tokens</div>
       </button>
@@ -260,7 +260,7 @@ const estimateSwap = computed(() => {
     <div v-if="selectedMethod === 'swap'" class="space-y-3">
       <!-- Squid Router Widget Embed -->
       <div class="card">
-        <h2 class="text-sm font-semibold text-slate-100 mb-3">?? Cross-Chain Swap (Squid Router)</h2>
+        <h2 class="text-sm font-semibold text-slate-100 mb-3">🦑 Cross-Chain Swap (Squid Router)</h2>
         <p class="text-xs text-slate-400 mb-4">
           Swap from <strong>any token on any chain</strong> to RETRO. Supports Ethereum, Polygon, Arbitrum, Optimism, BSC, Avalanche, and all Cosmos chains.
         </p>
@@ -270,10 +270,10 @@ const estimateSwap = computed(() => {
         
         <div class="mt-3 p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
           <div class="text-xs text-indigo-300 space-y-1">
-            <div>? Automatic routing across 40+ chains</div>
-            <div>? Best rates via aggregation</div>
-            <div>? Gasless swaps on some chains</div>
-            <div>? No registration required</div>
+            <div>✅ Automatic routing across 40+ chains</div>
+            <div>✅ Best rates via aggregation</div>
+            <div>✅ Gasless swaps on some chains</div>
+            <div>✅ No registration required</div>
           </div>
         </div>
       </div>
@@ -281,7 +281,7 @@ const estimateSwap = computed(() => {
       <!-- Skip Protocol -->
       <div class="card hover:border-indigo-500/50 transition-all cursor-pointer" @click="openSkipWidget">
         <div class="flex items-center gap-4">
-          <div class="text-4xl">?</div>
+          <div class="text-4xl">⚡</div>
           <div class="flex-1">
             <div class="text-base font-semibold text-slate-100 mb-1">Skip Protocol</div>
             <div class="text-sm text-slate-400 mb-2">Fast IBC swaps across Cosmos chains</div>
@@ -289,14 +289,14 @@ const estimateSwap = computed(() => {
               Swap ATOM, OSMO, USDC, or any IBC token to RETRO
             </div>
           </div>
-          <div class="text-slate-400">?</div>
+          <div class="text-slate-400">→</div>
         </div>
       </div>
 
       <!-- Osmosis Frontier -->
       <div class="card hover:border-indigo-500/50 transition-all cursor-pointer" @click="openOsmosisFrontier">
         <div class="flex items-center gap-4">
-          <div class="text-4xl">??</div>
+          <div class="text-4xl">🌊</div>
           <div class="flex-1">
             <div class="text-base font-semibold text-slate-100 mb-1">Osmosis Frontier</div>
             <div class="text-sm text-slate-400 mb-2">Create or join RETRO liquidity pools</div>
@@ -304,7 +304,7 @@ const estimateSwap = computed(() => {
               Bootstrap liquidity for RETRO/USDC, RETRO/ATOM pools
             </div>
           </div>
-          <div class="text-slate-400">?</div>
+          <div class="text-slate-400">→</div>
         </div>
       </div>
     </div>
@@ -312,7 +312,7 @@ const estimateSwap = computed(() => {
     <!-- Liquidity Pool Tab -->
     <div v-if="selectedMethod === 'pool'" class="space-y-3">
       <div class="card">
-        <h2 class="text-sm font-semibold text-slate-100 mb-3">?? Liquidity Pools</h2>
+        <h2 class="text-sm font-semibold text-slate-100 mb-3">💧 Liquidity Pools</h2>
         <p class="text-xs text-slate-400 mb-4">
           Provide liquidity to earn trading fees and liquidity mining rewards
         </p>
@@ -386,7 +386,7 @@ const estimateSwap = computed(() => {
 
         <!-- Create Pool CTA -->
         <div class="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 mt-3">
-          <div class="text-sm text-slate-100 mb-2">?? Bootstrap RETRO Liquidity</div>
+          <div class="text-sm text-slate-100 mb-2">🚀 Bootstrap RETRO Liquidity</div>
           <div class="text-xs text-slate-400 mb-3">
             Be among the first liquidity providers and earn maximum fees
           </div>
@@ -421,14 +421,14 @@ const estimateSwap = computed(() => {
               <div>5. Tokens arrive in ~60 seconds</div>
             </div>
           </div>
-          <div v-if="!bridge.instructions" class="text-slate-400">?</div>
+          <div v-if="!bridge.instructions" class="text-slate-400">→</div>
         </div>
       </div>
     </div>
 
     <!-- Faucet Tab (Testnet Only) -->
     <div v-if="selectedMethod === 'faucet' && network !== 'mainnet'" class="card">
-      <h2 class="text-sm font-semibold text-slate-100 mb-3">?? Testnet Faucet</h2>
+      <h2 class="text-sm font-semibold text-slate-100 mb-3">🚰 Testnet Faucet</h2>
       <p class="text-xs text-slate-400 mb-4">
         Get free {{ tokenInfo.symbol }} tokens for testing purposes
       </p>
