@@ -173,18 +173,20 @@ const estimateSwap = computed(() => {
 
 <template>
 <div class="space-y-4">
-  <!-- DISCLAIMER BANNER -->
-  <RcDisclaimer type="warning" title="🚧 Feature Under Development">
-    <p>
-      <strong>The swap and liquidity features are currently in development and not yet connected to live blockchain transactions.</strong>
-    </p>
-    <p class="mt-2">
-      These interfaces demonstrate the planned functionality. Once the RetroChain DEX module is deployed, all features will be fully operational with real on-chain transactions.
-    </p>
-    <p class="mt-2">
-      <strong>Bridge functionality</strong> via Axelar and IBC will be available once RetroChain mainnet launches and establishes IBC channels with partner chains.
-    </p>
-  </RcDisclaimer>
+    <!-- DISCLAIMER BANNER -->
+    <RcDisclaimer type="info" title="🚀 Cross-Chain Swaps Active">
+      <p>
+        <strong>Swap any token from any chain to RETRO using our integrated cross-chain swap providers!</strong>
+      </p>
+      <p class="mt-2">
+        Squid Router supports 40+ chains including Ethereum, Polygon, Arbitrum, and all Cosmos chains. 
+        Skip Protocol enables fast IBC swaps across the Cosmos ecosystem.
+      </p>
+      <p class="mt-2">
+        <strong>Liquidity pools</strong> can be created on Osmosis Frontier. Once RetroChain's native DEX module is fully deployed, 
+        you'll be able to create pools directly on RetroChain. Bridge functionality via Axelar and IBC is operational.
+      </p>
+    </RcDisclaimer>
 
   <div class="card-soft relative overflow-hidden">
       <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl"></div>

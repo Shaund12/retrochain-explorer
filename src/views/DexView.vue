@@ -405,17 +405,16 @@ const handleCreatePool = async () => {
 <template>
 <div class="space-y-4">
   <!-- DISCLAIMER BANNER -->
-  <RcDisclaimer type="warning" title="🚧 DEX Module Coming Soon">
+  <RcDisclaimer type="info" title="✅ Native DEX - Mainnet Ready">
     <p>
-      <strong>The Native DEX is ready for deployment once RetroChain's DEX module goes live.</strong>
+      <strong>The Native DEX is LIVE on RetroChain mainnet!</strong>
     </p>
     <p class="mt-2">
-      All transactions (swap, add liquidity, limit orders, create pools) are wired to sign with Keplr and broadcast to the blockchain. 
-      The UI is production-ready and waiting for the smart contracts to be deployed.
+      All transactions (swap, add liquidity, limit orders, create pools) are fully operational and will execute on-chain. 
+      Connect your Keplr wallet to start trading, providing liquidity, and earning fees.
     </p>
     <p class="mt-2">
-      Until the DEX module is deployed, these interfaces serve as a preview of the upcoming functionality. 
-      You can connect your wallet and explore the UI, but actual trades will execute once mainnet is live.
+      Once liquidity pools are created and funded, you can swap tokens, add liquidity, place limit orders, and participate in the RetroChain DeFi ecosystem.
     </p>
   </RcDisclaimer>
 
