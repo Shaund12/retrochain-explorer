@@ -44,11 +44,11 @@ const tokenDenom = computed(() => network.value === 'mainnet' ? 'uretro' : 'udre
 const tokenSymbol = computed(() => network.value === 'mainnet' ? 'RETRO' : 'DRETRO');
 
 const availableTokens = computed(() => [
-  { symbol: tokenSymbol.value, denom: tokenDenom.value, icon: "??" },
-  { symbol: "USDC", denom: "ibc/usdc", icon: "??" },
-  { symbol: "USDT", denom: "ibc/usdt", icon: "??" },
-  { symbol: "ATOM", denom: "ibc/atom", icon: "??" },
-  { symbol: "OSMO", denom: "ibc/osmo", icon: "??" }
+  { symbol: tokenSymbol.value, denom: tokenDenom.value, icon: "🎮" },
+  { symbol: "USDC", denom: "ibc/usdc", icon: "💵" },
+  { symbol: "USDT", denom: "ibc/usdt", icon: "💲" },
+  { symbol: "ATOM", denom: "ibc/atom", icon: "⚛️" },
+  { symbol: "OSMO", denom: "ibc/osmo", icon: "🌊" }
 ]);
 
 const selectedPool = computed(() => {
@@ -182,7 +182,7 @@ const swapTokens = () => {
         <!-- Connect Wallet -->
         <div v-if="!address" class="p-4 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
           <div class="flex items-center gap-3">
-            <div class="text-3xl">??</div>
+            <div class="text-3xl">👛</div>
             <div class="flex-1">
               <div class="text-sm font-semibold text-slate-100 mb-1">Connect Your Wallet</div>
               <div class="text-xs text-slate-400">Connect Keplr to trade on the DEX</div>
@@ -205,28 +205,28 @@ const swapTokens = () => {
         :class="activeTab === 'swap' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
         @click="activeTab = 'swap'"
       >
-        ?? Swap
+        🔄 Swap
       </button>
       <button 
         class="btn text-xs whitespace-nowrap"
         :class="activeTab === 'pools' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
         @click="activeTab = 'pools'"
       >
-        ?? Pools
+        💧 Pools
       </button>
       <button 
         class="btn text-xs whitespace-nowrap"
         :class="activeTab === 'limit' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
         @click="activeTab = 'limit'"
       >
-        ?? Limit Orders
+        📊 Limit Orders
       </button>
       <button 
         class="btn text-xs whitespace-nowrap"
         :class="activeTab === 'bridge' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
         @click="activeTab = 'bridge'"
       >
-        ?? Bridge
+        🌉 Bridge
       </button>
     </div>
 
@@ -348,7 +348,7 @@ const swapTokens = () => {
         <h3 class="text-sm font-semibold text-slate-100 mb-3">Active Pools</h3>
         <div v-if="dexLoading" class="text-xs text-slate-400">Loading pools...</div>
         <div v-else-if="pools.length === 0" class="text-xs text-slate-400 text-center py-8">
-          <div class="text-3xl mb-2">??</div>
+          <div class="text-3xl mb-2">💧</div>
           <div>No pools yet</div>
           <div class="text-[11px] mt-1">Create the first pool!</div>
         </div>
@@ -429,13 +429,13 @@ const swapTokens = () => {
         </div>
 
         <div class="p-4 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
-          <h3 class="text-sm font-semibold text-slate-100 mb-3">?? Liquidity Provider Benefits</h3>
+          <h3 class="text-sm font-semibold text-slate-100 mb-3">💡 Liquidity Provider Benefits</h3>
           <ul class="text-xs text-slate-300 space-y-2">
-            <li>? Earn trading fees (0.2% - 0.3% per swap)</li>
-            <li>? Liquidity mining rewards</li>
-            <li>? Governance voting power</li>
-            <li>? Support RetroChain ecosystem</li>
-            <li>?? Be aware of impermanent loss</li>
+            <li>✅ Earn trading fees (0.2% - 0.3% per swap)</li>
+            <li>✅ Liquidity mining rewards</li>
+            <li>✅ Governance voting power</li>
+            <li>✅ Support RetroChain ecosystem</li>
+            <li>⚠️ Be aware of impermanent loss</li>
           </ul>
         </div>
       </div>
@@ -542,9 +542,9 @@ const swapTokens = () => {
 
         <div class="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
           <div class="text-xs text-indigo-300 space-y-1">
-            <div>?? Estimated Time: {{ getEstimatedTime(bridgeChain, 'retrochain-1') }}</div>
-            <div>?? Bridge Fee: {{ getBridgeFee(bridgeChain, bridgeAsset, bridgeAmount) }}</div>
-            <div>?? Destination: {{ address || 'Connect wallet first' }}</div>
+            <div>⏱️ Estimated Time: {{ getEstimatedTime(bridgeChain, 'retrochain-1') }}</div>
+            <div>💰 Bridge Fee: {{ getBridgeFee(bridgeChain, bridgeAsset, bridgeAmount) }}</div>
+            <div>📍 Destination: {{ address || 'Connect wallet first' }}</div>
           </div>
         </div>
 
