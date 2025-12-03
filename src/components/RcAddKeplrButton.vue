@@ -9,6 +9,9 @@ const suggest = async () => {
     return;
   }
   const isMainnet = current.value === "mainnet";
+  const pfx = isMainnet
+    ? (import.meta.env.VITE_BECH32_PREFIX_MAINNET || "cosmos")
+    : (import.meta.env.VITE_BECH32_PREFIX_TESTNET || "cosmos");
   const cfg = isMainnet
     ? {
         chainId: "retrochain-1",
@@ -18,12 +21,12 @@ const suggest = async () => {
         stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
         bip44: { coinType: 118 },
         bech32Config: {
-          bech32PrefixAccAddr: "retro",
-          bech32PrefixAccPub: "retropub",
-          bech32PrefixValAddr: "retrovaloper",
-          bech32PrefixValPub: "retrovaloperpub",
-          bech32PrefixConsAddr: "retrovalcons",
-          bech32PrefixConsPub: "retrovalconspub"
+          bech32PrefixAccAddr: pfx,
+          bech32PrefixAccPub: `${pfx}pub`,
+          bech32PrefixValAddr: `${pfx}valoper`,
+          bech32PrefixValPub: `${pfx}valoperpub`,
+          bech32PrefixConsAddr: `${pfx}valcons`,
+          bech32PrefixConsPub: `${pfx}valconspub`
         },
         currencies: [{ coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 }],
         feeCurrencies: [{
@@ -32,7 +35,7 @@ const suggest = async () => {
           coinDecimals: 6,
           gasPriceStep: { low: 0.001, average: 0.0025, high: 0.004 }
         }],
-        features: ["stargate", "ibc-transfer", "no-legacy-stdTx", "cosmwasm"]
+        features: ["ibc-transfer", "cosmwasm"]
       }
     : {
         chainId: "retrochain-devnet-1",
@@ -42,16 +45,16 @@ const suggest = async () => {
         stakeCurrency: { coinDenom: "DRETRO", coinMinimalDenom: "udretro", coinDecimals: 6 },
         bip44: { coinType: 118 },
         bech32Config: {
-          bech32PrefixAccAddr: "retro",
-          bech32PrefixAccPub: "retropub",
-          bech32PrefixValAddr: "retrovaloper",
-          bech32PrefixValPub: "retrovaloperpub",
-          bech32PrefixConsAddr: "retrovalcons",
-          bech32PrefixConsPub: "retrovalconspub"
+          bech32PrefixAccAddr: pfx,
+          bech32PrefixAccPub: `${pfx}pub`,
+          bech32PrefixValAddr: `${pfx}valoper`,
+          bech32PrefixValPub: `${pfx}valoperpub`,
+          bech32PrefixConsAddr: `${pfx}valcons`,
+          bech32PrefixConsPub: `${pfx}valconspub`
         },
         currencies: [{ coinDenom: "DRETRO", coinMinimalDenom: "udretro", coinDecimals: 6 }],
         feeCurrencies: [{ coinDenom: "DRETRO", coinMinimalDenom: "udretro", coinDecimals: 6 }],
-        features: ["stargate", "ibc-transfer", "no-legacy-stdTx"]
+        features: ["ibc-transfer"]
       };
 
   try {
