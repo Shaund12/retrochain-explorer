@@ -2,6 +2,20 @@
 import { RouterView } from "vue-router";
 import RcHeader from "@/components/RcHeader.vue";
 import RcToastHost from "@/components/RcToastHost.vue";
+import { useNetwork } from "@/composables/useNetwork";
+import { useChainInfo } from "@/composables/useChainInfo";
+import { computed, onMounted } from "vue";
+
+const { current: network, restBase, rpcBase } = useNetwork();
+const { info, refresh } = useChainInfo();
+
+const isOnline = computed(() => !!info.value.latestBlockHeight);
+const displayRpc = computed(() => rpcBase.value || import.meta.env.VITE_RPC_URL || '/rpc');
+const displayRest = computed(() => restBase.value || import.meta.env.VITE_REST_API_URL || '/api');
+
+onMounted(() => {
+  refresh();
+});
 </script>
 
 <template>
@@ -17,8 +31,8 @@ import RcToastHost from "@/components/RcToastHost.vue";
           <!-- Brand Section -->
           <div class="col-span-1">
             <div class="flex items-center gap-3 mb-4">
-              <div class="h-10 w-10 rounded-xl bg-gradient-to-br from-indigo-500 via-purple-500 to-pink-500 flex items-center justify-center text-sm font-black shadow-lg">
-                <span class="text-white">RC</span>
+              <div class="h-10 w-10 rounded-xl overflow-hidden flex items-center justify-center shadow-lg">
+                <img src="@/assets/RCICOIMAGE.png" alt="RetroChain" class="w-full h-full object-cover" />
               </div>
               <div>
                 <div class="font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
@@ -120,13 +134,17 @@ import RcToastHost from "@/components/RcToastHost.vue";
             </ul>
             
             <!-- Network Status -->
-            <div class="p-3 rounded-lg bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20">
+            <div class="p-3 rounded-lg bg-gradient-to-br border" :class="isOnline ? 'from-emerald-500/10 to-cyan-500/10 border-emerald-500/20' : 'from-rose-500/10 to-orange-500/10 border-rose-500/20'">
               <div class="flex items-center gap-2 text-xs">
-                <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-                <span class="text-emerald-300 font-medium">Network Online</span>
+                <span class="w-2 h-2 rounded-full" :class="isOnline ? 'bg-emerald-400 animate-pulse' : 'bg-rose-400'"></span>
+                <span class="font-medium" :class="isOnline ? 'text-emerald-300' : 'text-rose-300'">
+                  {{ isOnline ? 'Network Online' : 'Network Offline' }}
+                </span>
               </div>
-              <div class="text-[10px] text-slate-400 mt-1">
-                REST: localhost:1317
+              <div class="text-[10px] text-slate-400 mt-1 space-y-0.5">
+                <div>REST: {{ displayRest }}</div>
+                <div>RPC: {{ displayRpc }}</div>
+                <div v-if="isOnline" class="text-emerald-400">Block #{{ info.latestBlockHeight }}</div>
               </div>
             </div>
           </div>
