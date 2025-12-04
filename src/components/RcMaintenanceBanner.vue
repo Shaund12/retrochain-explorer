@@ -12,7 +12,7 @@ const { isMaintenanceMode, message, details, eta } = useMaintenance();
     <div class="max-w-7xl mx-auto px-4 py-4">
       <div class="flex items-start gap-4">
         <!-- Icon -->
-        <div class="text-3xl animate-pulse">??</div>
+        <div class="text-3xl animate-pulse">⚠️</div>
         
         <!-- Content -->
         <div class="flex-1">
@@ -20,7 +20,7 @@ const { isMaintenanceMode, message, details, eta } = useMaintenance();
           <div class="text-sm opacity-90 mb-2">{{ details }}</div>
           <div class="flex items-center gap-3 text-xs">
             <span class="px-2 py-1 rounded bg-white/20 font-mono">{{ eta }}</span>
-            <span class="opacity-75">� Some features may be temporarily unavailable</span>
+            <span class="opacity-75">• Some features may be temporarily unavailable</span>
           </div>
         </div>
 
