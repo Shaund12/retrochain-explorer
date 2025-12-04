@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { RouterView } from "vue-router";
 import RcHeader from "@/components/RcHeader.vue";
+import RcMaintenanceBanner from "@/components/RcMaintenanceBanner.vue";
 import { useNetwork } from "@/composables/useNetwork";
 import { useChainInfo } from "@/composables/useChainInfo";
 import { computed, onMounted } from "vue";
@@ -18,11 +19,12 @@ onMounted(() => {
 </script>
 
 <template>
-  <div class="min-h-screen flex flex-col">
-    <RcHeader />
-    <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 relative z-10">
-      <RouterView />
-    </main>
+<div class="min-h-screen flex flex-col">
+  <RcMaintenanceBanner />
+  <RcHeader />
+  <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 relative z-10">
+    <RouterView />
+  </main>
     <footer class="border-t border-indigo-500/20 relative z-10 backdrop-blur-sm bg-[rgba(10,14,39,0.6)]">
       <div class="max-w-7xl mx-auto px-4 py-8">
         <!-- Main Footer Content -->

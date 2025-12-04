@@ -9,6 +9,7 @@ import { useNetwork } from "@/composables/useNetwork";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import { useFaucet } from "@/composables/useFaucet";
 import { formatAmount as fmtAmount } from "@/utils/format";
+import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
 
 const route = useRoute();
 const router = useRouter();
@@ -21,6 +22,53 @@ const faucetAmount = ref<string>("1000000"); // default 1 RETRO in micro (uretro
 
 const addressInput = ref<string>((route.params.address as string) || "");
 const loadingTxs = ref(false);
+
+// Transfer state
+const showTransferModal = ref(false);
+const transferRecipient = ref("");
+const transferAmount = ref("");
+const transferMemo = ref("");
+const transferring = ref(false);
+
+// Address book
+const addressBook = ref<Array<{name: string, address: string}>>([
+  { name: "Alice", address: "cosmos1..." },
+  { name: "Bob", address: "cosmos1..." },
+]);
+
+// Load address book from localStorage
+const loadAddressBook = () => {
+  try {
+    const saved = localStorage.getItem('retrochain_address_book');
+    if (saved) {
+      addressBook.value = JSON.parse(saved);
+    }
+  } catch (e) {
+    console.error('Failed to load address book', e);
+  }
+};
+
+// Save address book to localStorage
+const saveAddressBook = () => {
+  try {
+    localStorage.setItem('retrochain_address_book', JSON.stringify(addressBook.value));
+  } catch (e) {
+    console.error('Failed to save address book', e);
+  }
+};
+
+// Add to address book
+const addToAddressBook = (name: string, address: string) => {
+  if (!name || !address) return;
+  addressBook.value.push({ name, address });
+  saveAddressBook();
+};
+
+// Remove from address book
+const removeFromAddressBook = (index: number) => {
+  addressBook.value.splice(index, 1);
+  saveAddressBook();
+};
 
 const totalBalance = computed(() => {
   const coin = balances.value.find(b => b.denom === "uretro") || balances.value[0];
@@ -60,6 +108,9 @@ const FAUCET_DISPLAY = import.meta.env.VITE_FAUCET_URL || 'faucet';
 const { current: network } = useNetwork();
 
 onMounted(async () => {
+  // Load address book
+  loadAddressBook();
+  
   // If route has an address, use it
   if (addressInput.value) {
     await loadAccount();
@@ -83,6 +134,81 @@ watch(keplrAddress, (newAddress) => {
 watch(error, (val) => {
   if (val) notify(val);
 });
+
+// Handle token transfer
+const handleTransfer = async () => {
+  if (!window.keplr || !keplrAddress.value) {
+    notify("Please connect Keplr wallet first");
+    return;
+  }
+
+  if (!transferRecipient.value || !transferAmount.value) {
+    notify("Please enter recipient and amount");
+    return;
+  }
+
+  transferring.value = true;
+  const toast = useToast();
+  toast.showInfo("Preparing transfer...");
+
+  try {
+    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
+    const denom = network.value === 'mainnet' ? 'uretro' : 'udretro';
+    
+    // Convert to micro units
+    const amountInMicro = Math.floor(parseFloat(transferAmount.value) * 1_000_000).toString();
+
+    // Create transfer message
+    const msg = {
+      typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+      value: {
+        fromAddress: keplrAddress.value,
+        toAddress: transferRecipient.value,
+        amount: [{
+          denom: denom,
+          amount: amountInMicro
+        }]
+      }
+    };
+
+    const fee = {
+      amount: [{ denom: denom, amount: "5000" }],
+      gas: "200000"
+    };
+
+    // Sign and broadcast
+    const result = await (window.keplr as any).signAndBroadcast(
+      chainId,
+      keplrAddress.value,
+      [msg],
+      fee,
+      transferMemo.value || "Transfer from RetroChain Explorer"
+    );
+
+    if (result.code === 0) {
+      toast.showTxSuccess(result.transactionHash || "");
+      showTransferModal.value = false;
+      transferRecipient.value = "";
+      transferAmount.value = "";
+      transferMemo.value = "";
+      // Reload account balances
+      await loadAccount();
+    } else {
+      throw new Error(`Transaction failed: ${result.rawLog}`);
+    }
+  } catch (e: any) {
+    console.error("Transfer failed:", e);
+    const toast = useToast();
+    toast.showTxError(e.message || "Transaction failed");
+  } finally {
+    transferring.value = false;
+  }
+};
+
+// Select address from address book
+const selectFromAddressBook = (address: string) => {
+  transferRecipient.value = address;
+};
 </script>
 
 <template>
@@ -149,6 +275,23 @@ watch(error, (val) => {
 
     <!-- Account Data -->
     <template v-if="bech32Address">
+      <!-- Keplr Setup Notice -->
+      <div v-if="keplrAddress && keplrAddress === bech32Address" class="card border-indigo-500/50 bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
+        <div class="flex items-center gap-3">
+          <div class="text-3xl">??</div>
+          <div class="flex-1">
+            <div class="text-sm font-semibold text-slate-100 mb-1">Keplr Wallet Setup</div>
+            <div class="text-xs text-slate-400 mb-2">
+              To see your balance in Keplr wallet, you need to add RetroChain to Keplr first.
+            </div>
+            <div class="flex items-center gap-2">
+              <RcAddKeplrButton />
+              <span class="text-xs text-slate-500">? Click here to add RetroChain to Keplr</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="grid gap-3 grid-cols-1 lg:grid-cols-3">
         <!-- Balance Overview -->
         <div class="card">
@@ -158,8 +301,18 @@ watch(error, (val) => {
           <div class="text-2xl font-bold text-emerald-400 mb-1">
             {{ totalBalance }}
           </div>
-          <div class="text-xs text-slate-400">
+          <div class="text-xs text-slate-400 mb-3">
             Address: <code class="text-[10px]">{{ bech32Address.slice(0, 16) }}...</code>
+          </div>
+          
+          <!-- Quick Actions -->
+          <div v-if="keplrAddress && keplrAddress === bech32Address" class="flex gap-2">
+            <button class="btn btn-primary text-xs flex-1" @click="showTransferModal = true">
+              ?? Send Tokens
+            </button>
+            <button class="btn text-xs" @click="copyAddress">
+              ?? Copy
+            </button>
           </div>
         </div>
 
@@ -305,6 +458,166 @@ watch(error, (val) => {
         <li>All amounts are shown in micro-units (1 RETRO = 1,000,000 uretro)</li>
         <li>Validator addresses start with <code class="text-indigo-400">retrovaloper</code></li>
       </ul>
+    </div>
+
+    <!-- Transfer Modal -->
+    <div v-if="showTransferModal" class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm" @click.self="showTransferModal = false">
+      <div class="card max-w-2xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
+            <span>??</span> Send Tokens
+          </h2>
+          <button class="btn text-xs" @click="showTransferModal = false">? Close</button>
+        </div>
+
+        <div class="space-y-4">
+          <!-- Recipient -->
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Recipient Address</label>
+            <input 
+              v-model="transferRecipient"
+              type="text"
+              placeholder="cosmos1..."
+              class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm font-mono"
+            />
+          </div>
+
+          <!-- Address Book -->
+          <div v-if="addressBook.length > 0" class="space-y-2">
+            <div class="text-xs text-slate-400">?? Quick Select</div>
+            <div class="grid grid-cols-2 gap-2">
+              <button
+                v-for="(contact, index) in addressBook"
+                :key="index"
+                class="p-2 rounded-lg border border-slate-700 hover:border-indigo-500/50 transition-all text-left"
+                @click="selectFromAddressBook(contact.address)"
+              >
+                <div class="text-xs font-semibold text-slate-200">{{ contact.name }}</div>
+                <div class="text-[10px] text-slate-400 font-mono truncate">{{ contact.address }}</div>
+              </button>
+            </div>
+          </div>
+
+          <!-- Amount -->
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Amount ({{ network === 'mainnet' ? 'RETRO' : 'DRETRO' }})</label>
+            <div class="relative">
+              <input 
+                v-model="transferAmount"
+                type="number"
+                step="0.000001"
+                placeholder="0.000000"
+                class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm pr-20"
+              />
+              <button 
+                class="absolute right-2 top-1/2 -translate-y-1/2 btn text-xs"
+                @click="transferAmount = (parseFloat(totalBalance.split(' ')[0]) * 0.9).toFixed(6)"
+              >
+                Max
+              </button>
+            </div>
+            <div class="text-xs text-slate-500 mt-1">Available: {{ totalBalance }}</div>
+          </div>
+
+          <!-- Memo -->
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Memo (Optional)</label>
+            <input 
+              v-model="transferMemo"
+              type="text"
+              placeholder="Payment note..."
+              class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+            />
+          </div>
+
+          <!-- Transaction Info -->
+          <div class="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+            <div class="text-xs text-indigo-300 space-y-1">
+              <div class="flex justify-between">
+                <span>Network Fee:</span>
+                <span class="font-mono">0.005 {{ network === 'mainnet' ? 'RETRO' : 'DRETRO' }}</span>
+              </div>
+              <div class="flex justify-between">
+                <span>Total:</span>
+                <span class="font-mono font-bold">
+                  {{ transferAmount ? (parseFloat(transferAmount) + 0.005).toFixed(6) : '0.005' }} 
+                  {{ network === 'mainnet' ? 'RETRO' : 'DRETRO' }}
+                </span>
+              </div>
+            </div>
+          </div>
+
+          <!-- Send Button -->
+          <button 
+            class="btn btn-primary w-full"
+            @click="handleTransfer"
+            :disabled="!transferRecipient || !transferAmount || transferring"
+          >
+            {{ transferring ? 'Sending...' : '?? Send Tokens' }}
+          </button>
+        </div>
+
+        <!-- Address Book Management -->
+        <div class="mt-6 pt-6 border-t border-slate-700">
+          <h3 class="text-sm font-semibold text-slate-100 mb-3">?? Address Book</h3>
+          
+          <!-- Add New Contact -->
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700 mb-3">
+            <div class="text-xs text-slate-400 mb-2">Add New Contact</div>
+            <div class="flex gap-2">
+              <input 
+                ref="newContactName"
+                type="text"
+                placeholder="Name"
+                class="w-32 p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs"
+              />
+              <input 
+                ref="newContactAddress"
+                type="text"
+                placeholder="cosmos1..."
+                class="flex-1 p-2 rounded-lg bg-slate-800 border border-slate-700 text-slate-200 text-xs font-mono"
+              />
+              <button 
+                class="btn text-xs"
+                @click="() => {
+                  const name = ($refs.newContactName as HTMLInputElement)?.value;
+                  const addr = ($refs.newContactAddress as HTMLInputElement)?.value;
+                  if (name && addr) {
+                    addToAddressBook(name, addr);
+                    ($refs.newContactName as HTMLInputElement).value = '';
+                    ($refs.newContactAddress as HTMLInputElement).value = '';
+                  }
+                }"
+              >
+                + Add
+              </button>
+            </div>
+          </div>
+
+          <!-- Contact List -->
+          <div class="space-y-2">
+            <div
+              v-for="(contact, index) in addressBook"
+              :key="index"
+              class="p-2 rounded-lg bg-slate-900/60 border border-slate-700 flex items-center justify-between"
+            >
+              <div class="flex-1">
+                <div class="text-xs font-semibold text-slate-200">{{ contact.name }}</div>
+                <div class="text-[10px] text-slate-400 font-mono">{{ contact.address }}</div>
+              </div>
+              <button 
+                class="btn text-xs text-rose-300 hover:text-rose-200"
+                @click="removeFromAddressBook(index)"
+              >
+                ???
+              </button>
+            </div>
+            <div v-if="addressBook.length === 0" class="text-xs text-slate-500 text-center py-4">
+              No contacts yet. Add your first contact above!
+            </div>
+          </div>
+        </div>
+      </div>
     </div>
   </div>
 </template>

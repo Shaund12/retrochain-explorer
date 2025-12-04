@@ -16,8 +16,8 @@ const suggest = async () => {
     ? {
         chainId: "retrochain-1",
         chainName: "Retrochain",
-        rpc: import.meta.env.VITE_RPC_URL_MAINNET || "https://retrochain.ddns.net:26667",
-        rest: import.meta.env.VITE_REST_API_URL_MAINNET || "https://retrochain.ddns.net:1318",
+        rpc: "https://rpc.retrochain.ddns.net",
+        rest: "https://api.retrochain.ddns.net",
         stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
         bip44: { coinType: 118 },
         bech32Config: {
