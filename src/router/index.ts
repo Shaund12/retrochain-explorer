@@ -5,6 +5,7 @@ import BlockDetailView from "@/views/BlockDetailView.vue";
 import TxsView from "@/views/TxsView.vue";
 import TxDetailView from "@/views/TxDetailView.vue";
 import AccountView from "@/views/AccountView.vue";
+import AccountsView from "@/views/AccountsView.vue";
 import ValidatorsView from "@/views/ValidatorsView.vue";
 import GovernanceView from "@/views/GovernanceView.vue";
 import StakingView from "@/views/StakingView.vue";
@@ -20,6 +21,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/txs", name: "txs", component: TxsView },
   { path: "/txs/:hash", name: "tx-detail", component: TxDetailView, props: true },
   { path: "/account/:address?", name: "account", component: AccountView, props: true },
+  { path: "/accounts", name: "accounts", component: AccountsView },
   { path: "/validators", name: "validators", component: ValidatorsView },
   { path: "/governance", name: "governance", component: GovernanceView },
   { path: "/staking", name: "staking", component: StakingView },

@@ -8,6 +8,7 @@ const { txs, loading, error, searchRecent } = useTxs();
 const router = useRouter();
 
 const filter = ref<'all' | 'success' | 'failed'>('all');
+const limit = ref(20); // Reduced from 50 to 20
 const filteredTxs = computed(() => {
   if (filter.value === 'success') return txs.value.filter(t => (t.code ?? 0) === 0);
   if (filter.value === 'failed') return txs.value.filter(t => (t.code ?? 0) !== 0);
@@ -16,8 +17,13 @@ const filteredTxs = computed(() => {
 
 const copy = async (text: string) => { try { await navigator.clipboard?.writeText?.(text); } catch {} };
 
+const loadMore = async () => {
+  limit.value += 20;
+  await searchRecent(limit.value);
+};
+
 onMounted(async () => {
-  await searchRecent(50);
+  await searchRecent(limit.value);
 });
 </script>
 
@@ -26,19 +32,33 @@ onMounted(async () => {
     <div class="flex items-center justify-between mb-3">
       <div>
         <h1 class="text-sm font-semibold text-slate-100">Transactions</h1>
-        <div class="flex items-center gap-2 mt-1">
+      <div class="flex items-center gap-2 mt-1">
           <button class="btn text-[10px]" :class="filter==='all' ? 'border-indigo-400/70 bg-indigo-500/10' : ''" @click="filter='all'">All</button>
           <button class="btn text-[10px]" :class="filter==='success' ? 'border-emerald-400/70 bg-emerald-500/10' : ''" @click="filter='success'">Success</button>
           <button class="btn text-[10px]" :class="filter==='failed' ? 'border-rose-400/70 bg-rose-500/10' : ''" @click="filter='failed'">Failed</button>
         </div>
       </div>
-      <button class="btn text-xs" @click="searchRecent(50)">
-        Refresh
-      </button>
+      <div class="flex gap-2">
+        <button class="btn text-xs" @click="searchRecent(limit)" :disabled="loading">
+          {{ loading ? 'Loading...' : 'Refresh' }}
+        </button>
+        <button 
+          v-if="txs.length >= limit" 
+          class="btn text-xs" 
+          @click="loadMore"
+          :disabled="loading"
+        >
+          Load More
+        </button>
+      </div>
     </div>
 
-    <div v-if="loading" class="text-xs text-slate-400 mb-2">
-      Loading transactions...
+    <div v-if="loading && txs.length === 0" class="flex items-center justify-center py-12">
+      <div class="text-center">
+        <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-indigo-400 mb-4"></div>
+        <div class="text-sm text-slate-400">Loading recent transactions...</div>
+        <div class="text-xs text-slate-500 mt-1">Scanning latest blocks</div>
+      </div>
     </div>
     <div v-if="error" class="text-xs text-rose-300 mb-2">
       {{ error }}
