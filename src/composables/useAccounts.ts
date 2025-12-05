@@ -38,21 +38,25 @@ export function useAccounts() {
           for (const txBase64 of txs) {
             try {
               // Decode transaction to find addresses
-              const txBytes = Uint8Array.from(atob(txBase64), c => c.charCodeAt(0));
+              const txBytes = Uint8Array.from(atob(txBase64 as string), c => c.charCodeAt(0));
               const txStr = new TextDecoder().decode(txBytes);
               
               // Extract cosmos addresses using regex
               const matches = txStr.match(/cosmos1[a-z0-9]{38,}/g);
               if (matches) {
-                matches.forEach(addr => {
+                matches.forEach((addr: string) => {
                   if (!addressMap.has(addr)) {
                     addressMap.set(addr, new Set());
                   }
                 });
               }
-            } catch {}
+            } catch (e) {
+              // Skip tx decode errors
+            }
           }
-        } catch {}
+        } catch (e) {
+          // Skip block fetch errors
+        }
         
         // Break if we have enough addresses
         if (addressMap.size >= limit) break;
@@ -84,7 +88,7 @@ export function useAccounts() {
               denom: 'uretro'
             });
           }
-        } catch {
+        } catch (e) {
           // Skip addresses that error
         }
         
@@ -113,3 +117,4 @@ export function useAccounts() {
     fetchAccounts
   };
 }
+
