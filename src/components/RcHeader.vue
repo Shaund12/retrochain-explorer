@@ -15,11 +15,8 @@
           <div class="font-bold text-base bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
             RetroChain
           </div>
-          <span
-            class="px-2 py-0.5 rounded-full text-[10px] font-semibold border"
-            :class="net === 'mainnet' ? 'border-emerald-400/60 text-emerald-300 bg-emerald-500/10' : 'border-indigo-400/60 text-indigo-300 bg-indigo-500/10'"
-          >
-            {{ net === 'mainnet' ? 'MAINNET' : 'TESTNET' }}
+          <span class="px-2 py-0.5 rounded-full text-[10px] font-semibold border border-emerald-400/60 text-emerald-300 bg-emerald-500/10">
+            MAINNET
           </span>
         </div>
       </button>
@@ -99,22 +96,6 @@
         >
           {{ item.label }}
         </a>
-        <div class="mt-3 px-4 flex items-center gap-2">
-          <button
-            class="btn text-[10px] px-2 py-1 flex-1"
-            :class="net === 'testnet' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-            @click="setNetwork('testnet'); mobileMenuOpen = false"
-          >
-            Testnet
-          </button>
-          <button
-            class="btn text-[10px] px-2 py-1 flex-1"
-            :class="net === 'mainnet' ? 'border-indigo-400/70 bg-indigo-500/10' : ''"
-            @click="setNetwork('mainnet'); mobileMenuOpen = false"
-          >
-            Mainnet
-          </button>
-        </div>
         <div class="mt-3 px-4">
           <RcAddKeplrButton class="w-full inline-flex justify-center" />
         </div>
@@ -127,14 +108,12 @@
 import { computed, ref } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useKeplr } from "@/composables/useKeplr";
-import { useNetwork } from "@/composables/useNetwork";
 import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
 
 const route = useRoute();
 const router = useRouter();
 const { isAvailable, address, connecting, connect, disconnect } = useKeplr();
 const mobileMenuOpen = ref(false);
-const { current: net, setNetwork } = useNetwork();
 
 const navItems = [
   { label: "Overview", to: { name: "home" } },

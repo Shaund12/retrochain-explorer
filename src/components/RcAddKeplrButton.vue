@@ -1,61 +1,34 @@
 <script setup lang="ts">
-import { useNetwork } from "@/composables/useNetwork";
-
-const { current } = useNetwork();
-
 const suggest = async () => {
   if (!window.keplr) {
     alert("Install Keplr first.");
     return;
   }
-  const isMainnet = current.value === "mainnet";
-  const pfx = isMainnet
-    ? "cosmos"
-    : "cosmos";
-  const cfg = isMainnet
-    ? {
-        chainId: "retrochain-1",
-        chainName: "Retrochain",
-        rpc: "https://retrochain.ddns.net/rpc",
-        rest: "https://retrochain.ddns.net/api",
-        stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
-        bip44: { coinType: 118 },
-        bech32Config: {
-          bech32PrefixAccAddr: pfx,
-          bech32PrefixAccPub: `${pfx}pub`,
-          bech32PrefixValAddr: `${pfx}valoper`,
-          bech32PrefixValPub: `${pfx}valoperpub`,
-          bech32PrefixConsAddr: `${pfx}valcons`,
-          bech32PrefixConsPub: `${pfx}valconspub`
-        },
-        currencies: [{ coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 }],
-        feeCurrencies: [{
-          coinDenom: "RETRO",
-          coinMinimalDenom: "uretro",
-          coinDecimals: 6,
-          gasPriceStep: { low: 0.001, average: 0.0025, high: 0.004 }
-        }],
-        features: ["ibc-transfer"]
-      }
-    : {
-        chainId: "retrochain-devnet-1",
-        chainName: "Retrochain Devnet",
-        rpc: import.meta.env.VITE_RPC_URL_TESTNET || "https://retrochaindevnet.ddns.net:27657",
-        rest: import.meta.env.VITE_REST_API_URL_TESTNET || "https://retrochaindevnet.ddns.net:2317",
-        stakeCurrency: { coinDenom: "DRETRO", coinMinimalDenom: "udretro", coinDecimals: 6 },
-        bip44: { coinType: 118 },
-        bech32Config: {
-          bech32PrefixAccAddr: pfx,
-          bech32PrefixAccPub: `${pfx}pub`,
-          bech32PrefixValAddr: `${pfx}valoper`,
-          bech32PrefixValPub: `${pfx}valoperpub`,
-          bech32PrefixConsAddr: `${pfx}valcons`,
-          bech32PrefixConsPub: `${pfx}valconspub`
-        },
-        currencies: [{ coinDenom: "DRETRO", coinMinimalDenom: "udretro", coinDecimals: 6 }],
-        feeCurrencies: [{ coinDenom: "DRETRO", coinMinimalDenom: "udretro", coinDecimals: 6 }],
-        features: ["ibc-transfer"]
-      };
+
+  const cfg = {
+    chainId: "retrochain-1",
+    chainName: "Retrochain",
+    rpc: "https://retrochain.ddns.net/rpc",
+    rest: "https://retrochain.ddns.net/api",
+    stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
+    bip44: { coinType: 118 },
+    bech32Config: {
+      bech32PrefixAccAddr: "cosmos",
+      bech32PrefixAccPub: "cosmospub",
+      bech32PrefixValAddr: "cosmosvaloper",
+      bech32PrefixValPub: "cosmosvaloperpub",
+      bech32PrefixConsAddr: "cosmosvalcons",
+      bech32PrefixConsPub: "cosmosvalconspub"
+    },
+    currencies: [{ coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 }],
+    feeCurrencies: [{
+      coinDenom: "RETRO",
+      coinMinimalDenom: "uretro",
+      coinDecimals: 6,
+      gasPriceStep: { low: 0.001, average: 0.0025, high: 0.004 }
+    }],
+    features: ["ibc-transfer"]
+  };
 
   try {
     await window.keplr.experimentalSuggestChain(cfg);
@@ -69,6 +42,6 @@ const suggest = async () => {
 
 <template>
   <button class="btn text-[10px]" @click="suggest">
-    Add {{ current === 'mainnet' ? 'Retrochain' : 'Devnet' }}
+    Add Retrochain
   </button>
 </template>

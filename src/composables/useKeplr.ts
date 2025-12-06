@@ -24,90 +24,54 @@ const address = ref<string | null>(null);
 const connecting = ref(false);
 const error = ref<string | null>(null);
 
-// ==== RetroChain chain info for Keplr ====
-// Dynamic mainnet/testnet configuration
-const { current: net, restBase, rpcBase } = useNetwork();
+const { restBase, rpcBase } = useNetwork();
 
-function getChainId() {
-  if (net.value === "mainnet") {
-    return (import.meta as any).env?.VITE_CHAIN_ID_MAINNET || "retrochain-1";
-  }
-  return (import.meta as any).env?.VITE_CHAIN_ID_TESTNET || "retrochain-devnet-1";
-}
-
-function getChainName() {
-  return net.value === "mainnet" ? "RetroChain" : "RetroChain Devnet";
-}
-
-function getCurrencies() {
-  if (net.value === "mainnet") {
-    return {
-      stake: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
-      list: [
-        { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 }
-      ],
-      fees: [{
-        coinDenom: "RETRO",
-        coinMinimalDenom: "uretro",
-        coinDecimals: 6,
-        gasPriceStep: { low: 0.001, average: 0.0025, high: 0.004 }
-      }]
-    };
-  }
-  return {
-    stake: { coinDenom: "DRETRO", coinMinimalDenom: "udretro", coinDecimals: 6 },
-    list: [
-      { coinDenom: "DRETRO", coinMinimalDenom: "udretro", coinDecimals: 6 }
-    ],
-    fees: [{ coinDenom: "DRETRO", coinMinimalDenom: "udretro", coinDecimals: 6 }]
-  };
-}
+const CHAIN_ID = "retrochain-1";
+const CHAIN_NAME = "RetroChain";
 
 function buildChainInfo() {
-  const currencies = getCurrencies();
-  const pfx = (() => {
-    if (net.value === "mainnet") {
-      return (import.meta as any).env?.VITE_BECH32_PREFIX_MAINNET || "cosmos";
-    }
-    return (import.meta as any).env?.VITE_BECH32_PREFIX_TESTNET || "cosmos";
-  })();
   return {
-    chainId: getChainId(),
-    chainName: getChainName(),
+    chainId: CHAIN_ID,
+    chainName: CHAIN_NAME,
     rpc: rpcBase.value || "/rpc",
     rest: restBase.value || "/api",
     bip44: { coinType: 118 },
     bech32Config: {
-      bech32PrefixAccAddr: pfx,
-      bech32PrefixAccPub: `${pfx}pub`,
-      bech32PrefixValAddr: `${pfx}valoper`,
-      bech32PrefixValPub: `${pfx}valoperpub`,
-      bech32PrefixConsAddr: `${pfx}valcons`,
-      bech32PrefixConsPub: `${pfx}valconspub`
+      bech32PrefixAccAddr: "cosmos",
+      bech32PrefixAccPub: "cosmospub",
+      bech32PrefixValAddr: "cosmosvaloper",
+      bech32PrefixValPub: "cosmosvaloperpub",
+      bech32PrefixConsAddr: "cosmosvalcons",
+      bech32PrefixConsPub: "cosmosvalconspub"
     },
-    currencies: currencies.list,
-    feeCurrencies: currencies.fees,
-    stakeCurrency: currencies.stake,
+    currencies: [
+      { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 }
+    ],
+    feeCurrencies: [{
+      coinDenom: "RETRO",
+      coinMinimalDenom: "uretro",
+      coinDecimals: 6,
+      gasPriceStep: { low: 0.001, average: 0.0025, high: 0.004 }
+    }],
+    stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
     features: ["ibc-transfer", "cosmwasm"]
   } as any;
 }
 
 export function useKeplr() {
-const checkAvailability = () => {
-  if (typeof window === "undefined") {
-    isAvailable.value = false;
-    return;
-  }
-  // Check both window.keplr and if it's not disabled
-  isAvailable.value = !!window.keplr && typeof window.keplr.enable === "function";
-};
+  const checkAvailability = () => {
+    if (typeof window === "undefined") {
+      isAvailable.value = false;
+      return;
+    }
+    isAvailable.value = !!window.keplr && typeof window.keplr.enable === "function";
+  };
 
   const suggestChain = async () => {
     if (!window.keplr) {
       throw new Error("Keplr extension not found.");
     }
 
-    // Some versions gate this under experimentalSuggestChain
     if (!window.keplr.experimentalSuggestChain) {
       throw new Error("Keplr does not support experimentalSuggestChain.");
     }
@@ -125,14 +89,12 @@ const checkAvailability = () => {
         throw new Error("Keplr extension not detected. Install it and reload.");
       }
 
-      // Add chain to Keplr, then enable it
       await suggestChain();
-      await window.keplr.enable(getChainId());
+      await window.keplr.enable(CHAIN_ID);
 
-      const chainId = getChainId();
       const offlineSigner =
-        (await window.getOfflineSignerAuto?.(chainId)) ||
-        window.getOfflineSigner?.(chainId);
+        (await window.getOfflineSignerAuto?.(CHAIN_ID)) ||
+        window.getOfflineSigner?.(CHAIN_ID);
 
       if (!offlineSigner) {
         throw new Error("Unable to get offline signer from Keplr.");
@@ -155,21 +117,17 @@ const checkAvailability = () => {
   };
 
   const disconnect = () => {
-    // Keplr doesn't have a "disconnect", we just clear local state
     address.value = null;
   };
 
-  // Helper to sign and broadcast transactions
   const signAndBroadcast = async (chainId: string, msgs: any[], fee: any, memo = "") => {
     if (!window.keplr) throw new Error("Keplr not available");
     if (!address.value) throw new Error("Not connected to Keplr");
 
     try {
-      // Get offline signer
       const offlineSigner = window.keplr.getOfflineSigner(chainId);
       const accounts = await offlineSigner.getAccounts();
       
-      // Use CosmJS to sign and broadcast
       const { SigningStargateClient } = await import("@cosmjs/stargate");
       const rpc = rpcBase.value || "/rpc";
       const client = await SigningStargateClient.connectWithSigner(rpc, offlineSigner);
@@ -188,17 +146,14 @@ const checkAvailability = () => {
     }
   };
 
-  // Extend window.keplr with signAndBroadcast if it doesn't exist
   if (typeof window !== "undefined" && window.keplr && !window.keplr.signAndBroadcast) {
     window.keplr.signAndBroadcast = async (chainId: string, signer: string, msgs: any[], fee: any, memo = "") => {
       return signAndBroadcast(chainId, msgs, fee, memo);
     };
   }
 
-  // run once on import
   checkAvailability();
 
-  // Also check again after a short delay (Keplr might load after page)
   if (typeof window !== "undefined") {
     setTimeout(() => {
       checkAvailability();
