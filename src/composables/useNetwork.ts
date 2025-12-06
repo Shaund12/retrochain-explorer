@@ -10,7 +10,8 @@ function resolveInitialNetwork(): Network {
     if (saved === "mainnet" || saved === "testnet") return saved;
   } catch {}
   const envDefault = (import.meta.env.VITE_DEFAULT_NETWORK as string | undefined)?.toLowerCase();
-  return envDefault === "mainnet" ? "mainnet" : "testnet";
+  // Always default to mainnet
+  return envDefault === "testnet" ? "testnet" : "mainnet";
 }
 
 const current = ref<Network>(resolveInitialNetwork());
