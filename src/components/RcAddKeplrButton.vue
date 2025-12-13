@@ -5,11 +5,14 @@ const suggest = async () => {
     return;
   }
 
+  // Build absolute URLs from current origin
+  const origin = window.location.origin;
+  
   const cfg = {
     chainId: "retrochain-mainnet",
     chainName: "RetroChain Mainnet",
-    rpc: "/rpc",
-    rest: "/api",
+    rpc: `${origin}/rpc`,
+    rest: `${origin}/api`,
     stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
     bip44: { coinType: 118 },
     bech32Config: {

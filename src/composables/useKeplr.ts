@@ -30,11 +30,16 @@ const CHAIN_ID = "retrochain-mainnet";
 const CHAIN_NAME = "RetroChain Mainnet";
 
 function buildChainInfo() {
+  // Build absolute URLs - Keplr requires full URIs
+  const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
+  const rpcUrl = rpcBase.value ? (rpcBase.value.startsWith('http') ? rpcBase.value : `${origin}${rpcBase.value}`) : `${origin}/rpc`;
+  const restUrl = restBase.value ? (restBase.value.startsWith('http') ? restBase.value : `${origin}${restBase.value}`) : `${origin}/api`;
+  
   return {
     chainId: CHAIN_ID,
     chainName: CHAIN_NAME,
-    rpc: rpcBase.value || "/rpc",
-    rest: restBase.value || "/api",
+    rpc: rpcUrl,
+    rest: restUrl,
     bip44: { coinType: 118 },
     bech32Config: {
       bech32PrefixAccAddr: "cosmos",
