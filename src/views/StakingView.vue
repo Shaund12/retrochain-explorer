@@ -93,13 +93,13 @@ const handleConnect = async () => {
 };
 
 const handleDelegate = async () => {
-  if (!selectedValidator.value || !amount.value) return;
-  if (!address.value) return;
+if (!selectedValidator.value || !amount.value) return;
+if (!address.value) return;
   
-  txLoading.value = true;
-  try {
-    const chainId = 'retrochain-mainnet';
-    const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
+txLoading.value = true;
+try {
+  const chainId = 'retrochain-1';
+  const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
 
     const msg = {
       typeUrl: "/cosmos.staking.v1beta1.MsgDelegate",
@@ -147,7 +147,7 @@ const handleClaimRewards = async (validatorAddress?: string) => {
   
   txLoading.value = true;
   try {
-    const chainId = 'retrochain-mainnet';
+    const chainId = 'retrochain-1';
 
     const msgs = validatorAddress
       ? [{
@@ -198,7 +198,7 @@ const handleUndelegate = async () => {
   
   txLoading.value = true;
   try {
-    const chainId = 'retrochain-mainnet';
+    const chainId = 'retrochain-1';
     const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
 
     const msg = {

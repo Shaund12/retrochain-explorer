@@ -9,7 +9,7 @@ const suggest = async () => {
   const origin = window.location.origin;
   
   const cfg = {
-    chainId: "retrochain-mainnet",
+    chainId: "retrochain-1",
     chainName: "RetroChain Mainnet",
     rpc: `${origin}/rpc`,
     rest: `${origin}/api`,

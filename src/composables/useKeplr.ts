@@ -26,7 +26,7 @@ const error = ref<string | null>(null);
 
 const { restBase, rpcBase } = useNetwork();
 
-const CHAIN_ID = "retrochain-mainnet";
+const CHAIN_ID = "retrochain-1";
 const CHAIN_NAME = "RetroChain Mainnet";
 
 function buildChainInfo() {

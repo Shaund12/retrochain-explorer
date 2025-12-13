@@ -79,7 +79,7 @@ const tokenInfo = computed(() => ({
   symbol: network.value === 'mainnet' ? 'RETRO' : 'DRETRO',
   denom: network.value === 'mainnet' ? 'uretro' : 'udretro',
   decimals: 6,
-  chainId: network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1'
+  chainId: 'retrochain-1'
 }));
 
 const copyAddress = async () => {
