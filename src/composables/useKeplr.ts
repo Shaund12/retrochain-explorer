@@ -62,7 +62,7 @@ function buildChainInfo() {
       coinDenom: "RETRO",
       coinMinimalDenom: "uretro",
       coinDecimals: 6,
-      gasPriceStep: { low: 0.001, average: 0.0025, high: 0.004 }
+      gasPriceStep: { low: 0.03, average: 0.035, high: 0.04 }
     }],
     stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
     features: ["ibc-transfer", "cosmwasm"]
