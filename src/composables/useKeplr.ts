@@ -215,7 +215,7 @@ export function useKeplr() {
       const { Registry } = await import("@cosmjs/proto-signing");
       const { defaultRegistryTypes } = await import("@cosmjs/stargate");
       const { encodePubkey, makeAuthInfoBytes, makeSignDoc: makeSignDocDirect } = await import("@cosmjs/proto-signing");
-      const { TxRaw, AuthInfo } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
+      const { TxRaw, AuthInfo, TxBody } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
       const { toBase64, fromBase64 } = await import("@cosmjs/encoding");
       const { Int53 } = await import("@cosmjs/math");
 
@@ -223,13 +223,12 @@ export function useKeplr() {
       const registry = new Registry(defaultRegistryTypes);
       
       // Encode transaction body
-      const txBodyBytes = registry.encode({
-        typeUrl: "/cosmos.tx.v1beta1.TxBody",
-        value: {
-          messages: msgs,
-          memo: memo || ""
-        }
+      const anyMsgs = msgs.map(msg => registry.encodeAsAny(msg));
+      const txBody = TxBody.fromPartial({
+        messages: anyMsgs,
+        memo: memo || ""
       });
+      const txBodyBytes = TxBody.encode(txBody).finish();
 
       console.log("Transaction body encoded");
 
