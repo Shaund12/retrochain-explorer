@@ -12,7 +12,15 @@ import dayjs from "dayjs";
 
 const router = useRouter();
 const { address, connect, isAvailable } = useKeplr();
-const { delegations, rewards, unbonding, loading: stakingLoading, fetchAll } = useStaking();
+const { 
+  delegations, 
+  rewards, 
+  unbonding, 
+  loading: stakingLoading, 
+  networkStats,
+  fetchAll,
+  fetchNetworkStats 
+} = useStaking();
 const { validators, loading: validatorsLoading, fetchValidators } = useValidators();
 const { current: network } = useNetwork();
 const toast = useToast();
@@ -67,6 +75,7 @@ const availableValidators = computed(() => {
 
 onMounted(async () => {
   await fetchValidators();
+  await fetchNetworkStats();
   if (address.value) {
     await fetchAll();
   }
@@ -274,6 +283,32 @@ const copy = async (text: string) => {
           Stake {{ tokenSymbol }} to secure the network and earn rewards
         </p>
 
+        <!-- Network Stats Banner -->
+        <div v-if="networkStats" class="mb-4 p-4 rounded-lg bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
+          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+            <div>
+              <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Base APR</div>
+              <div class="text-lg font-bold text-cyan-300">{{ networkStats.baseAPR.toFixed(2) }}%</div>
+              <div class="text-[10px] text-slate-500">pre-commission</div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Effective APR</div>
+              <div class="text-lg font-bold text-emerald-300">{{ networkStats.effectiveAPR.toFixed(2) }}%</div>
+              <div class="text-[10px] text-slate-500">w/ {{ networkStats.provisionBurnRate.toFixed(1) }}% burn</div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Inflation</div>
+              <div class="text-lg font-bold text-purple-300">{{ networkStats.inflation }}</div>
+              <div class="text-[10px] text-slate-500">annual</div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Fee Burn</div>
+              <div class="text-lg font-bold text-orange-300">{{ networkStats.feeBurnRate.toFixed(1) }}%</div>
+              <div class="text-[10px] text-slate-500">of fees</div>
+            </div>
+          </div>
+        </div>
+
         <!-- Connect Wallet -->
         <div v-if="!address" class="p-4 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
           <div class="flex items-center gap-3">
@@ -348,6 +383,30 @@ const copy = async (text: string) => {
       >
         💰 Rewards
       </button>
+    </div>
+
+    <!-- APR & Burn Explanation -->
+    <div v-if="networkStats" class="card bg-gradient-to-br from-indigo-500/5 to-purple-500/5 border-indigo-500/20">
+      <h3 class="text-sm font-semibold text-slate-100 mb-3 flex items-center gap-2">
+        <span>📈</span>
+        <span>Understanding Staking Returns</span>
+      </h3>
+      <div class="space-y-2 text-xs text-slate-300">
+        <p>
+          <strong class="text-cyan-300">Base APR ({{ networkStats.baseAPR.toFixed(2) }}%)</strong> = 
+          (Annual Provisions / Bonded Tokens) × (1 - Community Tax of {{ networkStats.communityTax }})
+        </p>
+        <p>
+          <strong class="text-emerald-300">Effective APR ({{ networkStats.effectiveAPR.toFixed(2) }}%)</strong> = 
+          Base APR × (1 - Provision Burn Rate of {{ networkStats.provisionBurnRate.toFixed(1) }}%)
+        </p>
+        <p class="text-slate-400 text-[11px] mt-2">
+          💡 <strong>Burn Mechanism:</strong> 
+          {{ networkStats.feeBurnRate.toFixed(1) }}% of transaction fees and 
+          {{ networkStats.provisionBurnRate.toFixed(1) }}% of minted provisions are burned to control inflation 
+          while maintaining high staking rewards. Validator commission (typically 5-10%) further reduces your take-home APR.
+        </p>
+      </div>
     </div>
 
     <!-- Overview Tab -->

@@ -5,17 +5,21 @@ export interface Proposal {
   proposalId: string;
   content: any;
   status: string;
-  finalTallyResult: {
+  finalTallyResult?: {
     yes: string;
     abstain: string;
     no: string;
     noWithVeto: string;
   };
-  submitTime: string;
-  depositEndTime: string;
-  totalDeposit: Array<{ denom: string; amount: string }>;
-  votingStartTime: string;
-  votingEndTime: string;
+  submitTime?: string;
+  depositEndTime?: string;
+  totalDeposit?: Array<{ denom: string; amount: string }>;
+  votingStartTime?: string;
+  votingEndTime?: string;
+  title?: string;
+  summary?: string;
+  messages?: any[];
+  metadata?: Record<string, any>;
 }
 
 export function useGovernance() {
@@ -23,6 +27,71 @@ export function useGovernance() {
   const proposals = ref<Proposal[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+
+  const govEndpointBases = ["/cosmos/gov/v1", "/cosmos/gov/v1beta1"];
+
+  const requestGov = async (builder: (base: string) => string, config?: any) => {
+    let lastError: any = null;
+    for (const base of govEndpointBases) {
+      try {
+        return await api.get(builder(base), config);
+      } catch (err: any) {
+        const status = err?.response?.status;
+        if (status === 404 || status === 501) {
+          lastError = err;
+          continue;
+        }
+        throw err;
+      }
+    }
+    throw lastError;
+  };
+
+  const normalizeProposal = (raw: any): Proposal | null => {
+    if (!raw) return null;
+    const id = raw.proposal_id ?? raw.id ?? raw.proposalId;
+    if (id === undefined || id === null) return null;
+
+    const metadata = (() => {
+      if (typeof raw.metadata === "string") {
+        try {
+          const parsed = JSON.parse(raw.metadata);
+          if (parsed && typeof parsed === "object") {
+            return parsed as Record<string, any>;
+          }
+        } catch {}
+      } else if (raw.metadata && typeof raw.metadata === "object") {
+        return raw.metadata as Record<string, any>;
+      }
+      return undefined;
+    })();
+
+    const tally = raw.final_tally_result ?? raw.finalTallyResult;
+    const normalizeTally = (value: any) => String(value ?? "0");
+
+    return {
+      proposalId: String(id),
+      content: raw.content ?? (Array.isArray(raw.messages) ? raw.messages[0] : null),
+      messages: Array.isArray(raw.messages) ? raw.messages : undefined,
+      metadata,
+      title: raw.title ?? metadata?.title,
+      summary: raw.summary ?? metadata?.summary ?? metadata?.description,
+      status: raw.status ?? "PROPOSAL_STATUS_UNSPECIFIED",
+      finalTallyResult: tally
+        ? {
+            yes: normalizeTally(tally.yes ?? tally.yes_count),
+            abstain: normalizeTally(tally.abstain ?? tally.abstain_count),
+            no: normalizeTally(tally.no ?? tally.no_count),
+            noWithVeto: normalizeTally(tally.no_with_veto ?? tally.noWithVeto ?? tally.no_with_veto_count)
+          }
+        : undefined,
+      submitTime: raw.submit_time ?? raw.submitTime,
+      depositEndTime: raw.deposit_end_time ?? raw.depositEndTime,
+      totalDeposit: raw.total_deposit ?? raw.totalDeposit ?? [],
+      votingStartTime: raw.voting_start_time ?? raw.votingStartTime,
+      votingEndTime: raw.voting_end_time ?? raw.votingEndTime
+    };
+  };
 
   const fetchProposals = async (status?: string) => {
     loading.value = true;
@@ -37,29 +106,23 @@ export function useGovernance() {
       if (status) {
         params.proposal_status = status;
       }
-
-      const res = await api.get("/cosmos/gov/v1beta1/proposals", { params });
-      
-      console.log("Governance API Response:", res.data);
-      
-      const rawProposals = res.data?.proposals || [];
+      const res = await requestGov((base) => `${base}/proposals`, { params });
+      const rawProposals = Array.isArray(res.data?.proposals)
+        ? res.data.proposals
+        : res.data?.proposal
+        ? [res.data.proposal]
+        : [];
       
       if (rawProposals.length === 0) {
         error.value = "No governance proposals found. Your chain may not have governance enabled yet.";
         return;
       }
-      
-      proposals.value = rawProposals.map((p: any) => ({
-        proposalId: p.proposal_id,
-        content: p.content,
-        status: p.status,
-        finalTallyResult: p.final_tally_result,
-        submitTime: p.submit_time,
-        depositEndTime: p.deposit_end_time,
-        totalDeposit: p.total_deposit,
-        votingStartTime: p.voting_start_time,
-        votingEndTime: p.voting_end_time
-      }));
+
+      const normalized = rawProposals
+        .map((p: any) => normalizeProposal(p))
+        .filter((p: Proposal | null): p is Proposal => Boolean(p));
+
+      proposals.value = normalized;
 
     } catch (e: any) {
       console.error("Failed to fetch proposals:", e);
@@ -75,8 +138,8 @@ export function useGovernance() {
     error.value = null;
 
     try {
-      const res = await api.get(`/cosmos/gov/v1beta1/proposals/${id}`);
-      return res.data?.proposal || null;
+      const res = await requestGov((base) => `${base}/proposals/${id}`);
+      return normalizeProposal(res.data?.proposal);
     } catch (e: any) {
       error.value = e?.message ?? String(e);
       return null;

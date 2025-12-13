@@ -2,6 +2,7 @@
 import { onMounted } from "vue";
 import { useRouter } from "vue-router";
 import { useGovernance } from "@/composables/useGovernance";
+import type { Proposal } from "@/composables/useGovernance";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 
@@ -25,13 +26,24 @@ const getStatusBadge = (status: string) => {
   return statusMap[status] || { text: status, class: "border-slate-400/60 text-slate-300" };
 };
 
-const formatTime = (time: string) => {
+const formatTime = (time?: string) => {
   if (!time) return "-";
   return dayjs(time).fromNow();
 };
 
-const getProposalTitle = (content: any) => {
-  return content?.title || content?.["@type"]?.split(".").pop() || "Unknown Proposal";
+const getProposalTitle = (proposal: Proposal) => {
+  const typeName = proposal.content?.["@type"]?.split(".").pop();
+  return proposal.title || proposal.metadata?.title || proposal.content?.title || typeName || `Proposal #${proposal.proposalId}`;
+};
+
+const getProposalSummary = (proposal: Proposal) => {
+  return (
+    proposal.summary ||
+    proposal.metadata?.summary ||
+    proposal.metadata?.description ||
+    proposal.content?.description ||
+    "No description available"
+  );
 };
 </script>
 
@@ -78,11 +90,11 @@ const getProposalTitle = (content: any) => {
             </div>
             
             <h3 class="text-base font-semibold text-slate-100 mb-1">
-              {{ getProposalTitle(proposal.content) }}
+              {{ getProposalTitle(proposal) }}
             </h3>
             
             <p class="text-sm text-slate-300 mb-3 line-clamp-2">
-              {{ proposal.content?.description || "No description available" }}
+              {{ getProposalSummary(proposal) }}
             </p>
 
             <div class="flex flex-wrap items-center gap-4 text-xs text-slate-400">
