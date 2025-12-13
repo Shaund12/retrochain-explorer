@@ -33,6 +33,7 @@ const DEFAULT_GAS_PRICE = 0.03; // uretro per gas unit
 const DEFAULT_GAS_ADJUSTMENT = 1.3;
 const DEFAULT_GAS_PER_MSG = 150000;
 const MIN_GAS_LIMIT = 200000;
+const MIN_TOTAL_FEE = 5000; // minimum fee in uretro to satisfy chain requirements
 
 function buildChainInfo() {
   // Build absolute URLs - Keplr requires full URIs
@@ -285,7 +286,7 @@ export function useKeplr() {
 
           const gasUsed = Number(simulateRes.data?.gas_info?.gas_used ?? baseGasLimit);
           const adjustedGas = Math.ceil(gasUsed * DEFAULT_GAS_ADJUSTMENT);
-          const feeAmount = Math.max(Math.ceil(adjustedGas * DEFAULT_GAS_PRICE), 1).toString();
+          const feeAmount = Math.max(Math.ceil(adjustedGas * DEFAULT_GAS_PRICE), MIN_TOTAL_FEE).toString();
 
           feeToUse = {
             amount: [{ denom: DEFAULT_FEE_DENOM, amount: feeAmount }],
@@ -297,7 +298,7 @@ export function useKeplr() {
           console.warn("Gas simulation failed, falling back to defaults:", simErr);
           const fallbackGas = baseGasLimit;
           feeToUse = {
-            amount: [{ denom: DEFAULT_FEE_DENOM, amount: Math.max(Math.ceil(fallbackGas * DEFAULT_GAS_PRICE), 1).toString() }],
+            amount: [{ denom: DEFAULT_FEE_DENOM, amount: Math.max(Math.ceil(fallbackGas * DEFAULT_GAS_PRICE), MIN_TOTAL_FEE).toString() }],
             gas: fallbackGas.toString()
           };
         }
