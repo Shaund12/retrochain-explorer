@@ -24,6 +24,30 @@ const address = ref<string | null>(null);
 const connecting = ref(false);
 const error = ref<string | null>(null);
 
+const KEPLR_DEFAULT_OPTS = {
+  sign: {
+    preferNoSetFee: true,
+    preferNoSetMemo: true
+  }
+};
+
+function configureKeplrDefaults() {
+  if (typeof window === "undefined") return;
+  if (!window.keplr) return;
+  const current = (window.keplr as any).defaultOptions || {};
+  if (
+    current?.sign?.preferNoSetFee === KEPLR_DEFAULT_OPTS.sign.preferNoSetFee &&
+    current?.sign?.preferNoSetMemo === KEPLR_DEFAULT_OPTS.sign.preferNoSetMemo
+  ) {
+    return;
+  }
+  (window.keplr as any).defaultOptions = KEPLR_DEFAULT_OPTS;
+}
+
+if (typeof window !== "undefined" && window.keplr) {
+  configureKeplrDefaults();
+}
+
 const { restBase, rpcBase } = useNetwork();
 
 const CHAIN_ID = "retrochain-mainnet";
@@ -76,6 +100,7 @@ export function useKeplr() {
       return;
     }
     isAvailable.value = !!window.keplr && typeof window.keplr.enable === "function";
+    if (isAvailable.value) configureKeplrDefaults();
   };
 
   const suggestChain = async () => {
@@ -100,17 +125,9 @@ export function useKeplr() {
         throw new Error("Keplr extension not detected. Install it and reload.");
       }
 
+      configureKeplrDefaults();
       await suggestChain();
       await window.keplr.enable(CHAIN_ID);
-
-      if (window.keplr && !window.keplr.defaultOptions) {
-        window.keplr.defaultOptions = {
-          sign: {
-            preferNoSetFee: true,
-            preferNoSetMemo: true
-          }
-        } as any;
-      }
 
       const offlineSigner =
         (await window.getOfflineSignerAuto?.(CHAIN_ID)) ||
@@ -268,7 +285,7 @@ export function useKeplr() {
         const { signature, signed } = await offlineSigner.signDirect(
           signerAddress,
           signDoc,
-          { preferNoSetFee: true, preferNoSetMemo: true } as any
+          KEPLR_DEFAULT_OPTS as any
         );
 
         const txRaw = TxRaw.fromPartial({
