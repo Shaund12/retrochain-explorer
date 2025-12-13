@@ -115,8 +115,8 @@ export function useTxs() {
         `message.sender='${address}'`,
         `transfer.recipient='${address}'`,
         `transfer.sender='${address}'`
-      ].join(" OR ");
-      
+      ];
+
       const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
         params: {
           events,

@@ -69,7 +69,11 @@ export default async function handler(req, res) {
     return;
   }
 
-  const base = process.env.REST_API_URL || process.env.VITE_REST_API_URL || "http://localhost:1317";
+  // Use the same REST base as the frontend (VITE_REST_API_URL),
+  // falling back to localhost when not set. This ensures that
+  // /api/* on Vercel proxies to the correct RetroChain REST host
+  // that exposes /arcade and /dex directly.
+  const base = process.env.VITE_REST_API_URL || process.env.REST_API_URL || "http://localhost:1317";
 
   try {
     // req.url starts with /api...

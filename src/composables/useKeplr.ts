@@ -24,7 +24,7 @@ const address = ref<string | null>(null);
 const connecting = ref(false);
 const error = ref<string | null>(null);
 
-const { restBase, rpcBase, rpcWsBase } = useNetwork();
+const { restBase, rpcBase } = useNetwork();
 
 const CHAIN_ID = "retrochain-1";
 const CHAIN_NAME = "RetroChain";
@@ -129,7 +129,8 @@ export function useKeplr() {
       const accounts = await offlineSigner.getAccounts();
 
       const { SigningStargateClient } = await import("@cosmjs/stargate");
-      const rpcEndpoint = rpcWsBase?.value || rpcBase.value || "/rpc";
+      // cosmjs SigningStargateClient expects an HTTP(S) RPC endpoint, not ws/wss
+      const rpcEndpoint = rpcBase.value || "/rpc";
       const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner);
 
       const result = await client.signAndBroadcast(
