@@ -6,10 +6,10 @@ const suggest = async () => {
   }
 
   const cfg = {
-    chainId: "retrochain-1",
-    chainName: "Retrochain",
-    rpc: "https://rpc.retrochain.ddns.net",
-    rest: "https://api.retrochain.ddns.net",
+    chainId: "retrochain-mainnet",
+    chainName: "RetroChain Mainnet",
+    rpc: "/rpc",
+    rest: "/api",
     stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
     bip44: { coinType: 118 },
     bech32Config: {

@@ -30,8 +30,8 @@ const selectedValidator = ref<string>("");
 const amount = ref("");
 const txLoading = ref(false);
 
-const tokenDenom = computed(() => network.value === 'mainnet' ? 'uretro' : 'udretro');
-const tokenSymbol = computed(() => network.value === 'mainnet' ? 'RETRO' : 'DRETRO');
+const tokenDenom = computed(() => 'uretro');
+const tokenSymbol = computed(() => 'RETRO');
 
 const totalStaked = computed(() => {
   return delegations.value.reduce((sum, d) => sum + parseInt(d.balance.amount || "0", 10), 0);
@@ -93,13 +93,13 @@ const handleConnect = async () => {
 };
 
 const handleDelegate = async () => {
-  if (!selectedValidator.value || !amount.value) return;
-  if (!window.keplr) return;
+if (!selectedValidator.value || !amount.value) return;
+if (!window.keplr) return;
   
-  txLoading.value = true;
-  try {
-    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
-    const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
+txLoading.value = true;
+try {
+  const chainId = 'retrochain-mainnet';
+  const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
 
     const msg = {
       typeUrl: "/cosmos.staking.v1beta1.MsgDelegate",
@@ -143,11 +143,11 @@ const handleDelegate = async () => {
 };
 
 const handleClaimRewards = async (validatorAddress?: string) => {
-  if (!window.keplr) return;
+if (!window.keplr) return;
   
-  txLoading.value = true;
-  try {
-    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
+txLoading.value = true;
+try {
+  const chainId = 'retrochain-mainnet';
 
     const msgs = validatorAddress
       ? [{
@@ -193,13 +193,13 @@ const handleClaimRewards = async (validatorAddress?: string) => {
 };
 
 const handleUndelegate = async () => {
-  if (!selectedValidator.value || !amount.value) return;
-  if (!window.keplr) return;
+if (!selectedValidator.value || !amount.value) return;
+if (!window.keplr) return;
   
-  txLoading.value = true;
-  try {
-    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
-    const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
+txLoading.value = true;
+try {
+  const chainId = 'retrochain-mainnet';
+  const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
 
     const msg = {
       typeUrl: "/cosmos.staking.v1beta1.MsgUndelegate",
