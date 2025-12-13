@@ -166,11 +166,14 @@ export function useKeplr() {
     if (!address.value) throw new Error("Not connected to Keplr");
 
     try {
+      console.log("Starting REST-based transaction...");
+
       // Import required utilities
       const { useApi } = await import("./useApi");
       const api = useApi();
       
-      // Get account info from REST API (this works fine!)
+      // Get account info from REST API (this works!)
+      console.log("Fetching account info from REST API...");
       const accountRes = await api.get(`/cosmos/auth/v1beta1/accounts/${address.value}`);
       const account = accountRes.data?.account;
       
@@ -178,7 +181,7 @@ export function useKeplr() {
         throw new Error("Account not found. Make sure your account is funded.");
       }
 
-      // Extract account number and sequence - handle both account types
+      // Extract account number and sequence
       let accountNumber: string;
       let sequence: string;
       
@@ -194,65 +197,97 @@ export function useKeplr() {
 
       console.log("Account info:", { accountNumber, sequence });
 
-      // Convert Protobuf messages to Amino format for Keplr
-      const aminoMsgs = msgs.map(msg => {
-        // Map protobuf type URLs to amino types
-        let type = msg.typeUrl;
-        if (type === "/cosmos.staking.v1beta1.MsgDelegate") {
-          type = "cosmos-sdk/MsgDelegate";
-        } else if (type === "/cosmos.staking.v1beta1.MsgUndelegate") {
-          type = "cosmos-sdk/MsgUndelegate";
-        } else if (type === "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward") {
-          type = "cosmos-sdk/MsgWithdrawDelegatorReward";
+      // Get offline signer from Keplr
+      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      const accounts = await offlineSigner.getAccounts();
+      const signerAddress = accounts[0].address;
+      const signerPubkey = accounts[0].pubkey;
+
+      console.log("Signer address:", signerAddress);
+
+      // Import CosmJS utilities
+      const { Registry } = await import("@cosmjs/proto-signing");
+      const { encodePubkey, makeAuthInfoBytes, makeSignDoc: makeSignDocDirect } = await import("@cosmjs/proto-signing");
+      const { TxRaw, TxBody, AuthInfo } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
+      const { toBase64, fromBase64 } = await import("@cosmjs/encoding");
+      const { Int53 } = await import("@cosmjs/math");
+
+      // Create registry and encode messages
+      const registry = new Registry();
+      
+      // Encode transaction body
+      const txBodyBytes = registry.encode({
+        typeUrl: "/cosmos.tx.v1beta1.TxBody",
+        value: {
+          messages: msgs,
+          memo: memo || ""
         }
-        
-        return {
-          type,
-          value: msg.value
-        };
       });
 
-      // Create Amino sign doc
-      const signDoc = {
-        chain_id: chainId,
-        account_number: accountNumber,
-        sequence: sequence,
-        fee: {
-          amount: fee.amount,
-          gas: fee.gas
-        },
-        msgs: aminoMsgs,
-        memo: memo || ""
-      };
+      console.log("Transaction body encoded");
 
-      console.log("Signing with Keplr:", signDoc);
+      // Encode public key
+      const pubkey = encodePubkey({
+        type: "tendermint/PubKeySecp256k1",
+        value: toBase64(signerPubkey)
+      });
 
-      // Sign with Keplr using Amino
-      const signResponse = await window.keplr!.signAmino(chainId, address.value, signDoc);
-      
-      console.log("Signature received:", signResponse.signature);
+      // Create auth info with fee
+      const authInfoBytes = makeAuthInfoBytes(
+        [{ pubkey, sequence: Int53.fromString(sequence).toNumber() }],
+        fee.amount,
+        parseInt(fee.gas),
+        fee.granter,
+        fee.payer
+      );
 
-      // Now encode to protobuf and broadcast
-      const { makeSignDoc } = await import("@cosmjs/amino");
-      const { makeStdTx } = await import("@cosmjs/amino");
-      
-      const stdTx = makeStdTx(signDoc, signResponse.signature);
-      
-      // Broadcast using REST
+      console.log("Auth info created");
+
+      // Create sign doc for Direct signing
+      const signDoc = makeSignDocDirect(
+        txBodyBytes,
+        authInfoBytes,
+        chainId,
+        Int53.fromString(accountNumber).toNumber()
+      );
+
+      console.log("Sign doc created");
+
+      // Sign with Keplr using Direct mode
+      const { signature, signed } = await offlineSigner.signDirect(signerAddress, signDoc);
+
+      console.log("Transaction signed");
+
+      // Create TxRaw
+      const txRaw = TxRaw.fromPartial({
+        bodyBytes: signed.bodyBytes,
+        authInfoBytes: signed.authInfoBytes,
+        signatures: [fromBase64(signature.signature)]
+      });
+
+      // Encode to bytes
+      const txBytes = TxRaw.encode(txRaw).finish();
+      const txBytesBase64 = toBase64(txBytes);
+
+      console.log("Transaction encoded, length:", txBytesBase64.length);
+
+      // Broadcast via REST API
       const broadcastRes = await api.post("/cosmos/tx/v1beta1/txs", {
-        tx: stdTx,
+        tx_bytes: txBytesBase64,
         mode: "BROADCAST_MODE_SYNC"
       });
 
       console.log("Broadcast response:", broadcastRes.data);
 
-      if (broadcastRes.data?.tx_response?.code !== 0) {
-        throw new Error(broadcastRes.data?.tx_response?.raw_log || "Transaction failed");
+      const txResponse = broadcastRes.data?.tx_response;
+      
+      if (txResponse?.code !== 0) {
+        throw new Error(txResponse?.raw_log || txResponse?.log || "Transaction failed");
       }
 
-      return broadcastRes.data?.tx_response;
+      return txResponse;
     } catch (e: any) {
-      console.error("REST transaction failed:", e);
+      console.error("Transaction failed:", e);
       throw e;
     }
   };
