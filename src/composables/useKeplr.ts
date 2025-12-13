@@ -215,7 +215,7 @@ export function useKeplr() {
       const { Registry } = await import("@cosmjs/proto-signing");
       const { defaultRegistryTypes } = await import("@cosmjs/stargate");
       const { encodePubkey, makeAuthInfoBytes, makeSignDoc: makeSignDocDirect } = await import("@cosmjs/proto-signing");
-      const { TxRaw } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
+      const { TxRaw, AuthInfo } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
       const { toBase64, fromBase64 } = await import("@cosmjs/encoding");
       const { Int53 } = await import("@cosmjs/math");
 
@@ -241,7 +241,7 @@ export function useKeplr() {
 
       const sequenceNumber = Int53.fromString(sequence).toNumber();
 
-      const signTx = async (feeValue: any) => {
+      const signTx = async (feeValue: any, debugLabel?: string) => {
         const authInfoBytes = makeAuthInfoBytes(
           [{ pubkey, sequence: sequenceNumber }],
           feeValue.amount,
@@ -266,6 +266,15 @@ export function useKeplr() {
         });
 
         const txBytes = TxRaw.encode(txRaw).finish();
+
+        if (debugLabel) {
+          const authInfo = AuthInfo.decode(txRaw.authInfoBytes);
+          console.log(`${debugLabel} fee`, {
+            amount: authInfo.fee?.amount?.map(c => ({ denom: c.denom, amount: c.amount })),
+            gasLimit: authInfo.fee?.gasLimit?.toString()
+          });
+        }
+
         return { txRaw, txBytesBase64: toBase64(txBytes) };
       };
 
@@ -279,7 +288,7 @@ export function useKeplr() {
         };
 
         try {
-          const { txBytesBase64 } = await signTx(simulateFee);
+          const { txBytesBase64 } = await signTx(simulateFee, "simulate");
           const simulateRes = await api.post("/cosmos/tx/v1beta1/simulate", {
             tx_bytes: txBytesBase64
           });
@@ -304,7 +313,9 @@ export function useKeplr() {
         }
       }
 
-      const { txBytesBase64 } = await signTx(feeToUse);
+      console.log("Using final fee", feeToUse);
+
+      const { txBytesBase64 } = await signTx(feeToUse, "broadcast");
 
       console.log("Transaction encoded, length:", txBytesBase64.length);
 
