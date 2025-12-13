@@ -207,13 +207,14 @@ export function useKeplr() {
 
       // Import CosmJS utilities
       const { Registry } = await import("@cosmjs/proto-signing");
+      const { defaultRegistryTypes } = await import("@cosmjs/stargate");
       const { encodePubkey, makeAuthInfoBytes, makeSignDoc: makeSignDocDirect } = await import("@cosmjs/proto-signing");
       const { TxRaw, TxBody, AuthInfo } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
       const { toBase64, fromBase64 } = await import("@cosmjs/encoding");
       const { Int53 } = await import("@cosmjs/math");
 
-      // Create registry and encode messages
-      const registry = new Registry();
+      // Create registry with default Cosmos SDK types (includes staking, distribution, etc.)
+      const registry = new Registry(defaultRegistryTypes);
       
       // Encode transaction body
       const txBodyBytes = registry.encode({
