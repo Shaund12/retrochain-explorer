@@ -265,7 +265,11 @@ export function useKeplr() {
           Int53.fromString(accountNumber).toNumber()
         );
 
-        const { signature, signed } = await offlineSigner.signDirect(signerAddress, signDoc);
+        const { signature, signed } = await offlineSigner.signDirect(
+          signerAddress,
+          signDoc,
+          { preferNoSetFee: true, preferNoSetMemo: true } as any
+        );
 
         const txRaw = TxRaw.fromPartial({
           bodyBytes: signed.bodyBytes,
