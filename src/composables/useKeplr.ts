@@ -28,6 +28,11 @@ const { restBase, rpcBase } = useNetwork();
 
 const CHAIN_ID = "retrochain-1";
 const CHAIN_NAME = "RetroChain Mainnet";
+const DEFAULT_FEE_DENOM = "uretro";
+const DEFAULT_GAS_PRICE = 0.03; // uretro per gas unit
+const DEFAULT_GAS_ADJUSTMENT = 1.3;
+const DEFAULT_GAS_PER_MSG = 150000;
+const MIN_GAS_LIMIT = 200000;
 
 function buildChainInfo() {
   // Build absolute URLs - Keplr requires full URIs
@@ -161,7 +166,7 @@ export function useKeplr() {
   };
 
   // REST-based signing alternative (workaround for RPC protobuf issues)
-  const signAndBroadcastWithREST = async (chainId: string, msgs: any[], fee: any, memo = "") => {
+  const signAndBroadcastWithREST = async (chainId: string, msgs: any[], fee?: any, memo = "") => {
     if (!window.keplr) throw new Error("Keplr not available");
     if (!address.value) throw new Error("Not connected to Keplr");
 
@@ -209,7 +214,7 @@ export function useKeplr() {
       const { Registry } = await import("@cosmjs/proto-signing");
       const { defaultRegistryTypes } = await import("@cosmjs/stargate");
       const { encodePubkey, makeAuthInfoBytes, makeSignDoc: makeSignDocDirect } = await import("@cosmjs/proto-signing");
-      const { TxRaw, TxBody, AuthInfo } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
+      const { TxRaw } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
       const { toBase64, fromBase64 } = await import("@cosmjs/encoding");
       const { Int53 } = await import("@cosmjs/math");
 
@@ -233,42 +238,72 @@ export function useKeplr() {
         value: toBase64(signerPubkey)
       });
 
-      // Create auth info with fee
-      const authInfoBytes = makeAuthInfoBytes(
-        [{ pubkey, sequence: Int53.fromString(sequence).toNumber() }],
-        fee.amount,
-        parseInt(fee.gas),
-        fee.granter,
-        fee.payer
-      );
+      const sequenceNumber = Int53.fromString(sequence).toNumber();
 
-      console.log("Auth info created");
+      const signTx = async (feeValue: any) => {
+        const authInfoBytes = makeAuthInfoBytes(
+          [{ pubkey, sequence: sequenceNumber }],
+          feeValue.amount,
+          parseInt(feeValue.gas, 10),
+          feeValue.granter,
+          feeValue.payer
+        );
 
-      // Create sign doc for Direct signing
-      const signDoc = makeSignDocDirect(
-        txBodyBytes,
-        authInfoBytes,
-        chainId,
-        Int53.fromString(accountNumber).toNumber()
-      );
+        const signDoc = makeSignDocDirect(
+          txBodyBytes,
+          authInfoBytes,
+          chainId,
+          Int53.fromString(accountNumber).toNumber()
+        );
 
-      console.log("Sign doc created");
+        const { signature, signed } = await offlineSigner.signDirect(signerAddress, signDoc);
 
-      // Sign with Keplr using Direct mode
-      const { signature, signed } = await offlineSigner.signDirect(signerAddress, signDoc);
+        const txRaw = TxRaw.fromPartial({
+          bodyBytes: signed.bodyBytes,
+          authInfoBytes: signed.authInfoBytes,
+          signatures: [fromBase64(signature.signature)]
+        });
 
-      console.log("Transaction signed");
+        const txBytes = TxRaw.encode(txRaw).finish();
+        return { txRaw, txBytesBase64: toBase64(txBytes) };
+      };
 
-      // Create TxRaw
-      const txRaw = TxRaw.fromPartial({
-        bodyBytes: signed.bodyBytes,
-        authInfoBytes: signed.authInfoBytes,
-        signatures: [fromBase64(signature.signature)]
-      });
+      const baseGasLimit = Math.max(MIN_GAS_LIMIT, msgs.length * DEFAULT_GAS_PER_MSG);
+      let feeToUse = fee ?? null;
 
-      // Encode to bytes
-      const txBytes = TxRaw.encode(txRaw).finish();
-      const txBytesBase64 = toBase64(txBytes);
+      if (!feeToUse) {
+        const simulateFee = {
+          amount: [{ denom: DEFAULT_FEE_DENOM, amount: "1" }],
+          gas: baseGasLimit.toString()
+        };
+
+        try {
+          const { txBytesBase64 } = await signTx(simulateFee);
+          const simulateRes = await api.post("/cosmos/tx/v1beta1/simulate", {
+            tx_bytes: txBytesBase64
+          });
+
+          const gasUsed = Number(simulateRes.data?.gas_info?.gas_used ?? baseGasLimit);
+          const adjustedGas = Math.ceil(gasUsed * DEFAULT_GAS_ADJUSTMENT);
+          const feeAmount = Math.max(Math.ceil(adjustedGas * DEFAULT_GAS_PRICE), 1).toString();
+
+          feeToUse = {
+            amount: [{ denom: DEFAULT_FEE_DENOM, amount: feeAmount }],
+            gas: adjustedGas.toString()
+          };
+
+          console.log("Gas simulation success", { gasUsed, adjustedGas, feeAmount });
+        } catch (simErr) {
+          console.warn("Gas simulation failed, falling back to defaults:", simErr);
+          const fallbackGas = baseGasLimit;
+          feeToUse = {
+            amount: [{ denom: DEFAULT_FEE_DENOM, amount: Math.max(Math.ceil(fallbackGas * DEFAULT_GAS_PRICE), 1).toString() }],
+            gas: fallbackGas.toString()
+          };
+        }
+      }
+
+      const { txBytesBase64 } = await signTx(feeToUse);
 
       console.log("Transaction encoded, length:", txBytesBase64.length);
 

@@ -113,15 +113,10 @@ try {
       }
     };
 
-    const fee = {
-      amount: [{ denom: tokenDenom.value, amount: "50000" }],
-      gas: "200000"
-    };
-
     const result = await signAndBroadcastWithREST(
       chainId,
       [msg],
-      fee,
+      null,
       "Delegate on RetroChain"
     );
 
@@ -165,15 +160,10 @@ const handleClaimRewards = async (validatorAddress?: string) => {
           }
         }));
 
-    const fee = {
-      amount: [{ denom: tokenDenom.value, amount: (msgs.length * 50000).toString() }],
-      gas: (msgs.length * 150000).toString()
-    };
-
     const result = await signAndBroadcastWithREST(
       chainId,
       msgs,
-      fee,
+      null,
       "Claim staking rewards"
     );
 
@@ -213,15 +203,10 @@ const handleUndelegate = async () => {
       }
     };
 
-    const fee = {
-      amount: [{ denom: tokenDenom.value, amount: "50000" }],
-      gas: "200000"
-    };
-
     const result = await signAndBroadcastWithREST(
       chainId,
       [msg],
-      fee,
+      null,
       "Undelegate from RetroChain"
     );
 

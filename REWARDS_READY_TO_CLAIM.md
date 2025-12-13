@@ -8,7 +8,7 @@
 ## Chain Fee Requirements
 
 Your chain requires minimum **0.025 uretro per gas unit**:
-- 150,000 gas × 0.025 = **3,750 uretro minimum**
+- 150,000 gas Ã— 0.025 = **3,750 uretro minimum**
 - We now send **50,000 uretro** = comfortable margin
 
 ## New Build
@@ -51,7 +51,7 @@ Then **CLAIM YOUR 10M RETRO REWARDS!** ????
 | Delegate | 200,000 | 50,000 uretro (0.05 RETRO) |
 | Undelegate | 200,000 | 50,000 uretro (0.05 RETRO) |
 | Claim (single) | 150,000 | 50,000 uretro (0.05 RETRO) |
-| Claim (multiple) | 150,000 × N | 50,000 × N uretro |
+| Claim (multiple) | 150,000 Ã— N | 50,000 Ã— N uretro |
 
 **Example**: Claiming from 1 validator = 50,000 uretro = **0.05 RETRO** fee
 
