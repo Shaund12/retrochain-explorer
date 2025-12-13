@@ -134,8 +134,16 @@ export function useKeplr() {
       const accounts = await offlineSigner.getAccounts();
 
       const { SigningStargateClient } = await import("@cosmjs/stargate");
-      // cosmjs SigningStargateClient expects an HTTP(S) RPC endpoint, not ws/wss
-      const rpcEndpoint = rpcBase.value || "/rpc";
+      
+      // Build absolute HTTP(S) RPC endpoint for CosmJS
+      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
+      let rpcEndpoint = rpcBase.value || "/rpc";
+      
+      // Convert to absolute URL if relative
+      if (!rpcEndpoint.startsWith('http')) {
+        rpcEndpoint = `${origin}${rpcEndpoint.startsWith('/') ? '' : '/'}${rpcEndpoint}`;
+      }
+      
       const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner);
 
       const result = await client.signAndBroadcast(
