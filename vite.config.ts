@@ -5,6 +5,7 @@ import path from "node:path";
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
   const restTarget = env.VITE_REST_API_URL || "http://localhost:1317";
+  const rpcTarget = env.VITE_RPC_URL || "http://localhost:26657";
   return {
     plugins: [vue()],
     resolve: {
@@ -24,7 +25,19 @@ export default defineConfig(({ mode }) => {
           rewrite: (p) => p.replace(/^\/api/, ""),
           configure: (proxy) => {
             proxy.on("proxyReq", (proxyReq) => {
-              // Ensure CORS headers through proxy where needed
+              proxyReq.setHeader("Origin", "*");
+            });
+          }
+        },
+        // Proxy RPC endpoint for transaction signing
+        "/rpc": {
+          target: rpcTarget,
+          changeOrigin: true,
+          secure: false,
+          rewrite: (p) => p.replace(/^\/rpc/, ""),
+          ws: true, // Enable WebSocket support
+          configure: (proxy) => {
+            proxy.on("proxyReq", (proxyReq) => {
               proxyReq.setHeader("Origin", "*");
             });
           }
