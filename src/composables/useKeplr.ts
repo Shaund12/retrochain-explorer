@@ -160,6 +160,103 @@ export function useKeplr() {
     }
   };
 
+  // REST-based signing alternative (workaround for RPC protobuf issues)
+  const signAndBroadcastWithREST = async (chainId: string, msgs: any[], fee: any, memo = "") => {
+    if (!window.keplr) throw new Error("Keplr not available");
+    if (!address.value) throw new Error("Not connected to Keplr");
+
+    try {
+      // Import required utilities
+      const { useApi } = await import("./useApi");
+      const api = useApi();
+      
+      // Get account info from REST API (this works fine!)
+      const accountRes = await api.get(`/cosmos/auth/v1beta1/accounts/${address.value}`);
+      const account = accountRes.data?.account;
+      
+      if (!account) {
+        throw new Error("Account not found. Make sure your account is funded.");
+      }
+
+      // Extract account number and sequence - handle both account types
+      let accountNumber: string;
+      let sequence: string;
+      
+      if (account["@type"] === "/cosmos.auth.v1beta1.BaseAccount") {
+        accountNumber = account.account_number;
+        sequence = account.sequence || "0";
+      } else if (account.base_account) {
+        accountNumber = account.base_account.account_number;
+        sequence = account.base_account.sequence || "0";
+      } else {
+        throw new Error("Unknown account type");
+      }
+
+      console.log("Account info:", { accountNumber, sequence });
+
+      // Convert Protobuf messages to Amino format for Keplr
+      const aminoMsgs = msgs.map(msg => {
+        // Map protobuf type URLs to amino types
+        let type = msg.typeUrl;
+        if (type === "/cosmos.staking.v1beta1.MsgDelegate") {
+          type = "cosmos-sdk/MsgDelegate";
+        } else if (type === "/cosmos.staking.v1beta1.MsgUndelegate") {
+          type = "cosmos-sdk/MsgUndelegate";
+        } else if (type === "/cosmos.distribution.v1beta1.MsgWithdrawDelegatorReward") {
+          type = "cosmos-sdk/MsgWithdrawDelegatorReward";
+        }
+        
+        return {
+          type,
+          value: msg.value
+        };
+      });
+
+      // Create Amino sign doc
+      const signDoc = {
+        chain_id: chainId,
+        account_number: accountNumber,
+        sequence: sequence,
+        fee: {
+          amount: fee.amount,
+          gas: fee.gas
+        },
+        msgs: aminoMsgs,
+        memo: memo || ""
+      };
+
+      console.log("Signing with Keplr:", signDoc);
+
+      // Sign with Keplr using Amino
+      const signResponse = await window.keplr!.signAmino(chainId, address.value, signDoc);
+      
+      console.log("Signature received:", signResponse.signature);
+
+      // Now encode to protobuf and broadcast
+      const { makeSignDoc } = await import("@cosmjs/amino");
+      const { makeStdTx } = await import("@cosmjs/amino");
+      
+      const stdTx = makeStdTx(signDoc, signResponse.signature);
+      
+      // Broadcast using REST
+      const broadcastRes = await api.post("/cosmos/tx/v1beta1/txs", {
+        tx: stdTx,
+        mode: "BROADCAST_MODE_SYNC"
+      });
+
+      console.log("Broadcast response:", broadcastRes.data);
+
+      if (broadcastRes.data?.tx_response?.code !== 0) {
+        throw new Error(broadcastRes.data?.tx_response?.raw_log || "Transaction failed");
+      }
+
+      return broadcastRes.data?.tx_response;
+    } catch (e: any) {
+      console.error("REST transaction failed:", e);
+      throw e;
+    }
+  };
+
   if (typeof window !== "undefined" && window.keplr && !window.keplr.signAndBroadcast) {
     window.keplr.signAndBroadcast = async (chainId: string, signer: string, msgs: any[], fee: any, memo = "") => {
       return signAndBroadcast(chainId, msgs, fee, memo);
@@ -182,6 +279,7 @@ export function useKeplr() {
     connect,
     disconnect,
     checkAvailability,
-    signAndBroadcast
+    signAndBroadcast,
+    signAndBroadcastWithREST
   };
 }

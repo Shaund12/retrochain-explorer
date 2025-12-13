@@ -11,7 +11,7 @@ import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import dayjs from "dayjs";
 
 const router = useRouter();
-const { address, connect, isAvailable, signAndBroadcast } = useKeplr();
+const { address, connect, isAvailable, signAndBroadcast, signAndBroadcastWithREST } = useKeplr();
 const { 
   delegations, 
   rewards, 
@@ -118,7 +118,7 @@ try {
       gas: "200000"
     };
 
-    const result = await signAndBroadcast(
+    const result = await signAndBroadcastWithREST(
       chainId,
       [msg],
       fee,
@@ -170,7 +170,7 @@ const handleClaimRewards = async (validatorAddress?: string) => {
       gas: (msgs.length * 150000).toString()
     };
 
-    const result = await signAndBroadcast(
+    const result = await signAndBroadcastWithREST(
       chainId,
       msgs,
       fee,
@@ -218,7 +218,7 @@ const handleUndelegate = async () => {
       gas: "200000"
     };
 
-    const result = await signAndBroadcast(
+    const result = await signAndBroadcastWithREST(
       chainId,
       [msg],
       fee,
