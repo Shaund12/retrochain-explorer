@@ -114,7 +114,7 @@ try {
     };
 
     const fee = {
-      amount: [{ denom: tokenDenom.value, amount: "5000" }],
+      amount: [{ denom: tokenDenom.value, amount: "50000" }],
       gas: "200000"
     };
 
@@ -166,7 +166,7 @@ const handleClaimRewards = async (validatorAddress?: string) => {
         }));
 
     const fee = {
-      amount: [{ denom: tokenDenom.value, amount: "5000" }],
+      amount: [{ denom: tokenDenom.value, amount: (msgs.length * 50000).toString() }],
       gas: (msgs.length * 150000).toString()
     };
 
@@ -214,7 +214,7 @@ const handleUndelegate = async () => {
     };
 
     const fee = {
-      amount: [{ denom: tokenDenom.value, amount: "5000" }],
+      amount: [{ denom: tokenDenom.value, amount: "50000" }],
       gas: "200000"
     };
 
