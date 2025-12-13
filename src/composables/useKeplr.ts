@@ -257,18 +257,18 @@ export function useKeplr() {
           Int53.fromString(accountNumber).toNumber()
         );
 
-        const { signature } = await offlineSigner.signDirect(signerAddress, signDoc);
+        const { signature, signed } = await offlineSigner.signDirect(signerAddress, signDoc);
 
         const txRaw = TxRaw.fromPartial({
-          bodyBytes: txBodyBytes,
-          authInfoBytes,
+          bodyBytes: signed.bodyBytes,
+          authInfoBytes: signed.authInfoBytes,
           signatures: [fromBase64(signature.signature)]
         });
 
         const txBytes = TxRaw.encode(txRaw).finish();
 
         if (debugLabel) {
-          const authInfo = AuthInfo.decode(authInfoBytes);
+          const authInfo = AuthInfo.decode(txRaw.authInfoBytes);
           console.log(`${debugLabel} fee`, {
             amount: authInfo.fee?.amount?.map(c => ({ denom: c.denom, amount: c.amount })),
             gasLimit: authInfo.fee?.gasLimit?.toString()
