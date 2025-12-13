@@ -6,13 +6,10 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
-import { inject } from '@vercel/analytics';
 
 // Enable dayjs relative time plugin globally
 dayjs.extend(relativeTime);
 
-// Inject Vercel Analytics
-inject();
 
 const app = createApp(App);
 app.use(router);

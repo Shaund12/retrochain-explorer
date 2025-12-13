@@ -68,7 +68,7 @@ export function useBridge() {
     loading.value = true;
     error.value = null;
     try {
-      const res = await api.get(`/retrochain/bridge/v1/transactions/${addr}`);
+      const res = await api.get(`/bridge/v1/transactions/${addr}`);
       transactions.value = res.data?.transactions || [];
     } catch (e: any) {
       console.warn("Bridge transactions not available:", e?.message);

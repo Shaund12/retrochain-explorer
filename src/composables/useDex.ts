@@ -43,7 +43,7 @@ export function useDex() {
     loading.value = true;
     error.value = null;
     try {
-      const res = await api.get("/retrochain/dex/v1/pools");
+      const res = await api.get("/dex/v1/pools");
       pools.value = res.data?.pools || [];
     } catch (e: any) {
       console.warn("DEX pools not available:", e?.message);
@@ -59,7 +59,7 @@ export function useDex() {
     loading.value = true;
     error.value = null;
     try {
-      const res = await api.get(`/retrochain/dex/v1/orderbook/${pair}`);
+      const res = await api.get(`/dex/v1/orderbook/${pair}`);
       return res.data;
     } catch (e: any) {
       console.warn("Order book not available:", e?.message);
@@ -72,7 +72,7 @@ export function useDex() {
   // Simulate swap to get expected output
   const simulateSwap = async (tokenIn: string, tokenOut: string, amountIn: string) => {
     try {
-      const res = await api.get("/retrochain/dex/v1/simulate-swap", {
+      const res = await api.get("/dex/v1/simulate-swap", {
         params: { token_in: tokenIn, token_out: tokenOut, amount_in: amountIn }
       });
       return res.data as SwapRoute;
@@ -98,7 +98,7 @@ export function useDex() {
     loading.value = true;
     error.value = null;
     try {
-      const res = await api.get(`/retrochain/dex/v1/liquidity/${addr}`);
+      const res = await api.get(`/dex/v1/liquidity/${addr}`);
       userLiquidity.value = res.data?.positions || [];
     } catch (e: any) {
       console.warn("User liquidity not available:", e?.message);

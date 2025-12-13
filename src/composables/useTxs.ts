@@ -25,21 +25,26 @@ export function useTxs() {
     txs.value = []; // Clear previous data
     
     try {
-      // Try fast aggregator first
-      const fast = await api.get(`/recent-txs`, { params: { limit } });
-      if (Array.isArray(fast.data?.txs) && fast.data.txs.length) {
-        txs.value = fast.data.txs.map((t: any) => ({
-          hash: t.hash,
-          height: t.height,
-          timestamp: t.timestamp
-        }));
-        return;
+      const base = api.defaults.baseURL || "";
+      const proxyAvailable = !base || base.startsWith("/");
+
+      if (proxyAvailable) {
+        // Try fast aggregator first
+        const fast = await api.get(`/recent-txs`, { params: { limit } });
+        if (Array.isArray(fast.data?.txs) && fast.data.txs.length) {
+          txs.value = fast.data.txs.map((t: any) => ({
+            hash: t.hash,
+            height: t.height,
+            timestamp: t.timestamp
+          }));
+          return;
+        }
+        throw new Error("fallback-scan");
       }
-      // Skip calling /cosmos/tx/v1beta1/txs without events; many nodes 500 with "query cannot be empty".
-      // Fall through to the catch block to run the block-scan fallback.
-      throw new Error("fallback-scan");
+
+      throw new Error("skip-proxy");
     } catch (e: any) {
-      if (e?.message !== "fallback-scan") {
+      if (e?.message !== "fallback-scan" && e?.message !== "skip-proxy") {
         console.error("Failed to fetch transactions:", e);
       }
       // Fallback: scan recent blocks, parse base64 txs, compute hash and optionally enrich via /txs/{hash}

@@ -75,7 +75,7 @@ export function useArcade() {
     loading.value = true;
     error.value = null;
     try {
-      const response = await api.get("/retrochain/arcade/v1/games");
+      const response = await api.get("/arcade/v1/games");
       games.value = response.data?.games || [];
     } catch (err: any) {
       error.value = err.message || "Failed to fetch games";
@@ -94,7 +94,7 @@ export function useArcade() {
     error.value = null;
     try {
       const response = await api.get(
-        `/retrochain/arcade/v1/highscores/${gameId}?limit=${limit}`
+        `/arcade/v1/highscores/${gameId}?limit=${limit}`
       );
       highScores.value = response.data?.scores || [];
     } catch (err: any) {
@@ -114,7 +114,7 @@ export function useArcade() {
     error.value = null;
     try {
       const response = await api.get(
-        `/retrochain/arcade/v1/leaderboard?limit=${limit}`
+        `/arcade/v1/leaderboard?limit=${limit}`
       );
       leaderboard.value = response.data?.leaderboard || [];
     } catch (err: any) {
@@ -134,7 +134,7 @@ export function useArcade() {
     error.value = null;
     try {
       const response = await api.get(
-        `/retrochain/arcade/v1/sessions?limit=${limit}`
+        `/arcade/v1/sessions?limit=${limit}`
       );
       sessions.value = response.data?.sessions || [];
     } catch (err: any) {
@@ -154,7 +154,7 @@ export function useArcade() {
     error.value = null;
     try {
       const response = await api.get(
-        `/retrochain/arcade/v1/achievements?limit=${limit}`
+        `/arcade/v1/achievements?limit=${limit}`
       );
       achievements.value = response.data?.achievements || [];
     } catch (err: any) {
@@ -173,7 +173,7 @@ export function useArcade() {
     loading.value = true;
     error.value = null;
     try {
-      const response = await api.get(`/retrochain/arcade/v1/stats/${address}`);
+      const response = await api.get(`/arcade/v1/stats/${address}`);
       playerStats.value = response.data || null;
     } catch (err: any) {
       error.value = err.message || "Failed to fetch player stats";
@@ -192,7 +192,7 @@ export function useArcade() {
     error.value = null;
     try {
       const response = await api.get(
-        `/retrochain/arcade/v1/sessions/player/${address}?limit=${limit}`
+        `/arcade/v1/sessions/player/${address}?limit=${limit}`
       );
       sessions.value = response.data?.sessions || [];
     } catch (err: any) {
@@ -212,7 +212,7 @@ export function useArcade() {
     error.value = null;
     try {
       const response = await api.get(
-        `/retrochain/arcade/v1/achievements/${address}`
+        `/arcade/v1/achievements/${address}`
       );
       achievements.value = response.data?.achievements || [];
     } catch (err: any) {
