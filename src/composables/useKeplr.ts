@@ -26,7 +26,7 @@ const error = ref<string | null>(null);
 
 const { restBase, rpcBase } = useNetwork();
 
-const CHAIN_ID = "retrochain-1";
+const CHAIN_ID = "retrochain-mainnet";
 const CHAIN_NAME = "RetroChain Mainnet";
 const DEFAULT_FEE_DENOM = "uretro";
 const DEFAULT_GAS_PRICE = 0.03; // uretro per gas unit

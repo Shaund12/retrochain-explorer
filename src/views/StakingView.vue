@@ -98,7 +98,7 @@ if (!address.value) return;
   
 txLoading.value = true;
 try {
-  const chainId = 'retrochain-1';
+  const chainId = 'retrochain-mainnet';
   const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
 
     const msg = {
@@ -142,7 +142,7 @@ const handleClaimRewards = async (validatorAddress?: string) => {
   
   txLoading.value = true;
   try {
-    const chainId = 'retrochain-1';
+    const chainId = 'retrochain-mainnet';
 
     const msgs = validatorAddress
       ? [{
@@ -188,7 +188,7 @@ const handleUndelegate = async () => {
   
   txLoading.value = true;
   try {
-    const chainId = 'retrochain-1';
+    const chainId = 'retrochain-mainnet';
     const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
 
     const msg = {
