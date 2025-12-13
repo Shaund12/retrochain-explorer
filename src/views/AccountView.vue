@@ -362,15 +362,15 @@ const selectFromAddressBook = (address: string) => {
         <div v-if="accountInfo" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs mb-3">
           <div class="p-3 rounded bg-slate-900/60 border border-slate-700">
             <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Account Number</div>
-            <div class="font-mono">{{ accountInfo.account_number || accountInfo.base_account?.account_number || '—' }}</div>
+            <div class="font-mono">{{ accountInfo.account_number || accountInfo.base_account?.account_number || 'Â—' }}</div>
           </div>
           <div class="p-3 rounded bg-slate-900/60 border border-slate-700">
             <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Sequence</div>
-            <div class="font-mono">{{ accountInfo.sequence || accountInfo.base_account?.sequence || '—' }}</div>
+            <div class="font-mono">{{ accountInfo.sequence || accountInfo.base_account?.sequence || 'Â—' }}</div>
           </div>
           <div class="p-3 rounded bg-slate-900/60 border border-slate-700 overflow-hidden">
             <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">PubKey</div>
-            <code class="text-[10px] break-all">{{ accountInfo.pub_key?.key || accountInfo.base_account?.pub_key?.key || '—' }}</code>
+            <code class="text-[10px] break-all">{{ accountInfo.pub_key?.key || accountInfo.base_account?.pub_key?.key || 'Â—' }}</code>
           </div>
         </div>
         <h3 class="text-sm font-semibold text-slate-100 mb-2">Balances</h3>

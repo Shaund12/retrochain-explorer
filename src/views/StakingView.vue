@@ -11,7 +11,7 @@ import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import dayjs from "dayjs";
 
 const router = useRouter();
-const { address, connect, isAvailable } = useKeplr();
+const { address, connect, isAvailable, signAndBroadcast } = useKeplr();
 const { 
   delegations, 
   rewards, 
@@ -93,13 +93,13 @@ const handleConnect = async () => {
 };
 
 const handleDelegate = async () => {
-if (!selectedValidator.value || !amount.value) return;
-if (!window.keplr) return;
+  if (!selectedValidator.value || !amount.value) return;
+  if (!address.value) return;
   
-txLoading.value = true;
-try {
-  const chainId = 'retrochain-mainnet';
-  const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
+  txLoading.value = true;
+  try {
+    const chainId = 'retrochain-mainnet';
+    const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
 
     const msg = {
       typeUrl: "/cosmos.staking.v1beta1.MsgDelegate",
@@ -118,9 +118,8 @@ try {
       gas: "200000"
     };
 
-    const result = await window.keplr.signAndBroadcast(
+    const result = await signAndBroadcast(
       chainId,
-      address.value,
       [msg],
       fee,
       "Delegate on RetroChain"
@@ -131,23 +130,24 @@ try {
       await fetchAll();
       amount.value = "";
       selectedValidator.value = "";
+      toast.showSuccess("Delegation successful!");
     } else {
       throw new Error(`Transaction failed: ${result.rawLog}`);
     }
   } catch (e: any) {
     console.error("Delegation failed:", e);
-    alert(`Delegation failed: ${e.message}`);
+    toast.showError(`Delegation failed: ${e.message}`);
   } finally {
     txLoading.value = false;
   }
 };
 
 const handleClaimRewards = async (validatorAddress?: string) => {
-if (!window.keplr) return;
+  if (!address.value) return;
   
-txLoading.value = true;
-try {
-  const chainId = 'retrochain-mainnet';
+  txLoading.value = true;
+  try {
+    const chainId = 'retrochain-mainnet';
 
     const msgs = validatorAddress
       ? [{
@@ -170,9 +170,8 @@ try {
       gas: (msgs.length * 150000).toString()
     };
 
-    const result = await window.keplr.signAndBroadcast(
+    const result = await signAndBroadcast(
       chainId,
-      address.value,
       msgs,
       fee,
       "Claim staking rewards"
@@ -181,25 +180,26 @@ try {
     if (result.code === 0) {
       console.log("Rewards claimed!", result);
       await fetchAll();
+      toast.showSuccess("Rewards claimed successfully!");
     } else {
       throw new Error(`Transaction failed: ${result.rawLog}`);
     }
   } catch (e: any) {
     console.error("Claim failed:", e);
-    alert(`Claim failed: ${e.message}`);
+    toast.showError(`Claim failed: ${e.message}`);
   } finally {
     txLoading.value = false;
   }
 };
 
 const handleUndelegate = async () => {
-if (!selectedValidator.value || !amount.value) return;
-if (!window.keplr) return;
+  if (!selectedValidator.value || !amount.value) return;
+  if (!address.value) return;
   
-txLoading.value = true;
-try {
-  const chainId = 'retrochain-mainnet';
-  const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
+  txLoading.value = true;
+  try {
+    const chainId = 'retrochain-mainnet';
+    const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
 
     const msg = {
       typeUrl: "/cosmos.staking.v1beta1.MsgUndelegate",
@@ -218,9 +218,8 @@ try {
       gas: "200000"
     };
 
-    const result = await window.keplr.signAndBroadcast(
+    const result = await signAndBroadcast(
       chainId,
-      address.value,
       [msg],
       fee,
       "Undelegate from RetroChain"
@@ -231,12 +230,13 @@ try {
       await fetchAll();
       amount.value = "";
       selectedValidator.value = "";
+      toast.showSuccess("Undelegation successful! Tokens will be available in 21 days.");
     } else {
       throw new Error(`Transaction failed: ${result.rawLog}`);
     }
   } catch (e: any) {
     console.error("Undelegation failed:", e);
-    alert(`Undelegation failed: ${e.message}`);
+    toast.showError(`Undelegation failed: ${e.message}`);
   } finally {
     txLoading.value = false;
   }

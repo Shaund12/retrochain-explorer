@@ -46,7 +46,7 @@ const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || "/api";
       <div>
         <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Blocks</h1>
         <p class="text-sm text-slate-400 mt-2">
-          Latest RetroChain blocks — {{ network === 'mainnet' ? 'mainnet' : 'testnet' }}
+          Latest RetroChain blocks Â— {{ network === 'mainnet' ? 'mainnet' : 'testnet' }}
         </p>
       </div>
       <div class="flex items-center gap-2">

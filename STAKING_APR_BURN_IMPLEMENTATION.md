@@ -17,8 +17,8 @@ Successfully implemented comprehensive staking features with APR calculation, bu
 #### Key Functions:
 ```typescript
 fetchNetworkStats() // Fetches and calculates:
-  - Base APR = (Annual Provisions / Bonded Tokens) × (1 - Community Tax)
-  - Effective APR = Base APR × (1 - Provision Burn Rate)
+  - Base APR = (Annual Provisions / Bonded Tokens) Ã— (1 - Community Tax)
+  - Effective APR = Base APR Ã— (1 - Provision Burn Rate)
   - Fee Burn Rate (% of tx fees burned)
   - Provision Burn Rate (% of minted tokens burned)
 ```
@@ -55,8 +55,8 @@ Educational section explaining:
 
 #### Formula Display:
 ```
-Base APR = (Annual Provisions / Bonded Tokens) × (1 - Community Tax)
-Effective APR = Base APR × (1 - Provision Burn Rate)
+Base APR = (Annual Provisions / Bonded Tokens) Ã— (1 - Community Tax)
+Effective APR = Base APR Ã— (1 - Provision Burn Rate)
 ```
 
 ### 3. **Existing Features Preserved**

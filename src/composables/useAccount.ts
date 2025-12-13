@@ -47,7 +47,7 @@ export function useAccount() {
         const hint = /bech32|prefix|decod/i.test(String(msg))
           ? "Check the address prefix matches the selected network."
           : "";
-        error.value = hint ? `${msg} — ${hint}` : msg;
+        error.value = hint ? `${msg} Â— ${hint}` : msg;
       }
     } catch (e: any) {
       const msg = e?.response?.data?.message || e?.message || String(e);
