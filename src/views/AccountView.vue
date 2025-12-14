@@ -310,16 +310,23 @@ const selectFromAddressBook = (address: string) => {
 
           <div
             v-if="knownAccount"
-            class="mb-3 rounded-lg border border-amber-400/40 bg-amber-500/10 p-2"
+            class="mb-4 rounded-2xl border border-amber-400/50 bg-gradient-to-br from-amber-500/15 via-orange-500/10 to-rose-500/10 p-3 shadow-lg shadow-amber-500/10"
           >
-            <div class="text-[11px] uppercase tracking-wider text-amber-200 mb-0.5">
-              Labeled Wallet
-            </div>
-            <div class="text-sm font-semibold text-amber-100">
-              {{ knownAccount.label }}
-            </div>
-            <div class="text-[11px] text-amber-200/80">
-              Allocation: {{ knownAccount.allocation }}
+            <div class="flex items-start gap-3">
+              <div class="text-3xl leading-none">
+                {{ knownAccount.icon }}
+              </div>
+              <div class="flex-1 space-y-1">
+                <div class="text-[11px] uppercase tracking-[0.2em] text-amber-200/80">
+                  Featured Wallet
+                </div>
+                <div class="text-base font-semibold text-amber-50">
+                  {{ knownAccount.label }}
+                </div>
+                <p class="text-xs text-amber-100/80 leading-relaxed">
+                  {{ knownAccount.description }}
+                </p>
+              </div>
             </div>
           </div>
           

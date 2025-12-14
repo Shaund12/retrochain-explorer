@@ -215,10 +215,11 @@ onMounted(() => {
                 </div>
                 <div
                   v-if="account.knownLabel"
-                  class="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200"
+                  class="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-100"
+                  :title="account.knownLabel.description"
                 >
+                  <span class="text-base leading-none">{{ account.knownLabel.icon }}</span>
                   <span>{{ account.knownLabel.label }}</span>
-                  <span class="text-[9px] text-amber-100/70">· {{ account.knownLabel.allocation }}</span>
                 </div>
               </td>
               
