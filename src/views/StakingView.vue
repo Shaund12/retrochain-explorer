@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
 import { useRouter } from "vue-router";
 import { useKeplr } from "@/composables/useKeplr";
 import { useStaking } from "@/composables/useStaking";
@@ -80,6 +80,15 @@ onMounted(async () => {
     await fetchAll();
   }
 });
+
+watch(
+  () => address.value,
+  async (newAddress, oldAddress) => {
+    if (newAddress && newAddress !== oldAddress) {
+      await fetchAll();
+    }
+  }
+);
 
 const handleConnect = async () => {
   try {

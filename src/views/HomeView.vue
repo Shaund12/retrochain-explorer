@@ -12,6 +12,7 @@ import { useRouter } from "vue-router";
 import dayjs from "dayjs";
 import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
 import { useNetwork } from "@/composables/useNetwork";
+import RcDisclaimer from "@/components/RcDisclaimer.vue";
 
 const router = useRouter();
 const { info, loading: loadingInfo, refresh } = useChainInfo();
@@ -97,6 +98,26 @@ function sparkPath(data: number[], width = 160, height = 40) {
 
 <template>
   <div class="grid grid-1-3 gap-4">
+    <div class="col-span-full">
+      <RcDisclaimer type="warning" title="⚠️ Experimental Mainnet Notice">
+        <p>
+          <strong>RetroChain is a live Cosmos SDK mainnet, but the network, modules, and contracts remain experimental.</strong>
+        </p>
+        <p>
+          Upgrades, validator rotations, and RPC changes can happen without notice. Expect occasional downtime while we harden the chain.
+        </p>
+        <p>
+          Transactions are irreversible—double-check recipients, fees, and any Keplr prompts, and only risk funds you can afford to lose.
+        </p>
+        <p class="mt-2 text-xs text-amber-200/80">
+          Read the full
+          <RouterLink to="/legal" class="underline underline-offset-2 hover:text-amber-100">
+            Terms &amp; Conditions
+          </RouterLink>
+          for detailed legal disclosures.
+        </p>
+      </RcDisclaimer>
+    </div>
     <div v-if="network === 'mainnet'" class="col-span-full">
       <div class="card-soft border-emerald-500/40">
         <div class="flex items-center justify-between">

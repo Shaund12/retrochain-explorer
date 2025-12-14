@@ -105,6 +105,11 @@ onMounted(() => {
                   <span></span> API Test
                 </a>
               </li>
+              <li>
+                <a href="/legal" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                  <span></span> Terms &amp; Conditions
+                </a>
+              </li>
             </ul>
           </div>
 
