@@ -10,61 +10,61 @@ const RAW_LABELS: Record<string, AccountLabelMeta> = {
     id: "foundation_validator",
     label: "Foundation Validator",
     description: "RetroChain Foundation's guardian validator that keeps mainnet blocks flowing 24/7.",
-    icon: "???"
+    icon: "🛡️"
   },
   "cosmos1exqr633rjzls2h4txrpu0cxhnxx0dquylf074x": {
     id: "ecosystem_rewards",
     label: "Ecosystem Rewards",
     description: "Grant pool that jump-starts builders, hackathons, and long-term contributors.",
-    icon: "??"
+    icon: "🎁"
   },
   "cosmos1w506apt4kyq72xgaakwxrvak8w5d94upn3gdf3": {
     id: "liquidity_fund",
     label: "Liquidity Fund",
     description: "Provisioning desk for RetroChain DEX pairs, market makers, and cross-chain bridges.",
-    icon: "??"
+    icon: "💧"
   },
   "cosmos1tksjh4tkdjfnwkkwty0wyuy4pv93q5q4lepgrn": {
     id: "community_fund",
     label: "Community Fund",
     description: "DAO-controlled treasury for governance proposals, retroactive rewards, and partnerships.",
-    icon: "??"
+    icon: "🌐"
   },
   "cosmos1epy8qnuu00w76xvvlt2mc7q8qslhw206vzu5vs": {
     id: "dev_fund",
     label: "Core Dev Fund",
     description: "Fuel for protocol upgrades, audits, and the RetroChain core engineering team.",
-    icon: "??"
+    icon: "🧰"
   },
   "cosmos1us0jjdd5dj0v499g959jatpnh6xuamwhwdrrgq": {
     id: "dev_profit",
     label: "Dev Profit",
     description: "Core team profit wallet covering infra, validator ops, and high-impact ecosystem pushes.",
-    icon: "??"
+    icon: "🚀"
   },
   "cosmos1ydn44ufvhddqhxu88m709k46hdm0dfjwm8v0tt": {
     id: "kitty_charity",
     label: "Kitty Charity",
     description: "Community kitty fund sponsoring shelters, meme contests, and feel-good grants.",
-    icon: "??"
+    icon: "🐾"
   },
   "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh": {
     id: "community_pool",
     label: "Community Pool",
     description: "Chain-wide treasury that accumulates inflation and community-tax funds for governance controlled spending.",
-    icon: "???"
+    icon: "🏛️"
   },
   "cosmos1f05vqgh9ufgfykn3g8zx45j273x0kxaj23akuz": {
     id: "ibc_relayer",
     label: "IBC Relayer",
     description: "Primary IBC relayer hot wallet moving packets between RetroChain and partner zones.",
-    icon: "??"
+    icon: "🔁"
   },
   "cosmos1jv65s3grqf6v6jl3dp4t6c9t9rk99cd88lyufl": {
     id: "staking_rewards_vault",
     label: "Staking Rewards Vault",
     description: "Primary accumulation vault where network staking rewards are swept before distribution.",
-    icon: "??"
+    icon: "🏦"
   }
 };
 
