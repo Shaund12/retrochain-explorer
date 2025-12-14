@@ -3,7 +3,8 @@ type DenomMeta = { display: string; decimals: number };
 const DENOMS: Record<string, DenomMeta> = {
   uretro: { display: "RETRO", decimals: 6 },
   udretro: { display: "DRETRO", decimals: 6 },
-  uatom: { display: "ATOM", decimals: 6 }
+  uatom: { display: "ATOM", decimals: 6 },
+  "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2": { display: "ATOM", decimals: 6 }
 };
 
 function splitAmount(amount: string, decimals: number) {
