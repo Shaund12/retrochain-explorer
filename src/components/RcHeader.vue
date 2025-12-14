@@ -102,7 +102,6 @@
           <div class="hidden sm:flex flex-col text-left">
             <span class="text-[10px] uppercase tracking-[0.25em] text-emerald-200/80">RETRO Balance</span>
             <span class="text-sm font-semibold text-white">
-</span>
               <span v-if="accountLoading">Syncing…</span>
               <span v-else>{{ walletBalance }}</span>
             </span>
@@ -112,7 +111,6 @@
             </div>
           </div>
           <div class="sm:hidden text-[11px] font-semibold text-emerald-200">
-</span>
             <span v-if="accountLoading">Syncing…</span>
             <span v-else>{{ walletBalance }}</span>
             <div v-if="atomWalletBalance" class="text-[10px] text-cyan-200 flex items-center gap-1">
