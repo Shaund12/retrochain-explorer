@@ -47,6 +47,54 @@ export function useTxs() {
       if (e?.message !== "fallback-scan" && e?.message !== "skip-proxy") {
         console.error("Failed to fetch transactions:", e);
       }
+
+      // Fallback #1: use gRPC-gateway /cosmos/tx endpoint with pagination
+      try {
+        const collected: TxSummary[] = [];
+        let nextKey: string | undefined;
+
+        while (collected.length < limit) {
+          const pageLimit = Math.min(50, limit - collected.length);
+          const params: Record<string, string> = {
+            events: "tx.height>0",
+            order_by: "ORDER_BY_DESC",
+            "pagination.limit": String(pageLimit)
+          };
+          if (nextKey) params["pagination.key"] = nextKey;
+
+          const res = await api.get(`/cosmos/tx/v1beta1/txs`, { params });
+          const responses: any[] = res.data?.tx_responses ?? [];
+          if (!responses.length) break;
+
+          for (const resp of responses) {
+            collected.push({
+              hash: resp.txhash,
+              height: parseInt(resp.height ?? "0", 10),
+              codespace: resp.codespace,
+              code: resp.code,
+              gasWanted: resp.gas_wanted,
+              gasUsed: resp.gas_used,
+              timestamp: resp.timestamp
+            });
+
+            if (collected.length >= limit) {
+              break;
+            }
+          }
+
+          nextKey = res.data?.pagination?.next_key || undefined;
+          if (!nextKey) break;
+        }
+
+        if (collected.length) {
+          txs.value = collected;
+          error.value = null;
+          return;
+        }
+      } catch (txErr) {
+        console.warn("/cosmos/tx fallback failed, scanning blocks", txErr);
+      }
+
       // Fallback: scan recent blocks, parse base64 txs, compute hash and optionally enrich via /txs/{hash}
       try {
         const latestRes = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/latest`);
