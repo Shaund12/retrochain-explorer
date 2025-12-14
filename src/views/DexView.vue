@@ -101,7 +101,7 @@ const handleSwap = async () => {
   toast.showInfo("Preparing swap transaction...");
   
   try {
-    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
+    const chainId = network.value === 'mainnet' ? 'retrochain-mainnet' : 'retrochain-devnet-1';
     
     // Get token denoms
     const tokenInDenom = availableTokens.value.find(t => t.symbol === tokenIn.value)?.denom || tokenDenom.value;
