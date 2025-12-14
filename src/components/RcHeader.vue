@@ -57,11 +57,28 @@
 
         <button
           v-else
-          class="flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-white/5 hover:bg-white/10 border border-white/10 hover:border-white/20 text-white transition-all"
+          class="flex items-center gap-3 px-3 sm:px-4 py-2 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-white/10 hover:border-emerald-300/40 hover:from-emerald-500/20 hover:to-cyan-500/20 text-white transition-all shadow-lg shadow-emerald-500/10"
           @click="disconnect"
         >
-          <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-          <span class="font-mono text-xs">{{ shortAddress }}</span>
+          <div class="hidden sm:flex flex-col text-left">
+            <span class="text-[10px] uppercase tracking-[0.25em] text-emerald-200/80">RETRO Balance</span>
+            <span class="text-sm font-semibold text-white">
+              <span v-if="accountLoading">Syncing…</span>
+              <span v-else>{{ walletBalance }}</span>
+            </span>
+          </div>
+          <div class="sm:hidden text-[11px] font-semibold text-emerald-200">
+            <span v-if="accountLoading">Syncing…</span>
+            <span v-else>{{ walletBalance }}</span>
+          </div>
+          <div class="hidden sm:block h-8 w-px bg-white/10"></div>
+          <div class="text-left">
+            <p class="font-mono text-xs">{{ shortAddress }}</p>
+            <p class="text-[10px] text-emerald-300 flex items-center gap-1">
+              <span class="w-1.5 h-1.5 rounded-full bg-emerald-400 animate-pulse"></span>
+              Disconnect
+            </p>
+          </div>
         </button>
 
         <!-- Mobile menu button -->
@@ -105,15 +122,41 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useKeplr } from "@/composables/useKeplr";
+import { useAccount } from "@/composables/useAccount";
+import { useNetwork } from "@/composables/useNetwork";
+import { formatAmount } from "@/utils/format";
 import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
 
 const route = useRoute();
 const router = useRouter();
 const { isAvailable, address, connecting, connect, disconnect } = useKeplr();
 const mobileMenuOpen = ref(false);
+const { balances, loading: accountLoading, load } = useAccount();
+const { current: network } = useNetwork();
+
+watch(
+  address,
+  (addr) => {
+    if (addr) {
+      load(addr);
+    } else {
+      balances.value = [];
+    }
+  },
+  { immediate: true }
+);
+
+const walletDenom = computed(() => (network.value === "mainnet" ? "uretro" : "udretro"));
+
+const walletBalance = computed(() => {
+  const denom = walletDenom.value;
+  const entry = balances.value.find((b) => b.denom === denom);
+  if (!entry) return "0.00 RETRO";
+  return formatAmount(entry.amount, denom, { minDecimals: 2, maxDecimals: 2, showZerosForIntegers: false });
+});
 
 const navItems = [
   { label: "Overview", to: { name: "home" } },

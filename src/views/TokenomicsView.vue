@@ -30,9 +30,9 @@ const formatRetro = (
   amount?: string | number | null,
   options?: { maximumFractionDigits?: number; minimumFractionDigits?: number }
 ) => {
-  if (amount === null || amount === undefined) return "ó";
+  if (amount === null || amount === undefined) return "‚Äî";
   const num = typeof amount === "string" ? Number(amount) : amount;
-  if (!Number.isFinite(num)) return "ó";
+  if (!Number.isFinite(num)) return "‚Äî";
   const retro = num / 1_000_000;
   return retro.toLocaleString(undefined, {
     minimumFractionDigits: options?.minimumFractionDigits ?? 0,
@@ -41,14 +41,14 @@ const formatRetro = (
 };
 
 const formatPercentFromDecimal = (value?: string | number | null, digits = 2) => {
-  if (value === null || value === undefined) return "ó";
+  if (value === null || value === undefined) return "‚Äî";
   const num = typeof value === "string" ? Number(value) : value;
-  if (!Number.isFinite(num)) return "ó";
+  if (!Number.isFinite(num)) return "‚Äî";
   return `${(num * 100).toFixed(digits)}%`;
 };
 
 const formatDuration = (duration?: string | null) => {
-  if (!duration) return "ó";
+  if (!duration) return "‚Äî";
   if (!duration.endsWith("s")) return duration;
   const seconds = Number(duration.slice(0, -1));
   if (!Number.isFinite(seconds)) return duration;
@@ -67,7 +67,7 @@ const netMinted = computed(() => {
 });
 
 const netMintedDisplay = computed(() => {
-  if (netMinted.value === null) return "ó";
+  if (netMinted.value === null) return "‚Äî";
   const amount = netMinted.value;
   const formatted = amount.toLocaleString(undefined, { maximumFractionDigits: 6 });
   return `${amount >= 0 ? "+" : ""}${formatted} RETRO`;
@@ -221,34 +221,41 @@ const testerDistributions = [
 
 const retroMythos = [
   {
-    emoji: "???",
+    emoji: "üï∂Ô∏è",
     title: "Message in the Cartridge",
     story:
       "Archivists say an anonymous dev left a hex note inside the first RetroChain client: \"Play fair, verify everything.\" It felt like Nakamoto whispering through assembly code, reminding builders that transparency beats hype.",
-    quote: "ó Fragment 00, recovered from the earliest git tag"
+    quote: "‚Äî Fragment 00, recovered from the earliest git tag"
   },
   {
-    emoji: "???",
+    emoji: "üéõÔ∏è",
     title: "Lore of the Infinite Arcade",
     story:
       "The community tells a campfire story about Satoshi dropping by under an alias, asking only one question: \"What would a permissionless arcade look like?\" That question pushed RetroChain economists to publish every supply dial in public.",
-    quote: "ó Midnight validator call, transcript redacted"
+    quote: "‚Äî Midnight validator call, transcript redacted"
   },
   {
-    emoji: "??",
+    emoji: "üì°",
     title: "Beacon Packet 2109",
     story:
-      "A cosmic relay allegedly pinged the network with the phrase \"Sound money needs joyful sinks.\" Whether myth or meme, it inspired the arcade moduleís burn-and-earn design without fabricating on-chain events.",
-    quote: "ó Community zine, Issue #7"
+      "A cosmic relay allegedly pinged the network with the phrase \"Sound money needs joyful sinks.\" Whether myth or meme, it inspired the arcade module‚Äôs burn-and-earn design without fabricating on-chain events.",
+    quote: "‚Äî Community zine, Issue #7"
   }
 ];
 
 const formatAddress = (address: string) => `${address.slice(0, 10)}...${address.slice(-6)}`;
 
+const maskAddress = (address: string) => {
+  if (!address) return "‚Äî";
+  const prefix = address.slice(0, 6);
+  const suffix = address.slice(-4);
+  return `${prefix}‚Ä¢‚Ä¢‚Ä¢‚Ä¢${suffix}`;
+};
+
 const minDepositRetro = computed(() => {
   const deposits: Array<{ denom: string; amount: string }> | undefined =
     depositParams.value?.min_deposit ?? depositParams.value?.minDeposit;
-  if (!deposits || !deposits.length) return "ó";
+  if (!deposits || !deposits.length) return "‚Äî";
   const entry = deposits.find((d) => d.denom === "uretro") || deposits[0];
   return `${formatRetro(entry.amount)} RETRO`;
 });
@@ -264,32 +271,32 @@ const minDepositRetro = computed(() => {
             <p class="text-xs uppercase tracking-[0.35em] text-emerald-200">Tokenomics</p>
             <h1 class="text-3xl font-bold text-white mt-2 flex items-center gap-3">
               <span>RetroChain Monetary Policy</span>
-              <span class="text-2xl">??</span>
+              <span class="text-2xl">ü™ô</span>
             </h1>
             <p class="text-sm text-slate-300 mt-2 max-w-3xl">
               Live supply, inflation, and audited treasury allocations for RetroChain mainnet (chain-id retrochain-mainnet).
             </p>
             <div class="flex flex-wrap gap-2 mt-3 text-[11px]">
-              <span class="badge border-emerald-500/40 text-emerald-200 bg-emerald-500/10">??? Live on-chain feed</span>
-              <span class="badge border-indigo-500/40 text-indigo-200 bg-indigo-500/10">?? Cosmos SDK economics</span>
-              <span class="badge border-amber-500/40 text-amber-200 bg-amber-500/10">?? Arcade treasury aware</span>
+              <span class="badge border-emerald-500/40 text-emerald-200 bg-emerald-500/10">üõ∞Ô∏è Live on-chain feed</span>
+              <span class="badge border-indigo-500/40 text-indigo-200 bg-indigo-500/10">‚öôÔ∏è Cosmos SDK economics</span>
+              <span class="badge border-amber-500/40 text-amber-200 bg-amber-500/10">üéÆ Arcade treasury aware</span>
             </div>
           </div>
           <div class="text-sm text-slate-300 text-right">
             <div class="text-xs text-slate-500 uppercase tracking-wider">Data as of</div>
             <div v-if="latestBlock" class="font-mono text-emerald-300">Height #{{ latestBlock.height }}</div>
             <div v-if="latestBlock" class="text-xs text-slate-400">{{ latestBlock.time }}</div>
-            <div v-else class="text-xs text-slate-500">Awaiting block dataÖ</div>
+            <div v-else class="text-xs text-slate-500">Awaiting block data‚Ä¶</div>
           </div>
         </div>
         <div v-if="errors.length" class="text-xs text-amber-300">
-          {{ errors.join(" ∑ ") }}
+          {{ errors.join(" ¬∑ ") }}
         </div>
       </div>
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading tokenomicsÖ" />
+      <RcLoadingSpinner size="md" text="Loading tokenomics‚Ä¶" />
     </div>
 
     <div v-else class="space-y-4">
@@ -308,17 +315,17 @@ const minDepositRetro = computed(() => {
       <!-- Token basics -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div class="card">
-          <p class="text-xs text-slate-400 flex items-center gap-1"><span>??</span><span>Symbol</span></p>
+          <p class="text-xs text-slate-400 flex items-center gap-1"><span>ü™ô</span><span>Symbol</span></p>
           <p class="text-xl font-semibold text-white">RETRO</p>
           <p class="text-xs text-slate-500">Display denom</p>
         </div>
         <div class="card">
-          <p class="text-xs text-slate-400 flex items-center gap-1"><span>??</span><span>Base denom</span></p>
+          <p class="text-xs text-slate-400 flex items-center gap-1"><span>‚öôÔ∏è</span><span>Base denom</span></p>
           <p class="text-xl font-semibold text-white">uretro</p>
           <p class="text-xs text-slate-500">On-chain representation</p>
         </div>
         <div class="card">
-          <p class="text-xs text-slate-400 flex items-center gap-1"><span>??</span><span>Decimals</span></p>
+          <p class="text-xs text-slate-400 flex items-center gap-1"><span>üìè</span><span>Decimals</span></p>
           <p class="text-xl font-semibold text-white">6</p>
           <p class="text-xs text-slate-500">1 RETRO = 1,000,000 uretro</p>
         </div>
@@ -328,18 +335,18 @@ const minDepositRetro = computed(() => {
       <div class="card">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            <span>??</span>
+            <span>üí∞</span>
             <span>Supply</span>
           </h2>
         </div>
         <div class="grid gap-4 md:grid-cols-2">
           <div class="rounded-xl border border-emerald-500/30 p-4 bg-emerald-500/10">
             <p class="text-xs text-emerald-200 uppercase tracking-wider flex items-center gap-1">
-              <span>??</span>
+              <span>üì°</span>
               <span>Current Supply</span>
             </p>
             <p class="text-2xl font-bold text-emerald-100 mt-1">
-              {{ currentSupply ? `${formatRetro(currentSupply, { maximumFractionDigits: 2 })} RETRO` : "ó" }}
+              {{ currentSupply ? `${formatRetro(currentSupply, { maximumFractionDigits: 2 })} RETRO` : "‚Äî" }}
             </p>
             <p class="text-xs text-emerald-200/70">Live from bank supply/by_denom</p>
           </div>
@@ -364,7 +371,7 @@ const minDepositRetro = computed(() => {
       <div class="card space-y-4">
         <div class="flex items-center justify-between">
           <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            <span>??</span>
+            <span>üî•</span>
             <span>Mint &amp; Inflation</span>
           </h2>
           <span class="badge text-xs">Mint denom: {{ mintParams?.mint_denom || mintParams?.mintDenom || "uretro" }}</span>
@@ -377,27 +384,27 @@ const minDepositRetro = computed(() => {
           <div class="rounded-xl border border-white/5 p-4">
             <p class="text-xs text-slate-400">Annual provisions</p>
             <p class="text-xl font-semibold text-white">
-              {{ annualProvisionRetro !== null ? `${annualProvisionRetro.toLocaleString(undefined, { maximumFractionDigits: 2 })} RETRO/yr` : "ó" }}
+              {{ annualProvisionRetro !== null ? `${annualProvisionRetro.toLocaleString(undefined, { maximumFractionDigits: 2 })} RETRO/yr` : "‚Äî" }}
             </p>
           </div>
           <div class="rounded-xl border border-white/5 p-4 space-y-1 text-sm text-slate-200">
-            <div>Daily: <span class="text-white">{{ dailyProvisionRetro !== null ? `${dailyProvisionRetro.toLocaleString(undefined, { maximumFractionDigits: 2 })} RETRO` : "ó" }}</span></div>
-            <div>Per block: <span class="text-white">{{ perBlockProvisionRetro !== null ? `${perBlockProvisionRetro.toLocaleString(undefined, { maximumFractionDigits: 6 })} RETRO` : "ó" }}</span></div>
-            <div>Blocks/year: <span class="text-white">{{ mintParams?.blocks_per_year || mintParams?.blocksPerYear || "ó" }}</span></div>
+            <div>Daily: <span class="text-white">{{ dailyProvisionRetro !== null ? `${dailyProvisionRetro.toLocaleString(undefined, { maximumFractionDigits: 2 })} RETRO` : "‚Äî" }}</span></div>
+            <div>Per block: <span class="text-white">{{ perBlockProvisionRetro !== null ? `${perBlockProvisionRetro.toLocaleString(undefined, { maximumFractionDigits: 6 })} RETRO` : "‚Äî" }}</span></div>
+            <div>Blocks/year: <span class="text-white">{{ mintParams?.blocks_per_year || mintParams?.blocksPerYear || "‚Äî" }}</span></div>
           </div>
         </div>
         <div class="grid gap-3 md:grid-cols-3 text-sm text-slate-300">
           <div>
             <p class="text-xs text-slate-500">Inflation rate change</p>
-            <p>{{ mintParams?.inflation_rate_change || mintParams?.inflationRateChange || "ó" }}</p>
+            <p>{{ mintParams?.inflation_rate_change || mintParams?.inflationRateChange || "‚Äî" }}</p>
           </div>
           <div>
             <p class="text-xs text-slate-500">Inflation min / max</p>
-            <p>{{ mintParams?.inflation_min || mintParams?.inflationMin || "ó" }} ? {{ mintParams?.inflation_max || mintParams?.inflationMax || "ó" }}</p>
+            <p>{{ mintParams?.inflation_min || mintParams?.inflationMin || "‚Äî" }} ‚ûú {{ mintParams?.inflation_max || mintParams?.inflationMax || "‚Äî" }}</p>
           </div>
           <div>
             <p class="text-xs text-slate-500">Goal bonded</p>
-            <p>{{ mintParams?.goal_bonded || mintParams?.goalBonded || "ó" }}</p>
+            <p>{{ mintParams?.goal_bonded || mintParams?.goalBonded || "‚Äî" }}</p>
           </div>
         </div>
       </div>
@@ -406,18 +413,18 @@ const minDepositRetro = computed(() => {
       <div class="grid gap-4 md:grid-cols-2">
         <div class="card space-y-2 text-sm text-slate-300">
           <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            <span>???</span>
+            <span>üõ°Ô∏è</span>
             <span>Staking Parameters</span>
           </h2>
-          <div>Bond denom: <span class="text-white">{{ stakingParams?.bond_denom || "ó" }}</span></div>
+          <div>Bond denom: <span class="text-white">{{ stakingParams?.bond_denom || "‚Äî" }}</span></div>
           <div>Unbonding time: <span class="text-white">{{ formatDuration(stakingParams?.unbonding_time) }}</span></div>
-          <div>Max validators: <span class="text-white">{{ stakingParams?.max_validators || "ó" }}</span></div>
-          <div>Max entries: <span class="text-white">{{ stakingParams?.max_entries || "ó" }}</span></div>
-          <div>Historical entries: <span class="text-white">{{ stakingParams?.historical_entries || "ó" }}</span></div>
+          <div>Max validators: <span class="text-white">{{ stakingParams?.max_validators || "‚Äî" }}</span></div>
+          <div>Max entries: <span class="text-white">{{ stakingParams?.max_entries || "‚Äî" }}</span></div>
+          <div>Historical entries: <span class="text-white">{{ stakingParams?.historical_entries || "‚Äî" }}</span></div>
         </div>
         <div class="card space-y-2 text-sm text-slate-300">
           <h2 class="text-sm font-semibold text-slate-100">Distribution Parameters</h2>
-          <div>Community tax: <span class="text-white">{{ distributionParams?.community_tax || "ó" }}</span></div>
+          <div>Community tax: <span class="text-white">{{ distributionParams?.community_tax || "‚Äî" }}</span></div>
           <div>Withdraw address enabled: <span class="text-white">{{ distributionParams?.withdraw_addr_enabled }}</span></div>
         </div>
       </div>
@@ -429,16 +436,16 @@ const minDepositRetro = computed(() => {
           <div>
             <p class="text-xs text-slate-500">Min deposit (uretro)</p>
             <p class="text-white">{{ minDepositRetro }}</p>
-            <p class="text-[11px] text-slate-500">Deposit period: {{ depositParams?.max_deposit_period || "ó" }}</p>
+            <p class="text-[11px] text-slate-500">Deposit period: {{ depositParams?.max_deposit_period || "‚Äî" }}</p>
           </div>
           <div>
             <p class="text-xs text-slate-500">Voting period</p>
-            <p class="text-white">{{ votingParams?.voting_period || "ó" }}</p>
+            <p class="text-white">{{ votingParams?.voting_period || "‚Äî" }}</p>
           </div>
           <div>
             <p class="text-xs text-slate-500">Quorum / Threshold / Veto</p>
             <p class="text-white">
-              {{ tallyParams?.quorum || "ó" }} / {{ tallyParams?.threshold || "ó" }} / {{ tallyParams?.veto_threshold || "ó" }}
+              {{ tallyParams?.quorum || "‚Äî" }} / {{ tallyParams?.threshold || "‚Äî" }} / {{ tallyParams?.veto_threshold || "‚Äî" }}
             </p>
           </div>
         </div>
@@ -447,7 +454,7 @@ const minDepositRetro = computed(() => {
       <!-- Genesis allocations -->
       <div class="card">
         <h2 class="text-sm font-semibold text-slate-100 mb-3 flex items-center gap-2">
-          <span>??</span>
+          <span>üìú</span>
           <span>Genesis Allocations (Height 1 Liquid)</span>
         </h2>
         <div class="overflow-x-auto">
@@ -476,13 +483,13 @@ const minDepositRetro = computed(() => {
       <!-- Early treasury redistributions -->
       <div class="card space-y-2">
         <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-          <span>??</span>
+          <span>üíº</span>
           <span>Early Treasury Redistributions</span>
         </h2>
         <ul class="text-sm text-slate-300 space-y-1">
           <li v-for="entry in treasuryTransfers" :key="entry.height">
             <span class="text-slate-500">Height {{ entry.height }}:</span>
-            {{ entry.from }} ? {{ entry.to }} ó {{ entry.amount.toLocaleString() }} RETRO
+            {{ entry.from }} ‚Üí {{ entry.to }} ‚Äî {{ entry.amount.toLocaleString() }} RETRO
           </li>
         </ul>
       </div>
@@ -490,13 +497,13 @@ const minDepositRetro = computed(() => {
       <!-- Tester distributions -->
       <div class="card space-y-2">
         <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-          <span>??</span>
+          <span>üéÆ</span>
           <span>Tester Distributions</span>
         </h2>
         <p class="text-xs text-slate-500">dev_fund wallet payouts (500,000 RETRO each)</p>
         <ul class="text-sm text-slate-300 space-y-1">
           <li v-for="tester in testerDistributions" :key="tester.height">
-            Height {{ tester.height }} ? {{ tester.address }}
+            Height {{ tester.height }} ‚Üí {{ maskAddress(tester.address) }}
           </li>
         </ul>
       </div>
@@ -505,15 +512,15 @@ const minDepositRetro = computed(() => {
       <div class="card space-y-3">
         <div class="flex items-center justify-between">
           <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            <span>??</span>
+            <span>üìñ</span>
             <span>RetroChain Mythos</span>
           </h2>
-          <span class="text-[11px] text-slate-500">Fictional inspiration ∑ not on-chain history</span>
+          <span class="text-[11px] text-slate-500">Fictional inspiration ¬∑ not on-chain history</span>
         </div>
         <RcDisclaimer type="info" title="Fictional lore only">
           <p>
-            This Satoshi-style narrative is pure myth. It does not describe real wallets, token movements, or financial guaranteesójust community
-            storytelling about RetroChainís ethos of transparency and open-source builders.
+            This Satoshi-style narrative is pure myth. It does not describe real wallets, token movements, or financial guarantees‚Äîjust community
+            storytelling about RetroChain‚Äôs ethos of transparency and open-source builders.
           </p>
         </RcDisclaimer>
         <div class="grid gap-3 md:grid-cols-3">
@@ -536,7 +543,7 @@ const minDepositRetro = computed(() => {
       <div class="card">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            <span>???</span>
+            <span>üïπÔ∏è</span>
             <span>Arcade Economy Params</span>
           </h2>
           <span class="text-xs text-slate-500">retrochain/arcade/v1/params</span>
