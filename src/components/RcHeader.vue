@@ -22,24 +22,61 @@
       </button>
 
       <!-- Navigation -->
-      <nav class="hidden lg:flex items-center">
-        <a
-          v-for="item in navItems"
-          :key="item.label"
-          @click.prevent="router.push(item.to)"
-          class="px-4 h-16 flex items-center text-sm font-medium transition-colors cursor-pointer relative"
-          :class="
-            isActive(item.to).value
-              ? 'text-white'
-              : 'text-slate-400 hover:text-white'
-          "
-        >
-          {{ item.label }}
+      <nav class="hidden lg:flex items-center gap-1">
+        <template v-for="item in navItems" :key="item.label">
+          <a
+            v-if="!isGroup(item)"
+            @click.prevent="router.push(item.to)"
+            class="px-4 h-16 flex items-center text-sm font-medium transition-colors cursor-pointer relative"
+            :class="isLinkActive(item.to) ? 'text-white' : 'text-slate-400 hover:text-white'"
+          >
+            {{ item.label }}
+            <div
+              v-if="isLinkActive(item.to)"
+              class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
+            ></div>
+          </a>
+
           <div
-            v-if="isActive(item.to).value"
-            class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
-          ></div>
-        </a>
+            v-else
+            class="relative"
+            @mouseenter="openDropdown = item.label"
+            @mouseleave="openDropdown = null"
+          >
+            <button
+              type="button"
+              class="px-4 h-16 flex items-center gap-1 text-sm font-medium transition-colors cursor-pointer"
+              :class="groupActive(item) ? 'text-white' : 'text-slate-400 hover:text-white'"
+            >
+              <span>{{ item.label }}</span>
+              <svg
+                class="w-3 h-3 transition-transform"
+                :class="openDropdown === item.label || groupActive(item) ? 'rotate-180 text-white' : ''"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div
+              v-show="openDropdown === item.label"
+              class="absolute left-0 top-full mt-2 w-56 rounded-2xl border border-white/10 bg-[rgba(10,14,39,0.98)] shadow-2xl shadow-black/40 py-2"
+            >
+              <button
+                v-for="link in item.items"
+                :key="link.label"
+                type="button"
+                @click.prevent="router.push(link.to); openDropdown = null;"
+                class="w-full px-4 py-2 text-left text-sm flex items-center justify-between transition-colors"
+                :class="isLinkActive(link.to) ? 'text-white bg-white/5' : 'text-slate-400 hover:text-white hover:bg-white/5'"
+              >
+                <span>{{ link.label }}</span>
+                <span v-if="isLinkActive(link.to)" class="text-[10px] text-emerald-300">Active</span>
+              </button>
+            </div>
+          </div>
+        </template>
       </nav>
 
       <!-- Wallet Connection -->
@@ -63,12 +100,12 @@
           <div class="hidden sm:flex flex-col text-left">
             <span class="text-[10px] uppercase tracking-[0.25em] text-emerald-200/80">RETRO Balance</span>
             <span class="text-sm font-semibold text-white">
-              <span v-if="accountLoading">Syncing…</span>
+              <span v-if="accountLoading">SyncingÂ…</span>
               <span v-else>{{ walletBalance }}</span>
             </span>
           </div>
           <div class="sm:hidden text-[11px] font-semibold text-emerald-200">
-            <span v-if="accountLoading">Syncing…</span>
+            <span v-if="accountLoading">SyncingÂ…</span>
             <span v-else>{{ walletBalance }}</span>
           </div>
           <div class="hidden sm:block h-8 w-px bg-white/10"></div>
@@ -99,20 +136,49 @@
       v-if="mobileMenuOpen"
       class="lg:hidden border-t border-white/5 bg-[rgba(10,14,39,0.98)]"
     >
-      <nav class="max-w-7xl mx-auto px-4 py-3 flex flex-col">
-        <a
-          v-for="item in navItems"
-          :key="item.label"
-          @click.prevent="router.push(item.to); mobileMenuOpen = false"
-          class="px-4 py-3 text-sm font-medium transition-all cursor-pointer rounded-lg"
-          :class="
-            isActive(item.to).value
-              ? 'text-white bg-white/5'
-              : 'text-slate-400 hover:text-white hover:bg-white/5'
-          "
-        >
-          {{ item.label }}
-        </a>
+      <nav class="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
+        <template v-for="item in navItems" :key="item.label">
+          <button
+            v-if="!isGroup(item)"
+            type="button"
+            @click.prevent="router.push(item.to); closeMobileMenu();"
+            class="px-4 py-3 text-sm font-medium transition-all text-left rounded-lg"
+            :class="isLinkActive(item.to) ? 'text-white bg-white/5' : 'text-slate-400 hover:text-white hover:bg-white/5'"
+          >
+            {{ item.label }}
+          </button>
+
+          <div v-else class="border border-white/5 rounded-xl overflow-hidden">
+            <button
+              type="button"
+              class="w-full px-4 py-3 flex items-center justify-between text-sm font-medium text-left text-slate-100"
+              @click="toggleMobileGroup(item.label)"
+            >
+              <span>{{ item.label }}</span>
+              <svg
+                class="w-4 h-4 transition-transform"
+                :class="expandedMobileGroups[item.label] ? 'rotate-180' : ''"
+                fill="none"
+                stroke="currentColor"
+                viewBox="0 0 24 24"
+              >
+                <path stroke-linecap="round" stroke-linejoin="round" stroke-width="2" d="M19 9l-7 7-7-7" />
+              </svg>
+            </button>
+            <div v-show="expandedMobileGroups[item.label]" class="bg-white/5 border-t border-white/5 flex flex-col">
+              <button
+                v-for="link in item.items"
+                :key="link.label"
+                type="button"
+                @click.prevent="router.push(link.to); closeMobileMenu();"
+                class="px-6 py-2 text-sm text-left transition-colors"
+                :class="isLinkActive(link.to) ? 'text-white bg-white/10' : 'text-slate-400 hover:text-white hover:bg-white/10'"
+              >
+                {{ link.label }}
+              </button>
+            </div>
+          </div>
+        </template>
         <div class="mt-3 px-4">
           <RcAddKeplrButton class="w-full inline-flex justify-center" />
         </div>
@@ -149,6 +215,13 @@ watch(
   { immediate: true }
 );
 
+watch(
+  () => route.name,
+  () => {
+    openDropdown.value = null;
+  }
+);
+
 const walletDenom = computed(() => (network.value === "mainnet" ? "uretro" : "udretro"));
 
 const walletBalance = computed(() => {
@@ -158,22 +231,69 @@ const walletBalance = computed(() => {
   return formatAmount(entry.amount, denom, { minDecimals: 2, maxDecimals: 2, showZerosForIntegers: false });
 });
 
-const navItems = [
+interface NavLink {
+  label: string;
+  to: { name: string; params?: Record<string, any> };
+}
+
+interface NavGroup {
+  label: string;
+  items: NavLink[];
+}
+
+type NavItem = NavLink | NavGroup;
+
+const navItems: NavItem[] = [
   { label: "Overview", to: { name: "home" } },
-  { label: "Blocks", to: { name: "blocks" } },
-  { label: "Transactions", to: { name: "txs" } },
-  { label: "Accounts", to: { name: "accounts" } },
-  { label: "Validators", to: { name: "validators" } },
-  { label: "Staking", to: { name: "staking" } },
-  { label: "DEX", to: { name: "dex" } },
-  { label: "Tokenomics", to: { name: "tokenomics" } },
-  { label: "Buy", to: { name: "buy" } },
-  { label: "Governance", to: { name: "governance" } },
-  { label: "Account", to: { name: "account" } }
+  {
+    label: "Network",
+    items: [
+      { label: "Blocks", to: { name: "blocks" } },
+      { label: "Transactions", to: { name: "txs" } },
+      { label: "Accounts", to: { name: "accounts" } },
+      { label: "Validators", to: { name: "validators" } }
+    ]
+  },
+  {
+    label: "Economy",
+    items: [
+      { label: "Tokenomics", to: { name: "tokenomics" } },
+      { label: "DEX", to: { name: "dex" } },
+      { label: "Buy", to: { name: "buy" } }
+    ]
+  },
+  {
+    label: "Participation",
+    items: [
+      { label: "Staking", to: { name: "staking" } },
+      { label: "Governance", to: { name: "governance" } },
+      { label: "Account", to: { name: "account" } }
+    ]
+  }
 ];
 
-const isActive = (to: any) =>
-  computed(() => route.name === to.name);
+const currentRouteName = computed(() => route.name as string | undefined);
+
+const isLinkActive = (to: NavLink["to"]) => currentRouteName.value === to.name;
+
+const isGroup = (item: NavItem): item is NavGroup => (item as NavGroup).items !== undefined;
+
+const groupActive = (group: NavGroup) => group.items.some((link) => isLinkActive(link.to));
+
+const openDropdown = ref<string | null>(null);
+const expandedMobileGroups = ref<Record<string, boolean>>({});
+
+const toggleMobileGroup = (label: string) => {
+  expandedMobileGroups.value = {
+    ...expandedMobileGroups.value,
+    [label]: !expandedMobileGroups.value[label]
+  };
+};
+
+const closeMobileMenu = () => {
+  mobileMenuOpen.value = false;
+  expandedMobileGroups.value = {};
+};
 
 const shortAddress = computed(() => {
   if (!address.value) return "";

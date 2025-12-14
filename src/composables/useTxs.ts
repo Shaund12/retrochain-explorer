@@ -10,7 +10,16 @@ export interface TxSummary {
   gasWanted?: string;
   gasUsed?: string;
   timestamp?: string;
+  messageTypes?: string[];
 }
+
+const extractMessageTypes = (txResponse: any): string[] => {
+  const messages: any[] | undefined = txResponse?.tx?.body?.messages;
+  if (!Array.isArray(messages)) return [];
+  return messages
+    .map((msg) => msg?.["@type"] || msg?.type || "")
+    .filter((type: string) => typeof type === "string" && type.length > 0);
+};
 
 export function useTxs() {
   const api = useApi();
@@ -35,7 +44,8 @@ export function useTxs() {
           txs.value = fast.data.txs.map((t: any) => ({
             hash: t.hash,
             height: t.height,
-            timestamp: t.timestamp
+            timestamp: t.timestamp,
+            messageTypes: Array.isArray(t.messageTypes) ? t.messageTypes : []
           }));
           return;
         }
@@ -74,7 +84,8 @@ export function useTxs() {
               code: resp.code,
               gasWanted: resp.gas_wanted,
               gasUsed: resp.gas_used,
-              timestamp: resp.timestamp
+              timestamp: resp.timestamp,
+              messageTypes: extractMessageTypes(resp)
             });
 
             if (collected.length >= limit) {
@@ -120,7 +131,7 @@ export function useTxs() {
           for (const raw of txList) {
             try {
               const hash = await hashFromBase64(raw);
-              let summary: TxSummary = { hash, height: h, timestamp: time };
+              let summary: TxSummary = { hash, height: h, timestamp: time, messageTypes: [] };
               // Enrich from /txs/{hash} if available
               try {
                 const d = await api.get(`/cosmos/tx/v1beta1/txs/${hash}`);
@@ -133,7 +144,8 @@ export function useTxs() {
                     code: r.code,
                     gasWanted: r.gas_wanted,
                     gasUsed: r.gas_used,
-                    timestamp: r.timestamp || time
+                    timestamp: r.timestamp || time,
+                    messageTypes: extractMessageTypes(r)
                   };
                 }
               } catch {}
@@ -201,7 +213,8 @@ export function useTxs() {
           code: resp.code,
           gasWanted: resp.gas_wanted,
           gasUsed: resp.gas_used,
-          timestamp: resp.timestamp
+          timestamp: resp.timestamp,
+          messageTypes: extractMessageTypes(resp)
         });
         return list;
       }, []);

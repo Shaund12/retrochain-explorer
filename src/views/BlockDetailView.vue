@@ -4,6 +4,9 @@ import { useRoute, useRouter } from "vue-router";
 import { useBlocks } from "@/composables/useBlocks";
 import { useToast } from "@/composables/useToast";
 import { useApi } from "@/composables/useApi";
+import { useValidators, type ValidatorWithVotingPower } from "@/composables/useValidators";
+import { decodeConsensusAddress } from "@/utils/consensus";
+import { getAccountLabel } from "@/constants/accountLabels";
 import dayjs from "dayjs";
 
 const route = useRoute();
@@ -11,6 +14,11 @@ const router = useRouter();
 const { fetchByHeight } = useBlocks();
 const { notify } = useToast();
 const api = useApi();
+const {
+  validators,
+  fetchValidators: fetchValidatorsList,
+  loading: validatorsLoading
+} = useValidators();
 
 const loading = ref(false);
 const error = ref<string | null>(null);
@@ -24,7 +32,44 @@ const height = ref<number>(Number(route.params.height || 0));
 const header = computed(() => block.value?.header ?? {});
 const txCount = computed(() => block.value?.data?.txs?.length ?? 0);
 const blockHash = computed(() => commit.value?.hash ?? "—");
-const proposer = computed(() => header.value.proposer_address ?? "—");
+const proposerAddressRaw = computed(() => header.value.proposer_address ?? "—");
+const proposerConsensusHex = computed(() => decodeConsensusAddress(header.value.proposer_address));
+const validatorByConsensus = computed(() => {
+  const map = new Map<string, ValidatorWithVotingPower>();
+  validators.value.forEach((v) => {
+    if (v.consensusAddressHex) {
+      map.set(v.consensusAddressHex, v);
+    }
+
+const gasStats = computed(() => {
+  if (!blockTxs.value.length) {
+    return { used: null as number | null, wanted: null as number | null, utilization: null as number | null };
+  }
+  const totals = blockTxs.value.reduce(
+    (acc, tx) => {
+      acc.used += Number(tx.gas_used ?? 0);
+      acc.wanted += Number(tx.gas_wanted ?? 0);
+      return acc;
+    },
+    { used: 0, wanted: 0 }
+  );
+  return {
+    used: totals.used,
+    wanted: totals.wanted,
+    utilization: totals.wanted > 0 ? totals.used / totals.wanted : null
+  };
+});
+  });
+  return map;
+});
+const proposerValidator = computed(() => {
+  const hex = proposerConsensusHex.value;
+  if (!hex) return null;
+  return validatorByConsensus.value.get(hex) ?? null;
+});
+const proposerLabel = computed(() => getAccountLabel(proposerValidator.value?.operatorAddress ?? null));
+const proposerDisplayName = computed(() => proposerLabel.value?.label || proposerValidator.value?.description?.moniker || "Unknown proposer");
+const proposerOperatorAddress = computed(() => proposerValidator.value?.operatorAddress ?? null);
 const time = computed(() => header.value.time ?? "—");
 const base64Txs = computed(() => (block.value?.data?.txs as string[]) || []);
 const prettyTime = computed(() => (time.value && time.value !== "—" ? dayjs(time.value).format("YYYY-MM-DD HH:mm:ss") : "—"));
@@ -32,6 +77,16 @@ const relativeTime = computed(() => (time.value && time.value !== "—" ? dayjs(
 
 const copy = async (text: string) => {
   try { await navigator.clipboard?.writeText?.(text); } catch {}
+};
+
+const formatNumber = (value?: number | null) => {
+  if (value === null || value === undefined) return "—";
+  return value.toLocaleString();
+};
+
+const formatPercent = (value?: number | null, digits = 1) => {
+  if (value === null || value === undefined) return "—";
+  return `${(value * 100).toFixed(digits)}%`;
 };
 
 // Compute fallback tx hashes from base64 (when tx_responses not available)
@@ -98,7 +153,10 @@ const loadBlock = async () => {
   }
 };
 
-onMounted(loadBlock);
+onMounted(() => {
+  fetchValidatorsList();
+  loadBlock();
+});
 
 // React when route param changes but component instance stays
 watch(
@@ -177,15 +235,58 @@ watch(
             <div class="text-[11px] uppercase tracking-[0.18em] text-slate-400">
               Proposer
             </div>
-            <div class="flex items-center gap-2">
-              <code class="text-[11px] break-all">{{ proposer }}</code>
-              <button class="btn text-[10px]" @click="copy(proposer)">Copy</button>
+            <div class="flex flex-col gap-2">
+              <div class="flex items-center justify-between gap-3">
+                <div class="flex items-center gap-3">
+                  <span v-if="proposerLabel?.icon" class="text-2xl leading-none">{{ proposerLabel.icon }}</span>
+                  <div>
+                    <div class="text-sm font-semibold text-white">{{ proposerDisplayName }}</div>
+                    <div v-if="proposerOperatorAddress" class="text-[11px] text-slate-400 font-mono">
+                      {{ proposerOperatorAddress }}
+                    </div>
+                    <div v-if="proposerConsensusHex" class="text-[11px] text-slate-500 font-mono">
+                      cons {{ proposerConsensusHex }}
+                    </div>
+                  </div>
+                </div>
+                <span v-if="validatorsLoading" class="text-[10px] text-slate-500">syncing…</span>
+              </div>
+              <div class="flex items-center gap-2">
+                <code class="text-[11px] break-all flex-1">{{ proposerAddressRaw }}</code>
+                <button class="btn text-[10px]" @click="copy(proposerAddressRaw)">Copy</button>
+              </div>
             </div>
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-[0.18em] text-slate-400">
               Tx count
             </div>
+
+        <div class="mt-3 border-t border-slate-800 pt-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-[11px] uppercase tracking-[0.18em] text-slate-400">
+                Gas utilization
+              </div>
+              <div class="text-lg font-semibold text-white">
+                {{ gasStats.utilization !== null ? formatPercent(gasStats.utilization) : "—" }}
+              </div>
+            </div>
+            <div class="text-right text-xs text-slate-400">
+              {{ formatNumber(gasStats.used) }} used / {{ formatNumber(gasStats.wanted) }} wanted
+            </div>
+          </div>
+          <div class="h-2 bg-slate-900 rounded overflow-hidden mt-2">
+            <div
+              v-if="gasStats.utilization !== null"
+              class="h-full bg-gradient-to-r from-emerald-400 to-cyan-400"
+              :style="{ width: `${Math.min(100, gasStats.utilization * 100).toFixed(1)}%` }"
+            ></div>
+          </div>
+          <p v-if="gasStats.utilization === null" class="text-[11px] text-slate-500 mt-1">
+            Gas stats unavailable for this block.
+          </p>
+        </div>
             <div>
               <span class="badge">{{ txCount }} tx</span>
             </div>

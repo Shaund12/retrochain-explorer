@@ -2,6 +2,7 @@
 import { onMounted, computed } from "vue";
 import { useRouter } from "vue-router";
 import { useValidators } from "@/composables/useValidators";
+import dayjs from "dayjs";
 
 const router = useRouter();
 const { validators, loading, error, fetchValidators } = useValidators();
@@ -67,6 +68,38 @@ const getStatusBadge = (status: string, jailed: boolean) => {
 
 const shortAddress = (addr: string, size = 10) =>
   `${addr?.slice(0, size)}...${addr?.slice(-6)}`;
+
+const BASE_NETWORK_APY = 0.18; // 18% nominal network APY assumption
+
+const estimateStakingApy = (commissionRate?: string) => {
+  const rate = parseFloat(commissionRate || "0");
+  if (!Number.isFinite(rate)) return "—";
+  const net = Math.max(0, BASE_NETWORK_APY * (1 - rate));
+  return `${(net * 100).toFixed(1)}%`;
+};
+
+const getCommissionTrendBadge = (updateTime?: string) => {
+  if (!updateTime) {
+    return { label: "No updates", class: "border-slate-500/60 text-slate-300" };
+  }
+  const hours = Math.max(0, dayjs().diff(dayjs(updateTime), "hour"));
+  if (hours < 24) {
+    return { label: "Active", class: "border-amber-400/60 text-amber-200" };
+  }
+  if (hours < 24 * 7) {
+    return { label: "Stable", class: "border-emerald-400/60 text-emerald-200" };
+  }
+  return { label: "Chill", class: "border-indigo-400/60 text-indigo-200" };
+};
+
+const commissionUpdatedAgo = (updateTime?: string) => {
+  if (!updateTime) return "never";
+  return dayjs(updateTime).fromNow();
+};
+
+const goDelegate = (validatorAddress: string) => {
+  router.push({ name: "staking", query: { validator: validatorAddress } });
+};
 </script>
 
 <template>
@@ -183,6 +216,7 @@ const shortAddress = (addr: string, size = 10) =>
             <col style="width: 160px" />
             <col style="width: 140px" />
             <col style="width: 110px" />
+            <col style="width: 130px" />
           </colgroup>
           <thead>
             <tr class="text-slate-300 text-xs">
@@ -192,6 +226,7 @@ const shortAddress = (addr: string, size = 10) =>
               <th class="text-right">Voting Power</th>
               <th class="text-right">Share</th>
               <th class="text-right">Commission</th>
+              <th class="text-right">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -218,6 +253,17 @@ const shortAddress = (addr: string, size = 10) =>
                     <a :href="v.description.website" target="_blank" rel="noopener" @click.stop>
                       {{ v.description.website }}
                     </a>
+                  </div>
+                  <div class="flex flex-wrap gap-2 mt-2">
+                    <span class="badge text-[10px] border-emerald-400/60 text-emerald-200">
+                      Est. APY {{ estimateStakingApy(v.commission?.commissionRates?.rate) }}
+                    </span>
+                    <span
+                      class="badge text-[10px]"
+                      :class="getCommissionTrendBadge(v.commission?.updateTime).class"
+                    >
+                      {{ getCommissionTrendBadge(v.commission?.updateTime).label }} · {{ commissionUpdatedAgo(v.commission?.updateTime) }}
+                    </span>
                   </div>
                 </div>
               </td>
@@ -247,6 +293,9 @@ const shortAddress = (addr: string, size = 10) =>
               </td>
               <td class="text-right text-sm text-slate-300 py-3">
                 {{ (parseFloat(v.commission?.commissionRates?.rate || "0") * 100).toFixed(1) }}%
+              </td>
+              <td class="text-right py-3">
+                <button class="btn text-[11px]" @click.stop="goDelegate(v.operatorAddress)">Delegate</button>
               </td>
             </tr>
           </tbody>

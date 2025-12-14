@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import { useApi } from "./useApi";
+import { deriveConsensusAddressFromPubkey } from "@/utils/consensus";
 
 export interface Validator {
   operatorAddress: string;
@@ -31,6 +32,7 @@ export interface Validator {
 export interface ValidatorWithVotingPower extends Validator {
   votingPower: number;
   votingPowerPercent: number;
+  consensusAddressHex?: string | null;
 }
 
 export function useValidators() {
@@ -61,12 +63,16 @@ export function useValidators() {
         return;
       }
       
+      const consensusAddresses = await Promise.all(
+        vals.map((v: any) => deriveConsensusAddressFromPubkey(v.consensus_pubkey))
+      );
+
       // Calculate total voting power
       const totalTokens = vals.reduce((sum: number, v: any) => {
         return sum + parseInt(v.tokens || "0", 10);
       }, 0);
 
-      validators.value = vals.map((v: any) => {
+      validators.value = vals.map((v: any, idx: number) => {
         const tokens = parseInt(v.tokens || "0", 10);
         return {
           operatorAddress: v.operator_address,
@@ -81,7 +87,8 @@ export function useValidators() {
           commission: v.commission,
           minSelfDelegation: v.min_self_delegation,
           votingPower: tokens,
-          votingPowerPercent: totalTokens > 0 ? (tokens / totalTokens) * 100 : 0
+          votingPowerPercent: totalTokens > 0 ? (tokens / totalTokens) * 100 : 0,
+          consensusAddressHex: consensusAddresses[idx]
         };
       }).sort((a: ValidatorWithVotingPower, b: ValidatorWithVotingPower) => 
         b.votingPower - a.votingPower

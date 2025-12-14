@@ -1,3 +1,5 @@
+import { fromBech32, toBech32 } from "@cosmjs/encoding";
+
 export interface AccountLabelMeta {
   id: string;
   label: string;
@@ -74,5 +76,25 @@ export const ACCOUNT_LABELS: Record<string, AccountLabelMeta> = Object.fromEntri
 
 export function getAccountLabel(address?: string | null): AccountLabelMeta | null {
   if (!address) return null;
-  return ACCOUNT_LABELS[address.toLowerCase()] ?? null;
+
+  const candidates: string[] = [];
+  const lower = address.toLowerCase();
+  candidates.push(lower);
+
+  try {
+    const decoded = fromBech32(address);
+    const accountAddr = toBech32("cosmos", decoded.data).toLowerCase();
+    if (!candidates.includes(accountAddr)) {
+      candidates.push(accountAddr);
+    }
+  } catch {
+    // not bech32, ignore
+  }
+
+  for (const candidate of candidates) {
+    const meta = ACCOUNT_LABELS[candidate];
+    if (meta) return meta;
+  }
+
+  return null;
 }

@@ -38,6 +38,16 @@ const loadMore = () => {
 
 const { current: network } = useNetwork();
 const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || "/api";
+
+const formatNumber = (value?: number | null) => {
+  if (value === null || value === undefined) return "—";
+  return value.toLocaleString();
+};
+
+const formatPercent = (value?: number | null, digits = 1) => {
+  if (value === null || value === undefined) return "—";
+  return `${(value * 100).toFixed(digits)}%`;
+};
 </script>
 
 <template>
@@ -94,15 +104,19 @@ const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || "/api";
       <div class="overflow-x-auto">
         <table class="table">
           <colgroup>
-            <col style="width: 120px" />
-            <col />
             <col style="width: 90px" />
-            <col style="width: 220px" />
+            <col style="width: 240px" />
+            <col />
+            <col style="width: 200px" />
+            <col style="width: 110px" />
+            <col style="width: 200px" />
           </colgroup>
           <thead>
             <tr class="text-xs text-slate-300">
               <th>Height</th>
+              <th>Proposer</th>
               <th>Block Hash</th>
+              <th>Gas</th>
               <th>Transactions</th>
               <th>Timestamp</th>
             </tr>
@@ -122,10 +136,39 @@ const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || "/api";
               <td class="font-mono text-[12px] font-semibold text-emerald-300 py-2">
                 #{{ b.height }}
               </td>
+              <td class="py-2">
+                <div class="flex items-center gap-3">
+                  <span v-if="b.proposerLabel?.icon" class="text-xl leading-none">{{ b.proposerLabel.icon }}</span>
+                  <div class="flex flex-col text-left">
+                    <span class="text-sm font-semibold text-white">
+                      {{ b.proposerLabel?.label || b.proposerMoniker || "Unknown proposer" }}
+                    </span>
+                    <span v-if="b.proposerOperator" class="text-[11px] text-slate-500 font-mono">
+                      {{ b.proposerOperator.slice(0, 14) }}...
+                    </span>
+                  </div>
+                </div>
+              </td>
               <td class="font-mono text-[12px] text-slate-300 py-2">
                 <div class="flex items-center gap-2 whitespace-nowrap">
-                  <span class="truncate max-w-[240px] inline-block align-middle">{{ b.hash ? b.hash.slice(0, 32) : "-" }}</span>
+                  <span class="truncate max-w-[220px] inline-block align-middle">{{ b.hash ? b.hash.slice(0, 32) : "-" }}</span>
                   <button v-if="b.hash" class="btn text-[10px]" @click.stop="copy(b.hash)">Copy</button>
+                </div>
+              </td>
+              <td class="text-xs text-slate-300 py-2">
+                <div class="flex items-center justify-between text-[11px]">
+                  <span>{{ formatNumber(b.gasUsed) }}</span>
+                  <span>{{ formatNumber(b.gasWanted) }}</span>
+                </div>
+                <div class="h-2 bg-slate-800 rounded-full overflow-hidden mt-1">
+                  <div
+                    v-if="b.gasUtilization !== null && b.gasUtilization !== undefined"
+                    class="h-full bg-gradient-to-r from-emerald-400 to-cyan-400"
+                    :style="{ width: `${Math.min(100, b.gasUtilization * 100).toFixed(1)}%` }"
+                  ></div>
+                </div>
+                <div class="text-[10px] text-slate-500 mt-1">
+                  {{ b.gasUtilization !== null && b.gasUtilization !== undefined ? formatPercent(b.gasUtilization) : "—" }}
                 </div>
               </td>
               <td class="text-center py-2">

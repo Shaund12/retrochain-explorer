@@ -7,15 +7,50 @@ import dayjs from "dayjs";
 const { txs, loading, error, searchRecent } = useTxs();
 const router = useRouter();
 
-const filter = ref<'all' | 'success' | 'failed'>('all');
-const limit = ref(20); // Reduced from 50 to 20
-const filteredTxs = computed(() => {
-  if (filter.value === 'success') return txs.value.filter(t => (t.code ?? 0) === 0);
-  if (filter.value === 'failed') return txs.value.filter(t => (t.code ?? 0) !== 0);
-  return txs.value;
+const statusFilter = ref<"all" | "success" | "failed">("all");
+const messageFilter = ref<string>("all");
+const limit = ref(20);
+
+const availableMessageTypes = computed(() => {
+  const counts = new Map<string, number>();
+  txs.value.forEach((tx) => {
+    (tx.messageTypes || []).forEach((type) => {
+      if (!type) return;
+      counts.set(type, (counts.get(type) ?? 0) + 1);
+    });
+  });
+  return Array.from(counts.entries())
+    .sort((a, b) => b[1] - a[1])
+    .map(([type]) => type);
 });
 
+const filteredTxs = computed(() =>
+  txs.value.filter((t) => {
+    const code = t.code ?? 0;
+    if (statusFilter.value === "success" && code !== 0) return false;
+    if (statusFilter.value === "failed" && code === 0) return false;
+    if (messageFilter.value !== "all") {
+      const msgs = t.messageTypes || [];
+      if (!msgs.includes(messageFilter.value)) return false;
+    }
+    return true;
+  })
+);
+
 const copy = async (text: string) => { try { await navigator.clipboard?.writeText?.(text); } catch {} };
+
+const prettyMessageType = (type: string) => {
+  if (!type) return "Unknown";
+  const segment = type.split(".").pop() || type;
+  return segment.replace(/Msg/g, "Msg ").replace(/  +/g, " ").trim();
+};
+
+const formatGas = (value?: string | number | null) => {
+  if (value === null || value === undefined) return "—";
+  const num = Number(value);
+  if (!Number.isFinite(num)) return "—";
+  return num.toLocaleString();
+};
 
 const loadMore = async () => {
   limit.value += 20;
@@ -33,9 +68,22 @@ onMounted(async () => {
       <div>
         <h1 class="text-sm font-semibold text-slate-100">Transactions</h1>
       <div class="flex items-center gap-2 mt-1">
-          <button class="btn text-[10px]" :class="filter==='all' ? 'border-indigo-400/70 bg-indigo-500/10' : ''" @click="filter='all'">All</button>
-          <button class="btn text-[10px]" :class="filter==='success' ? 'border-emerald-400/70 bg-emerald-500/10' : ''" @click="filter='success'">Success</button>
-          <button class="btn text-[10px]" :class="filter==='failed' ? 'border-rose-400/70 bg-rose-500/10' : ''" @click="filter='failed'">Failed</button>
+          <button class="btn text-[10px]" :class="statusFilter==='all' ? 'border-indigo-400/70 bg-indigo-500/10' : ''" @click="statusFilter='all'">All</button>
+          <button class="btn text-[10px]" :class="statusFilter==='success' ? 'border-emerald-400/70 bg-emerald-500/10' : ''" @click="statusFilter='success'">Success</button>
+          <button class="btn text-[10px]" :class="statusFilter==='failed' ? 'border-rose-400/70 bg-rose-500/10' : ''" @click="statusFilter='failed'">Failed</button>
+        </div>
+        <div class="flex flex-wrap items-center gap-2 mt-2 text-[11px] text-slate-400">
+          <span class="uppercase tracking-[0.2em]">Message Type</span>
+          <select
+            v-model="messageFilter"
+            class="bg-slate-900/60 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200"
+            :disabled="availableMessageTypes.length === 0"
+          >
+            <option value="all">All messages</option>
+            <option v-for="type in availableMessageTypes" :key="type" :value="type">
+              {{ prettyMessageType(type) }}
+            </option>
+          </select>
         </div>
       </div>
       <div class="flex gap-2">
@@ -67,9 +115,9 @@ onMounted(async () => {
     <table class="table">
       <thead>
         <tr class="text-xs text-slate-300">
-          <th>Hash</th>
+          <th>Hash &amp; Status</th>
           <th>Height</th>
-          <th>Code</th>
+          <th>Messages</th>
           <th>Gas</th>
           <th>Time</th>
         </tr>
@@ -82,22 +130,37 @@ onMounted(async () => {
           @click="router.push({ name: 'tx-detail', params: { hash: t.hash } })"
         >
           <td class="font-mono text-[11px]">
-            <div class="flex items-center gap-2">
-              <span>{{ t.hash.slice(0, 18) }}...</span>
-              <button class="btn text-[10px]" @click.stop="copy(t.hash)">Copy</button>
+            <div class="flex flex-col gap-1">
+              <div class="flex items-center gap-2">
+                <span>{{ t.hash.slice(0, 18) }}...</span>
+                <button class="btn text-[10px]" @click.stop="copy(t.hash)">Copy</button>
+              </div>
+              <span
+                class="badge text-[10px]"
+                :class="(t.code ?? 0) === 0 ? 'border-emerald-400/60 text-emerald-200' : 'border-rose-400/60 text-rose-200'"
+              >
+                {{ (t.code ?? 0) === 0 ? 'Success' : `Failed · code ${(t.code ?? 0)}` }}
+              </span>
             </div>
           </td>
           <td class="font-mono text-[11px]">{{ t.height }}</td>
-          <td class="text-xs">
-            <span
-              class="badge"
-              :class="t.code === 0 ? 'border-emerald-400/60' : 'border-rose-400/60 text-rose-200'"
-            >
-              {{ t.code ?? 0 }}
-            </span>
+          <td class="text-xs text-slate-300">
+            <div v-if="t.messageTypes?.length" class="flex flex-wrap gap-1">
+              <span
+                v-for="(msg, idx) in t.messageTypes.slice(0, 3)"
+                :key="`${msg}-${idx}`"
+                class="badge text-[10px] border-indigo-400/40 text-indigo-100"
+              >
+                {{ prettyMessageType(msg) }}
+              </span>
+              <span v-if="t.messageTypes.length > 3" class="text-[10px] text-slate-500">
+                +{{ t.messageTypes.length - 3 }} more
+              </span>
+            </div>
+            <span v-else class="text-[11px] text-slate-500">—</span>
           </td>
           <td class="text-[11px] text-slate-300">
-            {{ (t.gasUsed || '-').toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') }} / {{ (t.gasWanted || '-').toString().replace(/\B(?=(\d{3})+(?!\d))/g, ',') }}
+            {{ formatGas(t.gasUsed) }} / {{ formatGas(t.gasWanted) }}
           </td>
           <td class="text-[11px] text-slate-300">
             <span v-if="t.timestamp">{{ dayjs(t.timestamp).format('YYYY-MM-DD HH:mm:ss') }}</span>
