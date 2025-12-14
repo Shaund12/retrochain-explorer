@@ -40,25 +40,6 @@ const validatorByConsensus = computed(() => {
     if (v.consensusAddressHex) {
       map.set(v.consensusAddressHex, v);
     }
-
-const gasStats = computed(() => {
-  if (!blockTxs.value.length) {
-    return { used: null as number | null, wanted: null as number | null, utilization: null as number | null };
-  }
-  const totals = blockTxs.value.reduce(
-    (acc, tx) => {
-      acc.used += Number(tx.gas_used ?? 0);
-      acc.wanted += Number(tx.gas_wanted ?? 0);
-      return acc;
-    },
-    { used: 0, wanted: 0 }
-  );
-  return {
-    used: totals.used,
-    wanted: totals.wanted,
-    utilization: totals.wanted > 0 ? totals.used / totals.wanted : null
-  };
-});
   });
   return map;
 });
@@ -88,6 +69,25 @@ const formatPercent = (value?: number | null, digits = 1) => {
   if (value === null || value === undefined) return "—";
   return `${(value * 100).toFixed(digits)}%`;
 };
+
+const gasStats = computed(() => {
+  if (!blockTxs.value.length) {
+    return { used: null as number | null, wanted: null as number | null, utilization: null as number | null };
+  }
+  const totals = blockTxs.value.reduce(
+    (acc, tx) => {
+      acc.used += Number(tx.gas_used ?? 0);
+      acc.wanted += Number(tx.gas_wanted ?? 0);
+      return acc;
+    },
+    { used: 0, wanted: 0 }
+  );
+  return {
+    used: totals.used,
+    wanted: totals.wanted,
+    utilization: totals.wanted > 0 ? totals.used / totals.wanted : null
+  };
+});
 
 // Compute fallback tx hashes from base64 (when tx_responses not available)
 const fallbackTxs = ref<{ hash: string; raw: string }[]>([]);

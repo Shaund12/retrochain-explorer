@@ -40,8 +40,8 @@
           <div
             v-else
             class="relative"
-            @mouseenter="openDropdown = item.label"
-            @mouseleave="openDropdown = null"
+            @mouseenter="openDropdownMenu(item.label)"
+            @mouseleave="scheduleDropdownClose"
           >
             <button
               type="button"
@@ -62,6 +62,8 @@
             <div
               v-show="openDropdown === item.label"
               class="absolute left-0 top-full mt-2 w-56 rounded-2xl border border-white/10 bg-[rgba(10,14,39,0.98)] shadow-2xl shadow-black/40 py-2"
+              @mouseenter="clearDropdownTimer()"
+              @mouseleave="scheduleDropdownClose"
             >
               <button
                 v-for="link in item.items"
@@ -188,7 +190,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch } from "vue";
+import { computed, ref, watch, onBeforeUnmount } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useKeplr } from "@/composables/useKeplr";
 import { useAccount } from "@/composables/useAccount";
@@ -281,6 +283,7 @@ const isGroup = (item: NavItem): item is NavGroup => (item as NavGroup).items !=
 const groupActive = (group: NavGroup) => group.items.some((link) => isLinkActive(link.to));
 
 const openDropdown = ref<string | null>(null);
+const dropdownCloseTimer = ref<number | null>(null);
 const expandedMobileGroups = ref<Record<string, boolean>>({});
 
 const toggleMobileGroup = (label: string) => {
@@ -294,6 +297,29 @@ const closeMobileMenu = () => {
   mobileMenuOpen.value = false;
   expandedMobileGroups.value = {};
 };
+
+const clearDropdownTimer = () => {
+  if (dropdownCloseTimer.value !== null) {
+    window.clearTimeout(dropdownCloseTimer.value);
+    dropdownCloseTimer.value = null;
+  }
+};
+
+const openDropdownMenu = (label: string) => {
+  clearDropdownTimer();
+  openDropdown.value = label;
+};
+
+const scheduleDropdownClose = () => {
+  clearDropdownTimer();
+  dropdownCloseTimer.value = window.setTimeout(() => {
+    openDropdown.value = null;
+  }, 150);
+};
+
+onBeforeUnmount(() => {
+  clearDropdownTimer();
+});
 
 const shortAddress = computed(() => {
   if (!address.value) return "";
