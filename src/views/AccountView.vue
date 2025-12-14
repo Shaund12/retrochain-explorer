@@ -11,6 +11,7 @@ import { useFaucet } from "@/composables/useFaucet";
 import { formatAmount as fmtAmount } from "@/utils/format";
 import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
 import { getAccountLabel } from "@/constants/accountLabels";
+import { getTokenMeta, type TokenAccent, type TokenMeta } from "@/constants/tokens";
 
 const route = useRoute();
 const router = useRouter();
@@ -105,6 +106,74 @@ const loadAccount = async () => {
 };
 
 const formatAmount = (amount: string, denom: string) => fmtAmount(amount, denom, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
+
+interface AccentClasses {
+  card: string;
+  icon: string;
+  badge: string;
+}
+
+const ACCENT_CLASS_MAP: Record<TokenAccent, AccentClasses> = {
+  emerald: {
+    card: "border-emerald-400/40 bg-emerald-500/5",
+    icon: "bg-emerald-500/10 text-emerald-200 border border-emerald-400/30",
+    badge: "border-emerald-400/60 text-emerald-200"
+  },
+  sky: {
+    card: "border-cyan-400/40 bg-cyan-500/5",
+    icon: "bg-cyan-500/10 text-cyan-200 border border-cyan-400/30",
+    badge: "border-cyan-400/60 text-cyan-200"
+  },
+  violet: {
+    card: "border-violet-400/40 bg-violet-500/5",
+    icon: "bg-violet-500/10 text-violet-200 border border-violet-400/30",
+    badge: "border-violet-400/60 text-violet-200"
+  },
+  amber: {
+    card: "border-amber-400/40 bg-amber-500/5",
+    icon: "bg-amber-500/10 text-amber-200 border border-amber-400/30",
+    badge: "border-amber-400/60 text-amber-200"
+  },
+  slate: {
+    card: "border-slate-600/60 bg-slate-900/60",
+    icon: "bg-slate-800 text-slate-200 border border-slate-600/50",
+    badge: "border-slate-500/60 text-slate-200"
+  }
+};
+
+interface DecoratedBalance {
+  denom: string;
+  amount: string;
+  formatted: string;
+  displayAmount: string;
+  rawAmount: number;
+  meta: TokenMeta;
+  accent: AccentClasses;
+}
+
+const decoratedBalances = computed<DecoratedBalance[]>(() => {
+  return balances.value
+    .map((coin) => {
+      const meta = getTokenMeta(coin.denom);
+      const decimals = meta.decimals ?? 6;
+      const divisor = Math.pow(10, decimals);
+      const numeric = Number(coin.amount ?? "0") / divisor;
+      const localeAmount = Number.isFinite(numeric)
+        ? `${numeric.toLocaleString(undefined, { maximumFractionDigits: Math.min(6, decimals) })} ${meta.symbol}`
+        : formatAmount(coin.amount, coin.denom);
+
+      return {
+        denom: coin.denom,
+        amount: coin.amount,
+        formatted: formatAmount(coin.amount, coin.denom),
+        displayAmount: localeAmount,
+        rawAmount: Number.isFinite(numeric) ? numeric : 0,
+        meta,
+        accent: ACCENT_CLASS_MAP[meta.accent] ?? ACCENT_CLASS_MAP.slate
+      } as DecoratedBalance;
+    })
+    .sort((a, b) => b.rawAmount - a.rawAmount);
+});
 
 // Expose faucet URL for template without inline import.meta in interpolation
 const FAUCET_DISPLAY = import.meta.env.VITE_FAUCET_URL || 'faucet';
@@ -211,6 +280,16 @@ const handleTransfer = async () => {
 // Select address from address book
 const selectFromAddressBook = (address: string) => {
   transferRecipient.value = address;
+};
+
+const copyAddress = async () => {
+  if (!bech32Address.value) return;
+  try {
+    await navigator.clipboard?.writeText(bech32Address.value);
+    notify("Address copied to clipboard!");
+  } catch {
+    notify("Failed to copy address");
+  }
 };
 </script>
 
@@ -404,25 +483,41 @@ const selectFromAddressBook = (address: string) => {
           No balances found for this address
         </div>
         
-        <div v-else class="overflow-x-auto">
-          <table class="table">
-            <thead>
-              <tr class="text-xs text-slate-300">
-                <th>Denomination</th>
-                <th class="text-right">Amount</th>
-                <th class="text-right">Formatted</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr v-for="b in balances" :key="b.denom" class="animate-fade-in">
-                <td class="font-mono text-sm">{{ b.denom }}</td>
-                <td class="font-mono text-right text-sm text-slate-300">{{ b.amount }}</td>
-                <td class="text-right text-sm text-emerald-300">
-                  {{ formatAmount(b.amount, b.denom) }}
-                </td>
-              </tr>
-            </tbody>
-          </table>
+        <div v-else class="grid gap-3 sm:grid-cols-2">
+          <article
+            v-for="bal in decoratedBalances"
+            :key="bal.denom"
+            class="p-4 rounded-2xl border shadow-inner animate-fade-in"
+            :class="bal.accent.card"
+          >
+            <div class="flex items-center gap-3">
+              <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-2xl"
+                   :class="bal.accent.icon">
+                {{ bal.meta.icon }}
+              </div>
+              <div class="flex-1">
+                <div class="flex items-center gap-2 text-sm font-semibold text-white">
+                  <span>{{ bal.meta.symbol }}</span>
+                  <span class="badge text-[10px]" :class="bal.accent.badge">{{ bal.meta.chain }}</span>
+                </div>
+                <p class="text-xs text-slate-400">{{ bal.meta.name }}</p>
+                <p class="text-[11px] text-slate-500 font-mono break-all">{{ bal.denom }}</p>
+              </div>
+            </div>
+            <div class="mt-3 flex items-end justify-between gap-4">
+              <div>
+                <div class="text-[10px] text-slate-500 uppercase tracking-widest">On-chain Amount</div>
+                <div class="font-mono text-sm text-slate-200">{{ bal.amount }}</div>
+                <div v-if="bal.meta.description" class="text-[10px] text-slate-500 mt-1">
+                  {{ bal.meta.description }}
+                </div>
+              </div>
+              <div class="text-right">
+                <div class="text-lg font-semibold text-white">{{ bal.displayAmount }}</div>
+                <div class="text-xs text-slate-400">{{ bal.formatted }}</div>
+              </div>
+            </div>
+          </article>
         </div>
       </div>
 

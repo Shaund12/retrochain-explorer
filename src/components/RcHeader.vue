@@ -102,13 +102,23 @@
           <div class="hidden sm:flex flex-col text-left">
             <span class="text-[10px] uppercase tracking-[0.25em] text-emerald-200/80">RETRO Balance</span>
             <span class="text-sm font-semibold text-white">
-              <span v-if="accountLoading">Syncing</span>
+</span>
+              <span v-if="accountLoading">Syncing…</span>
               <span v-else>{{ walletBalance }}</span>
             </span>
+            <div v-if="atomWalletBalance" class="text-[11px] text-cyan-200 flex items-center gap-1 mt-0.5">
+              <span>{{ atomMeta?.icon ?? "⚛️" }}</span>
+              <span>{{ atomWalletBalance }}</span>
+            </div>
           </div>
           <div class="sm:hidden text-[11px] font-semibold text-emerald-200">
-            <span v-if="accountLoading">Syncing</span>
+</span>
+            <span v-if="accountLoading">Syncing…</span>
             <span v-else>{{ walletBalance }}</span>
+            <div v-if="atomWalletBalance" class="text-[10px] text-cyan-200 flex items-center gap-1">
+              <span>{{ atomMeta?.icon ?? "⚛️" }}</span>
+              <span>{{ atomWalletBalance }}</span>
+            </div>
           </div>
           <div class="hidden sm:block h-8 w-px bg-white/10"></div>
           <div class="text-left">
@@ -197,6 +207,7 @@ import { useAccount } from "@/composables/useAccount";
 import { useNetwork } from "@/composables/useNetwork";
 import { formatAmount } from "@/utils/format";
 import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
+import { getTokenMeta } from "@/constants/tokens";
 
 const route = useRoute();
 const router = useRouter();
@@ -226,11 +237,33 @@ watch(
 
 const walletDenom = computed(() => (network.value === "mainnet" ? "uretro" : "udretro"));
 
+const ATOM_IBC_DENOMS = [
+  "ibc/27394fb092d2eccd56123c74f36e4c1f926001ceada9ca97ea622b25f41e5eb2",
+  "ibc/atom"
+];
+const atomDenomSet = new Set(ATOM_IBC_DENOMS.map((d) => d.toLowerCase()));
+
 const walletBalance = computed(() => {
   const denom = walletDenom.value;
   const entry = balances.value.find((b) => b.denom === denom);
   if (!entry) return "0.00 RETRO";
   return formatAmount(entry.amount, denom, { minDecimals: 2, maxDecimals: 2, showZerosForIntegers: false });
+});
+
+const atomBalanceEntry = computed(() => balances.value.find((b) => atomDenomSet.has(b.denom.toLowerCase())));
+
+const atomWalletBalance = computed(() => {
+  if (!atomBalanceEntry.value) return null;
+  return formatAmount(atomBalanceEntry.value.amount, atomBalanceEntry.value.denom, {
+    minDecimals: 2,
+    maxDecimals: 4,
+    showZerosForIntegers: false
+  });
+});
+
+const atomMeta = computed(() => {
+  if (!atomBalanceEntry.value) return null;
+  return getTokenMeta(atomBalanceEntry.value.denom);
 });
 
 interface NavLink {
