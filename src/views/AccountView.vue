@@ -10,6 +10,7 @@ import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import { useFaucet } from "@/composables/useFaucet";
 import { formatAmount as fmtAmount } from "@/utils/format";
 import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
+import { getAccountLabel } from "@/constants/accountLabels";
 
 const route = useRoute();
 const router = useRouter();
@@ -75,6 +76,8 @@ const totalBalance = computed(() => {
   if (!coin) return "0.000000 RETRO";
   return fmtAmount(coin.amount, coin.denom, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
 });
+
+const knownAccount = computed(() => getAccountLabel(bech32Address.value || addressInput.value));
 
 const submit = async () => {
   if (!addressInput.value) {
@@ -303,6 +306,21 @@ const selectFromAddressBook = (address: string) => {
           </div>
           <div class="text-xs text-slate-400 mb-3">
             Address: <code class="text-[10px]">{{ bech32Address.slice(0, 16) }}...</code>
+          </div>
+
+          <div
+            v-if="knownAccount"
+            class="mb-3 rounded-lg border border-amber-400/40 bg-amber-500/10 p-2"
+          >
+            <div class="text-[11px] uppercase tracking-wider text-amber-200 mb-0.5">
+              Labeled Wallet
+            </div>
+            <div class="text-sm font-semibold text-amber-100">
+              {{ knownAccount.label }}
+            </div>
+            <div class="text-[11px] text-amber-200/80">
+              Allocation: {{ knownAccount.allocation }}
+            </div>
           </div>
           
           <!-- Quick Actions -->

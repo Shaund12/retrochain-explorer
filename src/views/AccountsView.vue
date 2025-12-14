@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from 'vue';
 import { useAccounts } from '@/composables/useAccounts';
+import type { WalletSummary } from '@/composables/useAccounts';
 import { useRouter } from 'vue-router';
 import { formatAmount } from '@/utils/format';
 import { useNetwork } from '@/composables/useNetwork';
+import { getAccountLabel, type AccountLabelMeta } from '@/constants/accountLabels';
 
 const { accounts, loading, error, totalAccounts, fetchAccounts } = useAccounts();
 const router = useRouter();
@@ -13,8 +15,19 @@ const searchQuery = ref('');
 const sortBy = ref<'balance' | 'address'>('balance');
 const sortOrder = ref<'asc' | 'desc'>('desc');
 
+type LabeledWallet = WalletSummary & {
+  knownLabel: AccountLabelMeta | null;
+};
+
+const labeledAccounts = computed<LabeledWallet[]>(() =>
+  accounts.value.map(acc => ({
+    ...acc,
+    knownLabel: getAccountLabel(acc.address)
+  }))
+);
+
 const filteredAccounts = computed(() => {
-  let filtered = accounts.value;
+  let filtered = labeledAccounts.value;
   
   // Filter by search
   if (searchQuery.value) {
@@ -199,6 +212,13 @@ onMounted(() => {
                   >
                     Copy
                   </button>
+                </div>
+                <div
+                  v-if="account.knownLabel"
+                  class="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/10 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-200"
+                >
+                  <span>{{ account.knownLabel.label }}</span>
+                  <span class="text-[9px] text-amber-100/70">· {{ account.knownLabel.allocation }}</span>
                 </div>
               </td>
               
