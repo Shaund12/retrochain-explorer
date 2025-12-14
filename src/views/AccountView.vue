@@ -31,6 +31,8 @@ const transferRecipient = ref("");
 const transferAmount = ref("");
 const transferMemo = ref("");
 const transferring = ref(false);
+const showTokenDetails = ref(false);
+const selectedToken = ref<DecoratedBalance | null>(null);
 
 // Address book
 const addressBook = ref<Array<{name: string, address: string}>>([
@@ -143,6 +145,7 @@ const ACCENT_CLASS_MAP: Record<TokenAccent, AccentClasses> = {
 
 interface DecoratedBalance {
   denom: string;
+  denomLabel: string;
   amount: string;
   formatted: string;
   displayAmount: string;
@@ -165,6 +168,7 @@ const decoratedBalances = computed<DecoratedBalance[]>(() => {
       return {
         denom: coin.denom,
         amount: coin.amount,
+        denomLabel: meta.symbol || coin.denom,
         formatted: formatAmount(coin.amount, coin.denom),
         displayAmount: localeAmount,
         rawAmount: Number.isFinite(numeric) ? numeric : 0,
@@ -290,6 +294,16 @@ const copyAddress = async () => {
   } catch {
     notify("Failed to copy address");
   }
+};
+
+const openTokenDetails = (bal: DecoratedBalance) => {
+  selectedToken.value = bal;
+  showTokenDetails.value = true;
+};
+
+const closeTokenDetails = () => {
+  showTokenDetails.value = false;
+  selectedToken.value = null;
 };
 </script>
 
@@ -491,7 +505,7 @@ const copyAddress = async () => {
             :class="bal.accent.card"
           >
             <div class="flex items-center gap-3">
-              <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-2xl"
+              <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-2xl emoji-text"
                    :class="bal.accent.icon">
                 {{ bal.meta.icon }}
               </div>
@@ -501,7 +515,8 @@ const copyAddress = async () => {
                   <span class="badge text-[10px]" :class="bal.accent.badge">{{ bal.meta.chain }}</span>
                 </div>
                 <p class="text-xs text-slate-400">{{ bal.meta.name }}</p>
-                <p class="text-[11px] text-slate-500 font-mono break-all">{{ bal.denom }}</p>
+                <p class="text-[11px] text-slate-500 font-mono">{{ bal.denomLabel }}</p>
+                <p v-if="bal.denomLabel !== bal.denom" class="text-[10px] text-slate-600 font-mono break-all">{{ bal.denom }}</p>
               </div>
             </div>
             <div class="mt-3 flex items-end justify-between gap-4">
@@ -516,6 +531,11 @@ const copyAddress = async () => {
                 <div class="text-lg font-semibold text-white">{{ bal.displayAmount }}</div>
                 <div class="text-xs text-slate-400">{{ bal.formatted }}</div>
               </div>
+            </div>
+            <div class="mt-4 flex justify-end">
+              <button class="btn text-[11px]" @click="openTokenDetails(bal)">
+                🔍 Token Details
+              </button>
             </div>
           </article>
         </div>
@@ -737,6 +757,55 @@ const copyAddress = async () => {
             </div>
           </div>
         </div>
+      </div>
+    </div>
+
+    <!-- Token Details Modal -->
+    <div
+      v-if="showTokenDetails && selectedToken"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      @click.self="closeTokenDetails"
+    >
+      <div class="card w-full max-w-2xl" :class="selectedToken.accent.card" @click.stop>
+        <div class="flex items-center justify-between mb-4">
+          <div class="flex items-center gap-3">
+            <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-3xl emoji-text" :class="selectedToken.accent.icon">
+              {{ selectedToken.meta.icon }}
+            </div>
+            <div>
+              <h2 class="text-lg font-bold text-white">{{ selectedToken.meta.symbol }} Details</h2>
+              <p class="text-xs text-slate-300">{{ selectedToken.meta.name }} · {{ selectedToken.meta.chain }}</p>
+            </div>
+          </div>
+          <button class="btn text-xs" @click="closeTokenDetails">✖ Close</button>
+        </div>
+
+        <div class="grid grid-cols-1 sm:grid-cols-2 gap-3 text-sm">
+          <div class="p-3 rounded-xl bg-black/20 border border-white/5">
+            <div class="text-[11px] uppercase tracking-widest text-slate-400 mb-1">Display Amount</div>
+            <div class="text-base font-semibold text-white">{{ selectedToken.displayAmount }}</div>
+            <div class="text-xs text-slate-400">{{ selectedToken.formatted }}</div>
+          </div>
+          <div class="p-3 rounded-xl bg-black/20 border border-white/5">
+            <div class="text-[11px] uppercase tracking-widest text-slate-400 mb-1">Raw Amount</div>
+            <div class="font-mono text-sm text-slate-200">{{ selectedToken.amount }}</div>
+          </div>
+          <div class="p-3 rounded-xl bg-black/20 border border-white/5">
+            <div class="text-[11px] uppercase tracking-widest text-slate-400 mb-1">Decimals</div>
+            <div class="font-mono text-sm text-slate-200">{{ selectedToken.meta.decimals }}</div>
+          </div>
+          <div class="p-3 rounded-xl bg-black/20 border border-white/5">
+            <div class="text-[11px] uppercase tracking-widest text-slate-400 mb-1">Chain</div>
+            <div class="text-sm text-slate-100">{{ selectedToken.meta.chain }}</div>
+          </div>
+        </div>
+
+        <div class="mt-4 text-xs text-slate-400">
+          Canonical Denom: <code class="text-[10px] break-all">{{ selectedToken.denom }}</code>
+        </div>
+        <p v-if="selectedToken.meta.description" class="mt-2 text-sm text-slate-300">
+          {{ selectedToken.meta.description }}
+        </p>
       </div>
     </div>
   </div>
