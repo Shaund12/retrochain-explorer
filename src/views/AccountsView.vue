@@ -203,8 +203,8 @@ onMounted(() => {
                 <span v-else>{{ index + 1 }}</span>
               </td>
               
-              <td class="font-mono text-xs">
-                <div class="flex items-center gap-2">
+              <td class="text-xs">
+                <div class="flex items-center gap-2 font-mono">
                   <span>{{ account.address.slice(0, 12) }}...{{ account.address.slice(-8) }}</span>
                   <button 
                     class="btn text-[10px]" 
@@ -215,7 +215,7 @@ onMounted(() => {
                 </div>
                 <div
                   v-if="account.knownLabel"
-                  class="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-100"
+                  class="mt-1 inline-flex items-center gap-1 rounded-full border border-amber-400/40 bg-amber-500/5 px-2 py-0.5 text-[10px] font-semibold uppercase tracking-wide text-amber-100 font-sans"
                   :title="account.knownLabel.description"
                 >
                   <span class="text-base leading-none">{{ account.knownLabel.icon }}</span>

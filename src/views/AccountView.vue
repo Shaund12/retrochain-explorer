@@ -333,10 +333,10 @@ const selectFromAddressBook = (address: string) => {
           <!-- Quick Actions -->
           <div v-if="keplrAddress && keplrAddress === bech32Address" class="flex gap-2">
             <button class="btn btn-primary text-xs flex-1" @click="showTransferModal = true">
-              ?? Send Tokens
+              🚀 Send Tokens
             </button>
             <button class="btn text-xs" @click="copyAddress">
-              ?? Copy
+              📋 Copy
             </button>
           </div>
         </div>
@@ -490,9 +490,9 @@ const selectFromAddressBook = (address: string) => {
       <div class="card max-w-2xl w-full max-h-[90vh] overflow-y-auto" @click.stop>
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-lg font-bold text-slate-100 flex items-center gap-2">
-            <span>??</span> Send Tokens
+            <span>🚀</span> Send Tokens
           </h2>
-          <button class="btn text-xs" @click="showTransferModal = false">? Close</button>
+          <button class="btn text-xs" @click="showTransferModal = false">✖ Close</button>
         </div>
 
         <div class="space-y-4">
@@ -509,7 +509,7 @@ const selectFromAddressBook = (address: string) => {
 
           <!-- Address Book -->
           <div v-if="addressBook.length > 0" class="space-y-2">
-            <div class="text-xs text-slate-400">?? Quick Select</div>
+            <div class="text-xs text-slate-400">⚡ Quick Select</div>
             <div class="grid grid-cols-2 gap-2">
               <button
                 v-for="(contact, index) in addressBook"
@@ -578,13 +578,13 @@ const selectFromAddressBook = (address: string) => {
             @click="handleTransfer"
             :disabled="!transferRecipient || !transferAmount || transferring"
           >
-            {{ transferring ? 'Sending...' : '?? Send Tokens' }}
+            {{ transferring ? 'Sending...' : '🚀 Send Tokens' }}
           </button>
         </div>
 
         <!-- Address Book Management -->
         <div class="mt-6 pt-6 border-t border-slate-700">
-          <h3 class="text-sm font-semibold text-slate-100 mb-3">?? Address Book</h3>
+          <h3 class="text-sm font-semibold text-slate-100 mb-3">📒 Address Book</h3>
           
           <!-- Add New Contact -->
           <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700 mb-3">
