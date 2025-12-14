@@ -100,9 +100,9 @@ onMounted(() => {
     <!-- Stats -->
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
       <div class="card">
-        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Total Accounts</div>
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Accounts Loaded</div>
         <div class="text-2xl font-bold text-cyan-400">{{ accounts.length }}</div>
-        <div class="text-xs text-slate-500">Found in recent blocks</div>
+        <div class="text-xs text-slate-500">Currently displayed</div>
       </div>
       
       <div class="card">
@@ -114,9 +114,9 @@ onMounted(() => {
       </div>
       
       <div class="card">
-        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Scanned</div>
-        <div class="text-2xl font-bold text-indigo-400">{{ totalAccounts }}</div>
-        <div class="text-xs text-slate-500">Unique addresses</div>
+        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Chain Total</div>
+        <div class="text-2xl font-bold text-indigo-400">{{ totalAccounts || accounts.length }}</div>
+        <div class="text-xs text-slate-500">Reported by auth module</div>
       </div>
     </div>
 
@@ -125,7 +125,7 @@ onMounted(() => {
       <div class="flex items-center justify-center py-12">
         <div class="text-center">
           <div class="inline-block animate-spin rounded-full h-12 w-12 border-b-2 border-cyan-400 mb-4"></div>
-          <div class="text-sm text-slate-400">Scanning blockchain for accounts...</div>
+          <div class="text-sm text-slate-400">Loading accounts from the chain...</div>
           <div class="text-xs text-slate-500 mt-1">This may take a moment</div>
         </div>
       </div>
@@ -229,8 +229,8 @@ onMounted(() => {
     <div class="card bg-slate-900/50 border-slate-700">
       <h3 class="text-sm font-semibold mb-2 text-slate-100">?? About This Page</h3>
       <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
-        <li>Displays active accounts found in recent blockchain activity</li>
-        <li>Balances are fetched in real-time from the chain</li>
+        <li>Displays paginated accounts returned by the Cosmos auth module</li>
+        <li>Balances are fetched directly from the bank module in real-time</li>
         <li>Sorted by balance (highest first) by default</li>
         <li>Click any account to view detailed information</li>
         <li>Top 3 accounts are highlighted with medals ??????</li>

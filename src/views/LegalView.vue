@@ -17,7 +17,7 @@ const sections: Section[] = [
     bullets: [
       "If you do not agree to these Terms, you must immediately discontinue use of the Service.",
       "We may update these Terms at any time with or without notice. Continued use constitutes acceptance of the revised Terms.",
-      "These Terms govern only the Explorer UI and related APIs—not the RetroChain blockchain protocol itself."
+      "These Terms govern only the Explorer UI and related APIsÂ—not the RetroChain blockchain protocol itself."
     ]
   },
   {
@@ -45,7 +45,7 @@ const sections: Section[] = [
     description:
       "Blockchain networks, smart contracts, bridges, and third-party integrations carry inherent risk, including but not limited to bugs, downtime, or permanent loss of funds.",
     bullets: [
-      "RetroChain mainnet is experimental—expect upgrades, validator rotations, and RPC changes without notice.",
+      "RetroChain mainnet is experimentalÂ—expect upgrades, validator rotations, and RPC changes without notice.",
       "On-chain transactions are irreversible and may fail due to gas limits, fee volatility, or sequence mismatches.",
       "Cross-chain bridges, DEX modules, and arcade features are provided on an \"as-is\" basis with no warranty of availability."
     ]
