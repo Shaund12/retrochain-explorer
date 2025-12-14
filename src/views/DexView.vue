@@ -6,13 +6,22 @@ import { useBridge } from "@/composables/useBridge";
 import { useNetwork } from "@/composables/useNetwork";
 import { formatAmount } from "@/utils/format";
 import { useToast } from "@/composables/useToast";
+import { useAccount } from "@/composables/useAccount";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
+
+interface TokenOption {
+  symbol: string;
+  denom: string;
+  icon: string;
+  decimals: number;
+}
 
 const { address, connect, isAvailable } = useKeplr();
 const { pools, loading: dexLoading, fetchPools, simulateSwap, calculatePoolPrice } = useDex();
 const { assets: bridgeAssets, bridgeFromNoble, bridgeFromEVM, getEstimatedTime, getBridgeFee } = useBridge();
 const { current: network } = useNetwork();
 const toast = useToast();
+const { balances, loading: accountLoading, load: loadAccount } = useAccount();
 
 const activeTab = ref<'swap' | 'pools' | 'limit' | 'bridge' | 'create'>('swap');
 const swapTab = ref<'market' | 'limit'>('market');
@@ -54,12 +63,12 @@ const creatingPool = ref(false);
 const tokenDenom = computed(() => network.value === 'mainnet' ? 'uretro' : 'udretro');
 const tokenSymbol = computed(() => network.value === 'mainnet' ? 'RETRO' : 'DRETRO');
 
-const availableTokens = computed(() => [
-  { symbol: tokenSymbol.value, denom: tokenDenom.value, icon: "🎮" },
-  { symbol: "USDC", denom: "ibc/usdc", icon: "💵" },
-  { symbol: "USDT", denom: "ibc/usdt", icon: "💲" },
-  { symbol: "ATOM", denom: "ibc/atom", icon: "⚛️" },
-  { symbol: "OSMO", denom: "ibc/osmo", icon: "🌊" }
+const availableTokens = computed<TokenOption[]>(() => [
+  { symbol: tokenSymbol.value, denom: tokenDenom.value, icon: "🎮", decimals: 6 },
+  { symbol: "USDC", denom: "ibc/usdc", icon: "💵", decimals: 6 },
+  { symbol: "USDT", denom: "ibc/usdt", icon: "💲", decimals: 6 },
+  { symbol: "ATOM", denom: "ibc/atom", icon: "⚛️", decimals: 6 },
+  { symbol: "OSMO", denom: "ibc/osmo", icon: "🌊", decimals: 6 }
 ]);
 
 const selectedPool = computed(() => {
@@ -73,6 +82,30 @@ const poolPrice = computed(() => {
   if (!selectedPool.value) return "0";
   return calculatePoolPrice(selectedPool.value);
 });
+
+const findTokenOption = (symbol: string) => availableTokens.value.find((t) => t.symbol === symbol);
+
+const rawBalanceForSymbol = (symbol: string) => {
+  const token = findTokenOption(symbol);
+  if (!token) return "0";
+  const entry = balances.value.find((b) => b.denom === token.denom);
+  return entry?.amount ?? "0";
+};
+
+const formatTokenBalance = (symbol: string) => {
+  const token = findTokenOption(symbol);
+  if (!token) return "0.00";
+  return formatAmount(rawBalanceForSymbol(symbol), token.denom, { minDecimals: 2, maxDecimals: 6 });
+};
+
+const setMaxSwapAmount = () => {
+  const token = findTokenOption(tokenIn.value);
+  if (!token) return;
+  const raw = rawBalanceForSymbol(tokenIn.value);
+  const amount = Number(raw) / Math.pow(10, token.decimals);
+  if (!Number.isFinite(amount) || amount <= 0) return;
+  amountIn.value = amount.toFixed(Math.min(token.decimals, 6));
+};
 
 // Watch amountIn and simulate swap
 watch([amountIn, tokenIn, tokenOut], async ([newAmountIn]) => {
@@ -89,8 +122,23 @@ watch([amountIn, tokenIn, tokenOut], async ([newAmountIn]) => {
   }
 });
 
+watch(
+  () => address.value,
+  async (newAddress, oldAddress) => {
+    if (newAddress && newAddress !== oldAddress) {
+      await loadAccount(newAddress);
+    }
+    if (!newAddress) {
+      balances.value = [];
+    }
+  }
+);
+
 onMounted(async () => {
   await fetchPools();
+  if (address.value) {
+    await loadAccount(address.value);
+  }
 });
 
 const handleSwap = async () => {
@@ -146,7 +194,10 @@ const handleSwap = async () => {
       amountIn.value = "";
       amountOut.value = "";
       // Refresh pools and balances
-      await fetchPools();
+      await Promise.all([
+        fetchPools(),
+        loadAccount(address.value)
+      ]);
     } else {
       throw new Error(`Transaction failed: ${result.rawLog}`);
     }
@@ -164,7 +215,7 @@ const handleAddLiquidity = async () => {
 
   addingLiquidity.value = true;
   try {
-    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
+    const chainId = network.value === 'mainnet' ? 'retrochain-mainnet' : 'retrochain-devnet-1';
     
     const tokenADenom = availableTokens.value.find(t => t.symbol === poolTokenA.value)?.denom || tokenDenom.value;
     const tokenBDenom = availableTokens.value.find(t => t.symbol === poolTokenB.value)?.denom || tokenDenom.value;
@@ -204,7 +255,10 @@ const handleAddLiquidity = async () => {
       console.log("Liquidity added!", result);
       poolAmountA.value = "";
       poolAmountB.value = "";
-      await fetchPools();
+      await Promise.all([
+        fetchPools(),
+        loadAccount(address.value)
+      ]);
     } else {
       throw new Error(`Transaction failed: ${result.rawLog}`);
     }
@@ -221,7 +275,7 @@ const handlePlaceLimitOrder = async () => {
   if (!window.keplr) return;
 
   try {
-    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
+    const chainId = network.value === 'mainnet' ? 'retrochain-mainnet' : 'retrochain-devnet-1';
     
     const amountBase = Math.floor(parseFloat(limitAmount.value) * 1_000_000).toString();
     const priceBase = Math.floor(parseFloat(limitPrice.value) * 1_000_000).toString();
@@ -255,6 +309,7 @@ const handlePlaceLimitOrder = async () => {
       console.log("Order placed!", result);
       limitPrice.value = "";
       limitAmount.value = "";
+      await loadAccount(address.value);
     } else {
       throw new Error(`Transaction failed: ${result.rawLog}`);
     }
@@ -270,7 +325,7 @@ const handleBridge = async () => {
 
   bridging.value = true;
   try {
-    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
+    const chainId = network.value === 'mainnet' ? 'retrochain-mainnet' : 'retrochain-devnet-1';
 
     if (bridgeChain.value === "Noble") {
       // IBC Transfer from Noble
@@ -346,7 +401,7 @@ const handleCreatePool = async () => {
 
   creatingPool.value = true;
   try {
-    const chainId = network.value === 'mainnet' ? 'retrochain-1' : 'retrochain-devnet-1';
+    const chainId = network.value === 'mainnet' ? 'retrochain-mainnet' : 'retrochain-devnet-1';
     
     const tokenADenom = availableTokens.value.find(t => t.symbol === createTokenA.value)?.denom || tokenDenom.value;
     const tokenBDenom = availableTokens.value.find(t => t.symbol === createTokenB.value)?.denom || tokenDenom.value;
@@ -387,7 +442,10 @@ const handleCreatePool = async () => {
       console.log("Pool created!", result);
       createAmountA.value = "";
       createAmountB.value = "";
-      await fetchPools();
+      await Promise.all([
+        fetchPools(),
+        loadAccount(address.value)
+      ]);
       // Switch to pools tab to see the new pool
       activeTab.value = 'pools';
     } else {
@@ -515,7 +573,23 @@ const handleCreatePool = async () => {
           <div class="p-4 rounded-lg bg-slate-900/60 border border-slate-700">
             <div class="flex items-center justify-between mb-2">
               <label class="text-xs text-slate-400">From</label>
-              <div class="text-xs text-slate-500">Balance: 0.00</div>
+              <div class="flex items-center gap-2 text-xs text-slate-500">
+                <span>
+                  Balance:
+                  <span class="font-mono text-slate-300">
+                    <span v-if="!address">—</span>
+                    <span v-else-if="accountLoading">Syncing…</span>
+                    <span v-else>{{ formatTokenBalance(tokenIn) }}</span>
+                  </span>
+                </span>
+                <button
+                  class="btn text-[10px]"
+                  @click="setMaxSwapAmount"
+                  :disabled="!address || accountLoading"
+                >
+                  Max
+                </button>
+              </div>
             </div>
             <div class="flex items-center gap-3">
               <input 
@@ -549,7 +623,14 @@ const handleCreatePool = async () => {
           <div class="p-4 rounded-lg bg-slate-900/60 border border-slate-700">
             <div class="flex items-center justify-between mb-2">
               <label class="text-xs text-slate-400">To</label>
-              <div class="text-xs text-slate-500">Balance: 0.00</div>
+              <div class="text-xs text-slate-500">
+                Balance:
+                <span class="font-mono text-slate-300">
+                  <span v-if="!address">—</span>
+                  <span v-else-if="accountLoading">Syncing…</span>
+                  <span v-else>{{ formatTokenBalance(tokenOut) }}</span>
+                </span>
+              </div>
             </div>
             <div class="flex items-center gap-3">
               <input 
@@ -799,7 +880,7 @@ const handleCreatePool = async () => {
 
         <div class="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
           <div class="text-xs text-indigo-300 space-y-1">
-            <div>⏱️ Estimated Time: {{ getEstimatedTime(bridgeChain, 'retrochain-1') }}</div>
+            <div>⏱️ Estimated Time: {{ getEstimatedTime(bridgeChain, 'retrochain-mainnet') }}</div>
             <div>💰 Bridge Fee: {{ getBridgeFee(bridgeChain, bridgeAsset, bridgeAmount) }}</div>
             <div>📍 Destination: {{ address || 'Connect wallet first' }}</div>
           </div>
