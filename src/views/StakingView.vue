@@ -63,6 +63,22 @@ const myDelegations = computed(() => {
       shares: d.shares,
       reward: parseFloat(rewardAmount?.amount || "0")
     };
+
+const walletBalanceMicro = computed(() => {
+  const bal = balances.value.find((b) => b.denom === tokenDenom.value);
+  return bal?.amount ?? "0";
+});
+
+const walletBalanceDisplay = computed(() =>
+  formatAmount(walletBalanceMicro.value, tokenDenom.value, { minDecimals: 2, maxDecimals: 2 })
+);
+
+const walletBalanceFloat = computed(() => parseInt(walletBalanceMicro.value || "0", 10) / 1_000_000);
+
+const setMaxAmount = () => {
+  if (walletBalanceFloat.value <= 0) return;
+  amount.value = walletBalanceFloat.value.toFixed(6);
+};
   });
 });
 
@@ -321,7 +337,15 @@ const copy = async (text: string) => {
         </div>
 
         <!-- Wallet Connected - Portfolio Summary -->
-        <div v-else class="grid grid-cols-1 sm:grid-cols-3 gap-3">
+        <div v-else class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+          <div class="p-4 rounded-lg bg-gradient-to-br from-emerald-500/10 to-lime-500/10 border border-emerald-500/30">
+            <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Wallet Balance</div>
+            <div class="text-xl font-bold text-emerald-200">
+              <span v-if="accountLoading">Syncing…</span>
+              <span v-else>{{ walletBalanceDisplay }}</span>
+            </div>
+            <div class="text-[10px] text-slate-500">Available to delegate</div>
+          </div>
           <div class="p-4 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
             <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Total Staked</div>
             <div class="text-xl font-bold text-indigo-300">
@@ -497,6 +521,12 @@ const copy = async (text: string) => {
             placeholder="0.000000"
             class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
           />
+          <div class="flex items-center justify-between text-[11px] text-slate-500 mt-1">
+            <span>Available: <span class="font-mono text-slate-300">{{ walletBalanceDisplay }}</span></span>
+            <button class="btn text-[10px]" @click="setMaxAmount" :disabled="walletBalanceFloat <= 0">
+              Max
+            </button>
+          </div>
         </div>
 
         <button 
