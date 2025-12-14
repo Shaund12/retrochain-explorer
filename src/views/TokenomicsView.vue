@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
+import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import { useApi } from "@/composables/useApi";
 
 interface LatestBlockInfo {
@@ -260,6 +261,18 @@ const minDepositRetro = computed(() => {
     </div>
 
     <div v-else class="space-y-4">
+      <RcDisclaimer type="warning" title="Experimental Economics & No Financial Guarantees">
+        <p>
+          RetroChain is an experimental blockchain network. Supply numbers, inflation rates, and treasury allocations shown here are
+          informational only and may change without notice. Holding or using RETRO does not entitle you to profits, dividends, or any
+          guaranteed financial return.
+        </p>
+        <p class="mt-2">
+          Always perform your own due diligence and never deploy funds you cannot afford to lose. Nothing on this page constitutes
+          investment advice, financial advice, or a promise of token appreciation.
+        </p>
+      </RcDisclaimer>
+
       <!-- Token basics -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div class="card">
