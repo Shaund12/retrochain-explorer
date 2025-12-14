@@ -22,21 +22,21 @@ const colorClasses = computed(() => {
     case "info":
       return {
         container: "from-blue-500/10 to-indigo-500/10 border-blue-500/30",
-        icon: "??",
+        icon: "ℹ️",
         title: "text-blue-300",
         text: "text-blue-200/80"
       };
     case "danger":
       return {
         container: "from-rose-500/10 to-red-500/10 border-rose-500/30",
-        icon: "??",
+        icon: "🚨",
         title: "text-rose-300",
         text: "text-rose-200/80"
       };
     default: // warning
       return {
         container: "from-amber-500/10 to-orange-500/10 border-amber-500/30",
-        icon: "??",
+        icon: "⚠️",
         title: "text-amber-300",
         text: "text-amber-200/80"
       };

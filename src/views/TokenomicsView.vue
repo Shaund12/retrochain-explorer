@@ -219,6 +219,30 @@ const testerDistributions = [
   { height: 27893, address: "cosmos1esun5s55tn0hhd287fjwxkc28sp0ueqtrhtx4k" }
 ];
 
+const retroMythos = [
+  {
+    emoji: "???",
+    title: "Message in the Cartridge",
+    story:
+      "Archivists say an anonymous dev left a hex note inside the first RetroChain client: \"Play fair, verify everything.\" It felt like Nakamoto whispering through assembly code, reminding builders that transparency beats hype.",
+    quote: "— Fragment 00, recovered from the earliest git tag"
+  },
+  {
+    emoji: "???",
+    title: "Lore of the Infinite Arcade",
+    story:
+      "The community tells a campfire story about Satoshi dropping by under an alias, asking only one question: \"What would a permissionless arcade look like?\" That question pushed RetroChain economists to publish every supply dial in public.",
+    quote: "— Midnight validator call, transcript redacted"
+  },
+  {
+    emoji: "??",
+    title: "Beacon Packet 2109",
+    story:
+      "A cosmic relay allegedly pinged the network with the phrase \"Sound money needs joyful sinks.\" Whether myth or meme, it inspired the arcade module’s burn-and-earn design without fabricating on-chain events.",
+    quote: "— Community zine, Issue #7"
+  }
+];
+
 const formatAddress = (address: string) => `${address.slice(0, 10)}...${address.slice(-6)}`;
 
 const minDepositRetro = computed(() => {
@@ -238,10 +262,18 @@ const minDepositRetro = computed(() => {
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-4">
           <div>
             <p class="text-xs uppercase tracking-[0.35em] text-emerald-200">Tokenomics</p>
-            <h1 class="text-3xl font-bold text-white mt-2">RetroChain Monetary Policy</h1>
+            <h1 class="text-3xl font-bold text-white mt-2 flex items-center gap-3">
+              <span>RetroChain Monetary Policy</span>
+              <span class="text-2xl">??</span>
+            </h1>
             <p class="text-sm text-slate-300 mt-2 max-w-3xl">
               Live supply, inflation, and audited treasury allocations for RetroChain mainnet (chain-id retrochain-mainnet).
             </p>
+            <div class="flex flex-wrap gap-2 mt-3 text-[11px]">
+              <span class="badge border-emerald-500/40 text-emerald-200 bg-emerald-500/10">??? Live on-chain feed</span>
+              <span class="badge border-indigo-500/40 text-indigo-200 bg-indigo-500/10">?? Cosmos SDK economics</span>
+              <span class="badge border-amber-500/40 text-amber-200 bg-amber-500/10">?? Arcade treasury aware</span>
+            </div>
           </div>
           <div class="text-sm text-slate-300 text-right">
             <div class="text-xs text-slate-500 uppercase tracking-wider">Data as of</div>
@@ -276,17 +308,17 @@ const minDepositRetro = computed(() => {
       <!-- Token basics -->
       <div class="grid grid-cols-1 md:grid-cols-3 gap-3">
         <div class="card">
-          <p class="text-xs text-slate-400">Symbol</p>
+          <p class="text-xs text-slate-400 flex items-center gap-1"><span>??</span><span>Symbol</span></p>
           <p class="text-xl font-semibold text-white">RETRO</p>
           <p class="text-xs text-slate-500">Display denom</p>
         </div>
         <div class="card">
-          <p class="text-xs text-slate-400">Base denom</p>
+          <p class="text-xs text-slate-400 flex items-center gap-1"><span>??</span><span>Base denom</span></p>
           <p class="text-xl font-semibold text-white">uretro</p>
           <p class="text-xs text-slate-500">On-chain representation</p>
         </div>
         <div class="card">
-          <p class="text-xs text-slate-400">Decimals</p>
+          <p class="text-xs text-slate-400 flex items-center gap-1"><span>??</span><span>Decimals</span></p>
           <p class="text-xl font-semibold text-white">6</p>
           <p class="text-xs text-slate-500">1 RETRO = 1,000,000 uretro</p>
         </div>
@@ -295,11 +327,17 @@ const minDepositRetro = computed(() => {
       <!-- Supply -->
       <div class="card">
         <div class="flex items-center justify-between mb-4">
-          <h2 class="text-sm font-semibold text-slate-100">Supply</h2>
+          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+            <span>??</span>
+            <span>Supply</span>
+          </h2>
         </div>
         <div class="grid gap-4 md:grid-cols-2">
           <div class="rounded-xl border border-emerald-500/30 p-4 bg-emerald-500/10">
-            <p class="text-xs text-emerald-200 uppercase tracking-wider">Current Supply</p>
+            <p class="text-xs text-emerald-200 uppercase tracking-wider flex items-center gap-1">
+              <span>??</span>
+              <span>Current Supply</span>
+            </p>
             <p class="text-2xl font-bold text-emerald-100 mt-1">
               {{ currentSupply ? `${formatRetro(currentSupply, { maximumFractionDigits: 2 })} RETRO` : "—" }}
             </p>
@@ -325,7 +363,10 @@ const minDepositRetro = computed(() => {
       <!-- Mint & Inflation -->
       <div class="card space-y-4">
         <div class="flex items-center justify-between">
-          <h2 class="text-sm font-semibold text-slate-100">Mint & Inflation</h2>
+          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+            <span>??</span>
+            <span>Mint &amp; Inflation</span>
+          </h2>
           <span class="badge text-xs">Mint denom: {{ mintParams?.mint_denom || mintParams?.mintDenom || "uretro" }}</span>
         </div>
         <div class="grid gap-3 md:grid-cols-3">
@@ -364,7 +405,10 @@ const minDepositRetro = computed(() => {
       <!-- Params -->
       <div class="grid gap-4 md:grid-cols-2">
         <div class="card space-y-2 text-sm text-slate-300">
-          <h2 class="text-sm font-semibold text-slate-100">Staking Parameters</h2>
+          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+            <span>???</span>
+            <span>Staking Parameters</span>
+          </h2>
           <div>Bond denom: <span class="text-white">{{ stakingParams?.bond_denom || "—" }}</span></div>
           <div>Unbonding time: <span class="text-white">{{ formatDuration(stakingParams?.unbonding_time) }}</span></div>
           <div>Max validators: <span class="text-white">{{ stakingParams?.max_validators || "—" }}</span></div>
@@ -402,7 +446,10 @@ const minDepositRetro = computed(() => {
 
       <!-- Genesis allocations -->
       <div class="card">
-        <h2 class="text-sm font-semibold text-slate-100 mb-3">Genesis Allocations (Height 1 Liquid)</h2>
+        <h2 class="text-sm font-semibold text-slate-100 mb-3 flex items-center gap-2">
+          <span>??</span>
+          <span>Genesis Allocations (Height 1 Liquid)</span>
+        </h2>
         <div class="overflow-x-auto">
           <table class="table">
             <thead>
@@ -428,7 +475,10 @@ const minDepositRetro = computed(() => {
 
       <!-- Early treasury redistributions -->
       <div class="card space-y-2">
-        <h2 class="text-sm font-semibold text-slate-100">Early Treasury Redistributions</h2>
+        <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+          <span>??</span>
+          <span>Early Treasury Redistributions</span>
+        </h2>
         <ul class="text-sm text-slate-300 space-y-1">
           <li v-for="entry in treasuryTransfers" :key="entry.height">
             <span class="text-slate-500">Height {{ entry.height }}:</span>
@@ -439,7 +489,10 @@ const minDepositRetro = computed(() => {
 
       <!-- Tester distributions -->
       <div class="card space-y-2">
-        <h2 class="text-sm font-semibold text-slate-100">Tester Distributions</h2>
+        <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+          <span>??</span>
+          <span>Tester Distributions</span>
+        </h2>
         <p class="text-xs text-slate-500">dev_fund wallet payouts (500,000 RETRO each)</p>
         <ul class="text-sm text-slate-300 space-y-1">
           <li v-for="tester in testerDistributions" :key="tester.height">
@@ -448,10 +501,44 @@ const minDepositRetro = computed(() => {
         </ul>
       </div>
 
+      <!-- RetroChain mythos (fictional inspiration) -->
+      <div class="card space-y-3">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+            <span>??</span>
+            <span>RetroChain Mythos</span>
+          </h2>
+          <span class="text-[11px] text-slate-500">Fictional inspiration · not on-chain history</span>
+        </div>
+        <RcDisclaimer type="info" title="Fictional lore only">
+          <p>
+            This Satoshi-style narrative is pure myth. It does not describe real wallets, token movements, or financial guarantees—just community
+            storytelling about RetroChain’s ethos of transparency and open-source builders.
+          </p>
+        </RcDisclaimer>
+        <div class="grid gap-3 md:grid-cols-3">
+          <article
+            v-for="chapter in retroMythos"
+            :key="chapter.title"
+            class="rounded-2xl border border-white/10 bg-white/5 p-4 shadow-inner"
+          >
+            <div class="flex items-center gap-2 mb-2">
+              <span class="text-2xl">{{ chapter.emoji }}</span>
+              <p class="text-sm font-semibold text-white">{{ chapter.title }}</p>
+            </div>
+            <p class="text-xs text-slate-300 leading-relaxed">{{ chapter.story }}</p>
+            <p class="text-[11px] text-indigo-200 mt-2 italic">{{ chapter.quote }}</p>
+          </article>
+        </div>
+      </div>
+
       <!-- Arcade params -->
       <div class="card">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-semibold text-slate-100">Arcade Economy Params</h2>
+          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+            <span>???</span>
+            <span>Arcade Economy Params</span>
+          </h2>
           <span class="text-xs text-slate-500">retrochain/arcade/v1/params</span>
         </div>
         <div v-if="arcadeParams" class="grid gap-2 text-sm text-slate-300">
