@@ -15,10 +15,17 @@ export function useAccounts() {
   const error = ref<string | null>(null);
   const totalAccounts = ref(0);
 
+  const normalizeAddress = (value?: string | null): string | null => {
+    if (typeof value !== "string") return null;
+    const trimmed = value.trim();
+    return trimmed.length ? trimmed : null;
+  };
+
   const resolveAccountAddress = (account: any): string | null => {
     if (!account) return null;
-    if (typeof account.address === "string" && account.address.length) {
-      return account.address;
+    const direct = normalizeAddress(account.address);
+    if (direct) {
+      return direct;
     }
     if (account.base_account) {
       return resolveAccountAddress(account.base_account);
