@@ -7,6 +7,7 @@ import { useValidators } from "@/composables/useValidators";
 import { useNetwork } from "@/composables/useNetwork";
 import { formatAmount } from "@/utils/format";
 import { useToast } from "@/composables/useToast";
+import { useAccount } from "@/composables/useAccount";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import dayjs from "dayjs";
 
@@ -24,6 +25,7 @@ const {
 const { validators, loading: validatorsLoading, fetchValidators } = useValidators();
 const { current: network } = useNetwork();
 const toast = useToast();
+const { balances, loading: accountLoading, load: loadAccount } = useAccount();
 
 const activeTab = ref<'overview' | 'delegate' | 'redelegate' | 'undelegate' | 'rewards'>('overview');
 const selectedValidator = ref<string>("");
@@ -63,6 +65,8 @@ const myDelegations = computed(() => {
       shares: d.shares,
       reward: parseFloat(rewardAmount?.amount || "0")
     };
+  });
+});
 
 const walletBalanceMicro = computed(() => {
   const bal = balances.value.find((b) => b.denom === tokenDenom.value);
@@ -79,8 +83,6 @@ const setMaxAmount = () => {
   if (walletBalanceFloat.value <= 0) return;
   amount.value = walletBalanceFloat.value.toFixed(6);
 };
-  });
-});
 
 const availableValidators = computed(() => {
   return validators.value.filter(v => 
@@ -93,7 +95,10 @@ onMounted(async () => {
   await fetchValidators();
   await fetchNetworkStats();
   if (address.value) {
-    await fetchAll();
+    await Promise.all([
+      fetchAll(),
+      loadAccount(address.value)
+    ]);
   }
 });
 
@@ -101,7 +106,10 @@ watch(
   () => address.value,
   async (newAddress, oldAddress) => {
     if (newAddress && newAddress !== oldAddress) {
-      await fetchAll();
+      await Promise.all([
+        fetchAll(),
+        loadAccount(newAddress)
+      ]);
     }
   }
 );
@@ -110,7 +118,10 @@ const handleConnect = async () => {
   try {
     await connect();
     if (address.value) {
-      await fetchAll();
+      await Promise.all([
+        fetchAll(),
+        loadAccount(address.value)
+      ]);
     }
   } catch (e: any) {
     console.error("Failed to connect:", e);
