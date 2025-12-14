@@ -37,15 +37,33 @@ const RAW_LABELS: Record<string, AccountLabelMeta> = {
     icon: "??"
   },
   "cosmos1us0jjdd5dj0v499g959jatpnh6xuamwhwdrrgq": {
-    id: "shaun_profit",
-    label: "Shaun Treasury",
-    description: "Shaun's personal war chest used for infra, validators, and guerrilla marketing stunts.",
+    id: "dev_profit",
+    label: "Dev Profit",
+    description: "Core team profit wallet covering infra, validator ops, and high-impact ecosystem pushes.",
     icon: "??"
   },
   "cosmos1ydn44ufvhddqhxu88m709k46hdm0dfjwm8v0tt": {
     id: "kitty_charity",
     label: "Kitty Charity",
     description: "Community kitty fund sponsoring shelters, meme contests, and feel-good grants.",
+    icon: "??"
+  },
+  "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh": {
+    id: "community_pool",
+    label: "Community Pool",
+    description: "Chain-wide treasury that accumulates inflation and community-tax funds for governance controlled spending.",
+    icon: "???"
+  },
+  "cosmos1f05vqgh9ufgfykn3g8zx45j273x0kxaj23akuz": {
+    id: "ibc_relayer",
+    label: "IBC Relayer",
+    description: "Primary IBC relayer hot wallet moving packets between RetroChain and partner zones.",
+    icon: "??"
+  },
+  "cosmos1jv65s3grqf6v6jl3dp4t6c9t9rk99cd88lyufl": {
+    id: "staking_rewards_vault",
+    label: "Staking Rewards Vault",
+    description: "Primary accumulation vault where network staking rewards are swept before distribution.",
     icon: "??"
   }
 };
