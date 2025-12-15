@@ -1,8 +1,19 @@
+import { sha256 } from "@cosmjs/crypto";
+
 const bytesToHex = (bytes: Uint8Array) =>
   Array.from(bytes)
     .map((b) => b.toString(16).padStart(2, "0"))
     .join("")
     .toUpperCase();
+
+const getSubtleCrypto = (): SubtleCrypto | null => {
+  if (typeof globalThis === "undefined") return null;
+  const maybeCrypto = (globalThis as any).crypto;
+  if (maybeCrypto?.subtle) {
+    return maybeCrypto.subtle as SubtleCrypto;
+  }
+  return null;
+};
 
 const decodeBase64 = (value: string): Uint8Array | null => {
   try {
@@ -54,10 +65,15 @@ export async function deriveConsensusAddressFromPubkey(pubkey: any): Promise<str
     if (!bytes) return null;
 
     const subtle = getSubtleCrypto();
-    if (!subtle) return null;
+    let hashBytes: Uint8Array;
+    if (subtle) {
+      const hashBuffer = await subtle.digest("SHA-256", bytes);
+      hashBytes = new Uint8Array(hashBuffer);
+    } else {
+      hashBytes = sha256(bytes);
+    }
 
-    const hashBuffer = await subtle.digest("SHA-256", bytes);
-    const truncated = new Uint8Array(hashBuffer).slice(0, 20);
+    const truncated = hashBytes.slice(0, 20);
     return bytesToHex(truncated);
   } catch {
     return null;
