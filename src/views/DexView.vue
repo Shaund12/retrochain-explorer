@@ -67,7 +67,12 @@ const availableTokens = computed<TokenOption[]>(() => [
   { symbol: tokenSymbol.value, denom: tokenDenom.value, icon: "🎮", decimals: 6 },
   { symbol: "USDC", denom: "ibc/usdc", icon: "💵", decimals: 6 },
   { symbol: "USDT", denom: "ibc/usdt", icon: "💲", decimals: 6 },
-  { symbol: "ATOM", denom: "ibc/atom", icon: "⚛️", decimals: 6 },
+  {
+    symbol: "ATOM",
+    denom: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
+    icon: "⚛️",
+    decimals: 6
+  },
   { symbol: "OSMO", denom: "ibc/osmo", icon: "🌊", decimals: 6 }
 ]);
 
