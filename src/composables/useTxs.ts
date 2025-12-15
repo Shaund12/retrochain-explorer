@@ -176,48 +176,48 @@ export function useTxs() {
     loading.value = true;
     error.value = null;
     try {
-      const events = [
+      const filters = [
         `message.sender='${address}'`,
         `transfer.recipient='${address}'`,
         `transfer.sender='${address}'`
       ];
 
-      const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
-        params: {
-          events,
-          order_by: "ORDER_BY_DESC",
-          "pagination.limit": limit
-        },
-        paramsSerializer: (params) => {
-          const search = new URLSearchParams();
-          const eventList = Array.isArray(params.events) ? params.events : [];
-          eventList.forEach((event: string) => search.append("events", event));
-          if (params.order_by) search.append("order_by", params.order_by);
-          if (params["pagination.limit"]) {
-            search.append("pagination.limit", String(params["pagination.limit"]));
-          }
-          return search.toString();
-        }
-      });
-      
-      const raw = res.data?.tx_responses ?? [];
       const seen = new Set<string>();
-      txs.value = raw.reduce((list: TxSummary[], resp: any) => {
-        const hash = resp.txhash;
-        if (!hash || seen.has(hash)) return list;
-        seen.add(hash);
-        list.push({
-          hash,
-          height: parseInt(resp.height ?? "0", 10),
-          codespace: resp.codespace,
-          code: resp.code,
-          gasWanted: resp.gas_wanted,
-          gasUsed: resp.gas_used,
-          timestamp: resp.timestamp,
-          messageTypes: extractMessageTypes(resp)
-        });
-        return list;
-      }, []);
+      const collected: TxSummary[] = [];
+
+      for (const filter of filters) {
+        try {
+          const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
+            params: {
+              events: filter,
+              order_by: "ORDER_BY_DESC",
+              "pagination.limit": limit
+            }
+          });
+
+          const responses: any[] = res.data?.tx_responses ?? [];
+          for (const resp of responses) {
+            const hash = resp.txhash;
+            if (!hash || seen.has(hash)) continue;
+            seen.add(hash);
+            collected.push({
+              hash,
+              height: parseInt(resp.height ?? "0", 10),
+              codespace: resp.codespace,
+              code: resp.code,
+              gasWanted: resp.gas_wanted,
+              gasUsed: resp.gas_used,
+              timestamp: resp.timestamp,
+              messageTypes: extractMessageTypes(resp)
+            });
+          }
+        } catch (filterErr) {
+          console.warn(`Tx search failed for filter ${filter}`, filterErr);
+        }
+      }
+
+      collected.sort((a, b) => b.height - a.height);
+      txs.value = collected.slice(0, limit);
     } catch (e: any) {
       error.value = e?.message ?? String(e);
       txs.value = [];
