@@ -1,5 +1,5 @@
 // src/composables/useDex.ts
-import { ref, computed } from "vue";
+import { ref } from "vue";
 import { useApi } from "./useApi";
 import { useKeplr } from "./useKeplr";
 
@@ -37,6 +37,14 @@ export function useDex() {
   const userLiquidity = ref<any[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+  const isModuleAvailable = ref(true);
+
+  const markModuleUnavailable = (e: any) => {
+    const status = e?.response?.status ?? e?.status;
+    if (status === 404 || status === 501) {
+      isModuleAvailable.value = false;
+    }
+  };
 
   // Fetch all liquidity pools
   const fetchPools = async () => {
@@ -45,10 +53,12 @@ export function useDex() {
     try {
       const res = await api.get("/dex/v1/pools");
       pools.value = res.data?.pools || [];
+      isModuleAvailable.value = true;
     } catch (e: any) {
       console.warn("DEX pools not available:", e?.message);
       pools.value = [];
       error.value = null; // Don't show error if module not enabled yet
+      markModuleUnavailable(e);
     } finally {
       loading.value = false;
     }
@@ -71,6 +81,16 @@ export function useDex() {
 
   // Simulate swap to get expected output
   const simulateSwap = async (tokenIn: string, tokenOut: string, amountIn: string) => {
+    if (!isModuleAvailable.value) {
+      return {
+        token_in: tokenIn,
+        token_out: tokenOut,
+        amount_in: amountIn,
+        amount_out: (parseFloat(amountIn || "0") * 0.99 || 0).toFixed(6),
+        price_impact: "0.01",
+        route: [tokenIn, tokenOut]
+      } as SwapRoute;
+    }
     try {
       const res = await api.get("/dex/v1/simulate-swap", {
         params: { token_in: tokenIn, token_out: tokenOut, amount_in: amountIn }
@@ -78,6 +98,7 @@ export function useDex() {
       return res.data as SwapRoute;
     } catch (e: any) {
       console.warn("Swap simulation failed:", e?.message);
+      markModuleUnavailable(e);
       // Mock simulation for demo
       return {
         token_in: tokenIn,
@@ -103,6 +124,7 @@ export function useDex() {
     } catch (e: any) {
       console.warn("User liquidity not available:", e?.message);
       userLiquidity.value = [];
+      markModuleUnavailable(e);
     } finally {
       loading.value = false;
     }
@@ -135,6 +157,7 @@ export function useDex() {
     simulateSwap,
     fetchUserLiquidity,
     calculatePoolPrice,
-    calculateUserShare
+    calculateUserShare,
+    isModuleAvailable
   };
 }

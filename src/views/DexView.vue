@@ -17,7 +17,7 @@ interface TokenOption {
 }
 
 const { address, connect, isAvailable } = useKeplr();
-const { pools, loading: dexLoading, fetchPools, simulateSwap, calculatePoolPrice } = useDex();
+const { pools, loading: dexLoading, fetchPools, simulateSwap, calculatePoolPrice, isModuleAvailable } = useDex();
 const { assets: bridgeAssets, bridgeFromNoble, bridgeFromEVM, getEstimatedTime, getBridgeFee } = useBridge();
 const { current: network } = useNetwork();
 const toast = useToast();
@@ -52,6 +52,21 @@ const bridgeChain = ref("Noble");
 const bridgeAmount = ref("");
 const bridging = ref(false);
 
+const isMainnet = computed(() => network.value === "mainnet");
+const retroToCosmosChannel = import.meta.env.VITE_IBC_CHANNEL_RETRO_COSMOS || "channel-1638";
+const cosmosToRetroChannel = import.meta.env.VITE_IBC_CHANNEL_COSMOS_RETRO || "";
+const cosmosHubChainId = import.meta.env.VITE_COSMOS_CHAIN_ID || "cosmoshub-4";
+const ibcDirection = ref<"retroToCosmos" | "cosmosToRetro">("retroToCosmos");
+const retroToCosmosAmount = ref("");
+const retroToCosmosRecipient = ref("");
+const retroToCosmosMemo = ref("");
+const cosmosToRetroAmount = ref("");
+const cosmosToRetroMemo = ref("");
+const ibcTransferring = ref(false);
+const cosmosWalletAddress = ref("");
+const fetchingCosmosAddress = ref(false);
+const cosmosInboundConfigured = computed(() => Boolean(cosmosToRetroChannel));
+
 // Create pool state
 const createTokenA = ref("RETRO");
 const createTokenB = ref("USDC");
@@ -62,6 +77,7 @@ const creatingPool = ref(false);
 
 const tokenDenom = computed(() => network.value === 'mainnet' ? 'uretro' : 'udretro');
 const tokenSymbol = computed(() => network.value === 'mainnet' ? 'RETRO' : 'DRETRO');
+const dexAvailable = computed(() => isModuleAvailable.value);
 
 const availableTokens = computed<TokenOption[]>(() => [
   { symbol: tokenSymbol.value, denom: tokenDenom.value, icon: "🎮", decimals: 6 },
@@ -113,8 +129,12 @@ const setMaxSwapAmount = () => {
 };
 
 // Watch amountIn and simulate swap
-watch([amountIn, tokenIn, tokenOut], async ([newAmountIn]) => {
+watch([amountIn, tokenIn, tokenOut, dexAvailable], async ([newAmountIn, , , available]) => {
   if (!newAmountIn || parseFloat(newAmountIn) <= 0) {
+    amountOut.value = "";
+    return;
+  }
+  if (!available) {
     amountOut.value = "";
     return;
   }
@@ -146,9 +166,18 @@ onMounted(async () => {
   }
 });
 
+const ensureDexAvailable = () => {
+  if (!dexAvailable.value) {
+    toast.showInfo("Native DEX module isn't enabled on this network yet.");
+    return false;
+  }
+  return true;
+};
+
 const handleSwap = async () => {
   if (!address.value) return;
   if (!window.keplr) return;
+  if (!ensureDexAvailable()) return;
 
   swapping.value = true;
   toast.showInfo("Preparing swap transaction...");
@@ -217,6 +246,7 @@ const handleSwap = async () => {
 const handleAddLiquidity = async () => {
   if (!address.value) return;
   if (!window.keplr) return;
+  if (!ensureDexAvailable()) return;
 
   addingLiquidity.value = true;
   try {
@@ -278,6 +308,7 @@ const handleAddLiquidity = async () => {
 const handlePlaceLimitOrder = async () => {
   if (!address.value) return;
   if (!window.keplr) return;
+  if (!ensureDexAvailable()) return;
 
   try {
     const chainId = network.value === 'mainnet' ? 'retrochain-mainnet' : 'retrochain-devnet-1';
@@ -389,6 +420,222 @@ const handleBridge = async () => {
   }
 };
 
+const buildIbcTimeoutTimestamp = () => ((Date.now() + 15 * 60 * 1000) * 1_000_000).toString();
+
+const ensureCosmosAccount = async () => {
+  if (!window.keplr) {
+    toast.showError("Keplr wallet not detected.");
+    throw new Error("Keplr unavailable");
+  }
+  if (cosmosWalletAddress.value) {
+    return cosmosWalletAddress.value;
+  }
+  fetchingCosmosAddress.value = true;
+  try {
+    await window.keplr.enable(cosmosHubChainId);
+    const key = await window.keplr.getKey(cosmosHubChainId);
+    cosmosWalletAddress.value = key?.bech32Address || "";
+    if (!retroToCosmosRecipient.value && cosmosWalletAddress.value) {
+      retroToCosmosRecipient.value = cosmosWalletAddress.value;
+    }
+    return cosmosWalletAddress.value;
+  } catch (err: any) {
+    toast.showTxError(err?.message || "Unable to access Cosmos Hub in Keplr");
+    throw err;
+  } finally {
+    fetchingCosmosAddress.value = false;
+  }
+};
+
+const handleRetroToCosmosTransfer = async () => {
+  if (!address.value) {
+    toast.showInfo("Connect your RetroChain wallet first.");
+    return;
+  }
+  if (!window.keplr) {
+    toast.showError("Keplr wallet not detected.");
+    return;
+  }
+  if (!isMainnet.value) {
+    toast.showWarning("IBC transfers to Cosmos Hub are only enabled on mainnet.");
+    return;
+  }
+  if (!retroToCosmosChannel) {
+    toast.showWarning("Set VITE_IBC_CHANNEL_RETRO_COSMOS in your env to enable this transfer.");
+    return;
+  }
+
+  const recipient = retroToCosmosRecipient.value.trim();
+  if (!recipient) {
+    toast.showWarning("Enter a Cosmos Hub (cosmos1...) recipient address.");
+    return;
+  }
+
+  const amountFloat = parseFloat(retroToCosmosAmount.value);
+  if (!Number.isFinite(amountFloat) || amountFloat <= 0) {
+    toast.showWarning("Enter a valid RETRO amount.");
+    return;
+  }
+
+  const chainId = network.value === 'mainnet' ? 'retrochain-mainnet' : 'retrochain-devnet-1';
+  const amountBase = Math.floor(amountFloat * 1_000_000).toString();
+
+  const msg = {
+    typeUrl: "/ibc.applications.transfer.v1.MsgTransfer",
+    value: {
+      sourcePort: "transfer",
+      sourceChannel: retroToCosmosChannel,
+      token: {
+        denom: tokenDenom.value,
+        amount: amountBase
+      },
+      sender: address.value,
+      receiver: recipient,
+      timeoutHeight: {
+        revisionNumber: "0",
+        revisionHeight: "0"
+      },
+      timeoutTimestamp: buildIbcTimeoutTimestamp(),
+      memo: retroToCosmosMemo.value || "IBC transfer to Cosmos Hub"
+    }
+  };
+
+  const fee = {
+    amount: [{ denom: tokenDenom.value, amount: "6000" }],
+    gas: "250000"
+  };
+
+  ibcTransferring.value = true;
+  toast.showInfo("Preparing RETRO → Cosmos Hub transfer...");
+  try {
+    const result = await window.keplr.signAndBroadcast(
+      chainId,
+      address.value,
+      [msg],
+      fee,
+      retroToCosmosMemo.value || "IBC transfer to Cosmos Hub"
+    );
+
+    if (result.code === 0) {
+      toast.showTxSuccess(result.transactionHash || "IBC transfer submitted");
+      retroToCosmosAmount.value = "";
+      retroToCosmosMemo.value = "";
+      await loadAccount(address.value);
+    } else {
+      throw new Error(result.rawLog || "IBC transfer failed");
+    }
+  } catch (e: any) {
+    toast.showTxError(e?.message || "IBC transfer failed");
+  } finally {
+    ibcTransferring.value = false;
+  }
+};
+
+watch(ibcDirection, (direction) => {
+  if (direction === "cosmosToRetro") {
+    ensureCosmosAccount().catch(() => undefined);
+  }
+});
+
+watch(cosmosWalletAddress, (value) => {
+  if (value && !retroToCosmosRecipient.value) {
+    retroToCosmosRecipient.value = value;
+  }
+});
+
+const handleCosmosToRetroTransfer = async () => {
+  if (!address.value) {
+    toast.showInfo("Connect your RetroChain wallet first.");
+    return;
+  }
+  if (!window.keplr) {
+    toast.showError("Keplr wallet not detected.");
+    return;
+  }
+  if (!isMainnet.value) {
+    toast.showWarning("IBC transfers are only available on mainnet.");
+    return;
+  }
+  if (!cosmosInboundConfigured.value) {
+    toast.showWarning("Set VITE_IBC_CHANNEL_COSMOS_RETRO to enable Cosmos → Retro transfers.");
+    return;
+  }
+
+  ibcTransferring.value = true;
+  try {
+    if (!cosmosWalletAddress.value) {
+      await ensureCosmosAccount();
+    }
+  } catch {
+    ibcTransferring.value = false;
+    return;
+  }
+
+  const cosmosSender = cosmosWalletAddress.value;
+  if (!cosmosSender) {
+    ibcTransferring.value = false;
+    return;
+  }
+
+  const amountFloat = parseFloat(cosmosToRetroAmount.value);
+  if (!Number.isFinite(amountFloat) || amountFloat <= 0) {
+    toast.showWarning("Enter a valid ATOM amount.");
+    ibcTransferring.value = false;
+    return;
+  }
+
+  const amountBase = Math.floor(amountFloat * 1_000_000).toString();
+
+  const msg = {
+    typeUrl: "/ibc.applications.transfer.v1.MsgTransfer",
+    value: {
+      sourcePort: "transfer",
+      sourceChannel: cosmosToRetroChannel,
+      token: {
+        denom: "uatom",
+        amount: amountBase
+      },
+      sender: cosmosSender,
+      receiver: address.value,
+      timeoutHeight: {
+        revisionNumber: "0",
+        revisionHeight: "0"
+      },
+      timeoutTimestamp: buildIbcTimeoutTimestamp(),
+      memo: cosmosToRetroMemo.value || "IBC transfer to RetroChain"
+    }
+  };
+
+  const fee = {
+    amount: [{ denom: "uatom", amount: "8000" }],
+    gas: "250000"
+  };
+
+  toast.showInfo("Submitting ATOM → RetroChain transfer...");
+  try {
+    const result = await window.keplr.signAndBroadcast(
+      cosmosHubChainId,
+      cosmosSender,
+      [msg],
+      fee,
+      cosmosToRetroMemo.value || "IBC transfer to RetroChain"
+    );
+
+    if (result.code === 0) {
+      toast.showTxSuccess(result.transactionHash || "IBC transfer submitted");
+      cosmosToRetroAmount.value = "";
+      cosmosToRetroMemo.value = "";
+      await loadAccount(address.value);
+    } else {
+      throw new Error(result.rawLog || "IBC transfer failed");
+    }
+  } catch (e: any) {
+    toast.showTxError(e?.message || "IBC transfer failed");
+  } finally {
+    ibcTransferring.value = false;
+  }
+};
+
 const swapTokens = () => {
   [tokenIn.value, tokenOut.value] = [tokenOut.value, tokenIn.value];
   [amountIn.value, amountOut.value] = [amountOut.value, amountIn.value];
@@ -403,6 +650,7 @@ const initialPrice = computed(() => {
 const handleCreatePool = async () => {
   if (!address.value) return;
   if (!window.keplr) return;
+  if (!ensureDexAvailable()) return;
 
   creatingPool.value = true;
   try {
@@ -468,7 +716,11 @@ const handleCreatePool = async () => {
 <template>
 <div class="space-y-4">
   <!-- DISCLAIMER BANNER -->
-  <RcDisclaimer type="info" title="✅ Native DEX - Mainnet Ready">
+  <RcDisclaimer
+    v-if="dexAvailable"
+    type="info"
+    title="✅ Native DEX - Mainnet Ready"
+  >
     <p>
       <strong>The Native DEX is LIVE on RetroChain mainnet!</strong>
     </p>
@@ -478,6 +730,18 @@ const handleCreatePool = async () => {
     </p>
     <p class="mt-2">
       Once liquidity pools are created and funded, you can swap tokens, add liquidity, place limit orders, and participate in the RetroChain DeFi ecosystem.
+    </p>
+  </RcDisclaimer>
+  <RcDisclaimer
+    v-else
+    type="warning"
+    title="⚠️ Native DEX Module Unavailable"
+  >
+    <p>
+      The on-chain DEX module is not enabled on this network yet, so swaps, liquidity, and pool creation are disabled.
+    </p>
+    <p class="mt-2">
+      You can still view balances and bridge assets, or use external venues (Squid Router, Skip Protocol, Osmosis) to trade RETRO.
     </p>
   </RcDisclaimer>
 
@@ -679,10 +943,13 @@ const handleCreatePool = async () => {
           <button 
             class="btn btn-primary w-full"
             @click="handleSwap"
-            :disabled="!address || !amountIn || !amountOut || swapping"
+            :disabled="!dexAvailable || !address || !amountIn || !amountOut || swapping"
           >
             {{ swapping ? 'Swapping...' : address ? 'Swap' : 'Connect Wallet' }}
           </button>
+          <p v-if="!dexAvailable" class="text-[11px] text-amber-300 text-center mt-2">
+            DEX module offline – actions disabled on this network.
+          </p>
         </div>
       </div>
 
@@ -715,7 +982,10 @@ const handleCreatePool = async () => {
 
     <!-- Pools Tab -->
     <div v-if="activeTab === 'pools'" class="card">
-      <h2 class="text-sm font-semibold text-slate-100 mb-4">Add Liquidity</h2>
+      <div class="flex items-center justify-between mb-4">
+        <h2 class="text-sm font-semibold text-slate-100">Add Liquidity</h2>
+        <span v-if="!dexAvailable" class="text-[11px] text-amber-300">DEX actions disabled</span>
+      </div>
       
       <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
         <div class="space-y-3">
@@ -765,7 +1035,7 @@ const handleCreatePool = async () => {
           <button 
             class="btn btn-primary w-full"
             @click="handleAddLiquidity"
-            :disabled="!address || !poolAmountA || !poolAmountB || addingLiquidity"
+            :disabled="!dexAvailable || !address || !poolAmountA || !poolAmountB || addingLiquidity"
           >
             {{ addingLiquidity ? 'Adding...' : 'Add Liquidity' }}
           </button>
@@ -840,64 +1110,222 @@ const handleCreatePool = async () => {
         <button 
           class="btn btn-primary w-full"
           @click="handlePlaceLimitOrder"
-          :disabled="!address || !limitPrice || !limitAmount"
+          :disabled="!dexAvailable || !address || !limitPrice || !limitAmount"
         >
           Place {{ limitSide === 'buy' ? 'Buy' : 'Sell' }} Order
         </button>
+        <p v-if="!dexAvailable" class="text-[11px] text-amber-300 text-center">
+          Limit orders unavailable while the DEX module is offline.
+        </p>
       </div>
     </div>
 
     <!-- Bridge Tab -->
-    <div v-if="activeTab === 'bridge'" class="card max-w-2xl mx-auto">
-      <h2 class="text-sm font-semibold text-slate-100 mb-4">Bridge Assets to RetroChain</h2>
-      
-      <div class="space-y-3">
-        <div>
-          <label class="text-xs text-slate-400 mb-2 block">Asset</label>
-          <select v-model="bridgeAsset" class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
-            <option v-for="asset in bridgeAssets" :key="asset.symbol" :value="asset.symbol">
-              {{ asset.icon }} {{ asset.name }} ({{ asset.symbol }})
-            </option>
-          </select>
-        </div>
-
-        <div>
-          <label class="text-xs text-slate-400 mb-2 block">From Chain</label>
-          <select v-model="bridgeChain" class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
-            <option value="Noble">Noble (Native USDC)</option>
-            <option value="Ethereum">Ethereum</option>
-            <option value="Polygon">Polygon</option>
-            <option value="Arbitrum">Arbitrum</option>
-            <option value="BSC">BSC</option>
-          </select>
-        </div>
-
-        <div>
-          <label class="text-xs text-slate-400 mb-2 block">Amount</label>
-          <input 
-            v-model="bridgeAmount"
-            type="number"
-            step="0.000001"
-            placeholder="0.0"
-            class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
-          />
-        </div>
-
-        <div class="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-          <div class="text-xs text-indigo-300 space-y-1">
-            <div>⏱️ Estimated Time: {{ getEstimatedTime(bridgeChain, 'retrochain-mainnet') }}</div>
-            <div>💰 Bridge Fee: {{ getBridgeFee(bridgeChain, bridgeAsset, bridgeAmount) }}</div>
-            <div>📍 Destination: {{ address || 'Connect wallet first' }}</div>
+    <div v-if="activeTab === 'bridge'" class="space-y-4 max-w-2xl mx-auto">
+      <div class="card">
+        <div class="flex items-center justify-between mb-3">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-100">IBC Transfer · Cosmos Hub</h2>
+            <p class="text-[11px] text-slate-500 mt-1">
+              Retro channel:
+              <span class="font-mono text-slate-300">{{ retroToCosmosChannel }}</span>
+              <span v-if="cosmosInboundConfigured">
+                · Cosmos channel:
+                <span class="font-mono text-slate-300">{{ cosmosToRetroChannel || '—' }}</span>
+              </span>
+            </p>
           </div>
+          <span class="badge text-[10px]" :class="isMainnet ? 'border-emerald-400/60 text-emerald-200' : 'border-amber-400/60 text-amber-200'">
+            {{ isMainnet ? 'Mainnet' : 'Unavailable' }}
+          </span>
         </div>
 
-        <button 
-          class="btn btn-primary w-full"
-          @click="handleBridge"
-          :disabled="!address || !bridgeAmount || bridging"
-        >
-          {{ bridging ? 'Bridging...' : 'Bridge to RetroChain' }}
-        </button>
+        <div class="flex items-center gap-2 mb-3">
+          <button 
+            class="btn text-xs"
+            :class="ibcDirection === 'retroToCosmos' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+            @click="ibcDirection = 'retroToCosmos'"
+          >
+            RETRO → Cosmos Hub
+          </button>
+          <button 
+            class="btn text-xs"
+            :class="ibcDirection === 'cosmosToRetro' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+            @click="ibcDirection = 'cosmosToRetro'"
+          >
+            ATOM → RetroChain
+          </button>
+        </div>
+
+        <div v-if="ibcDirection === 'retroToCosmos'" class="space-y-3">
+          <p class="text-[11px] text-slate-500">
+            Send native RETRO over channel {{ retroToCosmosChannel }} into any Cosmos Hub address.
+          </p>
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Recipient (Cosmos Hub)</label>
+            <input
+              v-model="retroToCosmosRecipient"
+              type="text"
+              placeholder="cosmos1..."
+              class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm font-mono"
+            />
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Amount (RETRO)</label>
+            <input
+              v-model="retroToCosmosAmount"
+              type="number"
+              step="0.000001"
+              placeholder="0.0"
+              class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+            />
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Memo (optional)</label>
+            <input
+              v-model="retroToCosmosMemo"
+              type="text"
+              placeholder="IBC transfer memo"
+              class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+            />
+          </div>
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-xs text-slate-300 space-y-1">
+            <div class="flex items-center justify-between">
+              <span>Sender</span>
+              <span class="font-mono text-slate-100">{{ address || 'Connect wallet' }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>Channel</span>
+              <span class="font-mono text-slate-100">{{ retroToCosmosChannel }}</span>
+            </div>
+          </div>
+          <button
+            class="btn btn-primary w-full"
+            @click="handleRetroToCosmosTransfer"
+            :disabled="!isMainnet || !address || !retroToCosmosRecipient || !retroToCosmosAmount || ibcTransferring"
+          >
+            {{ ibcTransferring ? 'Submitting...' : 'Send RETRO to Cosmos Hub' }}
+          </button>
+          <p v-if="!address" class="text-[11px] text-slate-500 text-center">
+            Connect your RetroChain wallet to start an IBC transfer.
+          </p>
+        </div>
+
+        <div v-else class="space-y-3">
+          <p class="text-[11px] text-slate-500">
+            Bridge ATOM from Cosmos Hub into RetroChain. Keplr will prompt you to approve the Cosmos Hub transaction.
+          </p>
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
+            <div class="flex items-center justify-between text-xs mb-1">
+              <span class="text-slate-400">Cosmos Hub Wallet</span>
+              <button
+                class="btn text-[10px]"
+                @click="ensureCosmosAccount"
+                :disabled="fetchingCosmosAddress"
+              >
+                {{ fetchingCosmosAddress ? 'Connecting...' : cosmosWalletAddress ? 'Refresh' : 'Connect' }}
+              </button>
+            </div>
+            <div v-if="cosmosWalletAddress" class="font-mono text-slate-200 text-xs break-all">
+              {{ cosmosWalletAddress }}
+            </div>
+            <div v-else class="text-[11px] text-slate-500">
+              Connect Keplr on Cosmos Hub to bridge ATOM in.
+            </div>
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Amount (ATOM)</label>
+            <input
+              v-model="cosmosToRetroAmount"
+              type="number"
+              step="0.000001"
+              placeholder="0.0"
+              class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+            />
+          </div>
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Memo (optional)</label>
+            <input
+              v-model="cosmosToRetroMemo"
+              type="text"
+              placeholder="IBC transfer memo"
+              class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+            />
+          </div>
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-xs text-slate-300 space-y-1">
+            <div class="flex items-center justify-between">
+              <span>Destination</span>
+              <span class="font-mono text-slate-100">{{ address || 'Connect wallet' }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span>Channel</span>
+              <span class="font-mono text-slate-100">{{ cosmosToRetroChannel || 'Set env var' }}</span>
+            </div>
+          </div>
+          <button
+            class="btn btn-primary w-full"
+            @click="handleCosmosToRetroTransfer"
+            :disabled="!isMainnet || !address || !cosmosInboundConfigured || !cosmosWalletAddress || !cosmosToRetroAmount || ibcTransferring"
+          >
+            {{ ibcTransferring ? 'Submitting...' : 'Send ATOM to RetroChain' }}
+          </button>
+          <p v-if="!cosmosInboundConfigured" class="text-[11px] text-amber-300 text-center">
+            Configure <code class="font-mono">VITE_IBC_CHANNEL_COSMOS_RETRO</code> to enable Cosmos → Retro transfers.
+          </p>
+        </div>
+      </div>
+
+      <div class="card">
+        <h2 class="text-sm font-semibold text-slate-100 mb-4">Bridge Assets to RetroChain</h2>
+        
+        <div class="space-y-3">
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Asset</label>
+            <select v-model="bridgeAsset" class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
+              <option v-for="asset in bridgeAssets" :key="asset.symbol" :value="asset.symbol">
+                {{ asset.icon }} {{ asset.name }} ({{ asset.symbol }})
+              </option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">From Chain</label>
+            <select v-model="bridgeChain" class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
+              <option value="Noble">Noble (Native USDC)</option>
+              <option value="Ethereum">Ethereum</option>
+              <option value="Polygon">Polygon</option>
+              <option value="Arbitrum">Arbitrum</option>
+              <option value="BSC">BSC</option>
+            </select>
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Amount</label>
+            <input 
+              v-model="bridgeAmount"
+              type="number"
+              step="0.000001"
+              placeholder="0.0"
+              class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+            />
+          </div>
+
+          <div class="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
+            <div class="text-xs text-indigo-300 space-y-1">
+              <div>⏱️ Estimated Time: {{ getEstimatedTime(bridgeChain, 'retrochain-mainnet') }}</div>
+              <div>💰 Bridge Fee: {{ getBridgeFee(bridgeChain, bridgeAsset, bridgeAmount) }}</div>
+              <div>📍 Destination: {{ address || 'Connect wallet first' }}</div>
+            </div>
+          </div>
+
+          <button 
+            class="btn btn-primary w-full"
+            @click="handleBridge"
+            :disabled="!address || !bridgeAmount || bridging"
+          >
+            {{ bridging ? 'Bridging...' : 'Bridge to RetroChain' }}
+          </button>
+        </div>
       </div>
     </div>
 
@@ -977,10 +1405,13 @@ const handleCreatePool = async () => {
           <button 
             class="btn btn-primary w-full"
             @click="handleCreatePool"
-            :disabled="!address || !createAmountA || !createAmountB || createTokenA === createTokenB || creatingPool"
+            :disabled="!dexAvailable || !address || !createAmountA || !createAmountB || createTokenA === createTokenB || creatingPool"
           >
             {{ creatingPool ? 'Creating Pool...' : 'Create Pool' }}
           </button>
+          <p v-if="!dexAvailable" class="text-[11px] text-amber-300 text-center">
+            Pool creation will unlock once the DEX module is deployed.
+          </p>
         </div>
 
         <div class="space-y-3">
