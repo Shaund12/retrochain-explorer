@@ -164,14 +164,14 @@ const handleSwap = async () => {
       value: {
         sender: address.value,
         routes: [{
-          pool_id: "1", // Would be determined by routing
-          token_out_denom: tokenOutDenom
+          poolId: "1", // Would be determined by routing
+          tokenOutDenom: tokenOutDenom
         }],
-        token_in: {
+        tokenIn: {
           denom: tokenInDenom,
           amount: amountInBase
         },
-        token_out_min_amount: minAmountOut
+        tokenOutMinAmount: minAmountOut
       }
     };
 
@@ -227,11 +227,11 @@ const handleAddLiquidity = async () => {
       typeUrl: "/retrochain.dex.v1.MsgAddLiquidity",
       value: {
         sender: address.value,
-        token_a: {
+        tokenA: {
           denom: tokenADenom,
           amount: amountABase
         },
-        token_b: {
+        tokenB: {
           denom: tokenBDenom,
           amount: amountBBase
         }
@@ -284,9 +284,9 @@ const handlePlaceLimitOrder = async () => {
       typeUrl: "/retrochain.dex.v1.MsgPlaceLimitOrder",
       value: {
         creator: address.value,
-        order_type: limitSide.value.toUpperCase(),
-        token_in: tokenIn.value,
-        token_out: tokenOut.value,
+        orderType: limitSide.value.toUpperCase(),
+        tokenIn: tokenIn.value,
+        tokenOut: tokenOut.value,
         amount: amountBase,
         price: priceBase
       }
@@ -413,15 +413,15 @@ const handleCreatePool = async () => {
       typeUrl: "/retrochain.dex.v1.MsgCreatePool",
       value: {
         creator: address.value,
-        token_a: {
+        tokenA: {
           denom: tokenADenom,
           amount: amountABase
         },
-        token_b: {
+        tokenB: {
           denom: tokenBDenom,
           amount: amountBBase
         },
-        swap_fee: (parseFloat(createSwapFee.value) / 100).toString() // Convert % to decimal
+        swapFee: (parseFloat(createSwapFee.value) / 100).toString() // Convert % to decimal
       }
     };
 
