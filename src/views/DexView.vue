@@ -126,6 +126,9 @@ const formatTokenBalance = (symbol: string) => {
   return formatAmount(rawBalanceForSymbol(symbol), token.denom, { minDecimals: 2, maxDecimals: 6 });
 };
 
+const retroBalanceDisplay = computed(() => formatTokenBalance(tokenSymbol.value));
+const ibcAtomBalanceDisplay = computed(() => formatTokenBalance("ATOM"));
+
 const setMaxSwapAmount = () => {
   const token = findTokenOption(tokenIn.value);
   if (!token) return;
@@ -1352,6 +1355,15 @@ const handleCreatePool = async () => {
               placeholder="0.0"
               class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
             />
+            <div class="flex items-center justify-between text-[11px] text-slate-500 mt-1">
+              <span>Available</span>
+              <span class="font-mono text-slate-300">
+                <template v-if="address">
+                  {{ retroToCosmosAsset === 'RETRO' ? retroBalanceDisplay : ibcAtomBalanceDisplay }}
+                </template>
+                <template v-else>Connect wallet</template>
+              </span>
+            </div>
           </div>
           <div>
             <label class="text-xs text-slate-400 mb-2 block">Memo (optional)</label>
