@@ -23,8 +23,9 @@ const { current: network } = useNetwork();
 const toast = useToast();
 const { balances, loading: accountLoading, load: loadAccount } = useAccount();
 
-const activeTab = ref<'swap' | 'pools' | 'limit' | 'bridge' | 'create'>('swap');
+const activeTab = ref<'swap' | 'pools' | 'limit' | 'bridge' | 'create'>('bridge');
 const swapTab = ref<'market' | 'limit'>('market');
+const dexFeaturesEnabled = import.meta.env.VITE_ENABLE_DEX === "true";
 
 // Swap state
 const tokenIn = ref("RETRO");
@@ -729,7 +730,7 @@ const handleCreatePool = async () => {
 <div class="space-y-4">
   <!-- DISCLAIMER BANNER -->
   <RcDisclaimer
-    v-if="dexAvailable"
+    v-if="dexFeaturesEnabled && dexAvailable"
     type="info"
     title="✅ Native DEX - Mainnet Ready"
   >
@@ -747,13 +748,13 @@ const handleCreatePool = async () => {
   <RcDisclaimer
     v-else
     type="warning"
-    title="⚠️ Native DEX Module Unavailable"
+    title="⚠️ DEX Trading Temporarily Disabled"
   >
     <p>
-      The on-chain DEX module is not enabled on this network yet, so swaps, liquidity, and pool creation are disabled.
+      Swaps, pools, limit orders, and pool creation are turned off while we finalize the on-chain DEX rollout.
     </p>
     <p class="mt-2">
-      You can still view balances and bridge assets, or use external venues (Squid Router, Skip Protocol, Osmosis) to trade RETRO.
+      Use the IBC bridge below to move assets between RetroChain and Cosmos Hub (or Noble/other chains) until trading is re-enabled.
     </p>
   </RcDisclaimer>
 
@@ -765,7 +766,7 @@ const handleCreatePool = async () => {
           Native DEX
         </h1>
         <p class="text-sm text-slate-300 mb-4">
-          Trade, provide liquidity, and bridge assets on RetroChain
+          {{ dexFeaturesEnabled ? 'Trade, provide liquidity, and bridge assets on RetroChain' : 'Bridge RETRO and ATOM via IBC while swaps and pools remain offline' }}
         </p>
 
         <!-- Connect Wallet -->
@@ -787,47 +788,48 @@ const handleCreatePool = async () => {
       </div>
     </div>
 
-    <!-- Navigation Tabs -->
-    <div class="flex items-center gap-2 overflow-x-auto">
-      <button 
-        class="btn text-xs whitespace-nowrap"
-        :class="activeTab === 'swap' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-        @click="activeTab = 'swap'"
-      >
-        🔄 Swap
-      </button>
-      <button 
-        class="btn text-xs whitespace-nowrap"
-        :class="activeTab === 'pools' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-        @click="activeTab = 'pools'"
-      >
-        💧 Pools
-      </button>
-      <button 
-        class="btn text-xs whitespace-nowrap"
-        :class="activeTab === 'create' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-        @click="activeTab = 'create'"
-      >
-        ✨ Create Pool
-      </button>
-      <button 
-        class="btn text-xs whitespace-nowrap"
-        :class="activeTab === 'limit' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-        @click="activeTab = 'limit'"
-      >
-        📊 Limit Orders
-      </button>
-      <button 
-        class="btn text-xs whitespace-nowrap"
-        :class="activeTab === 'bridge' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-        @click="activeTab = 'bridge'"
-      >
-        🌉 Bridge
-      </button>
-    </div>
+    <template v-if="dexFeaturesEnabled">
+      <!-- Navigation Tabs -->
+      <div class="flex items-center gap-2 overflow-x-auto">
+        <button 
+          class="btn text-xs whitespace-nowrap"
+          :class="activeTab === 'swap' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+          @click="activeTab = 'swap'"
+        >
+          🔄 Swap
+        </button>
+        <button 
+          class="btn text-xs whitespace-nowrap"
+          :class="activeTab === 'pools' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+          @click="activeTab = 'pools'"
+        >
+          💧 Pools
+        </button>
+        <button 
+          class="btn text-xs whitespace-nowrap"
+          :class="activeTab === 'create' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+          @click="activeTab = 'create'"
+        >
+          ✨ Create Pool
+        </button>
+        <button 
+          class="btn text-xs whitespace-nowrap"
+          :class="activeTab === 'limit' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+          @click="activeTab = 'limit'"
+        >
+          📊 Limit Orders
+        </button>
+        <button 
+          class="btn text-xs whitespace-nowrap"
+          :class="activeTab === 'bridge' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+          @click="activeTab = 'bridge'"
+        >
+          🌉 Bridge
+        </button>
+      </div>
 
-    <!-- Swap Tab -->
-    <div v-if="activeTab === 'swap'" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <!-- Swap Tab -->
+      <div v-if="activeTab === 'swap'" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="lg:col-span-2 card">
         <div class="flex items-center justify-between mb-4">
           <h2 class="text-sm font-semibold text-slate-100">Swap Tokens</h2>
@@ -990,10 +992,10 @@ const handleCreatePool = async () => {
           </div>
         </div>
       </div>
-    </div>
+      </div>
 
-    <!-- Pools Tab -->
-    <div v-if="activeTab === 'pools'" class="card">
+      <!-- Pools Tab -->
+      <div v-if="activeTab === 'pools'" class="card">
       <div class="flex items-center justify-between mb-4">
         <h2 class="text-sm font-semibold text-slate-100">Add Liquidity</h2>
         <span v-if="!dexAvailable" class="text-[11px] text-amber-300">DEX actions disabled</span>
@@ -1064,10 +1066,10 @@ const handleCreatePool = async () => {
           </ul>
         </div>
       </div>
-    </div>
+      </div>
 
-    <!-- Limit Orders Tab -->
-    <div v-if="activeTab === 'limit'" class="card max-w-2xl mx-auto">
+      <!-- Limit Orders Tab -->
+      <div v-if="activeTab === 'limit'" class="card max-w-2xl mx-auto">
       <h2 class="text-sm font-semibold text-slate-100 mb-4">Place Limit Order</h2>
       
       <div class="space-y-3">
@@ -1130,10 +1132,150 @@ const handleCreatePool = async () => {
           Limit orders unavailable while the DEX module is offline.
         </p>
       </div>
-    </div>
+      </div>
 
-    <!-- Bridge Tab -->
-    <div v-if="activeTab === 'bridge'" class="space-y-4 max-w-2xl mx-auto">
+
+      <!-- Create Pool Tab -->
+      <div v-if="activeTab === 'create'" class="card max-w-3xl mx-auto">
+      <h2 class="text-sm font-semibold text-slate-100 mb-4">✨ Create New Liquidity Pool</h2>
+      
+      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+        <div class="space-y-3">
+          <div class="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 mb-3">
+            <div class="text-xs text-purple-300 space-y-1">
+              <div>🚀 Bootstrap a new trading pair!</div>
+              <div>💡 You set the initial price ratio</div>
+              <div>🎯 Be the first liquidity provider</div>
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Token A</label>
+            <div class="flex items-center gap-2">
+              <select v-model="createTokenA" class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
+                <option v-for="token in availableTokens" :key="token.symbol" :value="token.symbol">
+                  {{ token.icon }} {{ token.symbol }}
+                </option>
+              </select>
+              <input 
+                v-model="createAmountA"
+                type="number"
+                step="0.000001"
+                placeholder="0.0"
+                class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Token B</label>
+            <div class="flex items-center gap-2">
+              <select v-model="createTokenB" class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
+                <option v-for="token in availableTokens" :key="token.symbol" :value="token.symbol">
+                  {{ token.icon }} {{ token.symbol }}
+                </option>
+              </select>
+              <input 
+                v-model="createAmountB"
+                type="number"
+                step="0.000001"
+                placeholder="0.0"
+                class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+              />
+            </div>
+          </div>
+
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Swap Fee (%)</label>
+            <div class="flex items-center gap-2">
+              <button 
+                v-for="fee in ['0.1', '0.3', '0.5', '1.0']" 
+                :key="fee"
+                class="px-3 py-2 rounded border text-xs"
+                :class="createSwapFee === fee ? 'border-indigo-400/70 bg-indigo-500/10 text-indigo-300' : 'border-slate-700 text-slate-400'"
+                @click="createSwapFee = fee"
+              >
+                {{ fee }}%
+              </button>
+              <input 
+                v-model="createSwapFee"
+                type="number"
+                step="0.1"
+                min="0.01"
+                max="10"
+                class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+              />
+            </div>
+          </div>
+
+          <button 
+            class="btn btn-primary w-full"
+            @click="handleCreatePool"
+            :disabled="!dexAvailable || !address || !createAmountA || !createAmountB || createTokenA === createTokenB || creatingPool"
+          >
+            {{ creatingPool ? 'Creating Pool...' : 'Create Pool' }}
+          </button>
+          <p v-if="!dexAvailable" class="text-[11px] text-amber-300 text-center">
+            Pool creation will unlock once the DEX module is deployed.
+          </p>
+        </div>
+
+        <div class="space-y-3">
+          <div class="p-4 rounded-lg bg-slate-900/60 border border-slate-700">
+            <h3 class="text-xs font-semibold text-slate-100 mb-3">📊 Pool Details</h3>
+            <div class="space-y-2 text-xs">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Pool Pair</span>
+                <span class="text-slate-200 font-mono">{{ createTokenA }}/{{ createTokenB }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Initial Price</span>
+                <span class="text-slate-200 font-mono">1 {{ createTokenA }} = {{ initialPrice }} {{ createTokenB }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Swap Fee</span>
+                <span class="text-emerald-300 font-mono">{{ createSwapFee }}%</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Your LP Share</span>
+                <span class="text-indigo-300 font-mono">100%</span>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+            <h3 class="text-xs font-semibold text-slate-100 mb-2">💡 Example Scenarios</h3>
+            <div class="text-xs text-slate-300 space-y-2">
+              <div>
+                <div class="text-indigo-300 font-semibold">Scenario 1: RETRO/USDC</div>
+                <div class="text-slate-400">10,000 RETRO + 1,000 USDC</div>
+                <div class="text-slate-500">= $0.10 per RETRO</div>
+              </div>
+              <div>
+                <div class="text-indigo-300 font-semibold">Scenario 2: RETRO/ATOM</div>
+                <div class="text-slate-400">10,000 RETRO + 100 ATOM</div>
+                <div class="text-slate-500">= 0.01 ATOM per RETRO</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="p-4 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
+            <h3 class="text-xs font-semibold text-slate-100 mb-2">⚠️ Important Notes</h3>
+            <ul class="text-xs text-slate-300 space-y-1">
+              <li>• You set the initial price ratio</li>
+              <li>• Requires both tokens in your wallet</li>
+              <li>• You'll be the first LP (100% share)</li>
+              <li>• Can't create duplicate pairs</li>
+              <li>• Minimum liquidity applies</li>
+            </ul>
+          </div>
+        </div>
+      </div>
+      </div>
+    </template>
+
+    <!-- Bridge experience (always available; gated by tab only when DEX is enabled) -->
+    <div v-if="dexFeaturesEnabled ? activeTab === 'bridge' : true" class="space-y-4 max-w-2xl mx-auto">
       <div class="card">
         <div class="flex items-center justify-between mb-3">
           <div>
@@ -1375,144 +1517,6 @@ const handleCreatePool = async () => {
           >
             {{ bridging ? 'Bridging...' : 'Bridge to RetroChain' }}
           </button>
-        </div>
-      </div>
-    </div>
-
-    <!-- Create Pool Tab -->
-    <div v-if="activeTab === 'create'" class="card max-w-3xl mx-auto">
-      <h2 class="text-sm font-semibold text-slate-100 mb-4">✨ Create New Liquidity Pool</h2>
-      
-      <div class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-        <div class="space-y-3">
-          <div class="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 mb-3">
-            <div class="text-xs text-purple-300 space-y-1">
-              <div>🚀 Bootstrap a new trading pair!</div>
-              <div>💡 You set the initial price ratio</div>
-              <div>🎯 Be the first liquidity provider</div>
-            </div>
-          </div>
-
-          <div>
-            <label class="text-xs text-slate-400 mb-2 block">Token A</label>
-            <div class="flex items-center gap-2">
-              <select v-model="createTokenA" class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
-                <option v-for="token in availableTokens" :key="token.symbol" :value="token.symbol">
-                  {{ token.icon }} {{ token.symbol }}
-                </option>
-              </select>
-              <input 
-                v-model="createAmountA"
-                type="number"
-                step="0.000001"
-                placeholder="0.0"
-                class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label class="text-xs text-slate-400 mb-2 block">Token B</label>
-            <div class="flex items-center gap-2">
-              <select v-model="createTokenB" class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
-                <option v-for="token in availableTokens" :key="token.symbol" :value="token.symbol">
-                  {{ token.icon }} {{ token.symbol }}
-                </option>
-              </select>
-              <input 
-                v-model="createAmountB"
-                type="number"
-                step="0.000001"
-                placeholder="0.0"
-                class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
-              />
-            </div>
-          </div>
-
-          <div>
-            <label class="text-xs text-slate-400 mb-2 block">Swap Fee (%)</label>
-            <div class="flex items-center gap-2">
-              <button 
-                v-for="fee in ['0.1', '0.3', '0.5', '1.0']" 
-                :key="fee"
-                class="px-3 py-2 rounded border text-xs"
-                :class="createSwapFee === fee ? 'border-indigo-400/70 bg-indigo-500/10 text-indigo-300' : 'border-slate-700 text-slate-400'"
-                @click="createSwapFee = fee"
-              >
-                {{ fee }}%
-              </button>
-              <input 
-                v-model="createSwapFee"
-                type="number"
-                step="0.1"
-                min="0.01"
-                max="10"
-                class="flex-1 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
-              />
-            </div>
-          </div>
-
-          <button 
-            class="btn btn-primary w-full"
-            @click="handleCreatePool"
-            :disabled="!dexAvailable || !address || !createAmountA || !createAmountB || createTokenA === createTokenB || creatingPool"
-          >
-            {{ creatingPool ? 'Creating Pool...' : 'Create Pool' }}
-          </button>
-          <p v-if="!dexAvailable" class="text-[11px] text-amber-300 text-center">
-            Pool creation will unlock once the DEX module is deployed.
-          </p>
-        </div>
-
-        <div class="space-y-3">
-          <div class="p-4 rounded-lg bg-slate-900/60 border border-slate-700">
-            <h3 class="text-xs font-semibold text-slate-100 mb-3">📊 Pool Details</h3>
-            <div class="space-y-2 text-xs">
-              <div class="flex items-center justify-between">
-                <span class="text-slate-400">Pool Pair</span>
-                <span class="text-slate-200 font-mono">{{ createTokenA }}/{{ createTokenB }}</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-slate-400">Initial Price</span>
-                <span class="text-slate-200 font-mono">1 {{ createTokenA }} = {{ initialPrice }} {{ createTokenB }}</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-slate-400">Swap Fee</span>
-                <span class="text-emerald-300 font-mono">{{ createSwapFee }}%</span>
-              </div>
-              <div class="flex items-center justify-between">
-                <span class="text-slate-400">Your LP Share</span>
-                <span class="text-indigo-300 font-mono">100%</span>
-              </div>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
-            <h3 class="text-xs font-semibold text-slate-100 mb-2">💡 Example Scenarios</h3>
-            <div class="text-xs text-slate-300 space-y-2">
-              <div>
-                <div class="text-indigo-300 font-semibold">Scenario 1: RETRO/USDC</div>
-                <div class="text-slate-400">10,000 RETRO + 1,000 USDC</div>
-                <div class="text-slate-500">= $0.10 per RETRO</div>
-              </div>
-              <div>
-                <div class="text-indigo-300 font-semibold">Scenario 2: RETRO/ATOM</div>
-                <div class="text-slate-400">10,000 RETRO + 100 ATOM</div>
-                <div class="text-slate-500">= 0.01 ATOM per RETRO</div>
-              </div>
-            </div>
-          </div>
-
-          <div class="p-4 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
-            <h3 class="text-xs font-semibold text-slate-100 mb-2">⚠️ Important Notes</h3>
-            <ul class="text-xs text-slate-300 space-y-1">
-              <li>• You set the initial price ratio</li>
-              <li>• Requires both tokens in your wallet</li>
-              <li>• You'll be the first LP (100% share)</li>
-              <li>• Can't create duplicate pairs</li>
-              <li>• Minimum liquidity applies</li>
-            </ul>
-          </div>
         </div>
       </div>
     </div>
