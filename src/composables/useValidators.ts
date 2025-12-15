@@ -47,17 +47,35 @@ export function useValidators() {
     validators.value = []; // Clear previous data
 
     try {
-      const res = await api.get("/cosmos/staking/v1beta1/validators", {
-        params: {
-          status: "BOND_STATUS_BONDED",
-          "pagination.limit": 100
+      const statusFilters = [
+        "BOND_STATUS_BONDED",
+        "BOND_STATUS_UNBONDING",
+        "BOND_STATUS_UNBONDED"
+      ];
+
+      const validatorMap = new Map<string, any>();
+
+      for (const status of statusFilters) {
+        try {
+          const res = await api.get("/cosmos/staking/v1beta1/validators", {
+            params: {
+              status,
+              "pagination.limit": 300
+            }
+          });
+
+          const list: any[] = res.data?.validators || [];
+          list.forEach((validator) => {
+            if (!validator?.operator_address) return;
+            validatorMap.set(validator.operator_address, validator);
+          });
+        } catch (statusErr) {
+          console.warn(`Validator fetch failed for status ${status}`, statusErr);
         }
-      });
+      }
 
-      console.log("Validators API Response:", res.data);
+      const vals = Array.from(validatorMap.values());
 
-      const vals = res.data?.validators || [];
-      
       if (vals.length === 0) {
         error.value = "No validators found. Make sure your chain has staking enabled and validators set up.";
         return;
