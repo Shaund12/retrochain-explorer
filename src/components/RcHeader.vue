@@ -302,7 +302,8 @@ const navItems: NavItem[] = [
       { label: "Governance", to: { name: "governance" } },
       { label: "Account", to: { name: "account" } }
     ]
-  }
+  },
+  { label: "Changelog", to: { name: "changelog" } }
 ];
 
 const currentRouteName = computed(() => route.name as string | undefined);
