@@ -1,5 +1,6 @@
 // src/composables/useTxs.ts
 import { ref } from "vue";
+import { sha256 } from "@cosmjs/crypto";
 import { useApi } from "./useApi";
 
 export interface TxSummary {
@@ -21,11 +22,121 @@ const extractMessageTypes = (txResponse: any): string[] => {
     .filter((type: string) => typeof type === "string" && type.length > 0);
 };
 
+const bytesToHex = (bytes: Uint8Array) =>
+  Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("")
+    .toUpperCase();
+
+const hashBytes = async (bytes: Uint8Array): Promise<Uint8Array> => {
+  const subtle = globalThis.crypto?.subtle;
+  if (subtle) {
+    const digest = await subtle.digest("SHA-256", bytes);
+    return new Uint8Array(digest);
+  }
+  return sha256(bytes);
+};
+
+const hashFromBase64 = async (b64: string) => {
+  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
+  const digest = await hashBytes(bytes);
+  return bytesToHex(digest);
+};
+
+const buildSummaryFromResponse = (resp: any, fallback: { hash: string; height: number; timestamp?: string }): TxSummary => ({
+  hash: resp?.txhash || fallback.hash,
+  height: parseInt(resp?.height ?? String(fallback.height), 10),
+  codespace: resp?.codespace,
+  code: resp?.code,
+  gasWanted: resp?.gas_wanted,
+  gasUsed: resp?.gas_used,
+  timestamp: resp?.timestamp || fallback.timestamp,
+  messageTypes: extractMessageTypes(resp)
+});
+
+const txContainsAddress = (txResponse: any, address: string) => {
+  const addrLower = address.toLowerCase();
+  const inspect = (value: any) => {
+    if (value === null || value === undefined) return false;
+    try {
+      return JSON.stringify(value).toLowerCase().includes(addrLower);
+    } catch {
+      return false;
+    }
+  };
+
+  return (
+    inspect(txResponse?.tx?.body?.messages) ||
+    inspect(txResponse?.logs) ||
+    inspect(txResponse?.tx?.auth_info?.signer_infos)
+  );
+};
+
+const MAX_BLOCK_SCAN_MULTIPLIER = 8; // scan up to limit * multiplier blocks before giving up
+
 export function useTxs() {
   const api = useApi();
   const txs = ref<TxSummary[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+
+  const scanBlocksForAddress = async (address: string, limit: number): Promise<TxSummary[]> => {
+    const latestRes = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/latest`);
+    const latestBlock = latestRes.data?.block;
+    const latest = parseInt(latestBlock?.header?.height ?? "0", 10);
+    if (!latest || Number.isNaN(latest)) {
+      return [];
+    }
+
+    const matches: TxSummary[] = [];
+    const maxBlocks = Math.max(limit * MAX_BLOCK_SCAN_MULTIPLIER, 50);
+    let scanned = 0;
+
+    for (let height = latest; height > 0 && matches.length < limit && scanned < maxBlocks; height -= 1, scanned += 1) {
+      let blockData: any;
+      try {
+        const bRes = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/${height}`);
+        blockData = bRes.data?.block;
+      } catch (err) {
+        console.warn(`Failed to fetch block ${height}`, err);
+        continue;
+      }
+
+      const txList: string[] = blockData?.data?.txs || [];
+      if (!txList.length) continue;
+      const blockTime = blockData?.header?.time as string | undefined;
+
+      for (const raw of txList) {
+        if (matches.length >= limit) break;
+        let hash: string;
+        try {
+          hash = await hashFromBase64(raw);
+        } catch (hashErr) {
+          console.warn("Failed to hash transaction", hashErr);
+          continue;
+        }
+
+        try {
+          const detail = await api.get(`/cosmos/tx/v1beta1/txs/${hash}`);
+          const resp = detail.data?.tx_response;
+          if (!resp) continue;
+          if (!txContainsAddress(resp, address)) continue;
+
+          matches.push(
+            buildSummaryFromResponse(resp, {
+              hash,
+              height,
+              timestamp: blockTime
+            })
+          );
+        } catch (txErr) {
+          console.warn(`Failed to inspect tx ${hash}`, txErr);
+        }
+      }
+    }
+
+    return matches;
+  };
 
   // NOTE: pagination.limit is the correct param for this endpoint.
   const searchRecent = async (limit = 20) => {
@@ -113,13 +224,6 @@ export function useTxs() {
         const latest = parseInt(latestBlock?.header?.height ?? "0", 10);
         const collected: TxSummary[] = [];
 
-        // helper: compute SHA-256 hash (uppercase hex) from base64 tx bytes
-        const hashFromBase64 = async (b64: string) => {
-          const bytes = Uint8Array.from(atob(b64), c => c.charCodeAt(0));
-          const digest = await crypto.subtle.digest("SHA-256", bytes);
-          return Array.from(new Uint8Array(digest)).map(b => b.toString(16).padStart(2, "0")).join("").toUpperCase();
-        };
-
         for (let h = latest; h > 0 && collected.length < limit; h--) {
           const bRes = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/${h}`);
           const blk = bRes.data?.block;
@@ -184,6 +288,7 @@ export function useTxs() {
 
       const seen = new Set<string>();
       const collected: TxSummary[] = [];
+      let indexerDisabled = false;
 
       for (const filter of filters) {
         try {
