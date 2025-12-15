@@ -169,21 +169,26 @@ export function useTxs() {
         console.error("Failed to fetch transactions:", e);
       }
 
-      // Fallback #1: use gRPC-gateway /cosmos/tx endpoint with pagination
+      // Fallback #1: use gRPC-gateway /cosmos/tx endpoint with pagination via POST body
       try {
         const collected: TxSummary[] = [];
         let nextKey: string | undefined;
 
         while (collected.length < limit) {
           const pageLimit = Math.min(50, limit - collected.length);
-          const params: Record<string, string> = {
-            events: "tx.height>0",
+          const body: any = {
+            events: ["tx.height>0"],
             order_by: "ORDER_BY_DESC",
-            "pagination.limit": String(pageLimit)
+            pagination: {
+              limit: String(pageLimit)
+            }
           };
-          if (nextKey) params["pagination.key"] = nextKey;
 
-          const res = await api.get(`/cosmos/tx/v1beta1/txs`, { params });
+          if (nextKey) {
+            body.pagination.key = nextKey;
+          }
+
+          const res = await api.post(`/cosmos/tx/v1beta1/txs`, body);
           const responses: any[] = res.data?.tx_responses ?? [];
           if (!responses.length) break;
 
@@ -292,11 +297,11 @@ export function useTxs() {
 
       for (const filter of filters) {
         try {
-          const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
-            params: {
-              events: filter,
-              order_by: "ORDER_BY_DESC",
-              "pagination.limit": limit
+          const res = await api.post(`/cosmos/tx/v1beta1/txs`, {
+            events: [filter],
+            order_by: "ORDER_BY_DESC",
+            pagination: {
+              limit: String(limit)
             }
           });
 
@@ -317,6 +322,10 @@ export function useTxs() {
             });
           }
         } catch (filterErr) {
+          const message = filterErr?.response?.data?.message || filterErr?.message || "";
+          if (typeof message === "string" && message.toLowerCase().includes("index")) {
+            indexerDisabled = true;
+          }
           console.warn(`Tx search failed for filter ${filter}`, filterErr);
         }
       }
