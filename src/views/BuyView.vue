@@ -117,7 +117,7 @@ const initSquidWidget = () => {
       infiniteApproval: false,
       enableExpress: true,
       apiUrl: 'https://apiplus.squidrouter.com',
-      mainLogoUrl: '/RCICOIMAGE.png',
+      mainLogoUrl: '/RCIcon.svg',
       titles: {
         swap: 'Buy RETRO',
         settings: 'Settings',

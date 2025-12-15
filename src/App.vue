@@ -33,7 +33,7 @@ onMounted(() => {
           <div class="col-span-1">
             <div class="flex items-center gap-3 mb-4">
               <div class="h-10 w-10 rounded-xl overflow-hidden flex items-center justify-center shadow-lg">
-                <img src="@/assets/RCICOIMAGE.png" alt="RetroChain" class="w-full h-full object-cover" />
+                <img src="@/assets/RCIcon.svg" alt="RetroChain" class="w-full h-full object-cover" />
               </div>
               <div>
                 <div class="font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">

@@ -1,0 +1,106 @@
+<svg width="1024" height="1024" viewBox="0 0 1024 1024" fill="none" xmlns="http://www.w3.org/2000/svg">
+  <!-- Background -->
+  <rect width="1024" height="1024" rx="120" fill="#070A12"></rect>
+
+  <defs>
+    <!-- Neon stroke gradient -->
+    <linearGradient id="neonStroke" x1="180" y1="220" x2="860" y2="820" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#00F5D4"></stop>
+      <stop offset="0.55" stop-color="#3A86FF"></stop>
+      <stop offset="1" stop-color="#00F5D4"></stop>
+    </linearGradient>
+
+    <!-- Label gradient -->
+    <linearGradient id="labelGrad" x1="280" y1="360" x2="760" y2="700" gradientUnits="userSpaceOnUse">
+      <stop stop-color="#0B1020"></stop>
+      <stop offset="1" stop-color="#07112A"></stop>
+    </linearGradient>
+
+    <!-- Glow filters -->
+    <filter id="glowTeal" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="6" result="blur"></feGaussianBlur>
+      <feMerge>
+        <feMergeNode in="blur"></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+
+    <filter id="glowMagenta" x="-50%" y="-50%" width="200%" height="200%">
+      <feGaussianBlur stdDeviation="4" result="blur"></feGaussianBlur>
+      <feMerge>
+        <feMergeNode in="blur"></feMergeNode>
+        <feMergeNode in="SourceGraphic"></feMergeNode>
+      </feMerge>
+    </filter>
+  </defs>
+
+  <!-- Cartridge body -->
+  <path d="M256 268
+       Q256 236 288 236
+       H736
+       Q768 236 768 268
+       V338
+       Q768 360 746 360
+       H278
+       Q256 360 256 338
+       V268Z" fill="#060A14" opacity="0.9"></path>
+
+  <path d="M220 338
+       Q220 280 278 280
+       H746
+       Q804 280 804 338
+       V744
+       Q804 796 752 796
+       H272
+       Q220 796 220 744
+       V338Z" fill="#070A12"></path>
+
+  <!-- Cartridge outline with neon gradient -->
+  <path d="M220 338
+       Q220 280 278 280
+       H746
+       Q804 280 804 338
+       V744
+       Q804 796 752 796
+       H272
+       Q220 796 220 744
+       V338Z" stroke="url(#neonStroke)" stroke-width="10" filter="url(#glowTeal)"></path>
+
+  <!-- Top “lip” notch detail -->
+  <path d="M306 280
+       H718
+       Q742 280 742 304
+       V326
+       Q742 344 724 344
+       H300
+       Q282 344 282 326
+       V304
+       Q282 280 306 280Z" stroke="url(#neonStroke)" stroke-width="6" opacity="0.75"></path>
+
+  <!-- Bottom connector ridge -->
+  <rect x="268" y="776" width="488" height="34" rx="14" fill="#060A14" opacity="0.9"></rect>
+  <rect x="268" y="776" width="488" height="34" rx="14" stroke="url(#neonStroke)" stroke-width="6" opacity="0.8"></rect>
+
+  <!-- Label panel -->
+  <rect x="290" y="380" width="444" height="300" rx="36" fill="url(#labelGrad)" stroke="url(#neonStroke)" stroke-width="6" opacity="0.95"></rect>
+
+  <!-- Magenta accent stripe (top of label) -->
+  <rect x="312" y="402" width="400" height="10" rx="5" fill="#FF2DAA" filter="url(#glowMagenta)" opacity="0.95"></rect>
+
+  <!-- Screw dots -->
+  <circle cx="278" cy="404" r="6" fill="#00F5D4" opacity="0.85"></circle>
+  <circle cx="746" cy="404" r="6" fill="#00F5D4" opacity="0.85"></circle>
+  <circle cx="278" cy="724" r="6" fill="#3A86FF" opacity="0.7"></circle>
+  <circle cx="746" cy="724" r="6" fill="#3A86FF" opacity="0.7"></circle>
+
+  <!-- RC letters -->
+  <path d="M374 622V458H454Q496 458 520 478Q544 498 544 534Q544 562 530 580Q516 598 492 606L544 622H498L454 606H416V622H374ZM416 570H452Q474 570 486 560Q498 550 498 532Q498 515 486 505Q474 495 452 495H416V570Z" fill="#00F5D4" filter="url(#glowTeal)"></path>
+
+  <path d="M678 586Q668 608 646 622Q624 636 592 636Q546 636 518 606Q490 576 490 540Q490 504 518 474Q546 444 592 444Q624 444 646 458Q668 472 678 494L640 510Q634 496 620 488Q606 480 592 480Q568 480 554 498Q540 516 540 540Q540 564 554 582Q568 600 592 600Q606 600 620 592Q634 584 640 570L678 586Z" fill="#3A86FF" filter="url(#glowTeal)"></path>
+
+  <!-- Tiny chain mark between R and C -->
+  <g opacity="0.95">
+    <path d="M520 540c0-18 14-32 32-32h18" stroke="#B8FF5A" stroke-width="8" stroke-linecap="round"></path>
+    <path d="M584 540c0 18-14 32-32 32h-18" stroke="#B8FF5A" stroke-width="8" stroke-linecap="round"></path>
+  </g>
+</svg>

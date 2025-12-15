@@ -7,7 +7,7 @@
         @click="router.push({ name: 'home' })"
       >
         <img
-          src="/RCICOIMAGE.png"
+          src="/RCIcon.svg"
           alt="RetroChain"
           class="h-10 w-10 rounded-lg shadow-lg shadow-indigo-500/40 group-hover:shadow-indigo-500/70 group-hover:scale-105 transition-all object-contain"
         />

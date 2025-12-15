@@ -21,7 +21,7 @@ const buildChainConfig = () => {
   const rest = import.meta.env.VITE_REST_API_URL || `${origin}/api`;
   const chainId = import.meta.env.VITE_CHAIN_ID || "retrochain-mainnet";
   const chainName = import.meta.env.VITE_CHAIN_NAME || "RetroChain Mainnet";
-  const icon = "https://retrochain.ddns.net/RCICOIMAGE.png";
+  const icon = `${origin}/RCIcon.svg`;
 
   return {
     chainId,
