@@ -66,6 +66,12 @@ const ibcTransferring = ref(false);
 const cosmosWalletAddress = ref("");
 const fetchingCosmosAddress = ref(false);
 const cosmosInboundConfigured = computed(() => Boolean(cosmosToRetroChannel));
+const ATOM_IBC_DENOM_ON_RETRO = "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2";
+const RETRO_IBC_DENOM_ON_COSMOS = "ibc/54B4719F6F076B54A05D96E0D9CB0AA1770B9993C904A03C6110FFD0525B1B9A";
+const retroToCosmosAsset = ref<"RETRO" | "ATOM">("RETRO");
+const cosmosToRetroAsset = ref<"RETRO" | "ATOM">("RETRO");
+const retroToCosmosAssetLabel = computed(() => (retroToCosmosAsset.value === "RETRO" ? tokenSymbol.value : "ATOM"));
+const cosmosToRetroAssetLabel = computed(() => (cosmosToRetroAsset.value === "RETRO" ? tokenSymbol.value : "ATOM"));
 
 // Create pool state
 const createTokenA = ref("RETRO");
@@ -479,6 +485,9 @@ const handleRetroToCosmosTransfer = async () => {
 
   const chainId = network.value === 'mainnet' ? 'retrochain-mainnet' : 'retrochain-devnet-1';
   const amountBase = Math.floor(amountFloat * 1_000_000).toString();
+  const selectedAsset = retroToCosmosAsset.value;
+  const tokenDenomToSend = selectedAsset === "RETRO" ? tokenDenom.value : ATOM_IBC_DENOM_ON_RETRO;
+  const memo = retroToCosmosMemo.value || `IBC transfer to Cosmos Hub (${retroToCosmosAssetLabel.value})`;
 
   const msg = {
     typeUrl: "/ibc.applications.transfer.v1.MsgTransfer",
@@ -486,7 +495,7 @@ const handleRetroToCosmosTransfer = async () => {
       sourcePort: "transfer",
       sourceChannel: retroToCosmosChannel,
       token: {
-        denom: tokenDenom.value,
+        denom: tokenDenomToSend,
         amount: amountBase
       },
       sender: address.value,
@@ -496,7 +505,7 @@ const handleRetroToCosmosTransfer = async () => {
         revisionHeight: "0"
       },
       timeoutTimestamp: buildIbcTimeoutTimestamp(),
-      memo: retroToCosmosMemo.value || "IBC transfer to Cosmos Hub"
+      memo
     }
   };
 
@@ -506,14 +515,14 @@ const handleRetroToCosmosTransfer = async () => {
   };
 
   ibcTransferring.value = true;
-  toast.showInfo("Preparing RETRO → Cosmos Hub transfer...");
+  toast.showInfo(`Preparing ${retroToCosmosAssetLabel.value} → Cosmos Hub transfer...`);
   try {
     const result = await window.keplr.signAndBroadcast(
       chainId,
       address.value,
       [msg],
       fee,
-      retroToCosmosMemo.value || "IBC transfer to Cosmos Hub"
+      memo
     );
 
     if (result.code === 0) {
@@ -585,6 +594,9 @@ const handleCosmosToRetroTransfer = async () => {
   }
 
   const amountBase = Math.floor(amountFloat * 1_000_000).toString();
+  const selectedAsset = cosmosToRetroAsset.value;
+  const tokenDenomToSend = selectedAsset === "ATOM" ? "uatom" : RETRO_IBC_DENOM_ON_COSMOS;
+  const memo = cosmosToRetroMemo.value || `IBC transfer to RetroChain (${cosmosToRetroAssetLabel.value})`;
 
   const msg = {
     typeUrl: "/ibc.applications.transfer.v1.MsgTransfer",
@@ -592,7 +604,7 @@ const handleCosmosToRetroTransfer = async () => {
       sourcePort: "transfer",
       sourceChannel: cosmosToRetroChannel,
       token: {
-        denom: "uatom",
+        denom: tokenDenomToSend,
         amount: amountBase
       },
       sender: cosmosSender,
@@ -602,7 +614,7 @@ const handleCosmosToRetroTransfer = async () => {
         revisionHeight: "0"
       },
       timeoutTimestamp: buildIbcTimeoutTimestamp(),
-      memo: cosmosToRetroMemo.value || "IBC transfer to RetroChain"
+      memo
     }
   };
 
@@ -611,14 +623,14 @@ const handleCosmosToRetroTransfer = async () => {
     gas: "250000"
   };
 
-  toast.showInfo("Submitting ATOM → RetroChain transfer...");
+  toast.showInfo(`Submitting ${cosmosToRetroAssetLabel.value} → RetroChain transfer...`);
   try {
     const result = await window.keplr.signAndBroadcast(
       cosmosHubChainId,
       cosmosSender,
       [msg],
       fee,
-      cosmosToRetroMemo.value || "IBC transfer to RetroChain"
+      memo
     );
 
     if (result.code === 0) {
@@ -1159,8 +1171,27 @@ const handleCreatePool = async () => {
 
         <div v-if="ibcDirection === 'retroToCosmos'" class="space-y-3">
           <p class="text-[11px] text-slate-500">
-            Send native RETRO over channel {{ retroToCosmosChannel }} into any Cosmos Hub address.
+            Send {{ retroToCosmosAssetLabel }} over channel {{ retroToCosmosChannel }} into any Cosmos Hub address.
           </p>
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Asset</label>
+            <div class="flex items-center gap-2">
+              <button
+                class="btn text-xs flex-1"
+                :class="retroToCosmosAsset === 'RETRO' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+                @click="retroToCosmosAsset = 'RETRO'"
+              >
+                {{ tokenSymbol }}
+              </button>
+              <button
+                class="btn text-xs flex-1"
+                :class="retroToCosmosAsset === 'ATOM' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+                @click="retroToCosmosAsset = 'ATOM'"
+              >
+                ATOM
+              </button>
+            </div>
+          </div>
           <div>
             <label class="text-xs text-slate-400 mb-2 block">Recipient (Cosmos Hub)</label>
             <input
@@ -1171,7 +1202,7 @@ const handleCreatePool = async () => {
             />
           </div>
           <div>
-            <label class="text-xs text-slate-400 mb-2 block">Amount (RETRO)</label>
+            <label class="text-xs text-slate-400 mb-2 block">Amount ({{ retroToCosmosAssetLabel }})</label>
             <input
               v-model="retroToCosmosAmount"
               type="number"
@@ -1204,7 +1235,7 @@ const handleCreatePool = async () => {
             @click="handleRetroToCosmosTransfer"
             :disabled="!isMainnet || !address || !retroToCosmosRecipient || !retroToCosmosAmount || ibcTransferring"
           >
-            {{ ibcTransferring ? 'Submitting...' : 'Send RETRO to Cosmos Hub' }}
+            {{ ibcTransferring ? 'Submitting...' : `Send ${retroToCosmosAssetLabel} to Cosmos Hub` }}
           </button>
           <p v-if="!address" class="text-[11px] text-slate-500 text-center">
             Connect your RetroChain wallet to start an IBC transfer.
@@ -1213,8 +1244,27 @@ const handleCreatePool = async () => {
 
         <div v-else class="space-y-3">
           <p class="text-[11px] text-slate-500">
-            Bridge ATOM from Cosmos Hub into RetroChain. Keplr will prompt you to approve the Cosmos Hub transaction.
+            Bridge {{ cosmosToRetroAssetLabel }} from Cosmos Hub into RetroChain. Keplr will prompt you to approve the Cosmos Hub transaction.
           </p>
+          <div>
+            <label class="text-xs text-slate-400 mb-2 block">Asset</label>
+            <div class="flex items-center gap-2">
+              <button
+                class="btn text-xs flex-1"
+                :class="cosmosToRetroAsset === 'RETRO' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+                @click="cosmosToRetroAsset = 'RETRO'"
+              >
+                {{ tokenSymbol }}
+              </button>
+              <button
+                class="btn text-xs flex-1"
+                :class="cosmosToRetroAsset === 'ATOM' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+                @click="cosmosToRetroAsset = 'ATOM'"
+              >
+                ATOM
+              </button>
+            </div>
+          </div>
           <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
             <div class="flex items-center justify-between text-xs mb-1">
               <span class="text-slate-400">Cosmos Hub Wallet</span>
@@ -1234,7 +1284,7 @@ const handleCreatePool = async () => {
             </div>
           </div>
           <div>
-            <label class="text-xs text-slate-400 mb-2 block">Amount (ATOM)</label>
+            <label class="text-xs text-slate-400 mb-2 block">Amount ({{ cosmosToRetroAssetLabel }})</label>
             <input
               v-model="cosmosToRetroAmount"
               type="number"
@@ -1267,7 +1317,7 @@ const handleCreatePool = async () => {
             @click="handleCosmosToRetroTransfer"
             :disabled="!isMainnet || !address || !cosmosInboundConfigured || !cosmosWalletAddress || !cosmosToRetroAmount || ibcTransferring"
           >
-            {{ ibcTransferring ? 'Submitting...' : 'Send ATOM to RetroChain' }}
+            {{ ibcTransferring ? 'Submitting...' : `Send ${cosmosToRetroAssetLabel} to RetroChain` }}
           </button>
           <p v-if="!cosmosInboundConfigured" class="text-[11px] text-amber-300 text-center">
             Configure <code class="font-mono">VITE_IBC_CHANNEL_COSMOS_RETRO</code> to enable Cosmos → Retro transfers.
