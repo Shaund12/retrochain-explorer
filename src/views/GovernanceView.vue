@@ -1,6 +1,5 @@
 <script setup lang="ts">
-import { onMounted } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted, ref } from "vue";
 import { useGovernance } from "@/composables/useGovernance";
 import type { Proposal } from "@/composables/useGovernance";
 import dayjs from "dayjs";
@@ -8,12 +7,23 @@ import relativeTime from "dayjs/plugin/relativeTime";
 
 dayjs.extend(relativeTime);
 
-const router = useRouter();
 const { proposals, loading, error, fetchProposals } = useGovernance();
+const activeProposal = ref<Proposal | null>(null);
+const isModalOpen = ref(false);
 
 onMounted(() => {
   fetchProposals();
 });
+
+const openProposalModal = (proposal: Proposal) => {
+  activeProposal.value = proposal;
+  isModalOpen.value = true;
+};
+
+const closeProposalModal = () => {
+  isModalOpen.value = false;
+  activeProposal.value = null;
+};
 
 const getStatusBadge = (status: string) => {
   const statusMap: Record<string, { text: string; class: string }> = {
@@ -45,6 +55,52 @@ const getProposalSummary = (proposal: Proposal) => {
     "No description available"
   );
 };
+
+const formatExactTime = (time?: string) => {
+  if (!time) return "-";
+  return dayjs(time).format("YYYY-MM-DD HH:mm:ss");
+};
+
+const calcTallyPercentages = (proposal: Proposal) => {
+  const tally = proposal.finalTallyResult;
+  if (!tally) {
+    return { yes: 0, no: 0, noWithVeto: 0, abstain: 0 };
+  }
+
+  const toNumber = (value?: string) => {
+    const parsed = Number(value ?? "0");
+    return Number.isFinite(parsed) ? parsed : 0;
+  };
+
+  const yes = toNumber(tally.yes);
+  const no = toNumber(tally.no);
+  const veto = toNumber(tally.noWithVeto);
+  const abstain = toNumber(tally.abstain);
+  const total = yes + no + veto + abstain;
+  if (total === 0) {
+    return { yes: 0, no: 0, noWithVeto: 0, abstain: 0 };
+  }
+
+  return {
+    yes: (yes / total) * 100,
+    no: (no / total) * 100,
+    noWithVeto: (veto / total) * 100,
+    abstain: (abstain / total) * 100
+  };
+};
+
+const formatVoteCount = (value?: string) => {
+  const number = Number(value ?? "0");
+  if (!Number.isFinite(number)) return "0";
+  return new Intl.NumberFormat("en-US").format(Math.floor(number));
+};
+
+const voteCategories = [
+  { key: "yes", label: "Yes", bar: "bg-emerald-500", text: "text-emerald-300" },
+  { key: "no", label: "No", bar: "bg-rose-500", text: "text-rose-300" },
+  { key: "noWithVeto", label: "Veto", bar: "bg-amber-500", text: "text-amber-300" },
+  { key: "abstain", label: "Abstain", bar: "bg-slate-500", text: "text-slate-400" }
+] as const;
 </script>
 
 <template>
@@ -74,6 +130,7 @@ const getProposalSummary = (proposal: Proposal) => {
         v-for="proposal in proposals"
         :key="proposal.proposalId"
         class="card hover:border-emerald-500/50 transition-all cursor-pointer"
+        @click="openProposalModal(proposal)"
       >
         <div class="flex items-start justify-between gap-4">
           <div class="flex-1">
@@ -114,31 +171,26 @@ const getProposalSummary = (proposal: Proposal) => {
           </div>
 
           <!-- Tally visualization -->
-          <div v-if="proposal.finalTallyResult" class="flex flex-col gap-1 min-w-[120px]">
+          <div v-if="proposal.finalTallyResult" class="flex flex-col gap-1 min-w-[160px]">
             <div class="text-xs text-slate-400 mb-1">Votes</div>
             <div class="space-y-1">
-              <div class="flex items-center gap-2">
-                <div class="w-12 text-[10px] text-emerald-300">Yes</div>
-                <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div class="h-full bg-emerald-500" style="width: 0%"></div>
+              <div
+                v-for="category in voteCategories"
+                :key="category.key"
+                class="flex items-center gap-2"
+              >
+                <div class="w-12 text-[10px]" :class="category.text">
+                  {{ category.label }}
                 </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="w-12 text-[10px] text-rose-300">No</div>
                 <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div class="h-full bg-rose-500" style="width: 0%"></div>
+                  <div
+                    class="h-full"
+                    :class="category.bar"
+                    :style="{ width: `${calcTallyPercentages(proposal)[category.key]}%` }"
+                  ></div>
                 </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="w-12 text-[10px] text-amber-300">Veto</div>
-                <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div class="h-full bg-amber-500" style="width: 0%"></div>
-                </div>
-              </div>
-              <div class="flex items-center gap-2">
-                <div class="w-12 text-[10px] text-slate-400">Abstain</div>
-                <div class="flex-1 h-1.5 bg-slate-800 rounded-full overflow-hidden">
-                  <div class="h-full bg-slate-500" style="width: 0%"></div>
+                <div class="w-12 text-right text-[10px] text-slate-400">
+                  {{ calcTallyPercentages(proposal)[category.key].toFixed(1) }}%
                 </div>
               </div>
             </div>
@@ -154,6 +206,76 @@ const getProposalSummary = (proposal: Proposal) => {
         <p class="text-xs text-slate-500">
           Proposals will appear here once created via the CLI
         </p>
+      </div>
+    </div>
+  </div>
+
+  <div v-if="isModalOpen && activeProposal" class="fixed inset-0 z-50 flex items-center justify-center">
+    <div class="absolute inset-0 bg-slate-950/80" @click="closeProposalModal"></div>
+    <div class="relative w-full max-w-2xl mx-4 bg-slate-900 border border-white/10 rounded-2xl p-6 shadow-2xl">
+      <div class="flex items-start justify-between gap-4">
+        <div>
+          <div class="text-xs font-mono text-slate-500 mb-1">Proposal #{{ activeProposal.proposalId }}</div>
+          <h2 class="text-xl font-semibold text-slate-100 mb-2">
+            {{ getProposalTitle(activeProposal) }}
+          </h2>
+          <p class="text-sm text-slate-300 whitespace-pre-line">
+            {{ getProposalSummary(activeProposal) }}
+          </p>
+        </div>
+        <button class="btn text-xs" @click="closeProposalModal">Close</button>
+      </div>
+
+      <div class="grid grid-cols-1 sm:grid-cols-2 gap-4 mt-6 text-xs text-slate-400">
+        <div>
+          <div class="text-slate-500">Status</div>
+          <div class="text-slate-200 mt-1">{{ getStatusBadge(activeProposal.status).text }}</div>
+        </div>
+        <div>
+          <div class="text-slate-500">Voting Start</div>
+          <div class="text-slate-200 mt-1">{{ formatExactTime(activeProposal.votingStartTime) }}</div>
+        </div>
+        <div>
+          <div class="text-slate-500">Voting End</div>
+          <div class="text-slate-200 mt-1">{{ formatExactTime(activeProposal.votingEndTime) }}</div>
+        </div>
+        <div>
+          <div class="text-slate-500">Submission</div>
+          <div class="text-slate-200 mt-1">{{ formatExactTime(activeProposal.submitTime) }}</div>
+        </div>
+      </div>
+
+      <div v-if="activeProposal.finalTallyResult" class="mt-6">
+        <div class="text-sm font-semibold text-slate-200 mb-3">Vote Breakdown</div>
+        <div class="space-y-2">
+          <div
+            v-for="category in voteCategories"
+            :key="category.key"
+            class="flex items-center justify-between text-sm"
+          >
+            <div :class="category.text">{{ category.label }}</div>
+            <div class="flex items-center gap-3">
+              <span class="text-slate-400">{{ formatVoteCount(activeProposal.finalTallyResult?.[category.key]) }}</span>
+              <span class="text-slate-500">
+                {{ calcTallyPercentages(activeProposal)[category.key].toFixed(2) }}%
+              </span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="activeProposal.messages?.length" class="mt-6">
+        <div class="text-sm font-semibold text-slate-200 mb-2">Messages</div>
+        <div class="space-y-2">
+          <div
+            v-for="(msg, idx) in activeProposal.messages"
+            :key="idx"
+            class="p-3 rounded-lg bg-slate-800/60 border border-slate-700 text-xs text-slate-300"
+          >
+            <div class="text-[10px] text-slate-500 mb-1">{{ msg["@type"] || msg.type || 'Msg' }}</div>
+            <pre class="whitespace-pre-wrap break-words">{{ JSON.stringify(msg, null, 2) }}</pre>
+          </div>
+        </div>
       </div>
     </div>
   </div>

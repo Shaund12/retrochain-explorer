@@ -93,6 +93,23 @@ export function useGovernance() {
     };
   };
 
+  const fetchCurrentTally = async (proposalId: string) => {
+    try {
+      const res = await requestGov((base) => `${base}/proposals/${proposalId}/tally`);
+      const tally = res.data?.tally ?? res.data?.tally_result ?? res.data;
+      if (!tally) return null;
+      return {
+        yes: String(tally.yes ?? tally.yes_count ?? "0"),
+        abstain: String(tally.abstain ?? tally.abstain_count ?? "0"),
+        no: String(tally.no ?? tally.no_count ?? "0"),
+        noWithVeto: String(tally.no_with_veto ?? tally.noWithVeto ?? tally.no_with_veto_count ?? "0")
+      };
+    } catch (err) {
+      console.warn(`Failed to fetch tally for proposal ${proposalId}`, err);
+      return null;
+    }
+  };
+
   const fetchProposals = async (status?: string) => {
     loading.value = true;
     error.value = null;
@@ -118,9 +135,23 @@ export function useGovernance() {
         return;
       }
 
-      const normalized = rawProposals
+      let normalized = rawProposals
         .map((p: any) => normalizeProposal(p))
         .filter((p: Proposal | null): p is Proposal => Boolean(p));
+
+      // Pull live tallies for proposals without final results (typically active ones)
+      normalized = await Promise.all(
+        normalized.map(async (proposal) => {
+          if (proposal.finalTallyResult && proposal.status !== "PROPOSAL_STATUS_VOTING_PERIOD") {
+            return proposal;
+          }
+          const tally = await fetchCurrentTally(proposal.proposalId);
+          if (tally) {
+            proposal.finalTallyResult = tally;
+          }
+          return proposal;
+        })
+      );
 
       proposals.value = normalized;
 

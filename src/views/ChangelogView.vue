@@ -11,7 +11,7 @@
     <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="card-soft text-center py-4">
         <p class="text-xs text-slate-400">Latest Release</p>
-        <p class="text-xl font-semibold text-white">{{ releases[0]?.version ?? '—' }}</p>
+        <p class="text-xl font-semibold text-white">{{ releases[0]?.version ?? 'Â—' }}</p>
         <p class="text-xs text-slate-500">{{ releases[0]?.date ?? 'Add the first entry' }}</p>
       </div>
       <div class="card-soft text-center py-4">
@@ -21,7 +21,7 @@
       </div>
       <div class="card-soft text-center py-4">
         <p class="text-xs text-slate-400">Last Updated</p>
-        <p class="text-xl font-semibold text-white">{{ releases[0]?.date ?? '—' }}</p>
+        <p class="text-xl font-semibold text-white">{{ releases[0]?.date ?? 'Â—' }}</p>
         <p class="text-xs text-slate-500">Keep this current with every deploy</p>
       </div>
     </section>
@@ -111,7 +111,7 @@ const releases: Release[] = [
       {
         type: "feature",
         title: "DEX and Buy disclaimers now announce live trading",
-        description: "Updated the RcDisclaimer copy exactly as outlined in MAINNET_LIVE_UPDATE.md so /dex shows \"Native DEX – Mainnet Ready\" and /buy advertises cross-chain swaps instead of under-construction language."
+        description: "Updated the RcDisclaimer copy exactly as outlined in MAINNET_LIVE_UPDATE.md so /dex shows \"Native DEX Â– Mainnet Ready\" and /buy advertises cross-chain swaps instead of under-construction language."
       },
       {
         type: "improvement",
@@ -134,7 +134,7 @@ const releases: Release[] = [
       {
         type: "feature",
         title: "On-chain DEX, staking, and IBC flows",
-        description: "Swap, add liquidity, place limit orders, delegate, undelegate, claim rewards, and bridge via IBC exactly as documented in REAL_TRANSACTIONS.md – all actions now call Keplr and broadcast to the RetroChain RPC."
+        description: "Swap, add liquidity, place limit orders, delegate, undelegate, claim rewards, and bridge via IBC exactly as documented in REAL_TRANSACTIONS.md Â– all actions now call Keplr and broadcast to the RetroChain RPC."
       },
       {
         type: "fix",
@@ -157,7 +157,7 @@ const releases: Release[] = [
       {
         type: "feature",
         title: "Keplr auto-connect on Account view",
-        description: "AccountView.vue now auto-loads the connected wallet, shows the “Your Wallet” badge, and offers the quick-load banner exactly as described in KEPLR_AUTO_CONNECT.md."
+        description: "AccountView.vue now auto-loads the connected wallet, shows the Â“Your WalletÂ” badge, and offers the quick-load banner exactly as described in KEPLR_AUTO_CONNECT.md."
       },
       {
         type: "feature",
