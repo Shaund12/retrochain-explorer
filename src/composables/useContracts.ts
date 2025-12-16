@@ -96,7 +96,8 @@ export function useContracts() {
         try {
           const contractsRes = await api.get(`/cosmwasm/wasm/v1/code/${code.codeId}/contracts`, {
             params: {
-              "pagination.limit": String(Math.min(cfg.contractsPerCode, cfg.maxContracts - collected.length))
+              "pagination.limit": String(Math.min(cfg.contractsPerCode, cfg.maxContracts - collected.length)),
+              "pagination.reverse": "true"
             }
           });
           contractAddresses = Array.isArray(contractsRes.data?.contracts) ? contractsRes.data.contracts : [];
