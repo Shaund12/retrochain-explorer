@@ -11,7 +11,7 @@ export interface TokenMeta {
   description?: string;
 }
 
-const TOKEN_META: Record<string, TokenMeta> = {
+const RAW_TOKEN_META: Record<string, TokenMeta> = {
   uretro: {
     denom: "uretro",
     symbol: "RETRO",
@@ -83,6 +83,14 @@ const TOKEN_META: Record<string, TokenMeta> = {
     description: "USDC bridged in over IBC."
   }
 };
+
+const TOKEN_META: Record<string, TokenMeta> = Object.entries(RAW_TOKEN_META).reduce(
+  (acc, [key, value]) => {
+    acc[key.toLowerCase()] = value;
+    return acc;
+  },
+  {} as Record<string, TokenMeta>
+);
 
 const FALLBACK_META: TokenMeta = {
   denom: "unknown",

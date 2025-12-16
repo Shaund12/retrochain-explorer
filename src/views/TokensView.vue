@@ -32,7 +32,7 @@ const tokenTypeLabel = (token: { isFactory: boolean }) => (token.isFactory ? "Fa
           <p class="text-xs uppercase tracking-[0.35em] text-emerald-200">Asset Registry</p>
           <h1 class="text-3xl font-bold text-white mt-2 flex items-center gap-3">
             <span>RetroChain Tokens &amp; Collections</span>
-            <span class="text-2xl">??</span>
+            <span class="text-2xl">🪙</span>
           </h1>
           <p class="text-sm text-slate-300 mt-2 max-w-3xl">
             Live inventory of fungible tokens, IBC routes, and NFT classes observed on RetroChain. All data is queried directly from
@@ -72,7 +72,8 @@ const tokenTypeLabel = (token: { isFactory: boolean }) => (token.isFactory ? "Fa
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Syncing token registry" />
+" />
+      <RcLoadingSpinner size="md" text="Syncing token registry…" />
     </div>
 
     <template v-else>
@@ -114,7 +115,7 @@ const tokenTypeLabel = (token: { isFactory: boolean }) => (token.isFactory ? "Fa
                     {{ tokenTypeLabel(token) }}
                   </span>
                 </td>
-                <td class="text-xs text-slate-400">{{ token.tokenMeta.description || token.metadata?.description || '' }}</td>
+                <td class="text-xs text-slate-400">{{ token.tokenMeta.description || token.metadata?.description || '—' }}</td>
               </tr>
             </tbody>
           </table>
@@ -148,8 +149,8 @@ const tokenTypeLabel = (token: { isFactory: boolean }) => (token.isFactory ? "Fa
                     </div>
                   </div>
                 </td>
-                <td class="text-xs text-slate-300">{{ token.baseDenom || '' }}</td>
-                <td class="text-xs text-slate-400 font-mono">{{ token.tracePath || '' }}</td>
+                <td class="text-xs text-slate-300">{{ token.baseDenom || '—' }}</td>
+                <td class="text-xs text-slate-400 font-mono">{{ token.tracePath || '—' }}</td>
                 <td class="text-slate-100">{{ token.displayAmount }}</td>
               </tr>
             </tbody>
