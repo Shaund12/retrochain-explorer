@@ -1,6 +1,13 @@
 // src/composables/useKeplr.ts
 import { ref } from "vue";
+import { SigningStargateClient, defaultRegistryTypes } from "@cosmjs/stargate";
+import { Registry, encodePubkey, makeAuthInfoBytes, makeSignDoc as makeSignDocDirect } from "@cosmjs/proto-signing";
+import { encodeSecp256k1Pubkey } from "@cosmjs/amino";
+import { TxRaw, AuthInfo, TxBody } from "cosmjs-types/cosmos/tx/v1beta1/tx";
+import { toBase64, fromBase64 } from "@cosmjs/encoding";
+import { Int53 } from "@cosmjs/math";
 import { useNetwork } from "./useNetwork";
+import { useApi } from "./useApi";
 
 declare global {
   interface Window {
@@ -94,6 +101,7 @@ function buildChainInfo() {
 }
 
 export function useKeplr() {
+  const api = useApi();
   const checkAvailability = () => {
     if (typeof window === "undefined") {
       isAvailable.value = false;
@@ -165,8 +173,6 @@ export function useKeplr() {
       const offlineSigner = window.keplr.getOfflineSigner(chainId);
       const accounts = await offlineSigner.getAccounts();
 
-      const { SigningStargateClient } = await import("@cosmjs/stargate");
-      
       // Build absolute HTTP(S) RPC endpoint for CosmJS
       const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
       let rpcEndpoint = rpcBase.value || "/rpc";
@@ -200,10 +206,6 @@ export function useKeplr() {
     try {
       console.log("Starting REST-based transaction...");
 
-      // Import required utilities
-      const { useApi } = await import("./useApi");
-      const api = useApi();
-      
       // Get account info from REST API (this works!)
       console.log("Fetching account info from REST API...");
       const accountRes = await api.get(`/cosmos/auth/v1beta1/accounts/${address.value}`);
@@ -236,15 +238,6 @@ export function useKeplr() {
       const signerPubkey = accounts[0].pubkey;
 
       console.log("Signer address:", signerAddress);
-
-      // Import CosmJS utilities
-      const { Registry } = await import("@cosmjs/proto-signing");
-      const { defaultRegistryTypes } = await import("@cosmjs/stargate");
-      const { encodePubkey, makeAuthInfoBytes, makeSignDoc: makeSignDocDirect } = await import("@cosmjs/proto-signing");
-      const { encodeSecp256k1Pubkey } = await import("@cosmjs/amino");
-      const { TxRaw, AuthInfo, TxBody } = await import("cosmjs-types/cosmos/tx/v1beta1/tx");
-      const { toBase64, fromBase64 } = await import("@cosmjs/encoding");
-      const { Int53 } = await import("@cosmjs/math");
 
       // Create registry with default Cosmos SDK types (includes staking, distribution, etc.)
       const registry = new Registry(defaultRegistryTypes);
