@@ -306,7 +306,7 @@ const copy = async (text: string) => {
 
         <!-- Network Stats Banner -->
         <div v-if="networkStats" class="mb-4 p-4 rounded-lg bg-gradient-to-br from-cyan-500/10 to-blue-500/10 border border-cyan-500/20">
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-3">
+          <div class="grid grid-cols-2 sm:grid-cols-5 gap-3">
             <div>
               <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Base APR</div>
               <div class="text-lg font-bold text-cyan-300">{{ networkStats.baseAPR.toFixed(2) }}%</div>
@@ -326,6 +326,11 @@ const copy = async (text: string) => {
               <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Fee Burn</div>
               <div class="text-lg font-bold text-orange-300">{{ networkStats.feeBurnRate.toFixed(1) }}%</div>
               <div class="text-[10px] text-slate-500">of fees</div>
+            </div>
+            <div>
+              <div class="text-[10px] text-slate-400 uppercase tracking-wider mb-1">Provision Burn</div>
+              <div class="text-lg font-bold text-amber-200">{{ networkStats.provisionBurnRate.toFixed(1) }}%</div>
+              <div class="text-[10px] text-slate-500">of new issuance</div>
             </div>
           </div>
         </div>
@@ -428,6 +433,10 @@ const copy = async (text: string) => {
         <p>
           <strong class="text-emerald-300">Effective APR ({{ networkStats.effectiveAPR.toFixed(2) }}%)</strong> = 
           Base APR × (1 - Provision Burn Rate of {{ networkStats.provisionBurnRate.toFixed(1) }}%)
+        </p>
+        <p>
+          <strong class="text-orange-300">Burn Pressure:</strong>
+          Roughly {{ networkStats.provisionBurnRate.toFixed(1) }}% of new issuance and {{ networkStats.feeBurnRate.toFixed(1) }}% of fees are burned, trimming inflation and nudging yields lower than the raw base APR.
         </p>
         <p class="text-slate-400 text-[11px] mt-2">
           💡 <strong>Burn Mechanism:</strong> 

@@ -21,6 +21,7 @@ const inflation = ref<string | null>(null);
 const annualProvisions = ref<string | null>(null);
 const stakingParams = ref<Record<string, any> | null>(null);
 const distributionParams = ref<Record<string, any> | null>(null);
+const burnParams = ref<Record<string, any> | null>(null);
 const depositParams = ref<Record<string, any> | null>(null);
 const votingParams = ref<Record<string, any> | null>(null);
 const tallyParams = ref<Record<string, any> | null>(null);
@@ -91,6 +92,22 @@ const perBlockProvisionRetro = computed(() => {
   return annualProvisionRetro.value / blocksPerYear;
 });
 
+const feeBurnRatePercent = computed(() => {
+  const raw = burnParams.value?.fee_burn_rate ?? burnParams.value?.feeBurnRate;
+  if (raw === undefined || raw === null) return "—";
+  const num = Number(raw);
+  if (!Number.isFinite(num)) return "—";
+  return `${(num * 100).toFixed(2)}%`;
+});
+
+const provisionBurnRatePercent = computed(() => {
+  const raw = burnParams.value?.provision_burn_rate ?? burnParams.value?.provisionBurnRate;
+  if (raw === undefined || raw === null) return "—";
+  const num = Number(raw);
+  if (!Number.isFinite(num)) return "—";
+  return `${(num * 100).toFixed(2)}%`;
+});
+
 const runTask = async (label: string, task: () => Promise<void>) => {
   try {
     await task();
@@ -135,6 +152,10 @@ const loadTokenomics = async () => {
     runTask("distribution params", async () => {
       const { data } = await api.get("/cosmos/distribution/v1beta1/params");
       distributionParams.value = data?.params ?? null;
+    }),
+    runTask("burn params", async () => {
+      const { data } = await api.get("/cosmos/burn/v1beta1/params").catch(() => ({ data: { params: { fee_burn_rate: "0.008", provision_burn_rate: "0.008" } } }));
+      burnParams.value = data?.params ?? { fee_burn_rate: "0.008", provision_burn_rate: "0.008" };
     }),
     runTask("deposit params", async () => {
       const { data } = await api.get("/cosmos/gov/v1/params/deposit");
@@ -282,6 +303,32 @@ const minDepositRetro = computed(() => {
               <span class="badge border-amber-500/40 text-amber-200 bg-amber-500/10">🎮 Arcade treasury aware</span>
             </div>
           </div>
+
+      <div class="card space-y-4">
+        <div class="flex items-center justify-between">
+          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+            <span>🧮</span>
+            <span>Burn Mechanics</span>
+          </h2>
+          <span class="text-xs text-slate-500">/cosmos/burn/v1beta1/params</span>
+        </div>
+        <div class="grid gap-3 md:grid-cols-3">
+          <div class="rounded-xl border border-emerald-400/30 bg-emerald-500/5 p-4">
+            <p class="text-xs text-emerald-200 uppercase tracking-wider">Provision Burn Rate</p>
+            <p class="text-2xl font-bold text-emerald-100 mt-1">{{ provisionBurnRatePercent }}</p>
+            <p class="text-[11px] text-emerald-200/70">Portion of new issuance destroyed each block.</p>
+          </div>
+          <div class="rounded-xl border border-amber-400/30 bg-amber-500/5 p-4">
+            <p class="text-xs text-amber-200 uppercase tracking-wider">Fee Burn Rate</p>
+            <p class="text-2xl font-bold text-amber-100 mt-1">{{ feeBurnRatePercent }}</p>
+            <p class="text-[11px] text-amber-200/70">Cut of transaction fees permanently removed.</p>
+          </div>
+          <div class="rounded-xl border border-white/10 p-4 text-sm text-slate-200 space-y-1">
+            <p>Supply pressure is reduced by scheduled burns, which also lowers staking APR (already reflected in the effective APR on the staking page).</p>
+            <p class="text-xs text-slate-400">If the burn module is offline, a conservative 0.8% default is assumed.</p>
+          </div>
+        </div>
+      </div>
           <div class="text-sm text-slate-300 text-right">
             <div class="text-xs text-slate-500 uppercase tracking-wider">Data as of</div>
             <div v-if="latestBlock" class="font-mono text-emerald-300">Height #{{ latestBlock.height }}</div>

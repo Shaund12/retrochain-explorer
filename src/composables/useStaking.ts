@@ -3,6 +3,8 @@ import { ref, computed } from "vue";
 import { useApi } from "./useApi";
 import { useKeplr } from "./useKeplr";
 
+const DEFAULT_BURN_RATE = 0.008; // 0.8% burn by default when module params unavailable
+
 export interface Delegation {
   delegator_address: string;
   validator_address: string;
@@ -176,17 +178,18 @@ const networkStats = ref<NetworkStats | null>(null);
   };
 
   const fetchBurnParams = async () => {
+    const fallback = DEFAULT_BURN_RATE.toString();
     try {
       const res = await api.get("/cosmos/burn/v1beta1/params");
       burnParams.value = {
-        fee_burn_rate: res.data?.params?.fee_burn_rate || "0",
-        provision_burn_rate: res.data?.params?.provision_burn_rate || "0"
+        fee_burn_rate: res.data?.params?.fee_burn_rate || fallback,
+        provision_burn_rate: res.data?.params?.provision_burn_rate || fallback
       };
     } catch (e: any) {
       console.warn("Burn module not available:", e?.message);
       burnParams.value = {
-        fee_burn_rate: "0",
-        provision_burn_rate: "0"
+        fee_burn_rate: fallback,
+        provision_burn_rate: fallback
       };
     }
   };
