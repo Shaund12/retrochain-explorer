@@ -70,6 +70,25 @@ export function useContracts() {
 
       const collected: ContractSummary[] = [];
 
+      const buildContractSummary = (
+        info: any,
+        fallbackAddress: string,
+        codeId: string
+      ): ContractSummary => {
+        const address = info?.address || fallbackAddress;
+        const labelBase = address ? address.slice(0, 8) : "contract";
+        return {
+          address,
+          label: info?.label || `Contract ${labelBase}…`,
+          codeId: String(info?.code_id ?? codeId),
+          creator: info?.creator ?? "",
+          admin: info?.admin ?? null,
+          createdHeight: info?.created?.block_height,
+          createdTxIndex: info?.created?.tx_index,
+          ibcPortId: info?.ibc_port_id ?? undefined
+        };
+      };
+
       for (const code of normalizedCodes) {
         if (collected.length >= cfg.maxContracts) break;
 

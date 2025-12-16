@@ -31,6 +31,8 @@ interface PaginatedResponse<T> {
   nextKey?: string;
 }
 
+let denomTraceEndpointSupported = true;
+
 const paramsSerializer = (params: Record<string, any>) => {
   const search = new URLSearchParams();
   Object.keys(params).forEach((key) => {
@@ -85,10 +87,15 @@ export function useAssets() {
   };
 
   const fetchDenomTrace = async (hash: string) => {
+    if (!denomTraceEndpointSupported) return null;
     try {
       const res = await api.get(`/ibc/apps/transfer/v1/denom_traces/${hash}`);
       return res.data?.denom_trace;
     } catch (traceErr) {
+      const status = (traceErr as any)?.response?.status;
+      if (status === 404 || status === 501) {
+        denomTraceEndpointSupported = false;
+      }
       console.warn(`Failed to fetch denom trace for ${hash}`, traceErr);
       return null;
     }

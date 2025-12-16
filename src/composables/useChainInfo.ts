@@ -9,6 +9,8 @@ export interface ChainInfo {
   totalTxs: number | null;
 }
 
+let totalTxCountSupported = true;
+
 export function useChainInfo() {
   const api = useApi();
   const info = ref<ChainInfo>({
@@ -48,7 +50,7 @@ export function useChainInfo() {
         headerTotalTxs = Number.isFinite(totalTxs) ? totalTxs : null;
       }
 
-      if (!headerTotalTxs) {
+      if (!headerTotalTxs && totalTxCountSupported) {
         try {
           const res = await api.get("/cosmos/tx/v1beta1/txs", {
             params: {
@@ -76,6 +78,10 @@ export function useChainInfo() {
             headerTotalTxs = parsed;
           }
         } catch (totalErr) {
+          const status = (totalErr as any)?.response?.status;
+          if (status && status >= 400) {
+            totalTxCountSupported = false;
+          }
           console.warn("Failed to fetch total transaction count", totalErr);
         }
       }
