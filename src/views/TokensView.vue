@@ -2,7 +2,8 @@
 import { computed, onMounted } from "vue";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
-import { useAssets } from "@/composables/useAssets";
+import { useAssets, type BankToken } from "@/composables/useAssets";
+import type { TokenAccent } from "@/constants/tokens";
 
 const { bankTokens, ibcTokens, nftClasses, loading, error, fetchAssets } = useAssets();
 
@@ -21,6 +22,21 @@ const stats = computed(() => ({
 }));
 
 const tokenTypeLabel = (token: { isFactory: boolean }) => (token.isFactory ? "Factory" : "Native");
+
+const accentBg: Record<TokenAccent, string> = {
+  emerald: "bg-emerald-500/15 text-emerald-200 border border-emerald-400/40",
+  violet: "bg-violet-500/15 text-violet-200 border border-violet-400/40",
+  sky: "bg-sky-500/15 text-sky-200 border border-sky-400/40",
+  amber: "bg-amber-500/15 text-amber-200 border border-amber-400/40",
+  slate: "bg-slate-500/15 text-slate-200 border border-slate-400/40"
+};
+
+const tokenAvatarClass = (token: BankToken) => accentBg[token.tokenMeta.accent ?? "slate"];
+
+const tokenAvatarText = (token: BankToken) => {
+  const source = token.tokenMeta.symbol || token.tokenMeta.name || token.denom;
+  return source.slice(0, 4).toUpperCase();
+};
 </script>
 
 <template>
@@ -72,7 +88,6 @@ const tokenTypeLabel = (token: { isFactory: boolean }) => (token.isFactory ? "Fa
     </div>
 
     <div v-if="loading" class="card">
-" />
       <RcLoadingSpinner size="md" text="Syncing token registry…" />
     </div>
 
@@ -98,7 +113,10 @@ const tokenTypeLabel = (token: { isFactory: boolean }) => (token.isFactory ? "Fa
               <tr v-for="token in bankTokens" :key="token.denom" class="text-sm">
                 <td class="py-3">
                   <div class="flex items-center gap-3">
-                    <div class="text-2xl">{{ token.tokenMeta.icon }}</div>
+                    <div class="h-10 w-10 rounded-2xl flex items-center justify-center font-semibold text-xs uppercase shadow-lg"
+                         :class="tokenAvatarClass(token)">
+                      {{ tokenAvatarText(token) }}
+                    </div>
                     <div>
                       <p class="font-semibold text-white">{{ token.tokenMeta.symbol }}</p>
                       <p class="text-xs text-slate-400">{{ token.tokenMeta.name }}</p>
@@ -142,7 +160,10 @@ const tokenTypeLabel = (token: { isFactory: boolean }) => (token.isFactory ? "Fa
               <tr v-for="token in ibcTokens" :key="token.denom" class="text-sm">
                 <td>
                   <div class="flex items-center gap-3">
-                    <div class="text-2xl">{{ token.tokenMeta.icon }}</div>
+                    <div class="h-10 w-10 rounded-2xl flex items-center justify-center font-semibold text-xs uppercase shadow-lg"
+                         :class="tokenAvatarClass(token)">
+                      {{ tokenAvatarText(token) }}
+                    </div>
                     <div>
                       <p class="font-semibold text-white">{{ token.tokenMeta.symbol }}</p>
                       <p class="text-xs text-slate-400">{{ token.denom }}</p>
