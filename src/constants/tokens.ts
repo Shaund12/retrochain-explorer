@@ -9,6 +9,7 @@ export interface TokenMeta {
   decimals: number;
   accent: TokenAccent;
   description?: string;
+  logo?: string;
 }
 
 const RAW_TOKEN_META: Record<string, TokenMeta> = {
@@ -20,7 +21,8 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     icon: "??",
     decimals: 6,
     accent: "emerald",
-    description: "Primary staking and gas token for RetroChain."
+    description: "Primary staking and gas token for RetroChain.",
+    logo: "/RCIcon.svg"
   },
   udretro: {
     denom: "udretro",
@@ -30,7 +32,8 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     icon: "??",
     decimals: 6,
     accent: "sky",
-    description: "Testnet variant of RETRO for dev deployments."
+    description: "Testnet variant of RETRO for dev deployments.",
+    logo: "/RCIcon.svg"
   },
   uatom: {
     denom: "uatom",

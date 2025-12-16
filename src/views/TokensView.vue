@@ -113,9 +113,20 @@ const tokenAvatarText = (token: BankToken) => {
               <tr v-for="token in bankTokens" :key="token.denom" class="text-sm">
                 <td class="py-3">
                   <div class="flex items-center gap-3">
-                    <div class="h-10 w-10 rounded-2xl flex items-center justify-center font-semibold text-xs uppercase shadow-lg"
-                         :class="tokenAvatarClass(token)">
-                      {{ tokenAvatarText(token) }}
+                    <div
+                      class="h-10 w-10 rounded-2xl flex items-center justify-center font-semibold text-xs uppercase shadow-lg overflow-hidden"
+                      :class="tokenAvatarClass(token)"
+                    >
+                      <img
+                        v-if="token.tokenMeta.logo"
+                        :src="token.tokenMeta.logo"
+                        :alt="`${token.tokenMeta.symbol} logo`"
+                        class="h-8 w-8 object-contain"
+                        loading="lazy"
+                      />
+                      <span v-else>
+                        {{ tokenAvatarText(token) }}
+                      </span>
                     </div>
                     <div>
                       <p class="font-semibold text-white">{{ token.tokenMeta.symbol }}</p>
@@ -160,9 +171,20 @@ const tokenAvatarText = (token: BankToken) => {
               <tr v-for="token in ibcTokens" :key="token.denom" class="text-sm">
                 <td>
                   <div class="flex items-center gap-3">
-                    <div class="h-10 w-10 rounded-2xl flex items-center justify-center font-semibold text-xs uppercase shadow-lg"
-                         :class="tokenAvatarClass(token)">
-                      {{ tokenAvatarText(token) }}
+                    <div
+                      class="h-10 w-10 rounded-2xl flex items-center justify-center font-semibold text-xs uppercase shadow-lg overflow-hidden"
+                      :class="tokenAvatarClass(token)"
+                    >
+                      <img
+                        v-if="token.tokenMeta.logo"
+                        :src="token.tokenMeta.logo"
+                        :alt="`${token.tokenMeta.symbol} logo`"
+                        class="h-8 w-8 object-contain"
+                        loading="lazy"
+                      />
+                      <span v-else>
+                        {{ tokenAvatarText(token) }}
+                      </span>
                     </div>
                     <div>
                       <p class="font-semibold text-white">{{ token.tokenMeta.symbol }}</p>
