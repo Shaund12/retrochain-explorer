@@ -102,6 +102,10 @@ function buildChainInfo() {
 
 export function useKeplr() {
   const api = useApi();
+
+  const isUndefinedValueError = (err: unknown) =>
+    typeof err === "object" && err !== null && "message" in err &&
+    typeof (err as any).message === "string" && (err as any).message.includes("Value must not be undefined");
   const checkAvailability = () => {
     if (typeof window === "undefined") {
       isAvailable.value = false;
@@ -163,39 +167,6 @@ export function useKeplr() {
 
   const disconnect = () => {
     address.value = null;
-  };
-
-  const signAndBroadcast = async (chainId: string, msgs: any[], fee: any, memo = "") => {
-    if (!window.keplr) throw new Error("Keplr not available");
-    if (!address.value) throw new Error("Not connected to Keplr");
-
-    try {
-      const offlineSigner = window.keplr.getOfflineSigner(chainId);
-      const accounts = await offlineSigner.getAccounts();
-
-      // Build absolute HTTP(S) RPC endpoint for CosmJS
-      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
-      let rpcEndpoint = rpcBase.value || "/rpc";
-      
-      // Convert to absolute URL if relative
-      if (!rpcEndpoint.startsWith('http')) {
-        rpcEndpoint = `${origin}${rpcEndpoint.startsWith('/') ? '' : '/'}${rpcEndpoint}`;
-      }
-      
-      const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner);
-
-      const result = await client.signAndBroadcast(
-        accounts[0].address,
-        msgs,
-        fee,
-        memo
-      );
-
-      return result;
-    } catch (e: any) {
-      console.error("Transaction failed:", e);
-      throw e;
-    }
   };
 
   // REST-based signing alternative (workaround for RPC protobuf issues)
@@ -301,6 +272,46 @@ export function useKeplr() {
 
         return { txRaw, txBytesBase64: toBase64(txBytes) };
       };
+
+  const signAndBroadcast = async (chainId: string, msgs: any[], fee: any, memo = "") => {
+    if (!window.keplr) throw new Error("Keplr not available");
+    if (!address.value) throw new Error("Not connected to Keplr");
+
+    const attemptRpc = async () => {
+      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      const accounts = await offlineSigner.getAccounts();
+
+      // Build absolute HTTP(S) RPC endpoint for CosmJS
+      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
+      let rpcEndpoint = rpcBase.value || "/rpc";
+
+      // Convert to absolute URL if relative
+      if (!rpcEndpoint.startsWith('http')) {
+        rpcEndpoint = `${origin}${rpcEndpoint.startsWith('/') ? '' : '/'}${rpcEndpoint}`;
+      }
+
+      const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner);
+
+      const result = await client.signAndBroadcast(
+        accounts[0].address,
+        msgs,
+        fee,
+        memo
+      );
+
+      return result;
+    };
+
+    try {
+      return await attemptRpc();
+    } catch (e) {
+      console.warn("RPC sign/broadcast failed, evaluating fallback", e);
+      if (isUndefinedValueError(e)) {
+        return signAndBroadcastWithREST(chainId, msgs, fee, memo);
+      }
+      throw e;
+    }
+  };
 
       const baseGasLimit = Math.max(MIN_GAS_LIMIT, msgs.length * DEFAULT_GAS_PER_MSG);
       let feeToUse = fee ?? null;
