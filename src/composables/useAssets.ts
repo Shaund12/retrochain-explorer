@@ -50,7 +50,10 @@ function formatWithExponent(amount: string, exponent: number, symbol: string) {
   if (!Number.isFinite(value)) {
     return `${amount} ${symbol}`;
   }
-  return `${value.toLocaleString(undefined, { maximumFractionDigits: 6 })} ${symbol}`;
+  return `${value.toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: 6
+  })} ${symbol}`;
 }
 
 export function useAssets() {
@@ -119,11 +122,15 @@ export function useAssets() {
         if (!denom) return;
         const amount = String(entry?.amount ?? "0");
         const meta = metadataMap.get(denom.toLowerCase());
-        const displayDenom = meta?.display || denom.toUpperCase();
-        const displayUnit = meta?.denom_units?.find((unit: any) => unit.denom === meta?.display) || meta?.denom_units?.slice(-1)?.[0];
-        const exponent = Number(displayUnit?.exponent ?? 6);
-        const displayAmount = formatWithExponent(amount, exponent, displayDenom);
         const tokenMeta = getTokenMeta(denom);
+        const displayUnit = meta?.denom_units?.find((unit: any) => unit.denom === meta?.display) || meta?.denom_units?.slice(-1)?.[0];
+        const exponent = typeof displayUnit?.exponent === "number"
+          ? displayUnit.exponent
+          : typeof tokenMeta.decimals === "number"
+            ? tokenMeta.decimals
+            : 6;
+        const displayDenom = tokenMeta.symbol || meta?.display || denom.toUpperCase();
+        const displayAmount = formatWithExponent(amount, exponent, displayDenom);
         const isIbc = denom.startsWith("ibc/");
         const isFactory = denom.startsWith("factory/");
 
