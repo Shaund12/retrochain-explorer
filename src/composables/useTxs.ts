@@ -176,19 +176,28 @@ export function useTxs() {
 
         while (collected.length < limit) {
           const pageLimit = Math.min(50, limit - collected.length);
-          const body: any = {
-            events: ["tx.height>0"],
-            order_by: "ORDER_BY_DESC",
-            pagination: {
-              limit: String(pageLimit)
+
+          const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
+            params: {
+              events: "tx.height>0",
+              order_by: "ORDER_BY_DESC",
+              "pagination.limit": String(pageLimit),
+              ...(nextKey ? { "pagination.key": nextKey } : {})
+            },
+            paramsSerializer: (params) => {
+              const search = new URLSearchParams();
+              Object.keys(params).forEach((key) => {
+                const value = (params as any)[key];
+                if (value === undefined || value === null) return;
+                if (Array.isArray(value)) {
+                  value.forEach((entry) => search.append(key, entry));
+                } else {
+                  search.append(key, value);
+                }
+              });
+              return search.toString();
             }
-          };
-
-          if (nextKey) {
-            body.pagination.key = nextKey;
-          }
-
-          const res = await api.post(`/cosmos/tx/v1beta1/txs`, body);
+          });
           const responses: any[] = res.data?.tx_responses ?? [];
           if (!responses.length) break;
 
@@ -297,11 +306,24 @@ export function useTxs() {
 
       for (const filter of filters) {
         try {
-          const res = await api.post(`/cosmos/tx/v1beta1/txs`, {
-            events: [filter],
-            order_by: "ORDER_BY_DESC",
-            pagination: {
-              limit: String(limit)
+          const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
+            params: {
+              events: filter,
+              order_by: "ORDER_BY_DESC",
+              "pagination.limit": String(limit)
+            },
+            paramsSerializer: (params) => {
+              const search = new URLSearchParams();
+              Object.keys(params).forEach((key) => {
+                const value = (params as any)[key];
+                if (value === undefined || value === null) return;
+                if (Array.isArray(value)) {
+                  value.forEach((entry) => search.append(key, entry));
+                } else {
+                  search.append(key, value);
+                }
+              });
+              return search.toString();
             }
           });
 

@@ -1,7 +1,7 @@
 <script setup lang="ts">
 import { useMaintenance } from '@/composables/useMaintenance';
 
-const { isMaintenanceMode, message, details, eta } = useMaintenance();
+const { isMaintenanceMode, message, details, eta, features } = useMaintenance();
 </script>
 
 <template>
@@ -18,6 +18,12 @@ const { isMaintenanceMode, message, details, eta } = useMaintenance();
         <div class="flex-1">
           <div class="text-lg font-bold mb-1">{{ message }}</div>
           <div class="text-sm opacity-90 mb-2">{{ details }}</div>
+          <div v-if="features.length" class="text-xs text-white/90 bg-white/10 rounded-lg p-3 mb-2 border border-white/20">
+            <div class="uppercase text-[10px] tracking-[0.3em] text-white/70 mb-1">Upgrade Includes</div>
+            <ul class="space-y-1 list-disc list-inside">
+              <li v-for="item in features" :key="item">{{ item }}</li>
+            </ul>
+          </div>
           <div class="flex items-center gap-3 text-xs">
             <span class="px-2 py-1 rounded bg-white/20 font-mono">{{ eta }}</span>
             <span class="opacity-75">• Some features may be temporarily unavailable</span>

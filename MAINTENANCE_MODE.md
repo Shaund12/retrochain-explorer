@@ -34,6 +34,7 @@ VITE_MAINTENANCE_MODE=false
 | `VITE_MAINTENANCE_MESSAGE` | `?? Arcade Module Upgrade` | Production |
 | `VITE_MAINTENANCE_DETAILS` | `Upgrading arcade module with new features!` | Production |
 | `VITE_MAINTENANCE_ETA` | `Expected completion: 30 minutes` | Production |
+| `VITE_MAINTENANCE_FEATURES` | `🔥 Burn module rollout,BTC staking launch,DEX liquidity upgrades` | Production |
 
 4. Click "Redeploy" or push any commit to trigger deployment
 
@@ -112,6 +113,10 @@ vercel env add VITE_MAINTENANCE_DETAILS production
 
 vercel env add VITE_MAINTENANCE_ETA production
 # Expected completion: 1 hour
+
+# Optional feature checklist that appears as bullet points
+vercel env add VITE_MAINTENANCE_FEATURES production
+# 🔥 Burn module rollout,BTC staking launch,New staking UX
 ```
 
 ### Validator Maintenance
@@ -226,6 +231,7 @@ disableMaintenance();
 | `VITE_MAINTENANCE_MESSAGE` | Main heading | `?? System Upgrade in Progress` |
 | `VITE_MAINTENANCE_DETAILS` | Detailed description | `RetroChain is currently undergoing...` |
 | `VITE_MAINTENANCE_ETA` | Time estimate | `Expected completion: ~30 minutes` |
+| `VITE_MAINTENANCE_FEATURES` | Comma-separated bullet list for upgrades (e.g. `🔥 Burn module rollout,BTC staking launch`) | _(empty)_ |
 
 ## Pro Tip: Schedule in Advance
 
