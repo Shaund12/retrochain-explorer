@@ -134,10 +134,22 @@ const latestProposerDisplay = computed(() => {
   );
 });
 
+const latestProposerShort = computed(() => {
+  const label = latestProposerDisplay.value;
+  if (!label || label === "—") return "—";
+  return label.length > 32 ? `${label.slice(0, 32)}…` : label;
+});
+
 const latestGasUtilizationDisplay = computed(() => {
   const util = latestBlockSummary.value?.gasUtilization;
   if (typeof util !== "number" || !Number.isFinite(util)) return "—";
   return `${(util * 100).toFixed(1)}%`;
+});
+
+const latestGasUtilizationPercent = computed(() => {
+  const util = latestBlockSummary.value?.gasUtilization;
+  if (typeof util !== "number" || !Number.isFinite(util)) return null;
+  return Math.max(0, Math.min(100, Number((util * 100).toFixed(1))));
 });
 
 const totalTxsDisplay = computed(() => {
@@ -146,6 +158,18 @@ const totalTxsDisplay = computed(() => {
   }
   return "—";
 });
+
+const totalTxsWindow = computed(() =>
+  recentBlocks.value.reduce((sum, block) => sum + (block.txs || 0), 0)
+);
+
+const totalTxsWindowDisplay = computed(() => totalTxsWindow.value.toLocaleString());
+
+const blockSampleLabel = computed(() =>
+  blockTimeDeltas.value.length
+    ? `Last ${blockTimeDeltas.value.length} blocks`
+    : "Awaiting blocks"
+);
 
 const networkStatus = computed(() => {
   if (loadingInfo.value) {
@@ -171,6 +195,29 @@ const networkStatus = computed(() => {
     subtext: `Height #${info.value.latestBlockHeight?.toLocaleString?.() ?? info.value.latestBlockHeight}`
   };
 });
+
+const featureHighlights = [
+  {
+    icon: "🎮",
+    title: "Arcade-first",
+    body: "Sessions, leaderboards, and achievements stream straight into the explorer."
+  },
+  {
+    icon: "🔗",
+    title: "IBC routing",
+    body: "Cosmos Hub + Noble channels preconfigured for rapid bridging."
+  },
+  {
+    icon: "⚡",
+    title: "Live telemetry",
+    body: "10s auto-refresh keeps blocks, txs, and sparkline insights fresh."
+  },
+  {
+    icon: "🛠️",
+    title: "Builder toolkit",
+    body: "REST, RPC, and WebSocket endpoints surfaced inline for dev workflows."
+  }
+];
 
 // Sparkline path generator
 function sparkPath(data: number[], width = 160, height = 40) {
@@ -296,73 +343,150 @@ function sparkPath(data: number[], width = 160, height = 40) {
         <RcSearchBar />
       </div>
 
-      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
-        <div class="p-4 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/30">
-          <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Latest Block</div>
-          <div class="text-3xl font-bold text-indigo-200">
-            {{ loadingInfo ? '…' : latestBlockHeightDisplay }}
+      <div class="grid gap-4 xl:grid-cols-4">
+        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-800/40 p-5 shadow-xl shadow-black/30 flex flex-col gap-4 xl:col-span-2">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.35em] text-emerald-200">
+            <span>Latest Block</span>
+            <span class="text-[10px] text-slate-400 normal-case tracking-normal">{{ latestBlockTimeRelative }}</span>
           </div>
-          <div class="text-[11px] text-slate-400">{{ latestBlockTimeRelative }}</div>
-          <div class="text-[11px] text-slate-500">Timestamp: {{ latestBlockTimeAbsolute }}</div>
-          <div class="text-[11px] text-slate-500 mt-1">Proposer: <span class="text-slate-300">{{ latestProposerDisplay }}</span></div>
-        </div>
-        <div class="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/30">
-          <div class="flex items-center justify-between mb-1">
-            <div class="text-[11px] uppercase tracking-wider text-slate-400">Live Block Time</div>
-            <div class="text-[10px] text-slate-500">Last {{ blockTimeDeltas.length || 0 }} blocks</div>
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="text-4xl font-bold text-white leading-none">
+              {{ loadingInfo ? '…' : latestBlockHeightDisplay }}
+            </div>
+            <span class="px-3 py-1 rounded-full text-[11px] uppercase tracking-[0.2em] border border-emerald-400/50 text-emerald-200">
+              {{ network === 'mainnet' ? 'Mainnet' : 'Testnet' }}
+            </span>
           </div>
-          <div class="text-3xl font-bold text-emerald-200">{{ avgBlockTimeDisplay }}</div>
-          <svg :width="160" :height="40" class="mt-2">
-            <path :d="sparkPath(blockTimeDeltas)" stroke="rgb(16 185 129)" fill="none" stroke-width="2" />
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-xs text-slate-400">
+            <div>
+              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Timestamp</dt>
+              <dd class="text-sm text-slate-100 font-mono">{{ latestBlockTimeAbsolute }}</dd>
+            </div>
+            <div>
+              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Proposer</dt>
+              <dd class="text-sm text-slate-100 truncate" :title="latestProposerDisplay">{{ latestProposerShort }}</dd>
+            </div>
+            <div>
+              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Used</dt>
+              <dd class="text-sm text-slate-100">
+                {{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}
+              </dd>
+            </div>
+            <div>
+              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Wanted</dt>
+              <dd class="text-sm text-slate-100">
+                {{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}
+              </dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 p-5 shadow-lg flex flex-col gap-3">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-emerald-200">
+            <span>Live Block Time</span>
+            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ blockSampleLabel }}</span>
+          </div>
+          <div class="text-4xl font-semibold text-white">
+            {{ avgBlockTimeDisplay }}
+          </div>
+          <svg :width="240" :height="60" class="-mx-2">
+            <path :d="sparkPath(blockTimeDeltas, 240, 60)" stroke="rgb(16 185 129)" fill="none" stroke-width="2" stroke-linecap="round" />
           </svg>
-        </div>
-        <div class="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/30">
-          <div class="flex items-center justify-between mb-1">
-            <div class="text-[11px] uppercase tracking-wider text-slate-400">Tx Throughput</div>
-            <div class="text-[10px] text-slate-500">Last 20 blocks</div>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-5 shadow-lg flex flex-col gap-3">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-indigo-200">
+            <span>Tx Throughput</span>
+            <span class="text-[10px] text-slate-500 font-normal tracking-normal">20-block window</span>
           </div>
-          <div class="text-3xl font-bold text-blue-200">{{ avgTxPerBlockDisplay }}</div>
-          <div class="text-[11px] text-slate-500">Latest block: {{ latestBlockSummary?.txs ?? 0 }} txs</div>
-          <svg :width="160" :height="40" class="mt-2">
-            <path :d="sparkPath(txsPerBlock)" stroke="rgb(59 130 246)" fill="none" stroke-width="2" />
+          <div class="text-4xl font-semibold text-white">
+            {{ avgTxPerBlockDisplay }}
+          </div>
+          <div class="text-[11px] text-slate-400">
+            Latest block: <span class="text-slate-100">{{ latestBlockSummary?.txs ?? 0 }}</span> txs · Window total: <span class="text-slate-100">{{ totalTxsWindowDisplay }}</span>
+          </div>
+          <svg :width="240" :height="60" class="-mx-2">
+            <path :d="sparkPath(txsPerBlock, 240, 60)" stroke="rgb(99 102 241)" fill="none" stroke-width="2" stroke-linecap="round" />
           </svg>
-        </div>
-        <div class="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/30">
-          <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Gas Utilization</div>
-          <div class="text-3xl font-bold text-amber-200">{{ latestGasUtilizationDisplay }}</div>
-          <div class="text-[11px] text-slate-500">
-            Gas: {{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '0' }} /
-            {{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '0' }}
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-5 shadow-lg flex flex-col gap-3">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-amber-200">
+            <span>Gas Utilization</span>
+            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ latestGasUtilizationDisplay }}</span>
           </div>
-        </div>
+          <div class="text-4xl font-semibold text-white">
+            {{ latestGasUtilizationDisplay }}
+          </div>
+          <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+            <div
+              class="h-full bg-gradient-to-r from-amber-400 to-orange-500"
+              :style="{ width: latestGasUtilizationPercent !== null ? `${latestGasUtilizationPercent}%` : '6%' }"
+            ></div>
+          </div>
+          <div class="text-[11px] text-slate-400 flex flex-col gap-1">
+            <span>Gas Used: <span class="text-slate-100">{{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}</span></span>
+            <span>Gas Wanted: <span class="text-slate-100">{{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}</span></span>
+          </div>
+        </article>
       </div>
 
-      <!-- Quick Stats -->
+      <!-- Network Pulse -->
       <div class="card">
-        <h2 class="text-lg font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-          Network Statistics
-        </h2>
-        <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div class="p-3 rounded-lg bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20">
-            <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Status</div>
-            <div class="text-xl font-bold flex items-center gap-2" :class="networkStatus.textClass">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            Network Pulse
+          </h2>
+          <span class="text-[11px] text-slate-500">Live refresh every 10s</span>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <article class="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col gap-1">
+            <div class="text-xs uppercase tracking-wider text-slate-400">Status</div>
+            <div class="text-xl font-semibold flex items-center gap-2" :class="networkStatus.textClass">
               <span class="w-2 h-2 rounded-full animate-pulse" :class="networkStatus.indicator"></span>
               {{ networkStatus.label }}
             </div>
-            <div class="text-[11px] text-slate-500">{{ networkStatus.subtext }}</div>
-          </div>
-          <div class="p-3 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
-            <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Chain ID</div>
-            <div class="text-xl font-bold text-indigo-200">{{ info.chainId || '—' }}</div>
-          </div>
-          <div class="p-3 rounded-lg bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20">
-            <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Total Blocks</div>
-            <div class="text-xl font-bold text-blue-200">{{ latestBlockHeightDisplay }}</div>
-          </div>
-          <div class="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
-            <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Total Txs</div>
-            <div class="text-xl font-bold text-purple-200">{{ totalTxsDisplay }}</div>
-          </div>
+            <div class="text-[11px] text-slate-400">{{ networkStatus.subtext }}</div>
+          </article>
+          <article class="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 flex flex-col gap-1">
+            <div class="text-xs uppercase tracking-wider text-slate-400">Chain ID</div>
+            <div class="text-xl font-semibold text-white truncate">{{ info.chainId || '—' }}</div>
+            <div class="text-[11px] text-slate-500">REST {{ REST_DISPLAY }} · RPC {{ RPC_DISPLAY }}</div>
+          </article>
+          <article class="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 flex flex-col gap-1">
+            <div class="text-xs uppercase tracking-wider text-slate-400">Total Blocks</div>
+            <div class="text-2xl font-semibold text-white">{{ latestBlockHeightDisplay }}</div>
+            <div class="text-[11px] text-slate-500">Synced height</div>
+          </article>
+          <article class="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-4 flex flex-col gap-1">
+            <div class="text-xs uppercase tracking-wider text-slate-400">Total Txs</div>
+            <div class="text-2xl font-semibold text-white">{{ totalTxsDisplay }}</div>
+            <div class="text-[11px] text-slate-500">Rolling counter</div>
+          </article>
+        </div>
+      </div>
+
+      <!-- Feature Highlights -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold text-white flex items-center gap-2">
+            <span>✨</span>
+            RetroChain Feature Pack
+          </h2>
+          <span class="text-[11px] text-slate-400">Explorer-native perks</span>
+        </div>
+        <div class="grid gap-3 md:grid-cols-2">
+          <article
+            v-for="feature in featureHighlights"
+            :key="feature.title"
+            class="rounded-2xl border border-white/10 bg-white/5 p-4 flex gap-3"
+          >
+            <div class="text-2xl">{{ feature.icon }}</div>
+            <div>
+              <h3 class="text-sm font-semibold text-white">{{ feature.title }}</h3>
+              <p class="text-xs text-slate-300 leading-relaxed">{{ feature.body }}</p>
+            </div>
+          </article>
         </div>
       </div>
 

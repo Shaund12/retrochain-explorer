@@ -37,6 +37,7 @@ const tokenAvatarText = (token: BankToken) => {
   const source = token.tokenMeta.symbol || token.tokenMeta.name || token.denom;
   return source.slice(0, 4).toUpperCase();
 };
+
 </script>
 
 <template>
