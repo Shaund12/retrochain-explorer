@@ -10,6 +10,8 @@ interface LatestBlockInfo {
 }
 
 const api = useApi();
+const BURN_SINK_ADDRESS = "cosmos1jv65s3grqf6v6jl3dp4t6c9t9rk99cd88lyufl";
+const BURN_TRACK_BLOCKS = 6;
 
 const loading = ref(true);
 const errors = ref<string[]>([]);
@@ -26,6 +28,16 @@ const depositParams = ref<Record<string, any> | null>(null);
 const votingParams = ref<Record<string, any> | null>(null);
 const tallyParams = ref<Record<string, any> | null>(null);
 const arcadeParams = ref<Record<string, any> | null>(null);
+const burnSnapshots = ref<{ height: number; balance: number; burned: number | null }[]>([]);
+const burnLoading = ref(false);
+
+const copy = async (text: string) => {
+  try {
+    await navigator.clipboard?.writeText?.(text);
+  } catch (err) {
+    console.warn("Clipboard unavailable", err);
+  }
+};
 
 const formatRetro = (
   amount?: string | number | null,
@@ -108,12 +120,90 @@ const provisionBurnRatePercent = computed(() => {
   return `${(num * 100).toFixed(2)}%`;
 });
 
+const burnAddressMasked = computed(() => maskAddress(BURN_SINK_ADDRESS));
+
+const burnCurrentBalanceDisplay = computed(() => {
+  const latest = burnSnapshots.value[0]?.balance;
+  if (latest === undefined) return "—";
+  return `${formatRetro(latest, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
+});
+
+const burnLastBlockAmount = computed(() => {
+  if (burnSnapshots.value.length < 2) return null;
+  const previous = burnSnapshots.value[1].balance;
+  const current = burnSnapshots.value[0].balance;
+  return previous - current;
+});
+
+const burnLastBlockDisplay = computed(() => formatRetroSigned(burnLastBlockAmount.value));
+
+const burnRollingWindowAmount = computed(() =>
+  burnSnapshots.value.reduce((sum, snap) => {
+    if (!snap || snap.burned === null) return sum;
+    return sum + Math.max(0, snap.burned);
+  }, 0)
+);
+
+const burnRollingWindowDisplay = computed(() => {
+  if (!burnRollingWindowAmount.value) return "—";
+  return `${formatRetro(burnRollingWindowAmount.value, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
+});
+
+const burnHistoryLabel = computed(() =>
+  burnSnapshots.value.length ? `Last ${burnSnapshots.value.length} blocks` : "Awaiting burn telemetry"
+);
+
+const burnDeltaClass = (amount: number | null) => {
+  if (amount === null) return "text-slate-400";
+  if (amount > 0) return "text-emerald-300";
+  if (amount < 0) return "text-rose-300";
+  return "text-slate-400";
+};
+
 const runTask = async (label: string, task: () => Promise<void>) => {
   try {
     await task();
   } catch (err) {
     console.error(`Failed to load ${label}`, err);
     errors.value.push(`Failed to load ${label}`);
+  }
+};
+
+const fetchBurnBalanceAtHeight = async (height: number) => {
+  const headers: Record<string, string> = { "x-cosmos-block-height": String(height) };
+  const { data } = await api.get(`/cosmos/bank/v1beta1/balances/${BURN_SINK_ADDRESS}`, {
+    params: { "pagination.limit": "1000" },
+    headers
+  });
+  const retroBalance = data?.balances?.find((coin: { denom: string }) => coin.denom === "uretro");
+  return Number(retroBalance?.amount ?? 0);
+};
+
+const loadBurnSnapshots = async (latestHeight: number) => {
+  burnLoading.value = true;
+  try {
+    const heights: number[] = [];
+    for (let i = 0; i < BURN_TRACK_BLOCKS; i++) {
+      const height = latestHeight - i;
+      if (height <= 0) break;
+      heights.push(height);
+    }
+    const snapshots: { height: number; balance: number }[] = [];
+    for (const height of heights) {
+      try {
+        const balance = await fetchBurnBalanceAtHeight(height);
+        snapshots.push({ height, balance });
+      } catch (err) {
+        console.warn(`Failed to fetch burn balance at height ${height}`, err);
+      }
+    }
+    burnSnapshots.value = snapshots.map((snap, idx) => {
+      const previous = snapshots[idx + 1];
+      const burned = previous ? previous.balance - snap.balance : null;
+      return { ...snap, burned };
+    });
+  } finally {
+    burnLoading.value = false;
   }
 };
 
@@ -174,6 +264,13 @@ const loadTokenomics = async () => {
       arcadeParams.value = data?.params ?? null;
     })
   ]);
+
+  const latestHeightNumber = latestBlock.value?.height ? Number(latestBlock.value.height) : null;
+  if (latestHeightNumber && Number.isFinite(latestHeightNumber)) {
+    await runTask("burn sink telemetry", async () => {
+      await loadBurnSnapshots(latestHeightNumber);
+    });
+  }
 
   loading.value = false;
 };
@@ -271,6 +368,17 @@ const maskAddress = (address: string) => {
   const prefix = address.slice(0, 6);
   const suffix = address.slice(-4);
   return `${prefix}••••${suffix}`;
+};
+
+const formatRetroSigned = (amount: number | null, fraction = 2) => {
+  if (amount === null || amount === undefined) return "—";
+  const retro = amount / 1_000_000;
+  const absFormatted = Math.abs(retro).toLocaleString(undefined, {
+    minimumFractionDigits: 2,
+    maximumFractionDigits: fraction
+  });
+  const sign = retro > 0 ? "+" : retro < 0 ? "-" : "";
+  return `${sign}${absFormatted} RETRO`;
 };
 
 const minDepositRetro = computed(() => {
@@ -411,6 +519,63 @@ const minDepositRetro = computed(() => {
               <p class="text-base text-white font-semibold">{{ netMintedDisplay }}</p>
             </div>
           </div>
+        </div>
+      </div>
+
+      <!-- Burn sink telemetry -->
+      <div class="card space-y-4">
+        <div class="flex items-center justify-between">
+          <div>
+            <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+              <span>🔥</span>
+              <span>Validator Reward Burn Sink</span>
+            </h2>
+            <p class="text-[11px] text-slate-500">Staking rewards / burn wallet: <code>{{ burnAddressMasked }}</code></p>
+          </div>
+          <button class="btn text-xs" @click="copy(BURN_SINK_ADDRESS)">Copy address</button>
+        </div>
+        <div class="grid gap-3 md:grid-cols-3">
+          <div class="rounded-xl border border-white/10 bg-white/5 p-4">
+            <p class="text-xs text-slate-400 uppercase tracking-wider">Current balance</p>
+            <p class="text-2xl font-bold text-white">{{ burnCurrentBalanceDisplay }}</p>
+            <p class="text-[11px] text-slate-500">Address {{ burnAddressMasked }}</p>
+          </div>
+          <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+            <p class="text-xs text-emerald-200 uppercase tracking-wider">Burned last block</p>
+            <p class="text-2xl font-bold text-emerald-100">{{ burnLastBlockDisplay }}</p>
+            <p class="text-[11px] text-emerald-200/70">Positive values = supply destroyed</p>
+          </div>
+          <div class="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-4">
+            <p class="text-xs text-indigo-200 uppercase tracking-wider">Rolling window</p>
+            <p class="text-2xl font-bold text-indigo-100">{{ burnRollingWindowDisplay }}</p>
+            <p class="text-[11px] text-indigo-200/70">{{ burnHistoryLabel }}</p>
+          </div>
+        </div>
+        <div v-if="burnLoading" class="text-xs text-slate-400">Syncing burn telemetry…</div>
+        <div v-else>
+          <div v-if="burnSnapshots.length" class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr class="text-xs text-slate-400">
+                  <th>Height</th>
+                  <th>Balance</th>
+                  <th>Δ vs prev block</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="snapshot in burnSnapshots" :key="snapshot.height">
+                  <td class="font-mono text-xs text-slate-300">#{{ snapshot.height.toLocaleString() }}</td>
+                  <td class="text-sm text-white">
+                    {{ `${formatRetro(snapshot.balance, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO` }}
+                  </td>
+                  <td class="text-sm font-semibold" :class="burnDeltaClass(snapshot.burned)">
+                    {{ formatRetroSigned(snapshot.burned) }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+          <p v-else class="text-xs text-slate-500">Burn telemetry unavailable for recent blocks.</p>
         </div>
       </div>
 
