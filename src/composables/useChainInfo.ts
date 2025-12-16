@@ -34,6 +34,8 @@ export function useChainInfo() {
 
       info.value.chainId = nodeInfo?.network ?? null;
 
+      let headerTotalTxs: number | null = null;
+
       if (block) {
         const header = block.header ?? {};
         const height = header.height ? parseInt(header.height, 10) : NaN;
@@ -43,7 +45,43 @@ export function useChainInfo() {
         info.value.latestBlockTime = time
           ? dayjs(time).format("YYYY-MM-DD HH:mm:ss")
           : null;
-        info.value.totalTxs = Number.isFinite(totalTxs) ? totalTxs : info.value.totalTxs;
+        headerTotalTxs = Number.isFinite(totalTxs) ? totalTxs : null;
+      }
+
+      if (!headerTotalTxs) {
+        try {
+          const res = await api.get("/cosmos/tx/v1beta1/txs", {
+            params: {
+              order_by: "ORDER_BY_DESC",
+              "pagination.limit": "1",
+              "pagination.count_total": "true"
+            },
+            paramsSerializer: (params) => {
+              const search = new URLSearchParams();
+              Object.keys(params).forEach((key) => {
+                const value = (params as any)[key];
+                if (value === undefined || value === null) return;
+                if (Array.isArray(value)) {
+                  value.forEach((entry) => search.append(key, entry));
+                } else {
+                  search.append(key, value);
+                }
+              });
+              return search.toString();
+            }
+          });
+          const total = res.data?.pagination?.total;
+          const parsed = typeof total === "string" ? parseInt(total, 10) : Number(total);
+          if (Number.isFinite(parsed) && parsed >= 0) {
+            headerTotalTxs = parsed;
+          }
+        } catch (totalErr) {
+          console.warn("Failed to fetch total transaction count", totalErr);
+        }
+      }
+
+      if (headerTotalTxs !== null) {
+        info.value.totalTxs = headerTotalTxs;
       }
     } catch (e: any) {
       error.value = e?.message ?? String(e);
