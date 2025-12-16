@@ -284,7 +284,8 @@ const navItems: NavItem[] = [
       { label: "Blocks", to: { name: "blocks" } },
       { label: "Transactions", to: { name: "txs" } },
       { label: "Accounts", to: { name: "accounts" } },
-      { label: "Validators", to: { name: "validators" } }
+      { label: "Validators", to: { name: "validators" } },
+      { label: "Contracts", to: { name: "contracts" } }
     ]
   },
   {

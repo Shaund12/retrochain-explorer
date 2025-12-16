@@ -13,6 +13,7 @@ import BuyView from "@/views/BuyView.vue";
 import DexView from "@/views/DexView.vue";
 import TokenomicsView from "@/views/TokenomicsView.vue";
 import TokensView from "@/views/TokensView.vue";
+import ContractsView from "@/views/ContractsView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
 import ApiTestView from "@/views/ApiTestView.vue";
 import LegalView from "@/views/LegalView.vue";
@@ -33,6 +34,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/dex", name: "dex", component: DexView },
   { path: "/tokens", name: "tokens", component: TokensView },
   { path: "/tokenomics", name: "tokenomics", component: TokenomicsView },
+  { path: "/contracts", name: "contracts", component: ContractsView },
   { path: "/changelog", name: "changelog", component: ChangelogView },
   { path: "/legal", name: "legal", component: LegalView },
   { path: "/api-test", name: "api-test", component: ApiTestView },
