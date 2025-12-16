@@ -70,14 +70,106 @@ const blockTimes = computed(() => recentBlocks.value.map(b => (b.time ? new Date
 const blockTimeDeltas = computed(() => {
   const arr: number[] = [];
   for (let i = 1; i < blockTimes.value.length; i++) {
-    arr.push(Math.max(0, (blockTimes.value[i] - blockTimes.value[i-1]) / 1000));
+    const delta = Math.abs((blockTimes.value[i - 1] - blockTimes.value[i]) / 1000);
+    if (Number.isFinite(delta) && delta > 0) {
+      arr.push(delta);
+    }
   }
   return arr;
 });
-const avgBlockTime = computed(() => {
-  if (!blockTimeDeltas.value.length) return "—";
-  const avg = blockTimeDeltas.value.reduce((a,b)=>a+b,0) / blockTimeDeltas.value.length;
-  return `${avg.toFixed(2)}s`;
+
+const avgBlockTimeSeconds = computed(() => {
+  if (!blockTimeDeltas.value.length) return null;
+  return blockTimeDeltas.value.reduce((a, b) => a + b, 0) / blockTimeDeltas.value.length;
+});
+
+const avgBlockTimeDisplay = computed(() => {
+  if (avgBlockTimeSeconds.value === null) return "—";
+  return `${avgBlockTimeSeconds.value.toFixed(2)}s`;
+});
+
+const avgTxPerBlock = computed(() => {
+  if (!recentBlocks.value.length) return null;
+  const total = recentBlocks.value.reduce((sum, block) => sum + (block.txs || 0), 0);
+  return total / recentBlocks.value.length;
+});
+
+const avgTxPerBlockDisplay = computed(() => {
+  if (avgTxPerBlock.value === null) return "—";
+  return avgTxPerBlock.value < 1
+    ? avgTxPerBlock.value.toFixed(2)
+    : avgTxPerBlock.value.toFixed(1);
+});
+
+const latestBlockHeightDisplay = computed(() => {
+  const height = info.value.latestBlockHeight;
+  if (typeof height === "number" && Number.isFinite(height)) {
+    return height.toLocaleString();
+  }
+  return "—";
+});
+
+const latestBlockSummary = computed(() => recentBlocks.value[0] ?? null);
+
+const latestBlockTimeRelative = computed(() => {
+  const time = latestBlockSummary.value?.time;
+  if (!time) return "—";
+  return dayjs(time).fromNow?.() ?? dayjs(time).format("YYYY-MM-DD HH:mm:ss");
+});
+
+const latestBlockTimeAbsolute = computed(() => {
+  const time = latestBlockSummary.value?.time;
+  if (!time) return info.value.latestBlockTime || "—";
+  return dayjs(time).format("YYYY-MM-DD HH:mm:ss");
+});
+
+const latestProposerDisplay = computed(() => {
+  const latest = latestBlockSummary.value;
+  if (!latest) return "—";
+  return (
+    latest.proposerLabel?.name ||
+    latest.proposerMoniker ||
+    latest.proposerOperator?.slice(0, 16)?.concat("…") ||
+    "Unknown"
+  );
+});
+
+const latestGasUtilizationDisplay = computed(() => {
+  const util = latestBlockSummary.value?.gasUtilization;
+  if (typeof util !== "number" || !Number.isFinite(util)) return "—";
+  return `${(util * 100).toFixed(1)}%`;
+});
+
+const totalTxsDisplay = computed(() => {
+  if (typeof info.value.totalTxs === "number" && info.value.totalTxs >= 0) {
+    return info.value.totalTxs.toLocaleString();
+  }
+  return "—";
+});
+
+const networkStatus = computed(() => {
+  if (loadingInfo.value) {
+    return {
+      label: "Syncing",
+      indicator: "bg-amber-400",
+      textClass: "text-amber-200",
+      subtext: "Fetching latest state"
+    };
+  }
+  if (!info.value.latestBlockHeight) {
+    return {
+      label: "Offline",
+      indicator: "bg-rose-400",
+      textClass: "text-rose-200",
+      subtext: "No recent blocks"
+    };
+  }
+  return {
+    label: "Active",
+    indicator: "bg-emerald-400",
+    textClass: "text-emerald-200",
+    subtext: `Height #${info.value.latestBlockHeight?.toLocaleString?.() ?? info.value.latestBlockHeight}`
+  };
 });
 
 // Sparkline path generator
@@ -204,52 +296,72 @@ function sparkPath(data: number[], width = 160, height = 40) {
         <RcSearchBar />
       </div>
 
-      <div class="grid grid-cols-1 sm:grid-cols-3 gap-4">
-        <div class="p-4 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+      <div class="grid grid-cols-1 md:grid-cols-2 xl:grid-cols-4 gap-4">
+        <div class="p-4 rounded-xl bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/30">
           <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Latest Block</div>
-          <div class="text-2xl font-bold text-indigo-300">{{ loadingInfo ? '…' : info.latestBlockHeight ?? '—' }}</div>
-          <div class="text-[11px] text-slate-500">{{ info.latestBlockTime || 'Syncing...' }}</div>
+          <div class="text-3xl font-bold text-indigo-200">
+            {{ loadingInfo ? '…' : latestBlockHeightDisplay }}
+          </div>
+          <div class="text-[11px] text-slate-400">{{ latestBlockTimeRelative }}</div>
+          <div class="text-[11px] text-slate-500">Timestamp: {{ latestBlockTimeAbsolute }}</div>
+          <div class="text-[11px] text-slate-500 mt-1">Proposer: <span class="text-slate-300">{{ latestProposerDisplay }}</span></div>
         </div>
-        <div class="p-4 rounded-lg bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20">
-          <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Avg Block Time</div>
-          <div class="text-2xl font-bold text-emerald-300">{{ avgBlockTime }}</div>
+        <div class="p-4 rounded-xl bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/30">
+          <div class="flex items-center justify-between mb-1">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400">Live Block Time</div>
+            <div class="text-[10px] text-slate-500">Last {{ blockTimeDeltas.length || 0 }} blocks</div>
+          </div>
+          <div class="text-3xl font-bold text-emerald-200">{{ avgBlockTimeDisplay }}</div>
           <svg :width="160" :height="40" class="mt-2">
             <path :d="sparkPath(blockTimeDeltas)" stroke="rgb(16 185 129)" fill="none" stroke-width="2" />
           </svg>
         </div>
-        <div class="p-4 rounded-lg bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20">
-          <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Txs per Block</div>
-          <div class="text-2xl font-bold text-blue-300">{{ txsPerBlock[0] ?? 0 }}</div>
+        <div class="p-4 rounded-xl bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/30">
+          <div class="flex items-center justify-between mb-1">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400">Tx Throughput</div>
+            <div class="text-[10px] text-slate-500">Last 20 blocks</div>
+          </div>
+          <div class="text-3xl font-bold text-blue-200">{{ avgTxPerBlockDisplay }}</div>
+          <div class="text-[11px] text-slate-500">Latest block: {{ latestBlockSummary?.txs ?? 0 }} txs</div>
           <svg :width="160" :height="40" class="mt-2">
             <path :d="sparkPath(txsPerBlock)" stroke="rgb(59 130 246)" fill="none" stroke-width="2" />
           </svg>
+        </div>
+        <div class="p-4 rounded-xl bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/30">
+          <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Gas Utilization</div>
+          <div class="text-3xl font-bold text-amber-200">{{ latestGasUtilizationDisplay }}</div>
+          <div class="text-[11px] text-slate-500">
+            Gas: {{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '0' }} /
+            {{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '0' }}
+          </div>
         </div>
       </div>
 
       <!-- Quick Stats -->
       <div class="card">
-        <h2 class="text-lg font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Network Statistics</h2>
+        <h2 class="text-lg font-bold mb-4 bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+          Network Statistics
+        </h2>
         <div class="grid grid-cols-2 sm:grid-cols-4 gap-4">
-          <div class="p-3 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
-            <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Avg Block Time</div>
-            <div class="text-xl font-bold text-indigo-300">~6s</div>
-          </div>
           <div class="p-3 rounded-lg bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 border border-emerald-500/20">
-            <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Network</div>
-            <div class="text-xl font-bold text-emerald-300 flex items-center gap-2">
-              <span class="w-2 h-2 rounded-full bg-emerald-400 animate-pulse"></span>
-              Active
+            <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Status</div>
+            <div class="text-xl font-bold flex items-center gap-2" :class="networkStatus.textClass">
+              <span class="w-2 h-2 rounded-full animate-pulse" :class="networkStatus.indicator"></span>
+              {{ networkStatus.label }}
             </div>
+            <div class="text-[11px] text-slate-500">{{ networkStatus.subtext }}</div>
+          </div>
+          <div class="p-3 rounded-lg bg-gradient-to-br from-indigo-500/10 to-purple-500/10 border border-indigo-500/20">
+            <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Chain ID</div>
+            <div class="text-xl font-bold text-indigo-200">{{ info.chainId || '—' }}</div>
           </div>
           <div class="p-3 rounded-lg bg-gradient-to-br from-blue-500/10 to-indigo-500/10 border border-blue-500/20">
             <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Total Blocks</div>
-            <div class="text-xl font-bold text-blue-300">
-              {{ info.latestBlockHeight || '-' }}
-            </div>
+            <div class="text-xl font-bold text-blue-200">{{ latestBlockHeightDisplay }}</div>
           </div>
           <div class="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20">
             <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Total Txs</div>
-            <div class="text-xl font-bold text-purple-300">{{ txs.length }}+</div>
+            <div class="text-xl font-bold text-purple-200">{{ totalTxsDisplay }}</div>
           </div>
         </div>
       </div>
