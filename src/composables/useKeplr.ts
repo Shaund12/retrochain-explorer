@@ -175,21 +175,16 @@ export function useKeplr() {
     if (!address.value) throw new Error("Not connected to Keplr");
 
     try {
-      console.log("Starting REST-based transaction...");
-
-      // Get account info from REST API (this works!)
-      console.log("Fetching account info from REST API...");
       const accountRes = await api.get(`/cosmos/auth/v1beta1/accounts/${address.value}`);
       const account = accountRes.data?.account;
-      
+
       if (!account) {
         throw new Error("Account not found. Make sure your account is funded.");
       }
 
-      // Extract account number and sequence
       let accountNumber: string;
       let sequence: string;
-      
+
       if (account["@type"] === "/cosmos.auth.v1beta1.BaseAccount") {
         accountNumber = account.account_number;
         sequence = account.sequence || "0";
@@ -200,36 +195,21 @@ export function useKeplr() {
         throw new Error("Unknown account type");
       }
 
-      console.log("Account info:", { accountNumber, sequence });
-
-      // Get offline signer from Keplr
       const offlineSigner = window.keplr.getOfflineSigner(chainId);
       const accounts = await offlineSigner.getAccounts();
       const signerAddress = accounts[0].address;
       const signerPubkey = accounts[0].pubkey;
 
-      console.log("Signer address:", signerAddress);
-
-      // Create registry with default Cosmos SDK types (includes staking, distribution, etc.)
       const registry = new Registry(defaultRegistryTypes);
-      
-      // Encode transaction body
-      const anyMsgs = msgs.map(msg => registry.encodeAsAny(msg));
-      const txBody = TxBody.fromPartial({
-        messages: anyMsgs,
-        memo: memo || ""
-      });
+      const anyMsgs = msgs.map((msg) => registry.encodeAsAny(msg));
+      const txBody = TxBody.fromPartial({ messages: anyMsgs, memo: memo || "" });
       const txBodyBytes = TxBody.encode(txBody).finish();
 
-      console.log("Transaction body encoded");
-
-      // Encode public key
       if (!signerPubkey || !(signerPubkey instanceof Uint8Array)) {
         throw new Error("Unable to load signer pubkey from Keplr");
       }
 
       const pubkey = encodePubkey(encodeSecp256k1Pubkey(signerPubkey));
-
       const sequenceNumber = Int53.fromString(sequence).toNumber();
 
       const signTx = async (feeValue: any, debugLabel?: string) => {
@@ -265,53 +245,13 @@ export function useKeplr() {
         if (debugLabel) {
           const authInfo = AuthInfo.decode(txRaw.authInfoBytes);
           console.log(`${debugLabel} fee`, {
-            amount: authInfo.fee?.amount?.map(c => ({ denom: c.denom, amount: c.amount })),
+            amount: authInfo.fee?.amount?.map((c) => ({ denom: c.denom, amount: c.amount })),
             gasLimit: authInfo.fee?.gasLimit?.toString()
           });
         }
 
         return { txRaw, txBytesBase64: toBase64(txBytes) };
       };
-
-  const signAndBroadcast = async (chainId: string, msgs: any[], fee: any, memo = "") => {
-    if (!window.keplr) throw new Error("Keplr not available");
-    if (!address.value) throw new Error("Not connected to Keplr");
-
-    const attemptRpc = async () => {
-      const offlineSigner = window.keplr.getOfflineSigner(chainId);
-      const accounts = await offlineSigner.getAccounts();
-
-      // Build absolute HTTP(S) RPC endpoint for CosmJS
-      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
-      let rpcEndpoint = rpcBase.value || "/rpc";
-
-      // Convert to absolute URL if relative
-      if (!rpcEndpoint.startsWith('http')) {
-        rpcEndpoint = `${origin}${rpcEndpoint.startsWith('/') ? '' : '/'}${rpcEndpoint}`;
-      }
-
-      const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner);
-
-      const result = await client.signAndBroadcast(
-        accounts[0].address,
-        msgs,
-        fee,
-        memo
-      );
-
-      return result;
-    };
-
-    try {
-      return await attemptRpc();
-    } catch (e) {
-      console.warn("RPC sign/broadcast failed, evaluating fallback", e);
-      if (isUndefinedValueError(e)) {
-        return signAndBroadcastWithREST(chainId, msgs, fee, memo);
-      }
-      throw e;
-    }
-  };
 
       const baseGasLimit = Math.max(MIN_GAS_LIMIT, msgs.length * DEFAULT_GAS_PER_MSG);
       let feeToUse = fee ?? null;
@@ -324,9 +264,7 @@ export function useKeplr() {
 
         try {
           const { txBytesBase64 } = await signTx(simulateFee, "simulate");
-          const simulateRes = await api.post("/cosmos/tx/v1beta1/simulate", {
-            tx_bytes: txBytesBase64
-          });
+          const simulateRes = await api.post("/cosmos/tx/v1beta1/simulate", { tx_bytes: txBytesBase64 });
 
           const gasUsed = Number(simulateRes.data?.gas_info?.gas_used ?? baseGasLimit);
           const adjustedGas = Math.ceil(gasUsed * DEFAULT_GAS_ADJUSTMENT);
@@ -336,34 +274,26 @@ export function useKeplr() {
             amount: [{ denom: DEFAULT_FEE_DENOM, amount: feeAmount }],
             gas: adjustedGas.toString()
           };
-
-          console.log("Gas simulation success", { gasUsed, adjustedGas, feeAmount });
         } catch (simErr) {
           console.warn("Gas simulation failed, falling back to defaults:", simErr);
           const fallbackGas = baseGasLimit;
           feeToUse = {
-            amount: [{ denom: DEFAULT_FEE_DENOM, amount: Math.max(Math.ceil(fallbackGas * DEFAULT_GAS_PRICE), MIN_TOTAL_FEE).toString() }],
+            amount: [{
+              denom: DEFAULT_FEE_DENOM,
+              amount: Math.max(Math.ceil(fallbackGas * DEFAULT_GAS_PRICE), MIN_TOTAL_FEE).toString()
+            }],
             gas: fallbackGas.toString()
           };
         }
       }
 
-      console.log("Using final fee", feeToUse);
-
       const { txBytesBase64 } = await signTx(feeToUse, "broadcast");
-
-      console.log("Transaction encoded, length:", txBytesBase64.length);
-
-      // Broadcast via REST API
       const broadcastRes = await api.post("/cosmos/tx/v1beta1/txs", {
         tx_bytes: txBytesBase64,
         mode: "BROADCAST_MODE_SYNC"
       });
 
-      console.log("Broadcast response:", broadcastRes.data);
-
       const txResponse = broadcastRes.data?.tx_response;
-      
       if (txResponse?.code !== 0) {
         throw new Error(txResponse?.raw_log || txResponse?.log || "Transaction failed");
       }
@@ -371,6 +301,35 @@ export function useKeplr() {
       return txResponse;
     } catch (e: any) {
       console.error("Transaction failed:", e);
+      throw e;
+    }
+  };
+
+  const signAndBroadcast = async (chainId: string, msgs: any[], fee: any, memo = "") => {
+    if (!window.keplr) throw new Error("Keplr not available");
+    if (!address.value) throw new Error("Not connected to Keplr");
+
+    const attemptRpc = async () => {
+      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      const accounts = await offlineSigner.getAccounts();
+
+      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
+      let rpcEndpoint = rpcBase.value || "/rpc";
+      if (!rpcEndpoint.startsWith("http")) {
+        rpcEndpoint = `${origin}${rpcEndpoint.startsWith('/') ? '' : '/'}${rpcEndpoint}`;
+      }
+
+      const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner);
+      return client.signAndBroadcast(accounts[0].address, msgs, fee, memo);
+    };
+
+    try {
+      return await attemptRpc();
+    } catch (e) {
+      console.warn("RPC sign/broadcast failed, evaluating fallback…", e);
+      if (isUndefinedValueError(e)) {
+        return signAndBroadcastWithREST(chainId, msgs, fee, memo);
+      }
       throw e;
     }
   };
