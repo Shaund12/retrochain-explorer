@@ -4,6 +4,9 @@ import { useApi } from "./useApi";
 import { useKeplr } from "./useKeplr";
 
 const DEFAULT_BURN_RATE = 0.008; // 0.8% burn by default when module params unavailable
+const BLOCKED_DELEGATORS = new Set([
+  "cosmos1fscvf7rphx477z6vd4sxsusm2u8a70kewvc8wy"
+]);
 
 export interface Delegation {
   delegator_address: string;
@@ -235,9 +238,10 @@ const delegatorLeaderboardLoading = ref(false);
 
           const delegations: any[] = res.data?.delegation_responses ?? [];
           delegations.forEach((entry: any) => {
-            const delegator = entry?.delegation?.delegator_address;
+            const delegatorRaw = entry?.delegation?.delegator_address;
+            const delegator = typeof delegatorRaw === "string" ? delegatorRaw.toLowerCase() : "";
             const rawAmount = entry?.balance?.amount ?? "0";
-            if (!delegator) return;
+            if (!delegator || BLOCKED_DELEGATORS.has(delegator)) return;
             let amount: bigint;
             try {
               amount = BigInt(rawAmount);

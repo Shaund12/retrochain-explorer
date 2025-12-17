@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed } from "vue";
+import { onMounted, computed, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useValidators } from "@/composables/useValidators";
 import dayjs from "dayjs";
@@ -45,6 +45,7 @@ const highestSelfDelegation = computed(() => {
 });
 
 const topValidators = computed(() => validators.value.slice(0, 3));
+const showTopGuardians = ref(true);
 
 const guardianBadges = [
   { icon: "🥇", title: "Guardian of Blocks" },
@@ -157,10 +158,15 @@ const goDelegate = (validatorAddress: string) => {
 
     <div v-if="topValidators.length" class="card">
       <div class="flex items-center justify-between mb-4">
-        <h2 class="text-sm font-semibold text-slate-100">Top Guardians</h2>
-        <span class="text-xs text-slate-400">Most voting power</span>
+        <div>
+          <h2 class="text-sm font-semibold text-slate-100">Top Guardians</h2>
+          <span class="text-xs text-slate-400">Most voting power</span>
+        </div>
+        <button class="btn text-[11px]" @click="showTopGuardians = !showTopGuardians">
+          {{ showTopGuardians ? 'Hide' : 'Show' }}
+        </button>
       </div>
-      <div class="grid gap-3 md:grid-cols-3">
+      <div v-show="showTopGuardians" class="grid gap-3 md:grid-cols-3">
         <div
           v-for="(validator, idx) in topValidators"
           :key="validator.operatorAddress"
