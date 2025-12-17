@@ -171,6 +171,31 @@ export function useAssets() {
     return { items };
   };
 
+const fetchContractsForCode = async (codeId: string, limit = 50) => {
+  const endpoints = ["/cosmwasm/wasm/v1", "/cosmwasm/wasm/v1beta1"];
+  for (const base of endpoints) {
+    try {
+      const res = await api.get(`${base}/code/${codeId}/contracts`, {
+        params: {
+          "pagination.limit": String(limit),
+          "pagination.reverse": "true"
+        },
+        paramsSerializer
+      });
+      if (Array.isArray(res.data?.contracts) && res.data.contracts.length) {
+        return res.data.contracts as string[];
+      }
+    } catch (err: any) {
+      const status = err?.response?.status;
+      if (status === 404 || status === 501) {
+        continue;
+      }
+      console.warn(`Failed to fetch contracts for code ${codeId}`, err);
+    }
+  }
+  return [];
+};
+
   const fetchDenomTrace = async (hash: string) => {
     if (!denomTraceEndpointSupported) return null;
     const paths = ["/ibc/apps/transfer/v1", "/ibc/apps/transfer/v1beta1"];
@@ -254,16 +279,8 @@ export function useAssets() {
         const codeId = String(info?.code_id ?? info?.id ?? "");
         if (!codeId) continue;
 
-        let contracts: string[] = [];
-        try {
-          const res = await api.get(`/cosmwasm/wasm/v1/code/${codeId}/contracts`, {
-            params: { "pagination.limit": "50", "pagination.reverse": "true" }
-          });
-          contracts = Array.isArray(res.data?.contracts) ? res.data.contracts : [];
-        } catch (contractErr) {
-          console.warn(`Failed to fetch contracts for code ${codeId}`, contractErr);
-          continue;
-        }
+        const contracts = await fetchContractsForCode(codeId, 50);
+        if (!contracts.length) continue;
 
         const contractQueries = contracts.slice(0, 50).map(async (address: string) => {
           if (!address || seenContracts.has(address) || cw20List.length >= 40) return;
