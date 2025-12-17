@@ -187,11 +187,25 @@ export function useAssets() {
 
   const queryContractSmart = async (address: string, payload: Record<string, any>) => {
     const encoded = encodeJsonToBase64(payload);
-    const res = await api.post(`/cosmwasm/wasm/v1/contract/${address}/smart`, {
-      query_data: encoded
-    });
-    const data = res.data?.data ?? res.data?.smart_response?.data;
-    return decodeBase64Json(data);
+    const encodedPath = encodeURIComponent(encoded);
+    const paths = [
+      () => api.get(`/cosmwasm/wasm/v1/contract/${address}/smart/${encodedPath}`),
+      () => api.post(`/cosmwasm/wasm/v1/contract/${address}/smart`, { query_data: encoded })
+    ];
+
+    for (const request of paths) {
+      try {
+        const res = await request();
+        const data = res.data?.data ?? res.data?.smart_response?.data;
+        if (data !== undefined) {
+          return decodeBase64Json(data);
+        }
+      } catch (err) {
+        // try next transport option
+      }
+    }
+
+    throw new Error(`Smart query failed for ${address}`);
   };
 
   const fetchCw20Tokens = async (): Promise<Cw20Token[]> => {
