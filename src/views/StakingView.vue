@@ -38,6 +38,14 @@ const txLoading = ref(false);
 const tokenDenom = computed(() => 'uretro');
 const tokenSymbol = computed(() => 'RETRO');
 
+const stakerBadges = [
+  { icon: '🏆', label: 'Chain Champion', accent: 'text-amber-200' },
+  { icon: '🥈', label: 'Elite Guardian', accent: 'text-slate-200' },
+  { icon: '🥉', label: 'Prime Supporter', accent: 'text-amber-300' }
+];
+
+const getStakerBadge = (index: number) => stakerBadges[index] ?? { icon: '⭐', label: 'Trailblazer', accent: 'text-cyan-200' };
+
 const totalStaked = computed(() => {
   return delegations.value.reduce((sum, d) => sum + parseInt(d.balance.amount || "0", 10), 0);
 });
@@ -342,11 +350,11 @@ const copy = async (text: string) => {
         </div>
 
         <!-- Staking Leaderboard -->
-        <div class="card-soft mb-4">
+        <div class="card-soft mb-4 border border-emerald-500/20 bg-gradient-to-br from-emerald-500/5 to-cyan-500/5">
           <div class="flex items-center justify-between mb-3">
             <div>
               <h2 class="text-sm font-semibold text-slate-100">Top Stakers</h2>
-              <p class="text-xs text-slate-400">Largest discovered delegations (sampled from active validators)</p>
+              <p class="text-xs text-slate-400">Celebrating the biggest wallets backing RetroChain security</p>
             </div>
             <button class="btn text-[11px]" @click="fetchDelegatorLeaderboard()" :disabled="delegatorLeaderboardLoading">
               {{ delegatorLeaderboardLoading ? 'Refreshing…' : 'Refresh' }}
