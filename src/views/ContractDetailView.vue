@@ -3,13 +3,14 @@ import { computed, onMounted, ref, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { MsgExecuteContract } from "cosmjs-types/cosmwasm/wasm/v1/tx";
 import { useContracts } from "@/composables/useContracts";
+import type { ContractExecutionRecord } from "@/composables/useContracts";
 import { useKeplr } from "@/composables/useKeplr";
 import { useToast } from "@/composables/useToast";
 import { useNetwork } from "@/composables/useNetwork";
 
 const route = useRoute();
 const router = useRouter();
-const { getContractInfo, getCodeInfo, getContractCodeHash, smartQueryContract } = useContracts();
+const { getContractInfo, getCodeInfo, getContractCodeHash, smartQueryContract, getContractExecutions } = useContracts();
 const { address: walletAddress, connect, signAndBroadcast } = useKeplr();
 const toast = useToast();
 const { current: network, restBase } = useNetwork();
@@ -33,6 +34,7 @@ const executeMemo = ref("");
 const executeBusy = ref(false);
 const executeError = ref<string | null>(null);
 const lastTxHash = ref<string | null>(null);
+const executionHistory = ref<ContractExecutionRecord[]>([]);
 
 const queryTemplates = [
   { label: "General · Contract info", payload: '{ "contract_info": {} }' },
@@ -50,9 +52,32 @@ const codeDownloadUrl = computed(() => {
   return `${base}/cosmwasm/wasm/v1/code/${contractInfo.value.code_id}`;
 });
 
+const normalizeHex = (value?: string | null) => {
+  if (!value) return "";
+  const trimmed = value.trim();
+  if (!trimmed) return "";
+  const hex = trimmed.startsWith("0x") || trimmed.startsWith("0X") ? trimmed.slice(2) : trimmed;
+  return /^[0-9a-fA-F]+$/.test(hex) ? hex.toLowerCase() : "";
+};
+
+const formatHash = (value?: string | null) => {
+  if (!value) return "—";
+  const normalized = normalizeHex(value);
+  if (normalized) {
+    return `0x${normalized}`;
+  }
+  return value;
+};
+
+const normalizedContractHash = computed(() => normalizeHex(contractCodeHash.value));
+const normalizedCodeHash = computed(() => normalizeHex(codeInfo.value?.dataHash));
+
+const contractHashDisplay = computed(() => formatHash(contractCodeHash.value));
+const codeHashDisplay = computed(() => formatHash(codeInfo.value?.dataHash));
+
 const verificationStatus = computed(() => {
-  if (!contractCodeHash.value || !codeInfo.value?.dataHash) return "unknown";
-  return contractCodeHash.value.toLowerCase() === codeInfo.value.dataHash.toLowerCase() ? "verified" : "mismatch";
+  if (!normalizedContractHash.value || !normalizedCodeHash.value) return "unknown";
+  return normalizedContractHash.value === normalizedCodeHash.value ? "verified" : "mismatch";
 });
 
 const verificationLabel = computed(() => {
@@ -66,6 +91,50 @@ const verificationBadgeClass = computed(() => {
   if (verificationStatus.value === "mismatch") return "border-rose-400/60 text-rose-200";
   return "border-slate-600/60 text-slate-300";
 });
+
+const detectedExecuteFunctions = computed(() => {
+  const set = new Set<string>();
+  executionHistory.value.forEach((entry) => {
+    if (entry.msg && typeof entry.msg === "object" && !Array.isArray(entry.msg)) {
+      const key = Object.keys(entry.msg)[0];
+      if (key) set.add(key);
+    }
+  });
+  return Array.from(set);
+});
+
+const topFunctionName = (msg: ContractExecutionRecord["msg"]) => {
+  if (msg && typeof msg === "object" && !Array.isArray(msg)) {
+    const key = Object.keys(msg)[0];
+    return key || "execute";
+  }
+  if (typeof msg === "string" && msg.trim()) {
+    return msg.trim().slice(0, 48);
+  }
+  return "execute";
+};
+
+const formatExecutionMsg = (msg: ContractExecutionRecord["msg"]) => {
+  if (!msg) return "—";
+  try {
+    return typeof msg === "string" ? msg : JSON.stringify(msg, null, 2);
+  } catch {
+    return String(msg);
+  }
+};
+
+const formatTimestamp = (value?: string) => {
+  if (!value) return "—";
+  const date = new Date(value);
+  if (Number.isNaN(date.getTime())) return value;
+  return date.toLocaleString();
+};
+
+const shortAddr = (value?: string) => {
+  if (!value) return "—";
+  if (value.length <= 12) return value;
+  return `${value.slice(0, 6)}…${value.slice(-6)}`;
+};
 
 const hasAdmin = computed(() => Boolean(contractInfo.value?.admin));
 const createdHeight = computed(() => contractInfo.value?.created?.block_height);
@@ -182,12 +251,14 @@ const loadDetails = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const [info, hash] = await Promise.all([
+    const [info, hash, executions] = await Promise.all([
       getContractInfo(addr),
-      getContractCodeHash(addr)
+      getContractCodeHash(addr),
+      getContractExecutions(addr, 40)
     ]);
     contractInfo.value = info;
     contractCodeHash.value = hash;
+    executionHistory.value = executions;
     if (info?.code_id) {
       codeInfo.value = await getCodeInfo(info.code_id);
     } else {
@@ -290,11 +361,11 @@ watch(
             <div class="text-xs text-slate-300 space-y-2">
               <div>
                 <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Contract hash</div>
-                <div class="font-mono break-all">{{ contractCodeHash || '—' }}</div>
+                <div class="font-mono break-all">{{ contractHashDisplay }}</div>
               </div>
               <div>
                 <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Code data hash</div>
-                <div class="font-mono break-all">{{ codeInfo?.dataHash || '—' }}</div>
+                <div class="font-mono break-all">{{ codeHashDisplay }}</div>
               </div>
               <div>
                 <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Instantiate permission</div>
@@ -304,6 +375,60 @@ watch(
             </div>
           </section>
         </div>
+
+        <section class="card space-y-3">
+          <div class="flex items-center justify-between">
+            <div>
+              <h2 class="text-sm font-semibold text-slate-100">Detected execute functions</h2>
+              <p class="text-[11px] text-slate-500">Derived from on-chain transaction history</p>
+            </div>
+            <span class="badge text-[10px] border-indigo-400/60 text-indigo-200">{{ executionHistory.length }} calls</span>
+          </div>
+          <div v-if="detectedExecuteFunctions.length" class="flex flex-wrap gap-2">
+            <span
+              v-for="fn in detectedExecuteFunctions"
+              :key="fn"
+              class="badge text-[11px] border-emerald-400/60 text-emerald-200"
+            >
+              {{ fn }}
+            </span>
+          </div>
+          <p v-else class="text-[11px] text-slate-500">No execute messages observed yet for this contract.</p>
+
+          <div v-if="executionHistory.length" class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr class="text-xs text-slate-400">
+                  <th>Function</th>
+                  <th>Sender</th>
+                  <th>Height</th>
+                  <th>Tx</th>
+                  <th>Time</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="record in executionHistory.slice(0, 10)" :key="record.txhash + record.height">
+                  <td class="text-xs text-slate-200">
+                    <details class="group">
+                      <summary class="cursor-pointer text-emerald-200 hover:text-emerald-100 flex items-center gap-1 text-xs">
+                        {{ topFunctionName(record.msg) }}
+                      </summary>
+                      <pre class="mt-1 p-2 bg-slate-900/70 rounded text-[11px] whitespace-pre-wrap break-words">{{ formatExecutionMsg(record.msg) }}</pre>
+                    </details>
+                  </td>
+                  <td class="text-xs text-slate-300 font-mono">{{ shortAddr(record.sender) }}</td>
+                  <td class="text-xs text-slate-300">{{ record.height.toLocaleString() }}</td>
+                  <td class="text-xs text-indigo-300">
+                    <router-link class="underline" :to="{ name: 'tx-detail', params: { hash: record.txhash } }">
+                      {{ shortAddr(record.txhash) }}
+                    </router-link>
+                  </td>
+                  <td class="text-[11px] text-slate-400">{{ formatTimestamp(record.timestamp) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </section>
 
         <div class="grid gap-4 lg:grid-cols-2">
           <section class="card space-y-3">

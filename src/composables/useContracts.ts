@@ -19,6 +19,15 @@ export interface ContractSummary {
   ibcPortId?: string;
 }
 
+export interface ContractExecutionRecord {
+  txhash: string;
+  height: number;
+  timestamp?: string;
+  sender?: string;
+  funds: { amount: string; denom: string }[];
+  msg: Record<string, any> | string | null;
+}
+
 interface FetchOptions {
   maxCodes: number;
   maxContracts: number;
@@ -67,6 +76,30 @@ const base64ToString = (value: string) => {
   throw new Error("Base64 decoding is not supported in this environment.");
 };
 
+const bytesToHex = (bytes: Uint8Array) =>
+  Array.from(bytes)
+    .map((b) => b.toString(16).padStart(2, "0"))
+    .join("");
+
+const base64ToBytes = (value: string) => {
+  if (!value) return new Uint8Array(0);
+  if (typeof atob === "function") {
+    const binary = atob(value);
+    const len = binary.length;
+    const bytes = new Uint8Array(len);
+    for (let i = 0; i < len; i += 1) {
+      bytes[i] = binary.charCodeAt(i);
+    }
+    return bytes;
+  }
+  const nodeBuffer = (globalThis as any)?.Buffer;
+  if (nodeBuffer) {
+    const buf = nodeBuffer.from(value, "base64");
+    return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+  }
+  throw new Error("Base64 decoding is not supported in this environment.");
+};
+
 const encodeJsonToBase64 = (payload: Record<string, any> | string) => {
   const json = typeof payload === "string" ? payload : JSON.stringify(payload);
   if (typeof TextEncoder !== "undefined") {
@@ -88,6 +121,39 @@ const decodeBase64Json = (value?: string | null) => {
   } catch {
     return asString;
   }
+};
+
+const serializeParams = (params: Record<string, any>) => {
+  const search = new URLSearchParams();
+  Object.keys(params).forEach((key) => {
+    const value = params[key];
+    if (value === undefined || value === null) return;
+    if (Array.isArray(value)) {
+      value.forEach((entry) => search.append(key, entry));
+      return;
+    }
+    search.append(key, value);
+  });
+  return search.toString();
+};
+
+const normalizeHexHash = (value?: string | null) => {
+  if (!value) return undefined;
+  const trimmed = value.trim();
+  if (!trimmed) return undefined;
+  const hexCandidate = trimmed.startsWith("0x") || trimmed.startsWith("0X") ? trimmed.slice(2) : trimmed;
+  if (/^[0-9a-fA-F]+$/.test(hexCandidate)) {
+    return hexCandidate.toLowerCase();
+  }
+  try {
+    const bytes = base64ToBytes(trimmed);
+    if (bytes.length) {
+      return bytesToHex(bytes);
+    }
+  } catch {
+    // ignore – return undefined below
+  }
+  return undefined;
 };
 
 export function useContracts() {
@@ -122,7 +188,7 @@ export function useContracts() {
         .map((info) => ({
           codeId: String(info?.code_id ?? info?.id ?? ""),
           creator: info?.creator ?? "",
-          dataHash: info?.data_hash ?? undefined,
+          dataHash: normalizeHexHash(info?.data_hash) ?? undefined,
           instantiatePermission: info?.instantiate_permission ?? null
         }))
         .filter((info) => info.codeId.length > 0)
@@ -248,10 +314,12 @@ export function useContracts() {
     try {
       const res = await api.get(`/cosmwasm/wasm/v1/contract/${key}/code-hash`);
       const hash = res.data?.code_hash || null;
-      if (hash) {
-        contractCodeHashCache.set(key, hash);
+      const normalized = normalizeHexHash(hash);
+      const finalHash = normalized || hash;
+      if (finalHash) {
+        contractCodeHashCache.set(key, finalHash);
       }
-      return hash;
+      return finalHash;
     } catch (hashErr) {
       console.warn("Unable to fetch contract code hash", hashErr);
       return null;
@@ -269,7 +337,7 @@ export function useContracts() {
     const normalized: ExtendedCodeInfo = {
       codeId: id,
       creator: info?.creator ?? "",
-      dataHash: info?.data_hash ?? undefined,
+      dataHash: normalizeHexHash(info?.data_hash) ?? undefined,
       instantiatePermission: info?.instantiate_permission ?? null,
       raw: info
     };
@@ -288,6 +356,52 @@ export function useContracts() {
     return decodeBase64Json(payload);
   };
 
+  const getContractExecutions = async (address: string, limit = 25): Promise<ContractExecutionRecord[]> => {
+    const key = address?.trim();
+    if (!key) throw new Error("Contract address is required.");
+    try {
+      const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
+        params: {
+          events: `message.contract_address='${key}'`,
+          order_by: "ORDER_BY_DESC",
+          "pagination.limit": String(limit)
+        },
+        paramsSerializer: serializeParams
+      });
+
+      const responses: any[] = res.data?.tx_responses ?? [];
+      const executions: ContractExecutionRecord[] = [];
+
+      responses.forEach((resp) => {
+        const txMsgs: any[] = resp?.tx?.body?.messages ?? [];
+        txMsgs.forEach((msg) => {
+          const typeUrl = msg?.["@type"] || msg?.type;
+          if (typeUrl !== "/cosmwasm.wasm.v1.MsgExecuteContract") return;
+          if (msg?.contract !== key) return;
+
+          let decoded: Record<string, any> | string | null = null;
+          if (typeof msg.msg === "string" && msg.msg.length) {
+            decoded = decodeBase64Json(msg.msg);
+          }
+
+          executions.push({
+            txhash: resp?.txhash || "",
+            height: parseInt(resp?.height ?? "0", 10),
+            timestamp: resp?.timestamp,
+            sender: msg?.sender,
+            funds: Array.isArray(msg?.funds) ? msg.funds : [],
+            msg: decoded
+          });
+        });
+      });
+
+      return executions;
+    } catch (err) {
+      console.warn("Unable to fetch contract executions", err);
+      return [];
+    }
+  };
+
   return {
     codes,
     contracts,
@@ -297,6 +411,7 @@ export function useContracts() {
     getContractInfo,
     getContractCodeHash,
     getCodeInfo,
-    smartQueryContract
+    smartQueryContract,
+    getContractExecutions
   };
 }
