@@ -128,8 +128,6 @@ export function useAssets() {
     throw new Error("TextEncoder is unavailable in this environment.");
   };
 
-const toBase64Url = (value: string) =>
-  value.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
 
   const decodeBase64Json = (value?: string | null) => {
     if (!value) return null;
@@ -212,12 +210,12 @@ const toBase64Url = (value: string) =>
 
   const queryContractSmart = async (address: string, payload: Record<string, any>) => {
     const encoded = encodeJsonToBase64(payload);
-    const encodedUrl = toBase64Url(encoded);
+    const encodedPath = encodeURIComponent(encoded);
     const apiBases = ["/cosmwasm/wasm/v1", "/cosmwasm/wasm/v1beta1"];
 
     for (const basePath of apiBases) {
       const attempts = [
-        () => api.get(`${basePath}/contract/${address}/smart/${encodedUrl}`),
+        () => api.get(`${basePath}/contract/${address}/smart/${encodedPath}`),
         () => api.post(`${basePath}/contract/${address}/smart`, { query_data: encoded })
       ];
 
