@@ -138,9 +138,9 @@ const formatCw20Supply = (token: Cw20Token) => {
                       :class="tokenAvatarClass(token)"
                     >
                       <img
-                        v-if="token.tokenMeta.logo"
+                        v-if="token.tokenMeta?.logo"
                         :src="token.tokenMeta.logo"
-                        :alt="`${token.tokenMeta.symbol} logo`"
+                        :alt="`${token.tokenMeta?.symbol || token.tokenMeta?.name || token.denom} logo`"
                         class="h-8 w-8 object-contain"
                         loading="lazy"
                       />
@@ -149,8 +149,8 @@ const formatCw20Supply = (token: Cw20Token) => {
                       </span>
                     </div>
                     <div>
-                      <p class="font-semibold text-white">{{ token.tokenMeta.symbol }}</p>
-                      <p class="text-xs text-slate-400">{{ token.tokenMeta.name }}</p>
+                      <p class="font-semibold text-white">{{ token.tokenMeta?.symbol || token.denom?.toUpperCase() }}</p>
+                      <p class="text-xs text-slate-400">{{ token.tokenMeta?.name || token.denom }}</p>
                     </div>
                   </div>
                 </td>
@@ -164,7 +164,7 @@ const formatCw20Supply = (token: Cw20Token) => {
                     {{ tokenTypeLabel(token) }}
                   </span>
                 </td>
-                <td class="text-xs text-slate-400">{{ token.tokenMeta.description || token.metadata?.description || '—' }}</td>
+                <td class="text-xs text-slate-400">{{ token.tokenMeta?.description || token.metadata?.description || '—' }}</td>
               </tr>
             </tbody>
           </table>
@@ -230,9 +230,9 @@ const formatCw20Supply = (token: Cw20Token) => {
                       :class="tokenAvatarClass(token)"
                     >
                       <img
-                        v-if="token.tokenMeta.logo"
+                        v-if="token.tokenMeta?.logo"
                         :src="token.tokenMeta.logo"
-                        :alt="`${token.tokenMeta.symbol} logo`"
+                        :alt="`${token.tokenMeta?.symbol || token.tokenMeta?.name || token.denom} logo`"
                         class="h-8 w-8 object-contain"
                         loading="lazy"
                       />
@@ -241,7 +241,7 @@ const formatCw20Supply = (token: Cw20Token) => {
                       </span>
                     </div>
                     <div>
-                      <p class="font-semibold text-white">{{ token.tokenMeta.symbol }}</p>
+                      <p class="font-semibold text-white">{{ token.tokenMeta?.symbol || token.denom?.toUpperCase() }}</p>
                       <p class="text-xs text-slate-400">{{ token.denom }}</p>
                     </div>
                   </div>
