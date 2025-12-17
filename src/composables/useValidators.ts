@@ -90,6 +90,23 @@ export function useValidators() {
         return sum + parseInt(v.tokens || "0", 10);
       }, 0);
 
+      const normalizeCommission = (value: any) => ({
+        commissionRates: {
+          rate: value?.commission_rates?.rate ?? "0",
+          maxRate: value?.commission_rates?.max_rate ?? "0",
+          maxChangeRate: value?.commission_rates?.max_change_rate ?? "0"
+        },
+        updateTime: value?.update_time
+      });
+
+      const normalizeDescription = (value: any) => ({
+        moniker: value?.moniker ?? "Unknown",
+        identity: value?.identity ?? "",
+        website: value?.website ?? "",
+        securityContact: value?.security_contact ?? "",
+        details: value?.details ?? ""
+      });
+
       validators.value = vals.map((v: any, idx: number) => {
         const tokens = parseInt(v.tokens || "0", 10);
         return {
@@ -99,10 +116,10 @@ export function useValidators() {
           status: v.status,
           tokens: v.tokens,
           delegatorShares: v.delegator_shares,
-          description: v.description || { moniker: "Unknown", identity: "", website: "", securityContact: "", details: "" },
+          description: normalizeDescription(v.description),
           unbondingHeight: v.unbonding_height,
           unbondingTime: v.unbonding_time,
-          commission: v.commission,
+          commission: normalizeCommission(v.commission),
           minSelfDelegation: v.min_self_delegation,
           votingPower: tokens,
           votingPowerPercent: totalTokens > 0 ? (tokens / totalTokens) * 100 : 0,
