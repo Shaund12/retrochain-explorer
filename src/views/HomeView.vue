@@ -63,6 +63,12 @@ const copy = async (text: string) => {
   try { await navigator.clipboard?.writeText?.(text); } catch {}
 };
 
+const shortString = (value?: string | null, length = 10) => {
+  if (typeof value !== "string" || !value.length) return "—";
+  if (value.length <= length) return value;
+  return `${value.slice(0, length)}…`;
+};
+
 // Production stats and sparklines (no extra libs)
 const recentBlocks = computed(() => blocks.value.slice(0, 20));
 const txsPerBlock = computed(() => recentBlocks.value.map(b => b.txs));
@@ -559,7 +565,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                 <span v-else>{{ entry.rank }}</span>
               </td>
               <td class="font-mono text-[11px]">
-                {{ entry.player.slice(0, 12) }}...
+                {{ shortString(entry.player, 12) }}
               </td>
               <td class="text-xs">
                 <span class="badge border-indigo-400/60">
@@ -618,7 +624,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
               <td class="font-mono text-[12px] py-2">{{ b.height }}</td>
               <td class="font-mono text-[12px] py-2">
                 <div class="flex items-center gap-2 whitespace-nowrap">
-                  <span class="truncate max-w-[180px] inline-block align-middle">{{ b.hash.slice(0, 16) }}...</span>
+                  <span class="truncate max-w-[180px] inline-block align-middle">{{ shortString(b.hash, 16) }}</span>
                   <button class="btn text-[10px]" @click.stop="copy(b.hash)">Copy</button>
                 </div>
               </td>
@@ -674,7 +680,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
               @click="router.push({ name: 'tx-detail', params: { hash: t.hash } })"
             >
               <td class="font-mono text-[11px]">
-                {{ t.hash.slice(0, 10) }}...
+                {{ shortString(t.hash, 10) }}
               </td>
               <td class="font-mono text-[11px]">{{ t.height }}</td>
               <td class="text-xs">
@@ -720,7 +726,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
             <div class="flex items-start justify-between mb-2">
               <div>
                 <div class="text-xs font-bold text-slate-100">{{ session.game_id }}</div>
-                <div class="text-[11px] text-slate-400 font-mono">{{ session.player.slice(0, 20) }}...</div>
+                <div class="text-[11px] text-slate-400 font-mono">{{ shortString(session.player, 20) }}</div>
               </div>
               <span
                 class="badge text-[10px]"
@@ -771,7 +777,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                 <div class="text-xs font-bold text-slate-100">{{ achievement.name }}</div>
                 <div class="text-[11px] text-slate-300 mb-1">{{ achievement.description }}</div>
                 <div class="flex items-center justify-between">
-                  <div class="text-[11px] text-slate-400 font-mono">{{ achievement.player.slice(0, 16) }}...</div>
+                  <div class="text-[11px] text-slate-400 font-mono">{{ shortString(achievement.player, 16) }}</div>
                   <div class="text-[10px] text-slate-500">{{ formatTime(achievement.unlocked_at) }}</div>
                 </div>
               </div>
