@@ -137,6 +137,15 @@ const serializeParams = (params: Record<string, any>) => {
   return search.toString();
 };
 
+const sha256Hex = async (bytes: Uint8Array) => {
+  const subtle = globalThis.crypto?.subtle;
+  if (!subtle || typeof subtle.digest !== "function") {
+    throw new Error("WebCrypto SHA-256 is unavailable in this environment.");
+  }
+  const digest = await subtle.digest("SHA-256", bytes);
+  return bytesToHex(new Uint8Array(digest));
+};
+
 const normalizeHexHash = (value?: string | null) => {
   if (!value) return undefined;
   const trimmed = value.trim();
@@ -334,10 +343,19 @@ export function useContracts() {
     const res = await api.get(`/cosmwasm/wasm/v1/code/${id}`);
     const info = res.data?.code_info;
     if (!info) return null;
+    let dataHash = normalizeHexHash(info?.data_hash) ?? undefined;
+    if (!dataHash && typeof res.data?.data === "string" && res.data.data.length) {
+      try {
+        const codeBytes = base64ToBytes(res.data.data);
+        dataHash = await sha256Hex(codeBytes);
+      } catch (err) {
+        console.warn("Unable to compute code data hash", err);
+      }
+    }
     const normalized: ExtendedCodeInfo = {
       codeId: id,
       creator: info?.creator ?? "",
-      dataHash: normalizeHexHash(info?.data_hash) ?? undefined,
+      dataHash,
       instantiatePermission: info?.instantiate_permission ?? null,
       raw: info
     };
@@ -356,20 +374,37 @@ export function useContracts() {
     return decodeBase64Json(payload);
   };
 
+  const fetchExecsByEvent = async (event: string, limit: number) => {
+    const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
+      params: {
+        events: event,
+        order_by: "ORDER_BY_DESC",
+        "pagination.limit": String(limit)
+      },
+      paramsSerializer: serializeParams
+    });
+    return res.data?.tx_responses ?? [];
+  };
+
   const getContractExecutions = async (address: string, limit = 25): Promise<ContractExecutionRecord[]> => {
     const key = address?.trim();
     if (!key) throw new Error("Contract address is required.");
     try {
-      const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
-        params: {
-          events: `message.contract_address='${key}'`,
-          order_by: "ORDER_BY_DESC",
-          "pagination.limit": String(limit)
-        },
-        paramsSerializer: serializeParams
-      });
+      let responses: any[] = [];
+      try {
+        responses = await fetchExecsByEvent(`message.contract_address='${key}'`, limit);
+      } catch (primaryErr) {
+        console.warn("Primary contract execution query failed", primaryErr);
+      }
 
-      const responses: any[] = res.data?.tx_responses ?? [];
+      if (!responses.length) {
+        try {
+          responses = await fetchExecsByEvent(`wasm._contract_address='${key}'`, limit);
+        } catch (secondaryErr) {
+          console.warn("Fallback contract execution query failed", secondaryErr);
+        }
+      }
+
       const executions: ContractExecutionRecord[] = [];
 
       responses.forEach((resp) => {

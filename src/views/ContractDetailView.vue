@@ -251,18 +251,23 @@ const loadDetails = async () => {
   loading.value = true;
   error.value = null;
   try {
-    const [info, hash, executions] = await Promise.all([
-      getContractInfo(addr),
-      getContractCodeHash(addr),
-      getContractExecutions(addr, 40)
-    ]);
+    const info = await getContractInfo(addr);
     contractInfo.value = info;
-    contractCodeHash.value = hash;
+
+    const [hash, executions, codeDetails] = await Promise.all([
+      getContractCodeHash(addr),
+      getContractExecutions(addr, 40),
+      info?.code_id ? getCodeInfo(info.code_id) : Promise.resolve(null)
+    ]);
+
     executionHistory.value = executions;
-    if (info?.code_id) {
-      codeInfo.value = await getCodeInfo(info.code_id);
+    codeInfo.value = codeDetails;
+    if (hash) {
+      contractCodeHash.value = hash;
+    } else if (codeDetails?.dataHash) {
+      contractCodeHash.value = codeDetails.dataHash;
     } else {
-      codeInfo.value = null;
+      contractCodeHash.value = null;
     }
   } catch (err: any) {
     error.value = err?.message ?? String(err);
