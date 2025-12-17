@@ -239,10 +239,7 @@ const fetchContractsForCode = async (codeId: string, limit = 50) => {
     const apiBases = ["/cosmwasm/wasm/v1", "/cosmwasm/wasm/v1beta1"];
 
     for (const basePath of apiBases) {
-      const attempts = [
-        () => api.get(`${basePath}/contract/${address}/smart/${encodedPath}`),
-        () => api.post(`${basePath}/contract/${address}/smart`, { query_data: encoded })
-      ];
+      const attempts = [() => api.get(`${basePath}/contract/${address}/smart/${encodedPath}`)];
 
       for (const attempt of attempts) {
         try {
