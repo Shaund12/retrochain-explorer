@@ -188,20 +188,28 @@ export function useAssets() {
   const queryContractSmart = async (address: string, payload: Record<string, any>) => {
     const encoded = encodeJsonToBase64(payload);
     const encodedPath = encodeURIComponent(encoded);
-    const paths = [
-      () => api.get(`/cosmwasm/wasm/v1/contract/${address}/smart/${encodedPath}`),
-      () => api.post(`/cosmwasm/wasm/v1/contract/${address}/smart`, { query_data: encoded })
-    ];
+    const apiBases = ["/cosmwasm/wasm/v1", "/cosmwasm/wasm/v1beta1"];
 
-    for (const request of paths) {
-      try {
-        const res = await request();
-        const data = res.data?.data ?? res.data?.smart_response?.data;
-        if (data !== undefined) {
-          return decodeBase64Json(data);
+    for (const basePath of apiBases) {
+      const attempts = [
+        () => api.get(`${basePath}/contract/${address}/smart/${encodedPath}`),
+        () => api.post(`${basePath}/contract/${address}/smart`, { query_data: encoded })
+      ];
+
+      for (const attempt of attempts) {
+        try {
+          const res = await attempt();
+          const data = res.data?.data ?? res.data?.smart_response?.data;
+          if (data !== undefined) {
+            return decodeBase64Json(data);
+          }
+        } catch (err: any) {
+          const status = err?.response?.status;
+          if (status && status !== 404 && status !== 501) {
+            // for real contract errors bubble up when beta1 already tried
+            continue;
+          }
         }
-      } catch (err) {
-        // try next transport option
       }
     }
 

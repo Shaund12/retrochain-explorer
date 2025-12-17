@@ -330,6 +330,11 @@ export function useContracts() {
       }
       return finalHash;
     } catch (hashErr) {
+      const status = (hashErr as any)?.response?.status;
+      if (status === 501) {
+        contractCodeHashCache.set(key, "");
+        return null;
+      }
       console.warn("Unable to fetch contract code hash", hashErr);
       return null;
     }
