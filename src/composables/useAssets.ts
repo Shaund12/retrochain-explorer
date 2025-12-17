@@ -187,7 +187,7 @@ const fetchContractsForCode = async (codeId: string, limit = 50) => {
       }
     } catch (err: any) {
       const status = err?.response?.status;
-      if (status === 404 || status === 501) {
+      if (status === 404 || status === 501 || status === 500) {
         continue;
       }
       console.warn(`Failed to fetch contracts for code ${codeId}`, err);
