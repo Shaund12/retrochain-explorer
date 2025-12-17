@@ -72,6 +72,13 @@ export interface NetworkStats {
   provisionBurnRate: number;
 }
 
+export interface DelegatorLeaderboardEntry {
+  delegatorAddress: string;
+  totalStaked: string;
+  validatorCount: number;
+  validators: string[];
+}
+
 export function useStaking() {
 const api = useApi();
 const { address } = useKeplr();
@@ -87,6 +94,8 @@ const distributionParams = ref<DistributionParams | null>(null);
 const mintParams = ref<MintParams | null>(null);
 const burnParams = ref<BurnParams | null>(null);
 const networkStats = ref<NetworkStats | null>(null);
+const delegatorLeaderboard = ref<DelegatorLeaderboardEntry[]>([]);
+const delegatorLeaderboardLoading = ref(false);
 
   const fetchDelegations = async (delegatorAddress?: string) => {
     const addr = delegatorAddress || address.value;
@@ -194,6 +203,78 @@ const networkStats = ref<NetworkStats | null>(null);
     }
   };
 
+  const fetchDelegatorLeaderboard = async (topValidatorCount = 5, delegationsPerValidator = 75) => {
+    delegatorLeaderboardLoading.value = true;
+    try {
+      const bondedRes = await api.get("/cosmos/staking/v1beta1/validators", {
+        params: {
+          status: "BOND_STATUS_BONDED",
+          "pagination.limit": 100
+        }
+      }).catch(() => ({ data: { validators: [] } }));
+
+      const validators: any[] = bondedRes.data?.validators ?? [];
+      const sorted = validators
+        .slice()
+        .sort((a, b) => (BigInt(b.tokens || "0") > BigInt(a.tokens || "0") ? 1 : -1))
+        .slice(0, Math.max(1, topValidatorCount));
+
+      const aggregate = new Map<string, { amount: bigint; validators: Set<string> }>();
+
+      for (const validator of sorted) {
+        const operatorAddress = validator?.operator_address;
+        if (!operatorAddress) continue;
+
+        try {
+          const res = await api.get(`/cosmos/staking/v1beta1/validators/${operatorAddress}/delegations`, {
+            params: {
+              "pagination.limit": String(delegationsPerValidator),
+              "pagination.reverse": "true"
+            }
+          });
+
+          const delegations: any[] = res.data?.delegation_responses ?? [];
+          delegations.forEach((entry: any) => {
+            const delegator = entry?.delegation?.delegator_address;
+            const rawAmount = entry?.balance?.amount ?? "0";
+            if (!delegator) return;
+            let amount: bigint;
+            try {
+              amount = BigInt(rawAmount);
+            } catch {
+              amount = 0n;
+            }
+            if (amount <= 0n) return;
+
+            const record = aggregate.get(delegator) ?? { amount: 0n, validators: new Set<string>() };
+            record.amount += amount;
+            record.validators.add(operatorAddress);
+            aggregate.set(delegator, record);
+          });
+        } catch (delegationErr) {
+          console.warn(`Failed to load delegations for ${operatorAddress}`, delegationErr);
+        }
+      }
+
+      const leaderboard = Array.from(aggregate.entries())
+        .map(([delegatorAddress, info]) => ({
+          delegatorAddress,
+          totalStaked: info.amount.toString(),
+          validatorCount: info.validators.size,
+          validators: Array.from(info.validators)
+        }))
+        .sort((a, b) => (BigInt(b.totalStaked) > BigInt(a.totalStaked) ? 1 : -1))
+        .slice(0, 10);
+
+      delegatorLeaderboard.value = leaderboard;
+    } catch (e: any) {
+      console.warn("Failed to build delegator leaderboard", e);
+      delegatorLeaderboard.value = [];
+    } finally {
+      delegatorLeaderboardLoading.value = false;
+    }
+  };
+
   const fetchNetworkStats = async () => {
     try {
       const [inflationRes, provisionsRes, poolRes] = await Promise.all([
@@ -246,6 +327,8 @@ const networkStats = ref<NetworkStats | null>(null);
     mintParams,
     burnParams,
     networkStats,
+    delegatorLeaderboard,
+    delegatorLeaderboardLoading,
     fetchDelegations,
     fetchRewards,
     fetchUnbonding,
@@ -254,6 +337,7 @@ const networkStats = ref<NetworkStats | null>(null);
     fetchDistributionParams,
     fetchMintParams,
     fetchBurnParams,
-    fetchNetworkStats
+    fetchNetworkStats,
+    fetchDelegatorLeaderboard
   };
 }

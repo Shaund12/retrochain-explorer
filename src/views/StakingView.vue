@@ -19,8 +19,11 @@ const {
   unbonding, 
   loading: stakingLoading, 
   networkStats,
+  delegatorLeaderboard,
+  delegatorLeaderboardLoading,
   fetchAll,
-  fetchNetworkStats 
+  fetchNetworkStats,
+  fetchDelegatorLeaderboard 
 } = useStaking();
 const { validators, loading: validatorsLoading, fetchValidators } = useValidators();
 const { current: network } = useNetwork();
@@ -84,6 +87,8 @@ const setMaxAmount = () => {
   amount.value = walletBalanceFloat.value.toFixed(6);
 };
 
+const shortAddress = (addr: string, size = 10) => `${addr?.slice(0, size)}...${addr?.slice(-6)}`;
+
 const availableValidators = computed(() => {
   return validators.value.filter(v => 
     v.status === 'BOND_STATUS_BONDED' && 
@@ -94,6 +99,7 @@ const availableValidators = computed(() => {
 onMounted(async () => {
   await fetchValidators();
   await fetchNetworkStats();
+  fetchDelegatorLeaderboard();
   if (address.value) {
     await Promise.all([
       fetchAll(),
@@ -332,6 +338,50 @@ const copy = async (text: string) => {
               <div class="text-lg font-bold text-amber-200">{{ networkStats.provisionBurnRate.toFixed(1) }}%</div>
               <div class="text-[10px] text-slate-500">of new issuance</div>
             </div>
+          </div>
+        </div>
+
+        <!-- Staking Leaderboard -->
+        <div class="card-soft mb-4">
+          <div class="flex items-center justify-between mb-3">
+            <div>
+              <h2 class="text-sm font-semibold text-slate-100">Top Stakers</h2>
+              <p class="text-xs text-slate-400">Largest discovered delegations (sampled from active validators)</p>
+            </div>
+            <button class="btn text-[11px]" @click="fetchDelegatorLeaderboard()" :disabled="delegatorLeaderboardLoading">
+              {{ delegatorLeaderboardLoading ? 'Refreshing…' : 'Refresh' }}
+            </button>
+          </div>
+          <div v-if="delegatorLeaderboardLoading && delegatorLeaderboard.length === 0" class="text-xs text-slate-400">Collecting staking data…</div>
+          <div v-else-if="delegatorLeaderboard.length === 0" class="text-xs text-slate-500">No delegators discovered yet.</div>
+          <div v-else class="overflow-x-auto">
+            <table class="table text-sm">
+              <thead>
+                <tr class="text-slate-400 text-xs">
+                  <th class="text-left">Rank</th>
+                  <th class="text-left">Delegator</th>
+                  <th class="text-right">Total Staked</th>
+                  <th class="text-right">Validators</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(entry, idx) in delegatorLeaderboard" :key="entry.delegatorAddress" class="text-slate-200">
+                  <td class="py-2 font-mono text-xs text-slate-400">#{{ idx + 1 }}</td>
+                  <td class="py-2">
+                    <div class="flex items-center gap-2">
+                      <span class="font-mono text-xs">{{ shortAddress(entry.delegatorAddress, 12) }}</span>
+                      <button class="btn text-[10px]" @click.stop="copy(entry.delegatorAddress)">Copy</button>
+                    </div>
+                  </td>
+                  <td class="py-2 text-right font-mono">
+                    {{ formatAmount(entry.totalStaked, tokenDenom, { minDecimals: 2, maxDecimals: 2 }) }}
+                  </td>
+                  <td class="py-2 text-right text-xs text-slate-400">
+                    {{ entry.validatorCount }}
+                  </td>
+                </tr>
+              </tbody>
+            </table>
           </div>
         </div>
 
