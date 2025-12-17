@@ -17,6 +17,21 @@ export interface BankToken {
   counterpartyChain?: string;
 }
 
+export interface Cw20Token {
+  address: string;
+  symbol: string;
+  name: string;
+  decimals: number;
+  totalSupply: string;
+  codeId: string;
+  minter?: string | null;
+  marketing?: {
+    project?: string | null;
+    description?: string | null;
+    logo?: { url?: string | null } | null;
+  } | null;
+}
+
 export interface NftClassMeta {
   id: string;
   name: string;
@@ -62,9 +77,78 @@ export function useAssets() {
   const api = useApi();
   const bankTokens = ref<BankToken[]>([]);
   const ibcTokens = ref<BankToken[]>([]);
+  const cw20Tokens = ref<Cw20Token[]>([]);
   const nftClasses = ref<NftClassMeta[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
+
+  const bytesToBase64 = (bytes: Uint8Array) => {
+    if (typeof btoa === "function") {
+      let binary = "";
+      bytes.forEach((b) => {
+        binary += String.fromCharCode(b);
+      });
+      return btoa(binary);
+    }
+    const nodeBuffer = (globalThis as any)?.Buffer;
+    if (nodeBuffer) {
+      return nodeBuffer.from(bytes).toString("base64");
+    }
+    throw new Error("Base64 encoding not supported in this environment.");
+  };
+
+  const base64ToBytes = (value: string) => {
+    if (typeof atob === "function") {
+      const binary = atob(value);
+      const len = binary.length;
+      const bytes = new Uint8Array(len);
+      for (let i = 0; i < len; i += 1) {
+        bytes[i] = binary.charCodeAt(i);
+      }
+      return bytes;
+    }
+    const nodeBuffer = (globalThis as any)?.Buffer;
+    if (nodeBuffer) {
+      const buf = nodeBuffer.from(value, "base64");
+      return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
+    }
+    throw new Error("Base64 decoding not supported in this environment.");
+  };
+
+  const encodeJsonToBase64 = (payload: Record<string, any>) => {
+    const json = JSON.stringify(payload);
+    if (typeof TextEncoder !== "undefined") {
+      const encoder = new TextEncoder();
+      return bytesToBase64(encoder.encode(json));
+    }
+    const nodeBuffer = (globalThis as any)?.Buffer;
+    if (nodeBuffer) {
+      return nodeBuffer.from(json, "utf-8").toString("base64");
+    }
+    throw new Error("TextEncoder is unavailable in this environment.");
+  };
+
+  const decodeBase64Json = (value?: string | null) => {
+    if (!value) return null;
+    const bytes = base64ToBytes(value);
+    if (typeof TextDecoder !== "undefined") {
+      const decoder = new TextDecoder();
+      const asString = decoder.decode(bytes);
+      try {
+        return JSON.parse(asString);
+      } catch {
+        return asString;
+      }
+    }
+    try {
+      const asString = Array.from(bytes)
+        .map((b) => String.fromCharCode(b))
+        .join("");
+      return JSON.parse(asString);
+    } catch {
+      return null;
+    }
+  };
 
   const fetchPaginated = async <T>(path: string, dataKey: string, limit = 200): Promise<PaginatedResponse<T>> => {
     const items: T[] = [];
@@ -101,11 +185,81 @@ export function useAssets() {
     }
   };
 
+  const queryContractSmart = async (address: string, payload: Record<string, any>) => {
+    const encoded = encodeJsonToBase64(payload);
+    const res = await api.post(`/cosmwasm/wasm/v1/contract/${address}/smart`, {
+      query_data: encoded
+    });
+    const data = res.data?.data ?? res.data?.smart_response?.data;
+    return decodeBase64Json(data);
+  };
+
+  const fetchCw20Tokens = async (): Promise<Cw20Token[]> => {
+    const cw20List: Cw20Token[] = [];
+    try {
+      const codeRes = await api.get("/cosmwasm/wasm/v1/code", {
+        params: { "pagination.limit": "50" }
+      });
+      const codeInfos: any[] = Array.isArray(codeRes.data?.code_infos) ? codeRes.data.code_infos : [];
+      for (const info of codeInfos) {
+        if (cw20List.length >= 40) break;
+        const codeId = String(info?.code_id ?? info?.id ?? "");
+        if (!codeId) continue;
+        let contracts: string[] = [];
+        try {
+          const res = await api.get(`/cosmwasm/wasm/v1/code/${codeId}/contracts`, {
+            params: { "pagination.limit": "20", "pagination.reverse": "true" }
+          });
+          contracts = Array.isArray(res.data?.contracts) ? res.data.contracts : [];
+        } catch (contractErr) {
+          console.warn(`Failed to fetch contracts for code ${codeId}`, contractErr);
+          continue;
+        }
+
+        const contractQueries = contracts.slice(0, 20).map(async (address: string) => {
+          if (cw20List.length >= 40) return;
+          try {
+            const tokenInfo = await queryContractSmart(address, { token_info: {} });
+            if (!tokenInfo || typeof tokenInfo !== "object" || !tokenInfo.symbol) return;
+            const decimals = Number(tokenInfo.decimals ?? 6);
+            let minterData: any = null;
+            try {
+              minterData = await queryContractSmart(address, { minter: {} });
+            } catch {}
+            let marketingData: any = null;
+            try {
+              marketingData = await queryContractSmart(address, { marketing_info: {} });
+            } catch {}
+
+            cw20List.push({
+              address,
+              symbol: tokenInfo.symbol,
+              name: tokenInfo.name || tokenInfo.symbol,
+              decimals: Number.isFinite(decimals) ? decimals : 6,
+              totalSupply: String(tokenInfo.total_supply ?? tokenInfo.totalSupply ?? "0"),
+              codeId,
+              minter: minterData?.minter ?? null,
+              marketing: marketingData ?? null
+            });
+          } catch (err) {
+            // not a CW20 or query failed; ignore
+          }
+        });
+
+        await Promise.all(contractQueries);
+      }
+    } catch (err) {
+      console.warn("CW20 discovery failed", err);
+    }
+    return cw20List;
+  };
+
   const fetchAssets = async () => {
     loading.value = true;
     error.value = null;
     bankTokens.value = [];
     ibcTokens.value = [];
+    cw20Tokens.value = [];
     nftClasses.value = [];
 
     try {
@@ -199,6 +353,13 @@ export function useAssets() {
         console.warn("NFT module not available", nftErr);
         nftClasses.value = [];
       }
+
+      try {
+        cw20Tokens.value = await fetchCw20Tokens();
+      } catch (cw20Err) {
+        console.warn("Failed to load CW20 tokens", cw20Err);
+        cw20Tokens.value = [];
+      }
     } catch (e: any) {
       console.error("Failed to load asset data", e);
       error.value = e?.message ?? String(e);
@@ -207,9 +368,11 @@ export function useAssets() {
     }
   };
 
+
   return {
     bankTokens,
     ibcTokens,
+    cw20Tokens,
     nftClasses,
     loading,
     error,

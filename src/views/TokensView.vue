@@ -2,10 +2,10 @@
 import { computed, onMounted } from "vue";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
-import { useAssets, type BankToken } from "@/composables/useAssets";
+import { useAssets, type BankToken, type Cw20Token } from "@/composables/useAssets";
 import type { TokenAccent } from "@/constants/tokens";
 
-const { bankTokens, ibcTokens, nftClasses, loading, error, fetchAssets } = useAssets();
+const { bankTokens, ibcTokens, cw20Tokens, nftClasses, loading, error, fetchAssets } = useAssets();
 
 onMounted(() => {
   fetchAssets();
@@ -18,6 +18,7 @@ const stats = computed(() => ({
   native: nativeTokens.value.length,
   factory: factoryTokens.value.length,
   ibc: ibcTokens.value.length,
+  cw20: cw20Tokens.value.length,
   nft: nftClasses.value.length
 }));
 
@@ -31,11 +32,25 @@ const accentBg: Record<TokenAccent, string> = {
   slate: "bg-slate-500/15 text-slate-200 border border-slate-400/40"
 };
 
-const tokenAvatarClass = (token: BankToken) => accentBg[token.tokenMeta.accent ?? "slate"];
+const tokenAvatarClass = (token: BankToken) => accentBg[token.tokenMeta?.accent ?? "slate"];
 
 const tokenAvatarText = (token: BankToken) => {
-  const source = token.tokenMeta.symbol || token.tokenMeta.name || token.denom;
+  const raw = token?.tokenMeta?.symbol || token?.tokenMeta?.name || token?.denom || "ASSET";
+  const source = typeof raw === "string" && raw.length ? raw : "ASSET";
   return source.slice(0, 4).toUpperCase();
+};
+
+const formatCw20Supply = (token: Cw20Token) => {
+  const decimals = Number(token.decimals ?? 6);
+  const divisor = Math.pow(10, Math.max(decimals, 0));
+  const amount = Number(token.totalSupply) / (divisor || 1);
+  if (!Number.isFinite(amount)) {
+    return `${token.totalSupply} ${token.symbol}`;
+  }
+  return `${amount.toLocaleString(undefined, {
+    minimumFractionDigits: 0,
+    maximumFractionDigits: Math.min(6, Math.max(decimals, 0))
+  })} ${token.symbol}`;
 };
 
 </script>
@@ -56,7 +71,7 @@ const tokenAvatarText = (token: BankToken) => {
             on-chain modules via the REST API.
           </p>
         </div>
-        <div class="grid grid-cols-2 md:grid-cols-4 gap-3 text-xs">
+        <div class="grid grid-cols-2 md:grid-cols-5 gap-3 text-xs">
           <div class="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-3">
             <p class="text-emerald-200 uppercase tracking-wider">Native Tokens</p>
             <p class="text-2xl font-bold text-white">{{ stats.native }}</p>
@@ -68,6 +83,10 @@ const tokenAvatarText = (token: BankToken) => {
           <div class="rounded-2xl border border-indigo-400/30 bg-indigo-500/10 p-3">
             <p class="text-indigo-200 uppercase tracking-wider">IBC Assets</p>
             <p class="text-2xl font-bold text-white">{{ stats.ibc }}</p>
+          </div>
+          <div class="rounded-2xl border border-fuchsia-400/30 bg-fuchsia-500/10 p-3">
+            <p class="text-fuchsia-200 uppercase tracking-wider">CW20 Tokens</p>
+            <p class="text-2xl font-bold text-white">{{ stats.cw20 }}</p>
           </div>
           <div class="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3">
             <p class="text-amber-200 uppercase tracking-wider">NFT Collections</p>
@@ -146,6 +165,40 @@ const tokenAvatarText = (token: BankToken) => {
                   </span>
                 </td>
                 <td class="text-xs text-slate-400">{{ token.tokenMeta.description || token.metadata?.description || '—' }}</td>
+              </tr>
+            </tbody>
+          </table>
+        </div>
+      </div>
+
+      <div class="card" v-if="cw20Tokens.length">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-base font-semibold text-white">CW20 Tokens</h2>
+          <span class="text-xs text-slate-400">Discovered via smart contract queries</span>
+        </div>
+        <div class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr class="text-xs text-slate-400">
+                <th>Token</th>
+                <th>Contract</th>
+                <th>Total Supply</th>
+                <th>Decimals</th>
+                <th>Code ID</th>
+                <th>Minter</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="token in cw20Tokens" :key="token.address" class="text-sm">
+                <td class="py-3">
+                  <div class="font-semibold text-white">{{ token.symbol }}</div>
+                  <div class="text-xs text-slate-400">{{ token.name }}</div>
+                </td>
+                <td class="font-mono text-xs text-slate-300 break-all">{{ token.address }}</td>
+                <td class="text-slate-100">{{ formatCw20Supply(token) }}</td>
+                <td class="text-slate-300">{{ token.decimals }}</td>
+                <td class="text-slate-300">{{ token.codeId }}</td>
+                <td class="text-xs text-slate-400">{{ token.minter || '—' }}</td>
               </tr>
             </tbody>
           </table>
