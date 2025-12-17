@@ -171,55 +171,45 @@ export function useAssets() {
     return { items };
   };
 
-const fetchContractsForCode = async (codeId: string, limit = 50) => {
-  const endpoints = ["/cosmwasm/wasm/v1", "/cosmwasm/wasm/v1beta1"];
-  for (const base of endpoints) {
-    try {
-      const res = await api.get(`${base}/code/${codeId}/contracts`, {
-        params: {
-          "pagination.limit": String(limit),
-          "pagination.reverse": "true"
-        },
-        paramsSerializer
-      });
-      if (Array.isArray(res.data?.contracts) && res.data.contracts.length) {
-        return res.data.contracts as string[];
-      }
-    } catch (err: any) {
-      const status = err?.response?.status;
-      if (status === 404 || status === 501 || status === 500) {
-        continue;
-      }
-      console.warn(`Failed to fetch contracts for code ${codeId}`, err);
-    }
+const fetchCodeInfos = async () => {
+  try {
+    const { items } = await fetchPaginated<any>("/cosmwasm/wasm/v1/code", "code_infos", 100);
+    return items;
+  } catch (err) {
+    console.warn("Failed to fetch code infos", err);
+    return [];
   }
-  return [];
+};
+
+const fetchContractsForCode = async (codeId: string, limit = 50) => {
+  try {
+    const res = await api.get(`/cosmwasm/wasm/v1/code/${codeId}/contracts`, {
+      params: {
+        "pagination.limit": String(limit),
+        "pagination.reverse": "true"
+      },
+      paramsSerializer
+    });
+    return Array.isArray(res.data?.contracts) ? (res.data.contracts as string[]) : [];
+  } catch (err) {
+    console.warn(`Failed to fetch contracts for code ${codeId}`, err);
+    return [];
+  }
 };
 
   const fetchDenomTrace = async (hash: string) => {
     if (!denomTraceEndpointSupported) return null;
-    const paths = ["/ibc/apps/transfer/v1", "/ibc/apps/transfer/v1beta1"];
-    for (const base of paths) {
-      try {
-        const res = await api.get(`${base}/denom_traces/${hash}`);
-        if (res.data?.denom_trace) {
-          return res.data.denom_trace;
-        }
-      } catch (traceErr: any) {
-        const status = traceErr?.response?.status;
-        if (status === 404) {
-          denomTraceEndpointSupported = false;
-          return null;
-        }
-        if (status === 501) {
-          continue; // try beta1 or next option
-        }
-        console.warn(`Failed to fetch denom trace for ${hash}`, traceErr);
-        return null;
+    try {
+      const res = await api.get(`/ibc/apps/transfer/v1/denom_traces/${hash}`);
+      return res.data?.denom_trace ?? null;
+    } catch (traceErr) {
+      const status = (traceErr as any)?.response?.status;
+      if (status === 404 || status === 501) {
+        denomTraceEndpointSupported = false;
       }
+      console.warn(`Failed to fetch denom trace for ${hash}`, traceErr);
+      return null;
     }
-    denomTraceEndpointSupported = false;
-    return null;
   };
 
   const isIgnorableContractError = (err: any) => {
@@ -236,41 +226,27 @@ const fetchContractsForCode = async (codeId: string, limit = 50) => {
   const queryContractSmart = async (address: string, payload: Record<string, any>) => {
     const encoded = encodeJsonToBase64(payload);
     const encodedPath = encodeURIComponent(encoded);
-    const apiBases = ["/cosmwasm/wasm/v1", "/cosmwasm/wasm/v1beta1"];
-
-    for (const basePath of apiBases) {
-      const attempts = [() => api.get(`${basePath}/contract/${address}/smart/${encodedPath}`)];
-
-      for (const attempt of attempts) {
-        try {
-          const res = await attempt();
-          const data = res.data?.data ?? res.data?.smart_response?.data;
-          if (data !== undefined) {
-            return decodeBase64Json(data);
-          }
-        } catch (err: any) {
-          if (isIgnorableContractError(err)) {
-            return null;
-          }
-          const status = err?.response?.status;
-          if (status === 500) {
-            continue;
-          }
-          if (status && status !== 404 && status !== 501) {
-            continue;
-          }
-        }
+    try {
+      const res = await api.get(`/cosmwasm/wasm/v1/contract/${address}/smart/${encodedPath}`);
+      const data = res.data?.data ?? res.data?.smart_response?.data;
+      return data !== undefined ? decodeBase64Json(data) : null;
+    } catch (err: any) {
+      if (isIgnorableContractError(err)) {
+        return null;
       }
+      console.warn(`Smart query failed for ${address}`, err);
+      return null;
     }
-
-    return null;
   };
 
   const fetchCw20Tokens = async (): Promise<Cw20Token[]> => {
     const cw20List: Cw20Token[] = [];
     const seenContracts = new Set<string>();
     try {
-      const { items: codeInfos } = await fetchPaginated<any>("/cosmwasm/wasm/v1/code", "code_infos", 100);
+      const codeInfos = await fetchCodeInfos();
+      if (!codeInfos.length) {
+        return [];
+      }
       for (const info of codeInfos) {
         if (cw20List.length >= 40) break;
         const codeId = String(info?.code_id ?? info?.id ?? "");
