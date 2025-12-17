@@ -139,6 +139,48 @@ export function useTxs() {
   };
 
   // NOTE: pagination.limit is the correct param for this endpoint.
+  const hydrateFastTxs = async (list: any[], limit: number): Promise<TxSummary[]> => {
+    if (!Array.isArray(list) || !list.length) return [];
+    const trimmed = list.filter(Boolean).slice(0, limit);
+
+    const enriched = await Promise.all(
+      trimmed.map(async (raw) => {
+        const hash = raw?.hash || raw?.txhash || raw?.txHash;
+        if (!hash || typeof hash !== "string") {
+          return null;
+        }
+
+        const fallbackSummary: TxSummary = {
+          hash,
+          height: Number(raw?.height ?? 0) || 0,
+          timestamp: raw?.timestamp,
+          messageTypes: Array.isArray(raw?.messageTypes) ? raw.messageTypes : [],
+          gasUsed: raw?.gasUsed ?? raw?.gas_used,
+          gasWanted: raw?.gasWanted ?? raw?.gas_wanted,
+          code: typeof raw?.code === "number" ? raw.code : undefined
+        };
+
+        try {
+          const detail = await api.get(`/cosmos/tx/v1beta1/txs/${hash}`);
+          const resp = detail.data?.tx_response;
+          if (resp) {
+            return buildSummaryFromResponse(resp, {
+              hash,
+              height: fallbackSummary.height,
+              timestamp: fallbackSummary.timestamp
+            });
+          }
+        } catch (err) {
+          console.warn(`Failed to hydrate tx ${hash}`, err);
+        }
+
+        return fallbackSummary;
+      })
+    );
+
+    return enriched.filter(Boolean) as TxSummary[];
+  };
+
   const searchRecent = async (limit = 20) => {
     loading.value = true;
     error.value = null;
@@ -151,13 +193,9 @@ export function useTxs() {
       if (proxyAvailable) {
         // Try fast aggregator first
         const fast = await api.get(`/recent-txs`, { params: { limit } });
-        if (Array.isArray(fast.data?.txs) && fast.data.txs.length) {
-          txs.value = fast.data.txs.map((t: any) => ({
-            hash: t.hash,
-            height: t.height,
-            timestamp: t.timestamp,
-            messageTypes: Array.isArray(t.messageTypes) ? t.messageTypes : []
-          }));
+        const hydrated = await hydrateFastTxs(fast.data?.txs ?? [], limit);
+        if (hydrated.length) {
+          txs.value = hydrated;
           return;
         }
         throw new Error("fallback-scan");

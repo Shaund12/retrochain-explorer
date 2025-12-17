@@ -69,6 +69,11 @@ const shortString = (value?: string | null, length = 10) => {
   return `${value.slice(0, length)}…`;
 };
 
+const goToTx = (hash?: string | null) => {
+  if (!hash) return;
+  router.push({ name: "tx-detail", params: { hash } });
+};
+
 // Production stats and sparklines (no extra libs)
 const recentBlocks = computed(() => blocks.value.slice(0, 20));
 const txsPerBlock = computed(() => recentBlocks.value.map(b => b.txs));
@@ -677,7 +682,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
               v-for="t in txs"
               :key="t.hash"
               class="cursor-pointer"
-              @click="router.push({ name: 'tx-detail', params: { hash: t.hash } })"
+              @click="goToTx(t.hash)"
             >
               <td class="font-mono text-[11px]">
                 {{ shortString(t.hash, 10) }}
