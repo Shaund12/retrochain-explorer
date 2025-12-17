@@ -54,8 +54,8 @@ const bridgeAmount = ref("");
 const bridging = ref(false);
 
 const isMainnet = computed(() => network.value === "mainnet");
-const retroToCosmosChannel = import.meta.env.VITE_IBC_CHANNEL_RETRO_COSMOS || "channel-1638";
-const cosmosToRetroChannel = import.meta.env.VITE_IBC_CHANNEL_COSMOS_RETRO || "";
+const retroToCosmosChannel = import.meta.env.VITE_IBC_CHANNEL_RETRO_COSMOS || "channel-0";
+const cosmosToRetroChannel = import.meta.env.VITE_IBC_CHANNEL_COSMOS_RETRO || "channel-1638";
 const cosmosHubChainId = import.meta.env.VITE_COSMOS_CHAIN_ID || "cosmoshub-4";
 const ibcDirection = ref<"retroToCosmos" | "cosmosToRetro">("retroToCosmos");
 const retroToCosmosAmount = ref("");
