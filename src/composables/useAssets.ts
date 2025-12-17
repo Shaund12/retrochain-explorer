@@ -196,19 +196,18 @@ export function useAssets() {
 
   const fetchCw20Tokens = async (): Promise<Cw20Token[]> => {
     const cw20List: Cw20Token[] = [];
+    const seenContracts = new Set<string>();
     try {
-      const codeRes = await api.get("/cosmwasm/wasm/v1/code", {
-        params: { "pagination.limit": "50" }
-      });
-      const codeInfos: any[] = Array.isArray(codeRes.data?.code_infos) ? codeRes.data.code_infos : [];
+      const { items: codeInfos } = await fetchPaginated<any>("/cosmwasm/wasm/v1/code", "code_infos", 100);
       for (const info of codeInfos) {
         if (cw20List.length >= 40) break;
         const codeId = String(info?.code_id ?? info?.id ?? "");
         if (!codeId) continue;
+
         let contracts: string[] = [];
         try {
           const res = await api.get(`/cosmwasm/wasm/v1/code/${codeId}/contracts`, {
-            params: { "pagination.limit": "20", "pagination.reverse": "true" }
+            params: { "pagination.limit": "50", "pagination.reverse": "true" }
           });
           contracts = Array.isArray(res.data?.contracts) ? res.data.contracts : [];
         } catch (contractErr) {
@@ -216,8 +215,9 @@ export function useAssets() {
           continue;
         }
 
-        const contractQueries = contracts.slice(0, 20).map(async (address: string) => {
-          if (cw20List.length >= 40) return;
+        const contractQueries = contracts.slice(0, 50).map(async (address: string) => {
+          if (!address || seenContracts.has(address) || cw20List.length >= 40) return;
+          seenContracts.add(address);
           try {
             const tokenInfo = await queryContractSmart(address, { token_info: {} });
             if (!tokenInfo || typeof tokenInfo !== "object" || !tokenInfo.symbol) return;
@@ -247,6 +247,7 @@ export function useAssets() {
         });
 
         await Promise.all(contractQueries);
+        if (cw20List.length >= 40) break;
       }
     } catch (err) {
       console.warn("CW20 discovery failed", err);
