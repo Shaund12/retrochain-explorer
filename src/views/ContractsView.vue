@@ -1,9 +1,11 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import { useRouter } from "vue-router";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import { useContracts } from "@/composables/useContracts";
 
 const { contracts, codes, loading, error, fetchContracts } = useContracts();
+const router = useRouter();
 
 const search = ref("");
 const codeFilter = ref("all");
@@ -181,6 +183,7 @@ onMounted(async () => {
               <th class="text-left">Creator</th>
               <th class="text-left">Admin</th>
               <th class="text-left">Block</th>
+              <th class="text-left">Actions</th>
             </tr>
           </thead>
           <tbody>
@@ -211,6 +214,14 @@ onMounted(async () => {
               <td class="py-3">
                 <div class="text-slate-100">{{ formatHeight(contract.createdHeight) }}</div>
                 <div v-if="contract.createdTxIndex" class="text-[10px] text-slate-500">tx #{{ contract.createdTxIndex }}</div>
+              </td>
+              <td class="py-3">
+                <button
+                  class="btn text-[10px]"
+                  @click="router.push({ name: 'contract-detail', params: { address: contract.address } })"
+                >
+                  Inspect
+                </button>
               </td>
             </tr>
           </tbody>
