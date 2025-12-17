@@ -657,7 +657,7 @@ const copy = async (text: string) => {
           <div class="flex items-center justify-between">
             <div>
               <div class="text-sm text-slate-100">{{ v.description?.moniker || "Validator" }}</div>
-              <div class="text-xs text-slate-400">{{ (parseFloat(v.commission.commission_rates.rate) * 100).toFixed(1) }}% commission</div>
+              <div class="text-xs text-slate-400">{{ (parseFloat(v.commission?.commissionRates?.rate || "0") * 100).toFixed(1) }}% commission</div>
             </div>
             <div class="text-xs text-slate-300">
               {{ v.votingPowerPercent.toFixed(2) }}% VP
