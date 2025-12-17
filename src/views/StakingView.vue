@@ -362,34 +362,39 @@ const copy = async (text: string) => {
           </div>
           <div v-if="delegatorLeaderboardLoading && delegatorLeaderboard.length === 0" class="text-xs text-slate-400">Collecting staking data…</div>
           <div v-else-if="delegatorLeaderboard.length === 0" class="text-xs text-slate-500">No delegators discovered yet.</div>
-          <div v-else class="overflow-x-auto">
-            <table class="table text-sm">
-              <thead>
-                <tr class="text-slate-400 text-xs">
-                  <th class="text-left">Rank</th>
-                  <th class="text-left">Delegator</th>
-                  <th class="text-right">Total Staked</th>
-                  <th class="text-right">Validators</th>
-                </tr>
-              </thead>
-              <tbody>
-                <tr v-for="(entry, idx) in delegatorLeaderboard" :key="entry.delegatorAddress" class="text-slate-200">
-                  <td class="py-2 font-mono text-xs text-slate-400">#{{ idx + 1 }}</td>
-                  <td class="py-2">
-                    <div class="flex items-center gap-2">
-                      <span class="font-mono text-xs">{{ shortAddress(entry.delegatorAddress, 12) }}</span>
-                      <button class="btn text-[10px]" @click.stop="copy(entry.delegatorAddress)">Copy</button>
-                    </div>
-                  </td>
-                  <td class="py-2 text-right font-mono">
+          <div v-else class="space-y-2">
+            <div
+              v-for="(entry, idx) in delegatorLeaderboard"
+              :key="entry.delegatorAddress"
+              class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3 rounded-2xl border border-white/10 bg-white/5 px-4 py-3 shadow-xl"
+              :class="idx === 0 ? 'border-emerald-300/60 bg-emerald-500/10' : ''"
+            >
+              <div class="flex items-center gap-3">
+                <div class="w-12 h-12 rounded-2xl flex flex-col items-center justify-center bg-slate-900/60 border border-white/10">
+                  <span class="text-xl" :class="getStakerBadge(idx).accent">{{ getStakerBadge(idx).icon }}</span>
+                  <span class="text-[10px] text-slate-400">#{{ idx + 1 }}</span>
+                </div>
+                <div>
+                  <p class="font-semibold text-slate-100 flex items-center gap-2">
+                    {{ shortAddress(entry.delegatorAddress, 14) }}
+                    <button class="btn text-[10px]" @click.stop="copy(entry.delegatorAddress)">Copy</button>
+                  </p>
+                  <p class="text-[11px] text-slate-400">{{ getStakerBadge(idx).label }}</p>
+                </div>
+              </div>
+              <div class="flex flex-wrap items-center gap-4 sm:justify-end">
+                <div>
+                  <p class="text-[10px] uppercase tracking-wide text-slate-400">Total Staked</p>
+                  <p class="text-lg font-bold text-emerald-200">
                     {{ formatAmount(entry.totalStaked, tokenDenom, { minDecimals: 2, maxDecimals: 2 }) }}
-                  </td>
-                  <td class="py-2 text-right text-xs text-slate-400">
-                    {{ entry.validatorCount }}
-                  </td>
-                </tr>
-              </tbody>
-            </table>
+                  </p>
+                </div>
+                <div class="text-right">
+                  <p class="text-[10px] uppercase tracking-wide text-slate-400">Validators</p>
+                  <p class="text-base font-semibold text-cyan-200">{{ entry.validatorCount }}</p>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
 

@@ -222,7 +222,7 @@ const delegatorLeaderboardLoading = ref(false);
         .sort((a, b) => (BigInt(b.tokens || "0") > BigInt(a.tokens || "0") ? 1 : -1))
         .slice(0, Math.max(1, topValidatorCount));
 
-      const aggregate = new Map<string, { amount: bigint; validators: Set<string> }>();
+      const aggregate = new Map<string, { amount: bigint; validators: Set<string>; display: string }>();
 
       for (const validator of sorted) {
         const operatorAddress = validator?.operator_address;
@@ -250,9 +250,12 @@ const delegatorLeaderboardLoading = ref(false);
             }
             if (amount <= 0n) return;
 
-            const record = aggregate.get(delegator) ?? { amount: 0n, validators: new Set<string>() };
+            const record = aggregate.get(delegator) ?? { amount: 0n, validators: new Set<string>(), display: delegatorRaw };
             record.amount += amount;
             record.validators.add(operatorAddress);
+            if (!record.display && delegatorRaw) {
+              record.display = delegatorRaw;
+            }
             aggregate.set(delegator, record);
           });
         } catch (delegationErr) {
@@ -262,7 +265,7 @@ const delegatorLeaderboardLoading = ref(false);
 
       const leaderboard = Array.from(aggregate.entries())
         .map(([delegatorAddress, info]) => ({
-          delegatorAddress,
+          delegatorAddress: info.display || delegatorAddress,
           totalStaked: info.amount.toString(),
           validatorCount: info.validators.size,
           validators: Array.from(info.validators)
