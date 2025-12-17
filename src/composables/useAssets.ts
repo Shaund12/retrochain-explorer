@@ -185,6 +185,17 @@ export function useAssets() {
     }
   };
 
+  const isIgnorableContractError = (err: any) => {
+    const status = err?.response?.status;
+    if (status === 400 || status === 422) return true;
+    const msg: string | undefined = err?.response?.data?.message || err?.message;
+    if (typeof msg === "string") {
+      const lowered = msg.toLowerCase();
+      return lowered.includes("unknown variant") || lowered.includes("unknown field") || lowered.includes("error parsing");
+    }
+    return false;
+  };
+
   const queryContractSmart = async (address: string, payload: Record<string, any>) => {
     const encoded = encodeJsonToBase64(payload);
     const encodedPath = encodeURIComponent(encoded);
@@ -204,16 +215,18 @@ export function useAssets() {
             return decodeBase64Json(data);
           }
         } catch (err: any) {
+          if (isIgnorableContractError(err)) {
+            return null;
+          }
           const status = err?.response?.status;
           if (status && status !== 404 && status !== 501) {
-            // for real contract errors bubble up when beta1 already tried
             continue;
           }
         }
       }
     }
 
-    throw new Error(`Smart query failed for ${address}`);
+    return null;
   };
 
   const fetchCw20Tokens = async (): Promise<Cw20Token[]> => {
