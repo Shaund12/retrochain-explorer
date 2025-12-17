@@ -47,6 +47,10 @@ interface PaginatedResponse<T> {
 }
 
 let denomTraceEndpointSupported = true;
+const BLOCKED_CW20_CONTRACTS = new Set([
+  "cosmos1yyca08xqdgvjz0psg56z67ejh9xms6l436u8y58m82npdqqhmmtq8xrd4s",
+  "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s4hmalr"
+]);
 
 const paramsSerializer = (params: Record<string, any>) => {
   const search = new URLSearchParams();
@@ -259,8 +263,9 @@ const fetchContractsForCode = async (codeId: string, limit = 50) => {
         if (!contracts.length) continue;
 
         const contractQueries = contracts.slice(0, 50).map(async (address: string) => {
-          if (!address || seenContracts.has(address) || cw20List.length >= 40) return;
-          seenContracts.add(address);
+          const normalizedAddress = address?.toLowerCase?.() ?? "";
+          if (!normalizedAddress || seenContracts.has(normalizedAddress) || BLOCKED_CW20_CONTRACTS.has(normalizedAddress) || cw20List.length >= 40) return;
+          seenContracts.add(normalizedAddress);
           try {
             const tokenInfo = await queryContractSmart(address, { token_info: {} });
             if (!tokenInfo || typeof tokenInfo !== "object" || !tokenInfo.symbol) return;
