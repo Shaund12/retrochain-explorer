@@ -172,17 +172,28 @@ export function useAssets() {
 
   const fetchDenomTrace = async (hash: string) => {
     if (!denomTraceEndpointSupported) return null;
-    try {
-      const res = await api.get(`/ibc/apps/transfer/v1/denom_traces/${hash}`);
-      return res.data?.denom_trace;
-    } catch (traceErr) {
-      const status = (traceErr as any)?.response?.status;
-      if (status === 404 || status === 501) {
-        denomTraceEndpointSupported = false;
+    const paths = ["/ibc/apps/transfer/v1", "/ibc/apps/transfer/v1beta1"];
+    for (const base of paths) {
+      try {
+        const res = await api.get(`${base}/denom_traces/${hash}`);
+        if (res.data?.denom_trace) {
+          return res.data.denom_trace;
+        }
+      } catch (traceErr: any) {
+        const status = traceErr?.response?.status;
+        if (status === 404) {
+          denomTraceEndpointSupported = false;
+          return null;
+        }
+        if (status === 501) {
+          continue; // try beta1 or next option
+        }
+        console.warn(`Failed to fetch denom trace for ${hash}`, traceErr);
+        return null;
       }
-      console.warn(`Failed to fetch denom trace for ${hash}`, traceErr);
-      return null;
     }
+    denomTraceEndpointSupported = false;
+    return null;
   };
 
   const isIgnorableContractError = (err: any) => {
@@ -219,6 +230,9 @@ export function useAssets() {
             return null;
           }
           const status = err?.response?.status;
+          if (status === 500) {
+            continue;
+          }
           if (status && status !== 404 && status !== 501) {
             continue;
           }
