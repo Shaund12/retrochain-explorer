@@ -32,10 +32,16 @@ const averageCommission = computed(() => {
 
 const highestSelfDelegation = computed(() => {
   if (!validators.value.length) return 0;
-  const max = Math.max(
-    ...validators.value.map((v) => parseInt(v.minSelfDelegation || "0", 10) || 0)
+  const microAmount = Math.max(
+    ...validators.value.map((v) => {
+      const declared = parseInt(v.minSelfDelegation || "0", 10);
+      if (Number.isFinite(declared) && declared > 0) {
+        return declared;
+      }
+      return parseInt(v.tokens || "0", 10) || 0;
+    })
   );
-  return max / 1_000_000;
+  return microAmount / 1_000_000;
 });
 
 const topValidators = computed(() => validators.value.slice(0, 3));
