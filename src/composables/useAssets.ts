@@ -129,8 +129,11 @@ export function useAssets() {
   };
 
 
-  const decodeBase64Json = (value?: string | null) => {
-    if (!value) return null;
+  const decodeBase64Json = (value?: any) => {
+    if (value === null || value === undefined) return null;
+    if (typeof value !== "string") {
+      return value;
+    }
     const bytes = base64ToBytes(value);
     if (typeof TextDecoder !== "undefined") {
       const decoder = new TextDecoder();
