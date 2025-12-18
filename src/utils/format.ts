@@ -8,7 +8,7 @@ const DENOMS: Record<string, DenomMeta> = {
 };
 
 const WBTC_ON_RETRO = import.meta.env.VITE_IBC_DENOM_WBTC_ON_RETRO;
-const WBTC_ON_COSMOS = import.meta.env.VITE_DENOM_WBTC_ON_COSMOS || import.meta.env.VITE_IBC_DENOM_WBTC_ON_COSMOS;
+const WBTC_ON_COSMOS = import.meta.env.VITE_DENOM_WBTC_ON_COSMOS || import.meta.env.VITE_IBC_DENOM_WBTC_ON_COSMOS || "cwbtc";
 
 if (WBTC_ON_RETRO) {
   DENOMS[WBTC_ON_RETRO] = { display: "WBTC", decimals: 8 };

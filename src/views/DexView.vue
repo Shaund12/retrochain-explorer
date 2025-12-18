@@ -72,7 +72,7 @@ const cosmosInboundConfigured = computed(() => Boolean(cosmosToRetroChannel));
 const ATOM_IBC_DENOM_ON_RETRO = "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2";
 const RETRO_IBC_DENOM_ON_COSMOS = "ibc/54B4719F6F076B54A05D96E0D9CB0AA1770B9993C904A03C6110FFD0525B1B9A";
 const WBTC_IBC_DENOM_ON_RETRO = import.meta.env.VITE_IBC_DENOM_WBTC_ON_RETRO || "";
-const WBTC_DENOM_ON_COSMOS = import.meta.env.VITE_DENOM_WBTC_ON_COSMOS || import.meta.env.VITE_IBC_DENOM_WBTC_ON_COSMOS || "";
+const WBTC_DENOM_ON_COSMOS = import.meta.env.VITE_DENOM_WBTC_ON_COSMOS || import.meta.env.VITE_IBC_DENOM_WBTC_ON_COSMOS || "cwbtc";
 const retroToCosmosAsset = ref<BridgeAssetKind>("RETRO");
 const cosmosToRetroAsset = ref<BridgeAssetKind>("RETRO");
 
