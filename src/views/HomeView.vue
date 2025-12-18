@@ -246,39 +246,124 @@ function sparkPath(data: number[], width = 160, height = 40) {
 </script>
 
 <template>
-  <div class="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
-    <div class="col-span-full">
-      <RcDisclaimer type="warning" title="⚠️ Experimental Mainnet Notice">
-        <p>
-          <strong>RetroChain is a live Cosmos SDK mainnet, but the network, modules, and contracts remain experimental.</strong>
-        </p>
-        <p>
-          Upgrades, validator rotations, and RPC changes can happen without notice. Expect occasional downtime while we harden the chain.
-        </p>
-        <p>
-          Transactions are irreversible—double-check recipients, fees, and any Keplr prompts, and only risk funds you can afford to lose.
-        </p>
-        <p class="mt-2 text-xs text-amber-200/80">
-          Read the full
-          <RouterLink to="/legal" class="underline underline-offset-2 hover:text-amber-100">
-            Terms &amp; Conditions
-          </RouterLink>
-          for detailed legal disclosures.
-        </p>
-      </RcDisclaimer>
-    </div>
-    <div v-if="network === 'mainnet'" class="col-span-full">
-      <div class="card-soft border-emerald-500/40">
-        <div class="flex items-center justify-between">
-          <div class="text-sm">
-            <span class="text-emerald-300 font-semibold">Mainnet is live</span> — welcome to RetroChain! 🚀
+  <div class="flex flex-col gap-4">
+    <RcDisclaimer type="warning" title="⚠️ Experimental Mainnet Notice">
+      <p>
+        <strong>RetroChain is a live Cosmos SDK mainnet, but the network, modules, and contracts remain experimental.</strong>
+      </p>
+      <p>
+        Upgrades, validator rotations, and RPC changes can happen without notice. Expect occasional downtime while we harden the chain.
+      </p>
+      <p>
+        Transactions are irreversible—double-check recipients, fees, and any Keplr prompts, and only risk funds you can afford to lose.
+      </p>
+      <p class="mt-2 text-xs text-amber-200/80">
+        Read the full
+        <RouterLink to="/legal" class="underline underline-offset-2 hover:text-amber-100">
+          Terms &amp; Conditions
+        </RouterLink>
+        for detailed legal disclosures.
+      </p>
+    </RcDisclaimer>
+
+    <div v-if="network === 'mainnet'" class="card-soft border-emerald-500/40">
+      <div class="flex items-center justify-between">
+        <div class="text-sm">
+          <span class="text-emerald-300 font-semibold">Mainnet is live</span> — welcome to RetroChain! 🚀
+        </div>
+        <div class="flex items-center gap-2">
+          <a href="/api/cosmos/base/tendermint/v1beta1/node_info" class="btn text-xs">Node Info</a>
+        </div>
+      </div>
+
+      <div class="grid gap-3 xl:grid-cols-2 min-w-0">
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+              <span class="text-xl">🎯</span>
+              Recent Game Sessions
+            </h2>
           </div>
-          <div class="flex items-center gap-2">
-            <a href="/api/cosmos/base/tendermint/v1beta1/node_info" class="btn text-xs">Node Info</a>
+          <div v-if="loadingArcade" class="text-xs text-slate-400">
+            Loading sessions...
+          </div>
+          <div v-else-if="sessions.length === 0" class="text-xs text-slate-400 py-4 text-center">
+            <div class="mb-2 text-2xl">🎯</div>
+            <div>No game sessions yet</div>
+            <div class="text-[11px] mt-1">
+              Start a game using MsgInsertCoin and MsgStartSession
+            </div>
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="session in sessions"
+              :key="session.session_id"
+              class="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 hover:border-purple-400/40 transition-colors"
+            >
+              <div class="flex items-start justify-between mb-2">
+                <div>
+                  <div class="text-xs font-bold text-slate-100">{{ session.game_id }}</div>
+                  <div class="text-[11px] text-slate-400 font-mono">{{ shortString(session.player, 20) }}</div>
+                </div>
+                <span
+                  class="badge text-[10px]"
+                  :class="
+                    session.status === 'active'
+                      ? 'text-emerald-200 border-emerald-500/40'
+                      : 'text-slate-300 border-slate-500/40'
+                  "
+                >
+                  {{ session.status }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-slate-300">Score: <span class="text-indigo-300 font-bold">{{ session.score }}</span></span>
+                <span class="text-slate-400">Level {{ session.level_reached }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+              <span class="text-xl">🏅</span>
+              Latest Achievements
+            </h2>
+          </div>
+          <div v-if="loadingArcade" class="text-xs text-slate-400">
+            Loading achievements...
+          </div>
+          <div v-else-if="achievements.length === 0" class="text-xs text-slate-400 py-4 text-center">
+            <div class="mb-2 text-2xl">🏅</div>
+            <div>No achievements unlocked yet</div>
+            <div class="text-[11px] mt-1">
+              Unlock achievements by playing games!
+            </div>
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="achievement in achievements"
+              :key="achievement.achievement_id"
+              class="p-3 rounded-lg bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:border-yellow-400/40 transition-colors"
+            >
+              <div class="flex items-start gap-3">
+                <div class="text-2xl">🏅</div>
+                <div class="flex-1">
+                  <div class="text-xs font-bold text-slate-100">{{ achievement.name }}</div>
+                  <div class="text-[11px] text-slate-300 mb-1">{{ achievement.description }}</div>
+                  <div class="flex items-center justify-between">
+                    <div class="text-[11px] text-slate-400 font-mono">{{ shortString(achievement.player, 16) }}</div>
+                    <div class="text-[10px] text-slate-500">{{ formatTime(achievement.unlocked_at) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
           </div>
         </div>
       </div>
     </div>
+
     <section class="flex flex-col gap-3 min-w-0">
       <!-- Hero Welcome Card -->
       <div class="card-soft relative overflow-hidden">
@@ -705,96 +790,6 @@ function sparkPath(data: number[], width = 160, height = 40) {
         </table>
       </div>
 
-    </section>
-
-    <section class="flex flex-col gap-3 min-w-0">
-      <!-- 🎯 Recent Game Sessions -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            <span class="text-xl">🎯</span>
-            Recent Game Sessions
-          </h2>
-        </div>
-        <div v-if="loadingArcade" class="text-xs text-slate-400">
-          Loading sessions...
-        </div>
-        <div v-else-if="sessions.length === 0" class="text-xs text-slate-400 py-4 text-center">
-          <div class="mb-2 text-2xl">🎯</div>
-          <div>No game sessions yet</div>
-          <div class="text-[11px] mt-1">
-            Start a game using MsgInsertCoin and MsgStartSession
-          </div>
-        </div>
-        <div v-else class="space-y-2">
-          <div
-            v-for="session in sessions"
-            :key="session.session_id"
-            class="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 hover:border-purple-400/40 transition-colors cursor-pointer"
-          >
-            <div class="flex items-start justify-between mb-2">
-              <div>
-                <div class="text-xs font-bold text-slate-100">{{ session.game_id }}</div>
-                <div class="text-[11px] text-slate-400 font-mono">{{ shortString(session.player, 20) }}</div>
-              </div>
-              <span
-                class="badge text-[10px]"
-                :class="
-                  session.status === 'active'
-                    ? 'text-emerald-200 border-emerald-500/40'
-                    : 'text-slate-300 border-slate-500/40'
-                "
-              >
-                {{ session.status }}
-              </span>
-            </div>
-            <div class="flex items-center justify-between text-[11px]">
-              <span class="text-slate-300">Score: <span class="text-indigo-300 font-bold">{{ session.score }}</span></span>
-              <span class="text-slate-400">Level {{ session.level_reached }}</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 🏅 Latest Achievements -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            <span class="text-xl">🏅</span>
-            Latest Achievements
-          </h2>
-        </div>
-        <div v-if="loadingArcade" class="text-xs text-slate-400">
-          Loading achievements...
-        </div>
-        <div v-else-if="achievements.length === 0" class="text-xs text-slate-400 py-4 text-center">
-          <div class="mb-2 text-2xl">🏅</div>
-          <div>No achievements unlocked yet</div>
-          <div class="text-[11px] mt-1">
-            Unlock achievements by playing games!
-          </div>
-        </div>
-        <div v-else class="space-y-2">
-          <div
-            v-for="achievement in achievements"
-            :key="achievement.achievement_id"
-            class="p-3 rounded-lg bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:border-yellow-400/40 transition-colors"
-          >
-            <div class="flex items-start gap-3">
-              <div class="text-2xl">🏅</div>
-              <div class="flex-1">
-                <div class="text-xs font-bold text-slate-100">{{ achievement.name }}</div>
-                <div class="text-[11px] text-slate-300 mb-1">{{ achievement.description }}</div>
-                <div class="flex items-center justify-between">
-                  <div class="text-[11px] text-slate-400 font-mono">{{ shortString(achievement.player, 16) }}</div>
-                  <div class="text-[10px] text-slate-500">{{ formatTime(achievement.unlocked_at) }}</div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div v-if="network !== 'mainnet'" class="card text-xs text-slate-300 leading-relaxed">
         <h3 class="text-sm font-semibold mb-1 text-slate-100 flex items-center gap-2">
           <span>ℹ️</span>
@@ -819,6 +814,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
           </li>
         </ol>
       </div>
+
     </section>
   </div>
 </template>
