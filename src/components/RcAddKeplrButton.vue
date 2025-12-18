@@ -58,7 +58,7 @@ const walletStatuses = computed(() => [
 ]);
 
 const buttonLabel = computed(() => {
-  if (connecting.value) return "Connecting…";
+  if (connecting.value) return "Connectingï¿½";
   if (address.value) return "Wallet Connected";
   if (!isAvailable.value) return "Install Keplr";
   return "Connect Wallet";
@@ -66,9 +66,9 @@ const buttonLabel = computed(() => {
 
 const buttonSubtext = computed(() => {
   if (address.value) {
-    return `${address.value.slice(0, 10)}…${address.value.slice(-6)}`;
+    return `${address.value.slice(0, 10)}ï¿½${address.value.slice(-6)}`;
   }
-  return "Keplr • Leap • Cosmostation";
+  return "Keplr ï¿½ Leap ï¿½ Cosmostation";
 });
 
 const steps = [
@@ -156,8 +156,12 @@ onBeforeUnmount(() => {
 
     <teleport to="body">
       <transition name="fade">
-        <div v-if="showModal" class="fixed inset-0 z-[1000] flex items-center justify-center bg-black/70 px-4 py-8">
-          <div class="max-w-3xl w-full rounded-3xl border border-white/10 bg-[rgba(7,10,24,0.98)] shadow-2xl shadow-black/60">
+        <div
+          v-if="showModal"
+          class="fixed inset-0 z-[1000] overflow-y-auto bg-black/70"
+        >
+          <div class="flex min-h-full items-start justify-center px-4 py-6 sm:items-center sm:px-6 sm:py-10">
+            <div class="max-w-3xl w-full rounded-3xl border border-white/10 bg-[rgba(7,10,24,0.98)] shadow-2xl shadow-black/60 max-h-[90vh] overflow-y-auto">
             <div class="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5">
               <div>
                 <p class="text-[11px] uppercase tracking-[0.35em] text-indigo-300">Wallet Center</p>
@@ -191,7 +195,7 @@ onBeforeUnmount(() => {
                   </li>
                 </ul>
                 <div class="mt-3 rounded-xl border border-white/5 bg-white/5 p-3 text-[11px] text-slate-300">
-                  Tip: If Keplr isn’t detected, open the extension once and refresh this page.
+                  Tip: If Keplr isnï¿½t detected, open the extension once and refresh this page.
                 </div>
               </div>
 
@@ -250,6 +254,7 @@ onBeforeUnmount(() => {
               <p class="mt-4 text-[11px] text-slate-500">
                 RetroChain Explorer never stores your private keys. Connections happen locally inside Keplr or other supported wallets.
               </p>
+            </div>
             </div>
           </div>
         </div>
