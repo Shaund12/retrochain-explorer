@@ -10,7 +10,6 @@ import RcSearchBar from "@/components/RcSearchBar.vue";
 import RcArcadeGameCard from "@/components/RcArcadeGameCard.vue";
 import { useRouter } from "vue-router";
 import dayjs from "dayjs";
-import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
 import { useNetwork } from "@/composables/useNetwork";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
 
@@ -275,7 +274,6 @@ function sparkPath(data: number[], width = 160, height = 40) {
             <span class="text-emerald-300 font-semibold">Mainnet is live</span> — welcome to RetroChain! 🚀
           </div>
           <div class="flex items-center gap-2">
-            <RcAddKeplrButton />
             <a href="/api/cosmos/base/tendermint/v1beta1/node_info" class="btn text-xs">Node Info</a>
           </div>
         </div>
@@ -322,7 +320,6 @@ function sparkPath(data: number[], width = 160, height = 40) {
             >
               Account Lookup
             </button>
-            <RcAddKeplrButton />
           </div>
 
           <!-- Network Info Tags -->

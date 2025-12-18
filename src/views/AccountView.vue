@@ -9,7 +9,6 @@ import { useNetwork } from "@/composables/useNetwork";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import { useFaucet } from "@/composables/useFaucet";
 import { formatAmount as fmtAmount } from "@/utils/format";
-import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
 import { getAccountLabel } from "@/constants/accountLabels";
 import { getTokenMeta, type TokenAccent, type TokenMeta } from "@/constants/tokens";
 
@@ -371,23 +370,6 @@ const closeTokenDetails = () => {
 
     <!-- Account Data -->
     <template v-if="bech32Address">
-      <!-- Keplr Setup Notice -->
-      <div v-if="keplrAddress && keplrAddress === bech32Address" class="card border-indigo-500/50 bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
-        <div class="flex items-center gap-3">
-          <div class="text-3xl">??</div>
-          <div class="flex-1">
-            <div class="text-sm font-semibold text-slate-100 mb-1">Keplr Wallet Setup</div>
-            <div class="text-xs text-slate-400 mb-2">
-              To see your balance in Keplr wallet, you need to add RetroChain to Keplr first.
-            </div>
-            <div class="flex items-center gap-2">
-              <RcAddKeplrButton />
-              <span class="text-xs text-slate-500">? Click here to add RetroChain to Keplr</span>
-            </div>
-          </div>
-        </div>
-      </div>
-
       <div class="grid gap-3 grid-cols-1 lg:grid-cols-3">
         <!-- Balance Overview -->
         <div class="card">

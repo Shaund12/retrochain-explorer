@@ -12,7 +12,7 @@ import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import dayjs from "dayjs";
 
 const router = useRouter();
-const { address, connect, isAvailable, signAndBroadcast, signAndBroadcastWithREST } = useKeplr();
+const { address, signAndBroadcast, signAndBroadcastWithREST } = useKeplr();
 const { 
   delegations, 
   rewards, 
@@ -127,20 +127,6 @@ watch(
     }
   }
 );
-
-const handleConnect = async () => {
-  try {
-    await connect();
-    if (address.value) {
-      await Promise.all([
-        fetchAll(),
-        loadAccount(address.value)
-      ]);
-    }
-  } catch (e: any) {
-    console.error("Failed to connect:", e);
-  }
-};
 
 const handleDelegate = async () => {
 if (!selectedValidator.value || !amount.value) return;
@@ -398,25 +384,8 @@ const copy = async (text: string) => {
           </div>
         </div>
 
-        <!-- Connect Wallet -->
-        <div v-if="!address" class="p-4 rounded-lg bg-gradient-to-br from-amber-500/10 to-orange-500/10 border border-amber-500/20">
-          <div class="flex items-center gap-3">
-            <div class="text-3xl">👛</div>
-            <div class="flex-1">
-              <div class="text-sm font-semibold text-slate-100 mb-1">Connect Your Wallet</div>
-              <div class="text-xs text-slate-400">Connect Keplr to view your staking portfolio and delegate</div>
-            </div>
-            <button v-if="isAvailable" class="btn btn-primary text-xs" @click="handleConnect">
-              Connect Keplr
-            </button>
-            <a v-else href="https://www.keplr.app/download" target="_blank" class="btn text-xs">
-              Install Keplr
-            </a>
-          </div>
-        </div>
-
         <!-- Wallet Connected - Portfolio Summary -->
-        <div v-else class="grid grid-cols-1 sm:grid-cols-4 gap-3">
+        <div v-if="address" class="grid grid-cols-1 sm:grid-cols-4 gap-3">
           <div class="p-4 rounded-lg bg-gradient-to-br from-emerald-500/10 to-lime-500/10 border border-emerald-500/30">
             <div class="text-xs text-slate-400 mb-1 uppercase tracking-wider">Wallet Balance</div>
             <div class="text-xl font-bold text-emerald-200">

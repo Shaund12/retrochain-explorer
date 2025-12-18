@@ -83,19 +83,12 @@
 
       <!-- Wallet Connection -->
       <div class="flex items-center gap-3">
-        <button
-          v-if="!address"
-          class="hidden sm:flex items-center gap-2 px-4 py-2 rounded-lg text-sm font-semibold bg-gradient-to-r from-indigo-600 to-purple-600 hover:from-indigo-500 hover:to-purple-500 text-white transition-all"
-          :disabled="!isAvailable || connecting"
-          @click="connect"
-        >
-          <span v-if="connecting">Connecting...</span>
-          <span v-else-if="isAvailable">Connect Wallet</span>
-          <span v-else>Install Keplr</span>
-        </button>
+        <div class="hidden lg:block w-[260px]">
+          <RcAddKeplrButton class="w-full" />
+        </div>
 
         <button
-          v-else
+          v-if="address"
           class="flex items-center gap-3 px-3 sm:px-4 py-2 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-white/10 hover:border-emerald-300/40 hover:from-emerald-500/20 hover:to-cyan-500/20 text-white transition-all shadow-lg shadow-emerald-500/10"
           @click="disconnect"
         >
@@ -209,7 +202,7 @@ import { getTokenMeta } from "@/constants/tokens";
 
 const route = useRoute();
 const router = useRouter();
-const { isAvailable, address, connecting, connect, disconnect } = useKeplr();
+const { address, disconnect } = useKeplr();
 const mobileMenuOpen = ref(false);
 const { balances, loading: accountLoading, load } = useAccount();
 const { current: network } = useNetwork();
