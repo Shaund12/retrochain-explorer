@@ -246,7 +246,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
 </script>
 
 <template>
-  <div class="grid grid-1-3 gap-4">
+  <div class="grid gap-4 xl:grid-cols-[minmax(0,2fr)_minmax(0,1fr)]">
     <div class="col-span-full">
       <RcDisclaimer type="warning" title="⚠️ Experimental Mainnet Notice">
         <p>
@@ -279,7 +279,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
         </div>
       </div>
     </div>
-    <section class="flex flex-col gap-3">
+    <section class="flex flex-col gap-3 min-w-0">
       <!-- Hero Welcome Card -->
       <div class="card-soft relative overflow-hidden">
         <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
@@ -351,8 +351,8 @@ function sparkPath(data: number[], width = 160, height = 40) {
         <RcSearchBar />
       </div>
 
-      <div class="grid gap-3 xl:grid-cols-2">
-        <div class="card">
+      <div class="grid gap-3 xl:grid-cols-2 min-w-0">
+        <div class="card min-w-0 overflow-hidden">
           <div class="flex items-center justify-between mb-2">
             <h2 class="text-sm font-semibold text-slate-100">Latest blocks</h2>
             <div class="flex items-center gap-2">
@@ -371,7 +371,8 @@ function sparkPath(data: number[], width = 160, height = 40) {
           <div v-if="loadingBlocks" class="text-xs text-slate-400">
             Loading latest blocks...
           </div>
-          <table v-else class="table">
+          <div v-else class="overflow-x-auto">
+            <table class="table min-w-full">
             <colgroup>
               <col style="width: 120px" />
               <col />
@@ -411,10 +412,11 @@ function sparkPath(data: number[], width = 160, height = 40) {
                 </td>
               </tr>
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
 
-        <div class="card">
+        <div class="card min-w-0 overflow-hidden">
           <div class="flex items-center justify-between mb-2">
             <h2 class="text-sm font-semibold text-slate-100">
               Recent transactions
@@ -433,7 +435,8 @@ function sparkPath(data: number[], width = 160, height = 40) {
               Generate some activity using the CLI or faucet
             </div>
           </div>
-          <table v-else class="table">
+          <div v-else class="overflow-x-auto">
+            <table class="table min-w-full">
             <thead>
               <tr class="text-slate-300 text-xs">
                 <th>Hash</th>
@@ -466,7 +469,8 @@ function sparkPath(data: number[], width = 160, height = 40) {
                 </td>
               </tr>
             </tbody>
-          </table>
+            </table>
+          </div>
         </div>
       </div>
 
@@ -703,7 +707,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
 
     </section>
 
-    <section class="flex flex-col gap-3">
+    <section class="flex flex-col gap-3 min-w-0">
       <!-- 🎯 Recent Game Sessions -->
       <div class="card">
         <div class="flex items-center justify-between mb-2">
