@@ -65,6 +65,8 @@ const DEFAULT_GAS_ADJUSTMENT = 1.3;
 const DEFAULT_GAS_PER_MSG = 150000;
 const MIN_GAS_LIMIT = 200000;
 const MIN_TOTAL_FEE = 5000; // minimum fee in uretro to satisfy chain requirements
+const COSMOS_CHAIN_ID = import.meta.env.VITE_COSMOS_CHAIN_ID || "cosmoshub-4";
+const COSMOS_RPC_URL = (import.meta.env.VITE_COSMOS_RPC_URL || "").trim();
 
 function buildChainInfo() {
   // Build absolute URLs - Keplr requires full URIs
@@ -309,15 +311,29 @@ export function useKeplr() {
     if (!window.keplr) throw new Error("Keplr not available");
     if (!address.value) throw new Error("Not connected to Keplr");
 
+    const resolveRpcEndpoint = (targetChainId: string) => {
+      if (targetChainId === CHAIN_ID) {
+        let endpoint = rpcBase.value || "/rpc";
+        if (typeof window !== "undefined" && !endpoint.startsWith("http")) {
+          const origin = window.location.origin;
+          endpoint = `${origin}${endpoint.startsWith('/') ? '' : '/'}${endpoint}`;
+        }
+        return endpoint;
+      }
+      if (targetChainId === COSMOS_CHAIN_ID && COSMOS_RPC_URL) {
+        return COSMOS_RPC_URL;
+      }
+      return null;
+    };
+
+    const rpcEndpoint = resolveRpcEndpoint(chainId);
     const attemptRpc = async () => {
+      if (!rpcEndpoint) {
+        throw new Error(`No RPC endpoint configured for ${chainId}. Set VITE_COSMOS_RPC_URL (or chain-specific RPC) to continue.`);
+      }
+
       const offlineSigner = window.keplr.getOfflineSigner(chainId);
       const accounts = await offlineSigner.getAccounts();
-
-      const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
-      let rpcEndpoint = rpcBase.value || "/rpc";
-      if (!rpcEndpoint.startsWith("http")) {
-        rpcEndpoint = `${origin}${rpcEndpoint.startsWith('/') ? '' : '/'}${rpcEndpoint}`;
-      }
 
       const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner);
       return client.signAndBroadcast(accounts[0].address, msgs, fee, memo);
@@ -327,7 +343,7 @@ export function useKeplr() {
       return await attemptRpc();
     } catch (e) {
       console.warn("RPC sign/broadcast failed, evaluating fallback…", e);
-      if (isUndefinedValueError(e)) {
+      if (chainId === CHAIN_ID && isUndefinedValueError(e)) {
         return signAndBroadcastWithREST(chainId, msgs, fee, memo);
       }
       throw e;
