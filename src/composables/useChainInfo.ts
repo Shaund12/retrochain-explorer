@@ -50,13 +50,14 @@ export function useChainInfo() {
         headerTotalTxs = Number.isFinite(totalTxs) ? totalTxs : null;
       }
 
-      if (!headerTotalTxs && totalTxCountSupported) {
+      if (headerTotalTxs === null && totalTxCountSupported) {
         try {
           const res = await api.get("/cosmos/tx/v1beta1/txs", {
             params: {
               order_by: "ORDER_BY_DESC",
               "pagination.limit": "1",
-              "pagination.count_total": "true"
+              "pagination.count_total": "true",
+              events: ["tm.event='Tx'"]
             },
             paramsSerializer: (params) => {
               const search = new URLSearchParams();
