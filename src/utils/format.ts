@@ -7,6 +7,17 @@ const DENOMS: Record<string, DenomMeta> = {
   "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2": { display: "ATOM", decimals: 6 }
 };
 
+const WBTC_ON_RETRO = import.meta.env.VITE_IBC_DENOM_WBTC_ON_RETRO;
+const WBTC_ON_COSMOS = import.meta.env.VITE_DENOM_WBTC_ON_COSMOS || import.meta.env.VITE_IBC_DENOM_WBTC_ON_COSMOS;
+
+if (WBTC_ON_RETRO) {
+  DENOMS[WBTC_ON_RETRO] = { display: "WBTC", decimals: 8 };
+}
+
+if (WBTC_ON_COSMOS) {
+  DENOMS[WBTC_ON_COSMOS] = { display: "WBTC", decimals: 8 };
+}
+
 function splitAmount(amount: string, decimals: number) {
   if (!/^[0-9]+$/.test(amount)) amount = String(parseInt(amount || "0", 10) || 0);
   const neg = amount.startsWith("-");

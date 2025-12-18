@@ -16,6 +16,8 @@ interface TokenOption {
   decimals: number;
 }
 
+type BridgeAssetKind = "RETRO" | "ATOM" | "WBTC";
+
 const { address, connect, isAvailable } = useKeplr();
 const { pools, loading: dexLoading, fetchPools, simulateSwap, calculatePoolPrice, isModuleAvailable } = useDex();
 const { assets: bridgeAssets, bridgeFromNoble, bridgeFromEVM, getEstimatedTime, getBridgeFee } = useBridge();
@@ -69,10 +71,10 @@ const fetchingCosmosAddress = ref(false);
 const cosmosInboundConfigured = computed(() => Boolean(cosmosToRetroChannel));
 const ATOM_IBC_DENOM_ON_RETRO = "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2";
 const RETRO_IBC_DENOM_ON_COSMOS = "ibc/54B4719F6F076B54A05D96E0D9CB0AA1770B9993C904A03C6110FFD0525B1B9A";
-const retroToCosmosAsset = ref<"RETRO" | "ATOM">("RETRO");
-const cosmosToRetroAsset = ref<"RETRO" | "ATOM">("RETRO");
-const retroToCosmosAssetLabel = computed(() => (retroToCosmosAsset.value === "RETRO" ? tokenSymbol.value : "ATOM"));
-const cosmosToRetroAssetLabel = computed(() => (cosmosToRetroAsset.value === "RETRO" ? tokenSymbol.value : "ATOM"));
+const WBTC_IBC_DENOM_ON_RETRO = import.meta.env.VITE_IBC_DENOM_WBTC_ON_RETRO || "";
+const WBTC_DENOM_ON_COSMOS = import.meta.env.VITE_DENOM_WBTC_ON_COSMOS || import.meta.env.VITE_IBC_DENOM_WBTC_ON_COSMOS || "";
+const retroToCosmosAsset = ref<BridgeAssetKind>("RETRO");
+const cosmosToRetroAsset = ref<BridgeAssetKind>("RETRO");
 
 // Create pool state
 const createTokenA = ref("RETRO");
@@ -84,6 +86,8 @@ const creatingPool = ref(false);
 
 const tokenDenom = computed(() => network.value === 'mainnet' ? 'uretro' : 'udretro');
 const tokenSymbol = computed(() => network.value === 'mainnet' ? 'RETRO' : 'DRETRO');
+const retroToCosmosAssetLabel = computed(() => (retroToCosmosAsset.value === "RETRO" ? tokenSymbol.value : retroToCosmosAsset.value));
+const cosmosToRetroAssetLabel = computed(() => (cosmosToRetroAsset.value === "RETRO" ? tokenSymbol.value : cosmosToRetroAsset.value));
 const dexAvailable = computed(() => isModuleAvailable.value);
 
 const availableTokens = computed<TokenOption[]>(() => [
@@ -124,6 +128,26 @@ const formatTokenBalance = (symbol: string) => {
   const token = findTokenOption(symbol);
   if (!token) return "0.00";
   return formatAmount(rawBalanceForSymbol(symbol), token.denom, { minDecimals: 2, maxDecimals: 6 });
+};
+
+const rawBalanceForDenom = (denom?: string) => {
+  if (!denom) return "0";
+  const entry = balances.value.find((b) => b.denom === denom);
+  return entry?.amount ?? "0";
+};
+
+const wbtcBalanceDisplay = computed(() => {
+  if (!WBTC_IBC_DENOM_ON_RETRO) return "0.00 WBTC";
+  return formatAmount(rawBalanceForDenom(WBTC_IBC_DENOM_ON_RETRO), WBTC_IBC_DENOM_ON_RETRO, {
+    minDecimals: 2,
+    maxDecimals: 8
+  });
+});
+
+const assetDecimals = (asset: BridgeAssetKind) => (asset === "WBTC" ? 8 : 6);
+const toBaseAmount = (amountFloat: number, asset: BridgeAssetKind) => {
+  const decimals = assetDecimals(asset);
+  return Math.floor(amountFloat * Math.pow(10, decimals)).toString();
 };
 
 const retroBalanceDisplay = computed(() => formatTokenBalance(tokenSymbol.value));
@@ -483,14 +507,25 @@ const handleRetroToCosmosTransfer = async () => {
 
   const amountFloat = parseFloat(retroToCosmosAmount.value);
   if (!Number.isFinite(amountFloat) || amountFloat <= 0) {
-    toast.showWarning("Enter a valid RETRO amount.");
+    toast.showWarning(`Enter a valid ${retroToCosmosAssetLabel.value} amount.`);
     return;
   }
 
   const chainId = network.value === 'mainnet' ? 'retrochain-mainnet' : 'retrochain-devnet-1';
-  const amountBase = Math.floor(amountFloat * 1_000_000).toString();
   const selectedAsset = retroToCosmosAsset.value;
-  const tokenDenomToSend = selectedAsset === "RETRO" ? tokenDenom.value : ATOM_IBC_DENOM_ON_RETRO;
+  const amountBase = toBaseAmount(amountFloat, selectedAsset);
+  let tokenDenomToSend: string | null;
+  if (selectedAsset === "RETRO") {
+    tokenDenomToSend = tokenDenom.value;
+  } else if (selectedAsset === "ATOM") {
+    tokenDenomToSend = ATOM_IBC_DENOM_ON_RETRO;
+  } else {
+    tokenDenomToSend = WBTC_IBC_DENOM_ON_RETRO || null;
+  }
+  if (!tokenDenomToSend) {
+    toast.showWarning("WBTC denom for RetroChain is not configured.");
+    return;
+  }
   const memo = retroToCosmosMemo.value || `IBC transfer to Cosmos Hub (${retroToCosmosAssetLabel.value})`;
 
   const msg = {
@@ -592,14 +627,26 @@ const handleCosmosToRetroTransfer = async () => {
 
   const amountFloat = parseFloat(cosmosToRetroAmount.value);
   if (!Number.isFinite(amountFloat) || amountFloat <= 0) {
-    toast.showWarning("Enter a valid ATOM amount.");
+    toast.showWarning(`Enter a valid ${cosmosToRetroAssetLabel.value} amount.`);
     ibcTransferring.value = false;
     return;
   }
 
-  const amountBase = Math.floor(amountFloat * 1_000_000).toString();
   const selectedAsset = cosmosToRetroAsset.value;
-  const tokenDenomToSend = selectedAsset === "ATOM" ? "uatom" : RETRO_IBC_DENOM_ON_COSMOS;
+  const amountBase = toBaseAmount(amountFloat, selectedAsset);
+  let tokenDenomToSend: string | null;
+  if (selectedAsset === "ATOM") {
+    tokenDenomToSend = "uatom";
+  } else if (selectedAsset === "RETRO") {
+    tokenDenomToSend = RETRO_IBC_DENOM_ON_COSMOS;
+  } else {
+    tokenDenomToSend = WBTC_DENOM_ON_COSMOS || null;
+  }
+  if (!tokenDenomToSend) {
+    toast.showWarning("WBTC denom for Cosmos Hub is not configured.");
+    ibcTransferring.value = false;
+    return;
+  }
   const memo = cosmosToRetroMemo.value || `IBC transfer to RetroChain (${cosmosToRetroAssetLabel.value})`;
 
   const msg = {
@@ -769,7 +816,7 @@ const handleCreatePool = async () => {
           Native DEX
         </h1>
         <p class="text-sm text-slate-300 mb-4">
-          {{ dexFeaturesEnabled ? 'Trade, provide liquidity, and bridge assets on RetroChain' : 'Bridge RETRO and ATOM via IBC while swaps and pools remain offline' }}
+          {{ dexFeaturesEnabled ? 'Trade, provide liquidity, and bridge assets on RetroChain' : 'Bridge RETRO, ATOM, and WBTC via IBC while swaps and pools remain offline' }}
         </p>
 
         <!-- Connect Wallet -->
@@ -1303,14 +1350,14 @@ const handleCreatePool = async () => {
             :class="ibcDirection === 'retroToCosmos' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
             @click="ibcDirection = 'retroToCosmos'"
           >
-            RETRO → Cosmos Hub
+            RetroChain → Cosmos Hub
           </button>
           <button 
             class="btn text-xs"
             :class="ibcDirection === 'cosmosToRetro' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
             @click="ibcDirection = 'cosmosToRetro'"
           >
-            ATOM → RetroChain
+            Cosmos Hub → RetroChain
           </button>
         </div>
 
@@ -1335,6 +1382,13 @@ const handleCreatePool = async () => {
               >
                 ATOM
               </button>
+              <button
+                class="btn text-xs flex-1"
+                :class="retroToCosmosAsset === 'WBTC' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+                @click="retroToCosmosAsset = 'WBTC'"
+              >
+                WBTC
+              </button>
             </div>
           </div>
           <div>
@@ -1351,7 +1405,7 @@ const handleCreatePool = async () => {
             <input
               v-model="retroToCosmosAmount"
               type="number"
-              step="0.000001"
+              :step="retroToCosmosAsset === 'WBTC' ? '0.00000001' : '0.000001'"
               placeholder="0.0"
               class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
             />
@@ -1359,7 +1413,9 @@ const handleCreatePool = async () => {
               <span>Available</span>
               <span class="font-mono text-slate-300">
                 <template v-if="address">
-                  {{ retroToCosmosAsset === 'RETRO' ? retroBalanceDisplay : ibcAtomBalanceDisplay }}
+                  <span v-if="retroToCosmosAsset === 'RETRO'">{{ retroBalanceDisplay }}</span>
+                  <span v-else-if="retroToCosmosAsset === 'ATOM'">{{ ibcAtomBalanceDisplay }}</span>
+                  <span v-else>{{ wbtcBalanceDisplay }}</span>
                 </template>
                 <template v-else>Connect wallet</template>
               </span>
@@ -1417,6 +1473,13 @@ const handleCreatePool = async () => {
               >
                 ATOM
               </button>
+              <button
+                class="btn text-xs flex-1"
+                :class="cosmosToRetroAsset === 'WBTC' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+                @click="cosmosToRetroAsset = 'WBTC'"
+              >
+                WBTC
+              </button>
             </div>
           </div>
           <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
@@ -1434,7 +1497,7 @@ const handleCreatePool = async () => {
               {{ cosmosWalletAddress }}
             </div>
             <div v-else class="text-[11px] text-slate-500">
-              Connect Keplr on Cosmos Hub to bridge ATOM in.
+              Connect Keplr on Cosmos Hub to bridge ATOM/WBTC in.
             </div>
           </div>
           <div>
@@ -1442,7 +1505,7 @@ const handleCreatePool = async () => {
             <input
               v-model="cosmosToRetroAmount"
               type="number"
-              step="0.000001"
+              :step="cosmosToRetroAsset === 'WBTC' ? '0.00000001' : '0.000001'"
               placeholder="0.0"
               class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
             />
