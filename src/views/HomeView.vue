@@ -275,93 +275,6 @@ function sparkPath(data: number[], width = 160, height = 40) {
           <a href="/api/cosmos/base/tendermint/v1beta1/node_info" class="btn text-xs">Node Info</a>
         </div>
       </div>
-
-      <div class="grid gap-3 xl:grid-cols-2 min-w-0">
-        <div class="card">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-              <span class="text-xl">🎯</span>
-              Recent Game Sessions
-            </h2>
-          </div>
-          <div v-if="loadingArcade" class="text-xs text-slate-400">
-            Loading sessions...
-          </div>
-          <div v-else-if="sessions.length === 0" class="text-xs text-slate-400 py-4 text-center">
-            <div class="mb-2 text-2xl">🎯</div>
-            <div>No game sessions yet</div>
-            <div class="text-[11px] mt-1">
-              Start a game using MsgInsertCoin and MsgStartSession
-            </div>
-          </div>
-          <div v-else class="space-y-2">
-            <div
-              v-for="session in sessions"
-              :key="session.session_id"
-              class="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 hover:border-purple-400/40 transition-colors"
-            >
-              <div class="flex items-start justify-between mb-2">
-                <div>
-                  <div class="text-xs font-bold text-slate-100">{{ session.game_id }}</div>
-                  <div class="text-[11px] text-slate-400 font-mono">{{ shortString(session.player, 20) }}</div>
-                </div>
-                <span
-                  class="badge text-[10px]"
-                  :class="
-                    session.status === 'active'
-                      ? 'text-emerald-200 border-emerald-500/40'
-                      : 'text-slate-300 border-slate-500/40'
-                  "
-                >
-                  {{ session.status }}
-                </span>
-              </div>
-              <div class="flex items-center justify-between text-[11px]">
-                <span class="text-slate-300">Score: <span class="text-indigo-300 font-bold">{{ session.score }}</span></span>
-                <span class="text-slate-400">Level {{ session.level_reached }}</span>
-              </div>
-            </div>
-          </div>
-        </div>
-
-        <div class="card">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-              <span class="text-xl">🏅</span>
-              Latest Achievements
-            </h2>
-          </div>
-          <div v-if="loadingArcade" class="text-xs text-slate-400">
-            Loading achievements...
-          </div>
-          <div v-else-if="achievements.length === 0" class="text-xs text-slate-400 py-4 text-center">
-            <div class="mb-2 text-2xl">🏅</div>
-            <div>No achievements unlocked yet</div>
-            <div class="text-[11px] mt-1">
-              Unlock achievements by playing games!
-            </div>
-          </div>
-          <div v-else class="space-y-2">
-            <div
-              v-for="achievement in achievements"
-              :key="achievement.achievement_id"
-              class="p-3 rounded-lg bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:border-yellow-400/40 transition-colors"
-            >
-              <div class="flex items-start gap-3">
-                <div class="text-2xl">🏅</div>
-                <div class="flex-1">
-                  <div class="text-xs font-bold text-slate-100">{{ achievement.name }}</div>
-                  <div class="text-[11px] text-slate-300 mb-1">{{ achievement.description }}</div>
-                  <div class="flex items-center justify-between">
-                    <div class="text-[11px] text-slate-400 font-mono">{{ shortString(achievement.player, 16) }}</div>
-                    <div class="text-[10px] text-slate-500">{{ formatTime(achievement.unlocked_at) }}</div>
-                  </div>
-                </div>
-              </div>
-            </div>
-          </div>
-        </div>
-      </div>
     </div>
 
     <section class="flex flex-col gap-3 min-w-0">
@@ -434,6 +347,41 @@ function sparkPath(data: number[], width = 160, height = 40) {
           </div>
         </div>
         <RcSearchBar />
+      </div>
+
+      <!-- Network Pulse (promoted) -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-4">
+          <h2 class="text-lg font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
+            Network Pulse
+          </h2>
+          <span class="text-[11px] text-slate-500">Live refresh every 10s</span>
+        </div>
+        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+          <article class="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col gap-1">
+            <div class="text-xs uppercase tracking-wider text-slate-400">Status</div>
+            <div class="text-xl font-semibold flex items-center gap-2" :class="networkStatus.textClass">
+              <span class="w-2 h-2 rounded-full animate-pulse" :class="networkStatus.indicator"></span>
+              {{ networkStatus.label }}
+            </div>
+            <div class="text-[11px] text-slate-400">{{ networkStatus.subtext }}</div>
+          </article>
+          <article class="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 flex flex-col gap-1">
+            <div class="text-xs uppercase tracking-wider text-slate-400">Chain ID</div>
+            <div class="text-xl font-semibold text-white truncate">{{ info.chainId || '—' }}</div>
+            <div class="text-[11px] text-slate-500">REST {{ REST_DISPLAY }} · RPC {{ RPC_DISPLAY }}</div>
+          </article>
+          <article class="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 flex flex-col gap-1">
+            <div class="text-xs uppercase tracking-wider text-slate-400">Total Blocks</div>
+            <div class="text-2xl font-semibold text-white">{{ latestBlockHeightDisplay }}</div>
+            <div class="text-[11px] text-slate-500">Synced height</div>
+          </article>
+          <article class="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-4 flex flex-col gap-1">
+            <div class="text-xs uppercase tracking-wider text-slate-400">Total Txs</div>
+            <div class="text-2xl font-semibold text-white">{{ totalTxsDisplay }}</div>
+            <div class="text-[11px] text-slate-500">Rolling counter</div>
+          </article>
+        </div>
       </div>
 
       <div class="grid gap-3 xl:grid-cols-2 min-w-0">
@@ -559,126 +507,90 @@ function sparkPath(data: number[], width = 160, height = 40) {
         </div>
       </div>
 
-      <div class="grid gap-4 xl:grid-cols-4">
-        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-800/40 p-5 shadow-xl shadow-black/30 flex flex-col gap-4 xl:col-span-2">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.35em] text-emerald-200">
-            <span>Latest Block</span>
-            <span class="text-[10px] text-slate-400 normal-case tracking-normal">{{ latestBlockTimeRelative }}</span>
+      <div class="grid gap-3 xl:grid-cols-2 min-w-0">
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+              <span class="text-xl">🎯</span>
+              Recent Game Sessions
+            </h2>
           </div>
-          <div class="flex flex-wrap items-end gap-3">
-            <div class="text-4xl font-bold text-white leading-none">
-              {{ loadingInfo ? '…' : latestBlockHeightDisplay }}
+          <div v-if="loadingArcade" class="text-xs text-slate-400">
+            Loading sessions...
+          </div>
+          <div v-else-if="sessions.length === 0" class="text-xs text-slate-400 py-4 text-center">
+            <div class="mb-2 text-2xl">🎯</div>
+            <div>No game sessions yet</div>
+            <div class="text-[11px] mt-1">
+              Start a game using MsgInsertCoin and MsgStartSession
             </div>
-            <span class="px-3 py-1 rounded-full text-[11px] uppercase tracking-[0.2em] border border-emerald-400/50 text-emerald-200">
-              {{ network === 'mainnet' ? 'Mainnet' : 'Testnet' }}
-            </span>
           </div>
-          <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-xs text-slate-400">
-            <div>
-              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Timestamp</dt>
-              <dd class="text-sm text-slate-100 font-mono">{{ latestBlockTimeAbsolute }}</dd>
-            </div>
-            <div>
-              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Proposer</dt>
-              <dd class="text-sm text-slate-100 truncate" :title="latestProposerDisplay">{{ latestProposerShort }}</dd>
-            </div>
-            <div>
-              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Used</dt>
-              <dd class="text-sm text-slate-100">
-                {{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}
-              </dd>
-            </div>
-            <div>
-              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Wanted</dt>
-              <dd class="text-sm text-slate-100">
-                {{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}
-              </dd>
-            </div>
-          </dl>
-        </article>
-
-        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 p-5 shadow-lg flex flex-col gap-3">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-emerald-200">
-            <span>Live Block Time</span>
-            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ blockSampleLabel }}</span>
-          </div>
-          <div class="text-4xl font-semibold text-white">
-            {{ avgBlockTimeDisplay }}
-          </div>
-          <svg :width="240" :height="60" class="-mx-2">
-            <path :d="sparkPath(blockTimeDeltas, 240, 60)" stroke="rgb(16 185 129)" fill="none" stroke-width="2" stroke-linecap="round" />
-          </svg>
-        </article>
-
-        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-5 shadow-lg flex flex-col gap-3">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-indigo-200">
-            <span>Tx Throughput</span>
-            <span class="text-[10px] text-slate-500 font-normal tracking-normal">20-block window</span>
-          </div>
-          <div class="text-4xl font-semibold text-white">
-            {{ avgTxPerBlockDisplay }}
-          </div>
-          <div class="text-[11px] text-slate-400">
-            Latest block: <span class="text-slate-100">{{ latestBlockSummary?.txs ?? 0 }}</span> txs · Window total: <span class="text-slate-100">{{ totalTxsWindowDisplay }}</span>
-          </div>
-          <svg :width="240" :height="60" class="-mx-2">
-            <path :d="sparkPath(txsPerBlock, 240, 60)" stroke="rgb(99 102 241)" fill="none" stroke-width="2" stroke-linecap="round" />
-          </svg>
-        </article>
-
-        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-5 shadow-lg flex flex-col gap-3">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-amber-200">
-            <span>Gas Utilization</span>
-            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ latestGasUtilizationDisplay }}</span>
-          </div>
-          <div class="text-4xl font-semibold text-white">
-            {{ latestGasUtilizationDisplay }}
-          </div>
-          <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+          <div v-else class="space-y-2">
             <div
-              class="h-full bg-gradient-to-r from-amber-400 to-orange-500"
-              :style="{ width: latestGasUtilizationPercent !== null ? `${latestGasUtilizationPercent}%` : '6%' }"
-            ></div>
-          </div>
-          <div class="text-[11px] text-slate-400 flex flex-col gap-1">
-            <span>Gas Used: <span class="text-slate-100">{{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}</span></span>
-            <span>Gas Wanted: <span class="text-slate-100">{{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}</span></span>
-          </div>
-        </article>
-      </div>
-
-      <!-- Network Pulse -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-            Network Pulse
-          </h2>
-          <span class="text-[11px] text-slate-500">Live refresh every 10s</span>
-        </div>
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <article class="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col gap-1">
-            <div class="text-xs uppercase tracking-wider text-slate-400">Status</div>
-            <div class="text-xl font-semibold flex items-center gap-2" :class="networkStatus.textClass">
-              <span class="w-2 h-2 rounded-full animate-pulse" :class="networkStatus.indicator"></span>
-              {{ networkStatus.label }}
+              v-for="session in sessions"
+              :key="session.session_id"
+              class="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 hover:border-purple-400/40 transition-colors"
+            >
+              <div class="flex items-start justify-between mb-2">
+                <div>
+                  <div class="text-xs font-bold text-slate-100">{{ session.game_id }}</div>
+                  <div class="text-[11px] text-slate-400 font-mono">{{ shortString(session.player, 20) }}</div>
+                </div>
+                <span
+                  class="badge text-[10px]"
+                  :class="
+                    session.status === 'active'
+                      ? 'text-emerald-200 border-emerald-500/40'
+                      : 'text-slate-300 border-slate-500/40'
+                  "
+                >
+                  {{ session.status }}
+                </span>
+              </div>
+              <div class="flex items-center justify-between text-[11px]">
+                <span class="text-slate-300">Score: <span class="text-indigo-300 font-bold">{{ session.score }}</span></span>
+                <span class="text-slate-400">Level {{ session.level_reached }}</span>
+              </div>
             </div>
-            <div class="text-[11px] text-slate-400">{{ networkStatus.subtext }}</div>
-          </article>
-          <article class="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 flex flex-col gap-1">
-            <div class="text-xs uppercase tracking-wider text-slate-400">Chain ID</div>
-            <div class="text-xl font-semibold text-white truncate">{{ info.chainId || '—' }}</div>
-            <div class="text-[11px] text-slate-500">REST {{ REST_DISPLAY }} · RPC {{ RPC_DISPLAY }}</div>
-          </article>
-          <article class="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 flex flex-col gap-1">
-            <div class="text-xs uppercase tracking-wider text-slate-400">Total Blocks</div>
-            <div class="text-2xl font-semibold text-white">{{ latestBlockHeightDisplay }}</div>
-            <div class="text-[11px] text-slate-500">Synced height</div>
-          </article>
-          <article class="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-4 flex flex-col gap-1">
-            <div class="text-xs uppercase tracking-wider text-slate-400">Total Txs</div>
-            <div class="text-2xl font-semibold text-white">{{ totalTxsDisplay }}</div>
-            <div class="text-[11px] text-slate-500">Rolling counter</div>
-          </article>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+              <span class="text-xl">🏅</span>
+              Latest Achievements
+            </h2>
+          </div>
+          <div v-if="loadingArcade" class="text-xs text-slate-400">
+            Loading achievements...
+          </div>
+          <div v-else-if="achievements.length === 0" class="text-xs text-slate-400 py-4 text-center">
+            <div class="mb-2 text-2xl">🏅</div>
+            <div>No achievements unlocked yet</div>
+            <div class="text-[11px] mt-1">
+              Unlock achievements by playing games!
+            </div>
+          </div>
+          <div v-else class="space-y-2">
+            <div
+              v-for="achievement in achievements"
+              :key="achievement.achievement_id"
+              class="p-3 rounded-lg bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:border-yellow-400/40 transition-colors"
+            >
+              <div class="flex items-start gap-3">
+                <div class="text-2xl">🏅</div>
+                <div class="flex-1">
+                  <div class="text-xs font-bold text-slate-100">{{ achievement.name }}</div>
+                  <div class="text-[11px] text-slate-300 mb-1">{{ achievement.description }}</div>
+                  <div class="flex items-center justify-between">
+                    <div class="text-[11px] text-slate-400 font-mono">{{ shortString(achievement.player, 16) }}</div>
+                    <div class="text-[10px] text-slate-500">{{ formatTime(achievement.unlocked_at) }}</div>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
         </div>
       </div>
 
@@ -788,6 +700,94 @@ function sparkPath(data: number[], width = 160, height = 40) {
             </tr>
           </tbody>
         </table>
+      </div>
+
+      <div class="grid gap-4 xl:grid-cols-4">
+        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-800/40 p-5 shadow-xl shadow-black/30 flex flex-col gap-4 xl:col-span-2">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.35em] text-emerald-200">
+            <span>Latest Block</span>
+            <span class="text-[10px] text-slate-400 normal-case tracking-normal">{{ latestBlockTimeRelative }}</span>
+          </div>
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="text-4xl font-bold text-white leading-none">
+              {{ loadingInfo ? '…' : latestBlockHeightDisplay }}
+            </div>
+            <span class="px-3 py-1 rounded-full text-[11px] uppercase tracking-[0.2em] border border-emerald-400/50 text-emerald-200">
+              {{ network === 'mainnet' ? 'Mainnet' : 'Testnet' }}
+            </span>
+          </div>
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-xs text-slate-400">
+            <div>
+              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Timestamp</dt>
+              <dd class="text-sm text-slate-100 font-mono">{{ latestBlockTimeAbsolute }}</dd>
+            </div>
+            <div>
+              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Proposer</dt>
+              <dd class="text-sm text-slate-100 truncate" :title="latestProposerDisplay">{{ latestProposerShort }}</dd>
+            </div>
+            <div>
+              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Used</dt>
+              <dd class="text-sm text-slate-100">
+                {{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}
+              </dd>
+            </div>
+            <div>
+              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Wanted</dt>
+              <dd class="text-sm text-slate-100">
+                {{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}
+              </dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 p-5 shadow-lg flex flex-col gap-3">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-emerald-200">
+            <span>Live Block Time</span>
+            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ blockSampleLabel }}</span>
+          </div>
+          <div class="text-4xl font-semibold text-white">
+            {{ avgBlockTimeDisplay }}
+          </div>
+          <svg :width="240" :height="60" class="-mx-2">
+            <path :d="sparkPath(blockTimeDeltas, 240, 60)" stroke="rgb(16 185 129)" fill="none" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-5 shadow-lg flex flex-col gap-3">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-indigo-200">
+            <span>Tx Throughput</span>
+            <span class="text-[10px] text-slate-500 font-normal tracking-normal">20-block window</span>
+          </div>
+          <div class="text-4xl font-semibold text-white">
+            {{ avgTxPerBlockDisplay }}
+          </div>
+          <div class="text-[11px] text-slate-400">
+            Latest block: <span class="text-slate-100">{{ latestBlockSummary?.txs ?? 0 }}</span> txs · Window total: <span class="text-slate-100">{{ totalTxsWindowDisplay }}</span>
+          </div>
+          <svg :width="240" :height="60" class="-mx-2">
+            <path :d="sparkPath(txsPerBlock, 240, 60)" stroke="rgb(99 102 241)" fill="none" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-5 shadow-lg flex flex-col gap-3">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-amber-200">
+            <span>Gas Utilization</span>
+            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ latestGasUtilizationDisplay }}</span>
+          </div>
+          <div class="text-4xl font-semibold text-white">
+            {{ latestGasUtilizationDisplay }}
+          </div>
+          <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+            <div
+              class="h-full bg-gradient-to-r from-amber-400 to-orange-500"
+              :style="{ width: latestGasUtilizationPercent !== null ? `${latestGasUtilizationPercent}%` : '6%' }"
+            ></div>
+          </div>
+          <div class="text-[11px] text-slate-400 flex flex-col gap-1">
+            <span>Gas Used: <span class="text-slate-100">{{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}</span></span>
+            <span>Gas Wanted: <span class="text-slate-100">{{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}</span></span>
+          </div>
+        </article>
       </div>
 
       <div v-if="network !== 'mainnet'" class="card text-xs text-slate-300 leading-relaxed">
