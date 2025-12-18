@@ -384,6 +384,94 @@ function sparkPath(data: number[], width = 160, height = 40) {
         </div>
       </div>
 
+      <div class="grid gap-4 xl:grid-cols-4">
+        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-800/40 p-5 shadow-xl shadow-black/30 flex flex-col gap-4 xl:col-span-2">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.35em] text-emerald-200">
+            <span>Latest Block</span>
+            <span class="text-[10px] text-slate-400 normal-case tracking-normal">{{ latestBlockTimeRelative }}</span>
+          </div>
+          <div class="flex flex-wrap items-end gap-3">
+            <div class="text-4xl font-bold text-white leading-none">
+              {{ loadingInfo ? '…' : latestBlockHeightDisplay }}
+            </div>
+            <span class="px-3 py-1 rounded-full text-[11px] uppercase tracking-[0.2em] border border-emerald-400/50 text-emerald-200">
+              {{ network === 'mainnet' ? 'Mainnet' : 'Testnet' }}
+            </span>
+          </div>
+          <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-xs text-slate-400">
+            <div>
+              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Timestamp</dt>
+              <dd class="text-sm text-slate-100 font-mono">{{ latestBlockTimeAbsolute }}</dd>
+            </div>
+            <div>
+              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Proposer</dt>
+              <dd class="text-sm text-slate-100 truncate" :title="latestProposerDisplay">{{ latestProposerShort }}</dd>
+            </div>
+            <div>
+              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Used</dt>
+              <dd class="text-sm text-slate-100">
+                {{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}
+              </dd>
+            </div>
+            <div>
+              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Wanted</dt>
+              <dd class="text-sm text-slate-100">
+                {{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}
+              </dd>
+            </div>
+          </dl>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 p-5 shadow-lg flex flex-col gap-3">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-emerald-200">
+            <span>Live Block Time</span>
+            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ blockSampleLabel }}</span>
+          </div>
+          <div class="text-4xl font-semibold text-white">
+            {{ avgBlockTimeDisplay }}
+          </div>
+          <svg :width="240" :height="60" class="-mx-2">
+            <path :d="sparkPath(blockTimeDeltas, 240, 60)" stroke="rgb(16 185 129)" fill="none" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-5 shadow-lg flex flex-col gap-3">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-indigo-200">
+            <span>Tx Throughput</span>
+            <span class="text-[10px] text-slate-500 font-normal tracking-normal">20-block window</span>
+          </div>
+          <div class="text-4xl font-semibold text-white">
+            {{ avgTxPerBlockDisplay }}
+          </div>
+          <div class="text-[11px] text-slate-400">
+            Latest block: <span class="text-slate-100">{{ latestBlockSummary?.txs ?? 0 }}</span> txs · Window total: <span class="text-slate-100">{{ totalTxsWindowDisplay }}</span>
+          </div>
+          <svg :width="240" :height="60" class="-mx-2">
+            <path :d="sparkPath(txsPerBlock, 240, 60)" stroke="rgb(99 102 241)" fill="none" stroke-width="2" stroke-linecap="round" />
+          </svg>
+        </article>
+
+        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-5 shadow-lg flex flex-col gap-3">
+          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-amber-200">
+            <span>Gas Utilization</span>
+            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ latestGasUtilizationDisplay }}</span>
+          </div>
+          <div class="text-4xl font-semibold text-white">
+            {{ latestGasUtilizationDisplay }}
+          </div>
+          <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+            <div
+              class="h-full bg-gradient-to-r from-amber-400 to-orange-500"
+              :style="{ width: latestGasUtilizationPercent !== null ? `${latestGasUtilizationPercent}%` : '6%' }"
+            ></div>
+          </div>
+          <div class="text-[11px] text-slate-400 flex flex-col gap-1">
+            <span>Gas Used: <span class="text-slate-100">{{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}</span></span>
+            <span>Gas Wanted: <span class="text-slate-100">{{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}</span></span>
+          </div>
+        </article>
+      </div>
+
       <div class="grid gap-3 xl:grid-cols-2 min-w-0">
         <div class="card min-w-0 overflow-hidden">
           <div class="flex items-center justify-between mb-2">
@@ -702,93 +790,6 @@ function sparkPath(data: number[], width = 160, height = 40) {
         </table>
       </div>
 
-      <div class="grid gap-4 xl:grid-cols-4">
-        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-800/40 p-5 shadow-xl shadow-black/30 flex flex-col gap-4 xl:col-span-2">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.35em] text-emerald-200">
-            <span>Latest Block</span>
-            <span class="text-[10px] text-slate-400 normal-case tracking-normal">{{ latestBlockTimeRelative }}</span>
-          </div>
-          <div class="flex flex-wrap items-end gap-3">
-            <div class="text-4xl font-bold text-white leading-none">
-              {{ loadingInfo ? '…' : latestBlockHeightDisplay }}
-            </div>
-            <span class="px-3 py-1 rounded-full text-[11px] uppercase tracking-[0.2em] border border-emerald-400/50 text-emerald-200">
-              {{ network === 'mainnet' ? 'Mainnet' : 'Testnet' }}
-            </span>
-          </div>
-          <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-xs text-slate-400">
-            <div>
-              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Timestamp</dt>
-              <dd class="text-sm text-slate-100 font-mono">{{ latestBlockTimeAbsolute }}</dd>
-            </div>
-            <div>
-              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Proposer</dt>
-              <dd class="text-sm text-slate-100 truncate" :title="latestProposerDisplay">{{ latestProposerShort }}</dd>
-            </div>
-            <div>
-              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Used</dt>
-              <dd class="text-sm text-slate-100">
-                {{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}
-              </dd>
-            </div>
-            <div>
-              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Wanted</dt>
-              <dd class="text-sm text-slate-100">
-                {{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}
-              </dd>
-            </div>
-          </dl>
-        </article>
-
-        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 p-5 shadow-lg flex flex-col gap-3">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-emerald-200">
-            <span>Live Block Time</span>
-            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ blockSampleLabel }}</span>
-          </div>
-          <div class="text-4xl font-semibold text-white">
-            {{ avgBlockTimeDisplay }}
-          </div>
-          <svg :width="240" :height="60" class="-mx-2">
-            <path :d="sparkPath(blockTimeDeltas, 240, 60)" stroke="rgb(16 185 129)" fill="none" stroke-width="2" stroke-linecap="round" />
-          </svg>
-        </article>
-
-        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-5 shadow-lg flex flex-col gap-3">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-indigo-200">
-            <span>Tx Throughput</span>
-            <span class="text-[10px] text-slate-500 font-normal tracking-normal">20-block window</span>
-          </div>
-          <div class="text-4xl font-semibold text-white">
-            {{ avgTxPerBlockDisplay }}
-          </div>
-          <div class="text-[11px] text-slate-400">
-            Latest block: <span class="text-slate-100">{{ latestBlockSummary?.txs ?? 0 }}</span> txs · Window total: <span class="text-slate-100">{{ totalTxsWindowDisplay }}</span>
-          </div>
-          <svg :width="240" :height="60" class="-mx-2">
-            <path :d="sparkPath(txsPerBlock, 240, 60)" stroke="rgb(99 102 241)" fill="none" stroke-width="2" stroke-linecap="round" />
-          </svg>
-        </article>
-
-        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-5 shadow-lg flex flex-col gap-3">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-amber-200">
-            <span>Gas Utilization</span>
-            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ latestGasUtilizationDisplay }}</span>
-          </div>
-          <div class="text-4xl font-semibold text-white">
-            {{ latestGasUtilizationDisplay }}
-          </div>
-          <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-            <div
-              class="h-full bg-gradient-to-r from-amber-400 to-orange-500"
-              :style="{ width: latestGasUtilizationPercent !== null ? `${latestGasUtilizationPercent}%` : '6%' }"
-            ></div>
-          </div>
-          <div class="text-[11px] text-slate-400 flex flex-col gap-1">
-            <span>Gas Used: <span class="text-slate-100">{{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}</span></span>
-            <span>Gas Wanted: <span class="text-slate-100">{{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}</span></span>
-          </div>
-        </article>
-      </div>
 
       <div v-if="network !== 'mainnet'" class="card text-xs text-slate-300 leading-relaxed">
         <h3 class="text-sm font-semibold mb-1 text-slate-100 flex items-center gap-2">
