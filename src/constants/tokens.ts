@@ -1,5 +1,9 @@
 export type TokenAccent = "emerald" | "violet" | "sky" | "amber" | "slate";
 
+export const DEFAULT_WBTC_IBC_DENOM_ON_RETRO =
+  "ibc/CF57A83CED6CEC7D706631B5DC53ABC21B7EDA7DF7490732B4361E6D5DD19C73";
+export const DEFAULT_WBTC_DENOM_ON_COSMOS = "cwbtc";
+
 export interface TokenMeta {
   denom: string;
   symbol: string;
@@ -64,6 +68,36 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     decimals: 6,
     accent: "violet",
     description: "Alias used before the canonical ATOM denom hash is available."
+  },
+  [DEFAULT_WBTC_IBC_DENOM_ON_RETRO.toLowerCase()]: {
+    denom: DEFAULT_WBTC_IBC_DENOM_ON_RETRO,
+    symbol: "WBTC",
+    name: "Wrapped Bitcoin",
+    chain: "Osmosis ? RetroChain",
+    icon: "?",
+    decimals: 8,
+    accent: "amber",
+    description: "Wrapped Bitcoin bridged over IBC from Osmosis into RetroChain."
+  },
+  [DEFAULT_WBTC_DENOM_ON_COSMOS]: {
+    denom: DEFAULT_WBTC_DENOM_ON_COSMOS,
+    symbol: "WBTC",
+    name: "Wrapped Bitcoin (Cosmos)",
+    chain: "Cosmos Hub / Noble",
+    icon: "?",
+    decimals: 8,
+    accent: "amber",
+    description: "Base denom for Wrapped Bitcoin on Cosmos-connected zones."
+  },
+  "ibc/99b00614ddbe6189aa03b77066ff8eb3f93680bd790c43cf56096b7f23542015": {
+    denom: "ibc/99B00614DDBE6189AA03B77066FF8EB3F93680BD790C43CF56096B7F23542015",
+    symbol: "WBTC",
+    name: "Wrapped Bitcoin (IBC)",
+    chain: "Cosmos Hub via IBC",
+    icon: "?",
+    decimals: 8,
+    accent: "amber",
+    description: "IBC hash for Wrapped Bitcoin when routed through Cosmos Hub bridges."
   },
   uusdc: {
     denom: "uusdc",

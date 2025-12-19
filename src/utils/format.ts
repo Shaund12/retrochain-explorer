@@ -1,3 +1,5 @@
+import { DEFAULT_WBTC_DENOM_ON_COSMOS, DEFAULT_WBTC_IBC_DENOM_ON_RETRO } from "@/constants/tokens";
+
 type DenomMeta = { display: string; decimals: number };
 
 const DENOMS: Record<string, DenomMeta> = {
@@ -7,8 +9,11 @@ const DENOMS: Record<string, DenomMeta> = {
   "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2": { display: "ATOM", decimals: 6 }
 };
 
-const WBTC_ON_RETRO = import.meta.env.VITE_IBC_DENOM_WBTC_ON_RETRO;
-const WBTC_ON_COSMOS = import.meta.env.VITE_DENOM_WBTC_ON_COSMOS || import.meta.env.VITE_IBC_DENOM_WBTC_ON_COSMOS || "cwbtc";
+const WBTC_ON_RETRO = import.meta.env.VITE_IBC_DENOM_WBTC_ON_RETRO || DEFAULT_WBTC_IBC_DENOM_ON_RETRO;
+const WBTC_ON_COSMOS =
+  import.meta.env.VITE_DENOM_WBTC_ON_COSMOS ||
+  import.meta.env.VITE_IBC_DENOM_WBTC_ON_COSMOS ||
+  DEFAULT_WBTC_DENOM_ON_COSMOS;
 
 if (WBTC_ON_RETRO) {
   DENOMS[WBTC_ON_RETRO] = { display: "WBTC", decimals: 8 };

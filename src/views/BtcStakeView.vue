@@ -6,6 +6,7 @@ import { useBtcStake } from "@/composables/useBtcStake";
 import { useKeplr } from "@/composables/useKeplr";
 import { useToast } from "@/composables/useToast";
 import { useNetwork } from "@/composables/useNetwork";
+import { getTokenMeta } from "@/constants/tokens";
 
 const WBTC_DECIMALS = 8;
 const RETRO_DECIMALS = 6;
@@ -54,6 +55,9 @@ const poolUndistributed = computed(() => formatRetro(pool.value?.undistributed_u
 
 const userStakedDisplay = computed(() => formatWbtc(userStake.value?.staked_amount));
 const pendingRewardsDisplay = computed(() => formatRetro(pendingRewards.value?.pending_uretro));
+
+const allowedTokenMeta = computed(() => getTokenMeta(allowedDenom.value));
+const allowedTokenSymbol = computed(() => allowedTokenMeta.value.symbol);
 
 const shortAddress = (addr?: string | null, size = 10) => {
   if (!addr) return "—";
@@ -290,6 +294,7 @@ watch(
           <div>
             <p class="text-[10px] uppercase tracking-wider text-slate-500">Allowed Denom</p>
             <p class="font-mono text-xs text-slate-100 break-all">{{ allowedDenom || '—' }}</p>
+            <p v-if="allowedDenom" class="text-[11px] text-slate-500 mt-0.5">Symbol: {{ allowedTokenSymbol }}</p>
           </div>
           <div>
             <p class="text-[10px] uppercase tracking-wider text-slate-500">Total Staked</p>
