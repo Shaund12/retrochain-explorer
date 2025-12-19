@@ -2,11 +2,16 @@
 import { ref, computed } from "vue";
 import { useApi } from "./useApi";
 import { useKeplr } from "./useKeplr";
+import { ACCOUNT_LABELS } from "@/constants/accountLabels";
 
 const DEFAULT_BURN_RATE = 0.008; // 0.8% burn by default when module params unavailable
-const BLOCKED_DELEGATORS = new Set([
+const BASE_BLOCKED_DELEGATORS = [
   "cosmos1fscvf7rphx477z6vd4sxsusm2u8a70kewvc8wy"
-]);
+];
+
+const BLOCKED_DELEGATORS = new Set(
+  [...BASE_BLOCKED_DELEGATORS, ...Object.keys(ACCOUNT_LABELS)].map((addr) => addr.toLowerCase())
+);
 
 export interface Delegation {
   delegator_address: string;
