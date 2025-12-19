@@ -214,14 +214,27 @@ export function useKeplr() {
       const pubkey = encodePubkey(encodeSecp256k1Pubkey(signerPubkey));
       const sequenceNumber = Int53.fromString(sequence).toNumber();
 
-      const signTx = async (feeValue: any, debugLabel?: string) => {
-        const authInfoBytes = makeAuthInfoBytes(
+      const buildAuthInfoBytes = (feeValue: any) =>
+        makeAuthInfoBytes(
           [{ pubkey, sequence: sequenceNumber }],
           feeValue.amount,
           parseInt(feeValue.gas, 10),
           feeValue.granter,
           feeValue.payer
         );
+
+      const buildUnsignedTxBytes = (feeValue: any) => {
+        const authInfoBytes = buildAuthInfoBytes(feeValue);
+        const txRaw = TxRaw.fromPartial({
+          bodyBytes: txBodyBytes,
+          authInfoBytes,
+          signatures: [new Uint8Array()]
+        });
+        return toBase64(TxRaw.encode(txRaw).finish());
+      };
+
+      const signTx = async (feeValue: any, debugLabel?: string) => {
+        const authInfoBytes = buildAuthInfoBytes(feeValue);
 
         const signDoc = makeSignDocDirect(
           txBodyBytes,
@@ -265,8 +278,8 @@ export function useKeplr() {
         };
 
         try {
-          const { txBytesBase64 } = await signTx(simulateFee, "simulate");
-          const simulateRes = await api.post("/cosmos/tx/v1beta1/simulate", { tx_bytes: txBytesBase64 });
+          const unsignedTxBytes = buildUnsignedTxBytes(simulateFee);
+          const simulateRes = await api.post("/cosmos/tx/v1beta1/simulate", { tx_bytes: unsignedTxBytes });
 
           const gasUsed = Number(simulateRes.data?.gas_info?.gas_used ?? baseGasLimit);
           const adjustedGas = Math.ceil(gasUsed * DEFAULT_GAS_ADJUSTMENT);
