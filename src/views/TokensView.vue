@@ -34,10 +34,32 @@ const accentBg: Record<TokenAccent, string> = {
 
 const tokenAvatarClass = (token: BankToken) => accentBg[token.tokenMeta?.accent ?? "slate"];
 
+const shortFactoryTail = (token: BankToken) => {
+  const parts = token.denom?.split("/") || [];
+  const tail = parts[parts.length - 1];
+  return tail || token.denom || "ASSET";
+};
+
+const friendlySymbol = (token: BankToken) => {
+  if (token.tokenMeta?.symbol) return token.tokenMeta.symbol;
+  if (token.metadata?.symbol) return token.metadata.symbol;
+  if (token.metadata?.display) return token.metadata.display.toUpperCase();
+  if (token.metadata?.name) return token.metadata.name;
+  if (token.isFactory) return shortFactoryTail(token).toUpperCase();
+  return token.denom?.toUpperCase() || "ASSET";
+};
+
+const friendlyName = (token: BankToken) => {
+  if (token.tokenMeta?.name) return token.tokenMeta.name;
+  if (token.metadata?.name) return token.metadata.name;
+  if (token.metadata?.display) return token.metadata.display;
+  if (token.isFactory) return shortFactoryTail(token);
+  return token.denom || "—";
+};
+
 const tokenAvatarText = (token: BankToken) => {
-  const raw = token?.tokenMeta?.symbol || token?.tokenMeta?.name || token?.denom || "ASSET";
-  const source = typeof raw === "string" && raw.length ? raw : "ASSET";
-  return source.slice(0, 4).toUpperCase();
+  const raw = friendlySymbol(token);
+  return raw.slice(0, 4).toUpperCase();
 };
 
 const formatCw20Supply = (token: Cw20Token) => {
@@ -149,8 +171,8 @@ const formatCw20Supply = (token: Cw20Token) => {
                       </span>
                     </div>
                     <div>
-                      <p class="font-semibold text-white">{{ token.tokenMeta?.symbol || token.denom?.toUpperCase() }}</p>
-                      <p class="text-xs text-slate-400">{{ token.tokenMeta?.name || token.denom }}</p>
+                      <p class="font-semibold text-white">{{ friendlySymbol(token) }}</p>
+                      <p class="text-xs text-slate-400">{{ friendlyName(token) }}</p>
                     </div>
                   </div>
                 </td>
