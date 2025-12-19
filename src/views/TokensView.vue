@@ -75,6 +75,13 @@ const formatCw20Supply = (token: Cw20Token) => {
   })} ${token.symbol}`;
 };
 
+const nftSourceLabel = (cls: { source?: string }) => {
+  if (cls.source === "cw721") return "CW721";
+  if (cls.source === "ics721") return "ICS-721";
+  if (cls.source === "nft-module") return "x/nft";
+  return cls.source || "NFT";
+};
+
 </script>
 
 <template>
@@ -280,7 +287,7 @@ const formatCw20Supply = (token: Cw20Token) => {
       <div class="card">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-base font-semibold text-white">NFT Collections</h2>
-          <span class="text-xs text-slate-400">ICS-721 classes indexed from the NFT module.</span>
+          <span class="text-xs text-slate-400">Aggregated from x/nft, ICS-721 traces, and CW721 contracts.</span>
         </div>
         <div v-if="nftClasses.length === 0" class="text-xs text-slate-400">No NFT classes have been registered yet.</div>
         <div v-else class="grid gap-3 md:grid-cols-2">
@@ -294,12 +301,16 @@ const formatCw20Supply = (token: Cw20Token) => {
                 <p class="text-sm font-semibold text-white">{{ cls.name }}</p>
                 <p class="text-[11px] text-slate-400">{{ cls.id }}</p>
               </div>
-              <span class="badge text-[10px]" v-if="cls.symbol">{{ cls.symbol }}</span>
+              <div class="flex items-center gap-2">
+                <span class="badge text-[10px]" v-if="cls.source">{{ nftSourceLabel(cls) }}</span>
+                <span class="badge text-[10px]" v-if="cls.symbol">{{ cls.symbol }}</span>
+              </div>
             </div>
             <p class="text-xs text-slate-300 min-h-[40px]">
               {{ cls.description || 'No description provided.' }}
             </p>
             <p v-if="cls.uri" class="text-[11px] text-indigo-300 truncate mt-2">{{ cls.uri }}</p>
+            <p v-if="cls.data?.numTokens" class="text-[11px] text-slate-400 mt-1">{{ cls.data.numTokens }} tokens minted</p>
           </article>
         </div>
       </div>

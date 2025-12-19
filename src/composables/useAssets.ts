@@ -39,6 +39,7 @@ export interface NftClassMeta {
   description?: string;
   uri?: string;
   data?: Record<string, any> | null;
+  source?: "nft-module" | "ics721" | "cw721" | string;
 }
 
 interface PaginatedResponse<T> {
@@ -303,6 +304,113 @@ const fetchContractsForCode = async (codeId: string, limit = 50) => {
     return cw20List;
   };
 
+  const fetchNftModuleClasses = async (): Promise<NftClassMeta[]> => {
+    try {
+      const nftRes = await fetchPaginated<any>("/cosmos/nft/v1beta1/classes", "classes");
+      return nftRes.items.map((cls: any) => ({
+        id: cls?.id || cls?.class_id || "?",
+        name: cls?.name || cls?.description || cls?.id || "Untitled",
+        symbol: cls?.symbol,
+        description: cls?.description,
+        uri: cls?.uri,
+        data: cls?.data ?? null,
+        source: "nft-module"
+      }));
+    } catch (nftErr) {
+      console.warn("NFT module not available", nftErr);
+      return [];
+    }
+  };
+
+  const fetchIcs721Classes = async (): Promise<NftClassMeta[]> => {
+    try {
+      const traceRes = await fetchPaginated<any>("/ibc/apps/nft_transfer/v1/class_traces", "class_traces");
+      return traceRes.items.map((trace: any) => ({
+        id: trace?.class_id || trace?.hash || trace?.base_class_id || "?",
+        name: trace?.base_class_id || trace?.class_id || "IBC NFT Class",
+        description: trace?.path ? `IBC path: ${trace.path}` : undefined,
+        data: trace ?? null,
+        source: "ics721"
+      }));
+    } catch (icsErr) {
+      console.warn("ICS721 class traces not available", icsErr);
+      return [];
+    }
+  };
+
+  const fetchCw721Collections = async (): Promise<NftClassMeta[]> => {
+    const collections: NftClassMeta[] = [];
+    const seenContracts = new Set<string>();
+
+    try {
+      const codeInfos = await fetchCodeInfos();
+      if (!codeInfos.length) {
+        return [];
+      }
+
+      for (const info of codeInfos) {
+        if (collections.length >= 80) break;
+        const codeId = String(info?.code_id ?? info?.id ?? "");
+        if (!codeId) continue;
+
+        const contracts = await fetchContractsForCode(codeId, 50);
+        if (!contracts.length) continue;
+
+        const contractQueries = contracts.slice(0, 50).map(async (address: string) => {
+          const normalizedAddress = address?.toLowerCase?.() ?? "";
+          if (!normalizedAddress || seenContracts.has(normalizedAddress) || collections.length >= 80) return;
+          seenContracts.add(normalizedAddress);
+
+          try {
+            const contractInfo =
+              (await queryContractSmart(address, { contract_info: {} })) ||
+              (await queryContractSmart(address, { collection_info: {} }));
+            if (!contractInfo || typeof contractInfo !== "object" || !contractInfo.name) return;
+
+            let numTokens: string | undefined;
+            try {
+              const numTokensResp = await queryContractSmart(address, { num_tokens: {} });
+              if (typeof numTokensResp === "string") {
+                numTokens = numTokensResp;
+              } else if (typeof numTokensResp?.count === "string") {
+                numTokens = numTokensResp.count;
+              } else if (typeof numTokensResp?.num_tokens === "string") {
+                numTokens = numTokensResp.num_tokens;
+              }
+            } catch {}
+
+            let minter: string | undefined;
+            try {
+              const minterResp = await queryContractSmart(address, { minter: {} });
+              if (minterResp?.minter) {
+                minter = minterResp.minter;
+              }
+            } catch {}
+
+            collections.push({
+              id: address,
+              name: contractInfo.name || address,
+              symbol: contractInfo.symbol,
+              description: contractInfo.description || (numTokens ? `${numTokens} tokens minted` : undefined),
+              uri: contractInfo.base_token_uri || contractInfo.uri,
+              data: { ...contractInfo, numTokens, minter, codeId },
+              source: "cw721"
+            });
+          } catch (err) {
+            // not a CW721 or query failed; ignore
+          }
+        });
+
+        await Promise.all(contractQueries);
+        if (collections.length >= 80) break;
+      }
+    } catch (err) {
+      console.warn("CW721 discovery failed", err);
+    }
+
+    return collections;
+  };
+
   const fetchAssets = async () => {
     loading.value = true;
     error.value = null;
@@ -388,20 +496,21 @@ const fetchContractsForCode = async (codeId: string, limit = 50) => {
         ibcTokens.value = [];
       }
 
-      try {
-        const nftRes = await fetchPaginated<any>("/cosmos/nft/v1beta1/classes", "classes");
-        nftClasses.value = nftRes.items.map((cls: any) => ({
-          id: cls?.id || cls?.class_id || "?",
-          name: cls?.name || cls?.description || cls?.id || "Untitled",
-          symbol: cls?.symbol,
-          description: cls?.description,
-          uri: cls?.uri,
-          data: cls?.data ?? null
-        }));
-      } catch (nftErr) {
-        console.warn("NFT module not available", nftErr);
-        nftClasses.value = [];
-      }
+      const nftModuleClasses = await fetchNftModuleClasses();
+      const ics721Classes = await fetchIcs721Classes();
+      const cw721Collections = await fetchCw721Collections();
+
+      const combined = [...nftModuleClasses, ...ics721Classes, ...cw721Collections];
+      const mergedMap = new Map<string, NftClassMeta>();
+      combined.forEach((cls) => {
+        const key = String(cls?.id || "").toLowerCase();
+        if (!key) return;
+        if (!mergedMap.has(key)) {
+          mergedMap.set(key, cls);
+        }
+      });
+
+      nftClasses.value = Array.from(mergedMap.values());
 
       try {
         cw20Tokens.value = await fetchCw20Tokens();
