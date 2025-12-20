@@ -97,11 +97,20 @@ const setMaxAmount = () => {
 
 const refreshUserState = async () => {
   if (!address.value) return;
-  await Promise.all([
-    fetchAll(),
-    loadAccount(address.value),
-    fetchNetworkStats()
-  ]);
+  const run = async () => {
+    await Promise.all([
+      fetchAll(address.value),
+      loadAccount(address.value),
+      fetchNetworkStats()
+    ]);
+  };
+  await run();
+  // slight follow-up refresh to capture state after the next block commit
+  window.setTimeout(() => {
+    run().catch(() => {
+      /* best-effort refresh */
+    });
+  }, 1200);
 };
 
 const shortAddress = (addr: string, size = 10) => `${addr?.slice(0, size)}...${addr?.slice(-6)}`;
@@ -119,7 +128,7 @@ onMounted(async () => {
   fetchDelegatorLeaderboard();
   if (address.value) {
     await Promise.all([
-      fetchAll(),
+      fetchAll(address.value),
       loadAccount(address.value)
     ]);
   }
@@ -130,7 +139,7 @@ watch(
   async (newAddress, oldAddress) => {
     if (newAddress && newAddress !== oldAddress) {
       await Promise.all([
-        fetchAll(),
+        fetchAll(newAddress),
         loadAccount(newAddress)
       ]);
     }
