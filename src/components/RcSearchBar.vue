@@ -47,7 +47,7 @@ const selectQuickSearch = (q: string) => {
 </script>
 
 <template>
-  <div class="relative w-full max-w-2xl">
+  <div class="relative w-full max-w-2xl z-30">
     <div class="relative">
       <input
         v-model="query"
@@ -73,6 +73,7 @@ const selectQuickSearch = (q: string) => {
     <div
       v-if="showDropdown && query.length === 0"
       class="absolute top-full left-0 right-0 mt-2 bg-slate-900 border border-slate-700 rounded-xl shadow-2xl z-50 overflow-hidden"
+      style="z-index: 60;"
     >
       <div class="p-2">
         <div class="text-xs text-slate-400 px-2 py-1 uppercase tracking-wider">
