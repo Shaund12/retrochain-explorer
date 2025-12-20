@@ -21,6 +21,7 @@ const {
   userStake,
   pendingRewards,
   userBalance,
+  effectiveAllowedDenom,
   loading,
   userLoading,
   error,
@@ -59,7 +60,7 @@ const pendingRewardsDisplay = computed(() => formatRetro(pendingRewards.value?.p
 const userBalanceDisplay = computed(() => formatWbtc(userBalance.value));
 const userBalanceBase = computed(() => userBalance.value ?? "0");
 
-const allowedTokenMeta = computed(() => getTokenMeta(allowedDenom.value));
+const allowedTokenMeta = computed(() => getTokenMeta(effectiveAllowedDenom.value));
 const allowedTokenSymbol = computed(() => allowedTokenMeta.value.symbol);
 
 const shortAddress = (addr?: string | null, size = 10) => {
@@ -303,7 +304,7 @@ watch(
         <div class="grid grid-cols-2 gap-3 text-sm">
           <div>
             <p class="text-[10px] uppercase tracking-wider text-slate-500">Allowed Denom</p>
-            <p class="font-mono text-xs text-slate-100 break-all">{{ allowedDenom || '—' }}</p>
+            <p class="font-mono text-xs text-slate-100 break-all">{{ effectiveAllowedDenom || allowedDenom || '—' }}</p>
             <p v-if="allowedDenom" class="text-[11px] text-slate-500 mt-0.5">Symbol: {{ allowedTokenSymbol }}</p>
           </div>
           <div>

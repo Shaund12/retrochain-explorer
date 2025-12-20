@@ -26,6 +26,9 @@ export function useBtcStake() {
   const api = useApi();
   const { rpcBase, restBase } = useNetwork();
 
+  // Fallback denom (user-reported) in case params endpoint doesn't expose it yet
+  const FALLBACK_WBTC_DENOM = "ibc/CF57A83CED6CEC7D706631B5DC53ABC21B7EDA7DF7490732B4361E6D5DD19C73";
+
   const params = ref<BtcStakeParams | null>(null);
   const pool = ref<BtcStakePool | null>(null);
   const userStake = ref<BtcStakeUserPosition | null>(null);
@@ -41,7 +44,8 @@ export function useBtcStake() {
   let pollHandle: number | null = null;
 
   const allowedDenom = computed(() => params.value?.allowed_denom || "");
-  const hasValidDenom = computed(() => !!allowedDenom.value && allowedDenom.value.startsWith("ibc/"));
+  const effectiveAllowedDenom = computed(() => allowedDenom.value || FALLBACK_WBTC_DENOM);
+  const hasValidDenom = computed(() => !!effectiveAllowedDenom.value && effectiveAllowedDenom.value.startsWith("ibc/"));
 
   const fetchParams = async () => {
     try {
@@ -59,7 +63,7 @@ export function useBtcStake() {
       userBalance.value = null;
       return;
     }
-    if (!allowedDenom.value) {
+    if (!effectiveAllowedDenom.value) {
       userBalance.value = null;
       return;
     }
@@ -68,7 +72,8 @@ export function useBtcStake() {
         params: { "pagination.limit": "200" }
       });
       const balances: Array<{ denom: string; amount: string }> = res.data?.balances ?? [];
-      const entry = balances.find((b) => b.denom === allowedDenom.value);
+      const target = effectiveAllowedDenom.value.toLowerCase();
+      const entry = balances.find((b) => (b.denom || "").toLowerCase() === target);
       userBalance.value = entry?.amount ?? "0";
     } catch (err) {
       console.warn("Failed to load btcstake balance", err);
@@ -199,6 +204,7 @@ export function useBtcStake() {
     restHealthy,
     rpcHealthy,
     allowedDenom,
+    effectiveAllowedDenom,
     hasValidDenom,
     poolEndpoint,
     fetchParams,
