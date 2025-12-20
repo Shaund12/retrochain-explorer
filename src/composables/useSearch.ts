@@ -14,6 +14,16 @@ export function useSearch() {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
+  const isBech32Address = (value: string) => {
+    // Allow known prefixes (RetroChain + Cosmos derivations)
+    return (
+      /^retro[a-z0-9]{39}$/.test(value) ||
+      /^retrovaloper[a-z0-9]{39}$/.test(value) ||
+      /^cosmos[a-z0-9]{39}$/.test(value) ||
+      /^cosmosvaloper[a-z0-9]{39}$/.test(value)
+    );
+  };
+
   const search = async (query: string): Promise<void> => {
     if (!query || query.trim().length === 0) {
       return;
@@ -37,8 +47,8 @@ export function useSearch() {
         return;
       }
 
-      // Check if it's a RetroChain address (starts with expected prefix)
-      if (/^retro[a-z0-9]{39}/.test(trimmed) || /^retrovaloper[a-z0-9]{39}/.test(trimmed)) {
+      // Check if it's a bech32 account/validator address
+      if (isBech32Address(trimmed)) {
         await router.push({ name: "account", params: { address: trimmed } });
         return;
       }
@@ -54,7 +64,7 @@ export function useSearch() {
         // Continue to error
       }
 
-      error.value = "No results found. Search by block height, tx hash, or address.";
+      error.value = "No results found. Search by block height, tx hash, or account address.";
     } catch (e: any) {
       error.value = e?.message || "Search failed";
     } finally {

@@ -20,6 +20,7 @@ const {
   pool,
   userStake,
   pendingRewards,
+  userBalance,
   loading,
   userLoading,
   error,
@@ -55,6 +56,8 @@ const poolUndistributed = computed(() => formatRetro(pool.value?.undistributed_u
 
 const userStakedDisplay = computed(() => formatWbtc(userStake.value?.staked_amount));
 const pendingRewardsDisplay = computed(() => formatRetro(pendingRewards.value?.pending_uretro));
+const userBalanceDisplay = computed(() => formatWbtc(userBalance.value));
+const userBalanceBase = computed(() => userBalance.value ?? "0");
 
 const allowedTokenMeta = computed(() => getTokenMeta(allowedDenom.value));
 const allowedTokenSymbol = computed(() => allowedTokenMeta.value.symbol);
@@ -109,6 +112,13 @@ const pendingRewardsBase = computed(() => BigInt(pendingRewards.value?.pending_u
 
 const setUnstakeMax = () => {
   unstakeAmount.value = maxUnstakeReadable.value;
+};
+
+const setStakePercent = (percent: number) => {
+  const base = Number(userBalanceBase.value) / Math.pow(10, WBTC_DECIMALS);
+  if (!Number.isFinite(base) || base <= 0) return;
+  const amount = (base * percent).toFixed(WBTC_DECIMALS);
+  stakeAmount.value = amount;
 };
 
 const validateStakeInput = () => parseHumanAmount(stakeAmount.value, WBTC_DECIMALS);
@@ -345,14 +355,25 @@ watch(
         <div class="space-y-3">
           <div>
             <label class="text-xs text-slate-400 mb-1 block">Amount (WBTC)</label>
-            <input
-              v-model="stakeAmount"
-              type="number"
-              min="0"
-              step="0.00000001"
-              placeholder="0.00000000"
-              class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-white"
-            />
+            <div class="space-y-2">
+              <input
+                v-model="stakeAmount"
+                type="number"
+                min="0"
+                step="0.00000001"
+                placeholder="0.00000000"
+                class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-white"
+              />
+              <div class="flex items-center justify-between text-[11px] text-slate-500">
+                <span>Available: {{ userBalanceDisplay }}</span>
+                <div class="flex gap-1">
+                  <button class="btn text-[10px]" @click="setStakePercent(0.25)" :disabled="!address">25%</button>
+                  <button class="btn text-[10px]" @click="setStakePercent(0.5)" :disabled="!address">50%</button>
+                  <button class="btn text-[10px]" @click="setStakePercent(0.75)" :disabled="!address">75%</button>
+                  <button class="btn text-[10px]" @click="setStakePercent(1)" :disabled="!address">Max</button>
+                </div>
+              </div>
+            </div>
           </div>
           <button class="btn btn-primary w-full" @click="handleStake" :disabled="txLoading || !address || denomWarning">
             {{ txLoading ? 'Processing…' : address ? 'Stake WBTC' : 'Connect Wallet' }}

@@ -30,6 +30,7 @@ export function useBtcStake() {
   const pool = ref<BtcStakePool | null>(null);
   const userStake = ref<BtcStakeUserPosition | null>(null);
   const pendingRewards = ref<BtcStakePendingRewards | null>(null);
+  const userBalance = ref<string | null>(null);
   const loading = ref(false);
   const userLoading = ref(false);
   const error = ref<string | null>(null);
@@ -49,6 +50,29 @@ export function useBtcStake() {
     } catch (err: any) {
       console.warn("Failed to load btcstake params", err);
       params.value = null;
+      throw err;
+    }
+  };
+
+  const fetchUserBalance = async (addr?: string | null) => {
+    if (!addr) {
+      userBalance.value = null;
+      return;
+    }
+    if (!allowedDenom.value) {
+      userBalance.value = null;
+      return;
+    }
+    try {
+      const res = await api.get(`/cosmos/bank/v1beta1/balances/${addr}`, {
+        params: { "pagination.limit": "200" }
+      });
+      const balances: Array<{ denom: string; amount: string }> = res.data?.balances ?? [];
+      const entry = balances.find((b) => b.denom === allowedDenom.value);
+      userBalance.value = entry?.amount ?? "0";
+    } catch (err) {
+      console.warn("Failed to load btcstake balance", err);
+      userBalance.value = null;
       throw err;
     }
   };
@@ -121,10 +145,15 @@ export function useBtcStake() {
       await fetchPool();
       if (address) {
         userLoading.value = true;
-        await Promise.allSettled([fetchUserStake(address), fetchPendingRewards(address)]);
+        await Promise.allSettled([
+          fetchUserStake(address),
+          fetchPendingRewards(address),
+          fetchUserBalance(address)
+        ]);
       } else {
         userStake.value = null;
         pendingRewards.value = null;
+        userBalance.value = null;
       }
       await checkRpcHealth();
     } catch (err: any) {
@@ -162,6 +191,7 @@ export function useBtcStake() {
     pool,
     userStake,
     pendingRewards,
+    userBalance,
     loading,
     userLoading,
     error,
@@ -175,6 +205,7 @@ export function useBtcStake() {
     fetchPool,
     fetchUserStake,
     fetchPendingRewards,
+    fetchUserBalance,
     refreshAll,
     startPolling,
     stopPolling
