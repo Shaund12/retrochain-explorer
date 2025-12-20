@@ -92,7 +92,7 @@ const sections: Section[] = [
   }
 ];
 
-const contactEmail = "legal@retrochain.dev";
+const contactEmail = "retrochaininfo@gmail.com";
 </script>
 
 <template>

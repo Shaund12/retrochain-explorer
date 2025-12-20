@@ -132,6 +132,21 @@ onMounted(() => {
                   <span>💻</span> GitHub
                 </a>
               </li>
+              <li>
+                <a href="https://x.com/RetroChainInfo" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                  <span>🐦</span> Twitter / X
+                </a>
+              </li>
+              <li>
+                <a href="https://www.instagram.com/retrochaininfo/" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                  <span>📸</span> Instagram
+                </a>
+              </li>
+              <li>
+                <a href="mailto:retrochaininfo@gmail.com" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                  <span>✉️</span> Contact
+                </a>
+              </li>
             </ul>
             
             <!-- Network Status -->
@@ -163,6 +178,7 @@ onMounted(() => {
                 <a href="https://github.com/cosmos/cosmos-sdk/blob/main/LICENSE" target="_blank" class="hover:text-indigo-400 transition-colors">
                   Apache 2.0 License
                 </a>
+                · <a href="mailto:retrochaininfo@gmail.com" class="hover:text-indigo-400 transition-colors">retrochaininfo@gmail.com</a>
               </div>
             </div>
             
