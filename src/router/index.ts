@@ -14,6 +14,7 @@ import BuyView from "@/views/BuyView.vue";
 import DexView from "@/views/DexView.vue";
 import TokenomicsView from "@/views/TokenomicsView.vue";
 import TokensView from "@/views/TokensView.vue";
+import NftDetailView from "@/views/NftDetailView.vue";
 import ContractsView from "@/views/ContractsView.vue";
 import ContractDetailView from "@/views/ContractDetailView.vue";
 import NotFoundView from "@/views/NotFoundView.vue";
