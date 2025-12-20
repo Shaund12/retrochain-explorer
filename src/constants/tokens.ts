@@ -118,6 +118,17 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     decimals: 6,
     accent: "amber",
     description: "USDC bridged in over IBC."
+  },
+  "factory/cosmos1fscvf7rphx477z6vd4sxsusm2u8a70kewvc8wy/retroarcade": {
+    denom: "factory/cosmos1fscvf7rphx477z6vd4sxsusm2u8a70kewvc8wy/retroarcade",
+    symbol: "RETROARCADE",
+    name: "RetroArcade",
+    chain: "RetroArcade Factory",
+    icon: "??",
+    decimals: 6,
+    accent: "violet",
+    description: "RetroArcade Factory token",
+    logo: "https://retrochain.ddns.net/RCIcon.svg"
   }
 };
 
