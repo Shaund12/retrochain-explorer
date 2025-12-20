@@ -95,6 +95,15 @@ const setMaxAmount = () => {
   amount.value = walletBalanceFloat.value.toFixed(6);
 };
 
+const refreshUserState = async () => {
+  if (!address.value) return;
+  await Promise.all([
+    fetchAll(),
+    loadAccount(address.value),
+    fetchNetworkStats()
+  ]);
+};
+
 const shortAddress = (addr: string, size = 10) => `${addr?.slice(0, size)}...${addr?.slice(-6)}`;
 
 const availableValidators = computed(() => {
@@ -158,7 +167,7 @@ try {
 
     if (result.code === 0) {
       console.log("Delegation successful!", result);
-      await fetchAll();
+      await refreshUserState();
       amount.value = "";
       selectedValidator.value = "";
       toast.showSuccess("Delegation successful!");
@@ -205,7 +214,7 @@ const handleClaimRewards = async (validatorAddress?: string) => {
 
     if (result.code === 0) {
       console.log("Rewards claimed!", result);
-      await fetchAll();
+      await refreshUserState();
       toast.showSuccess("Rewards claimed successfully!");
     } else {
       throw new Error(`Transaction failed: ${result.rawLog}`);
@@ -248,7 +257,7 @@ const handleUndelegate = async () => {
 
     if (result.code === 0) {
       console.log("Undelegation successful!", result);
-      await fetchAll();
+      await refreshUserState();
       amount.value = "";
       selectedValidator.value = "";
       toast.showSuccess("Undelegation successful! Tokens will be available in 21 days.");
