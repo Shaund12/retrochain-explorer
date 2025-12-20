@@ -43,6 +43,9 @@ export default defineConfig(({ mode }) => {
           }
         }
       }
+    },
+    preview: {
+      allowedHosts: ["retrochain.ddns.net"]
     }
   };
 });
