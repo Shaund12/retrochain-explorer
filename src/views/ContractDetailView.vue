@@ -103,6 +103,31 @@ const detectedExecuteFunctions = computed(() => {
   return Array.from(set);
 });
 
+const executionTemplates = computed(() => {
+  const map = new Map<string, Record<string, any>>();
+  for (const entry of executionHistory.value) {
+    if (entry.msg && typeof entry.msg === "object" && !Array.isArray(entry.msg)) {
+      const key = Object.keys(entry.msg)[0];
+      if (key && !map.has(key)) {
+        map.set(key, entry.msg);
+      }
+    }
+  }
+  return Array.from(map.entries()).map(([fn, sample]) => ({ fn, sample }));
+});
+
+const selectedExecTemplate = ref<string>("");
+
+const applyExecutionTemplate = () => {
+  const found = executionTemplates.value.find((tpl) => tpl.fn === selectedExecTemplate.value);
+  if (!found) return;
+  try {
+    executeMsgInput.value = JSON.stringify(found.sample, null, 2);
+  } catch {
+    executeMsgInput.value = JSON.stringify(found.sample);
+  }
+};
+
 const topFunctionName = (msg: ContractExecutionRecord["msg"]) => {
   if (msg && typeof msg === "object" && !Array.isArray(msg)) {
     const key = Object.keys(msg)[0];
@@ -474,6 +499,25 @@ watch(
                 <p class="text-[11px] text-slate-500">Requires Keplr wallet</p>
               </div>
               <button v-if="!walletAddress" class="btn text-[10px]" @click="connect">Connect Keplr</button>
+            </div>
+            <div v-if="executionTemplates.length" class="grid gap-2 sm:grid-cols-2">
+              <div class="flex flex-col gap-1">
+                <label class="text-[11px] uppercase tracking-wider text-slate-500">Observed functions</label>
+                <select
+                  v-model="selectedExecTemplate"
+                  class="w-full rounded bg-slate-900/70 border border-slate-800 text-xs px-3 py-2"
+                >
+                  <option value="">Select a function…</option>
+                  <option v-for="tpl in executionTemplates" :key="tpl.fn" :value="tpl.fn">
+                    {{ tpl.fn }}
+                  </option>
+                </select>
+              </div>
+              <div class="flex items-end">
+                <button class="btn text-[10px] w-full" :disabled="!selectedExecTemplate" @click="applyExecutionTemplate">
+                  Load sample payload
+                </button>
+              </div>
             </div>
             <textarea
               v-model="executeMsgInput"
