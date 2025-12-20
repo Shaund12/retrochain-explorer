@@ -1,10 +1,12 @@
 <script setup lang="ts">
 import { ref } from "vue";
+import { useRouter } from "vue-router";
 import { useSearch } from "@/composables/useSearch";
 import { useToast } from "@/composables/useToast";
 
 const { search, loading, error } = useSearch();
 const { notify } = useToast();
+const router = useRouter();
 
 const query = ref("");
 const showDropdown = ref(false);
@@ -41,6 +43,17 @@ const quickSearches = [
 ];
 
 const selectQuickSearch = (q: string) => {
+  const lowered = q.toLowerCase();
+  // Direct navigation for known shortcuts
+  if (lowered === "latest") {
+    router.push({ name: "blocks" });
+    return;
+  }
+  if (lowered === "txs" || lowered === "transactions") {
+    router.push({ name: "txs" });
+    return;
+  }
+
   query.value = q;
   handleSearch();
 };
