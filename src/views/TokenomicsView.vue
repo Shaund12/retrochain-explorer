@@ -149,7 +149,10 @@ const burnLastBlockDisplay = computed(() => formatRetroSigned(burnLastBlockAmoun
 const burnRollingWindowAmount = computed(() =>
   burnSnapshots.value.reduce((sum, snap) => {
     if (!snap || snap.burned === null) return sum;
-    return sum + Math.max(0, snap.burned);
+    const delta = snap.burned;
+    // Treat balance decreases (positive delta) as burn, and also count negative deltas as burn magnitude
+    const destroyed = delta < 0 ? Math.abs(delta) : delta;
+    return sum + (Number.isFinite(destroyed) ? destroyed : 0);
   }, 0)
 );
 
