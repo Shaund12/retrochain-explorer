@@ -25,6 +25,42 @@ interface PaginatedResponse<T> {
   nextKey?: string;
 }
 
+const decodeBase64 = (value: string) => {
+  try {
+    if (typeof atob === "function") return atob(value);
+    const buf = (globalThis as any)?.Buffer?.from(value, "base64");
+    return buf ? buf.toString("utf-8") : value;
+  } catch {
+    return value;
+  }
+};
+
+const parseJsonMetadata = async (uri: string): Promise<Record<string, any> | null> => {
+  if (!uri) return null;
+  try {
+    const lower = uri.toLowerCase();
+    if (lower.startsWith("data:application/json;base64,")) {
+      const b64 = uri.split(",", 2)[1] || "";
+      const json = decodeBase64(b64);
+      return JSON.parse(json);
+    }
+    if (lower.startsWith("data:application/json;utf8,")) {
+      const encoded = uri.split(",", 2)[1] || "";
+      return JSON.parse(decodeURIComponent(encoded));
+    }
+    if (lower.startsWith("data:application/json,")) {
+      const encoded = uri.split(",", 2)[1] || "";
+      return JSON.parse(decodeURIComponent(encoded));
+    }
+
+    const res = await fetch(uri);
+    if (!res.ok) return null;
+    return await res.json();
+  } catch {
+    return null;
+  }
+};
+
 const paramsSerializer = (params: Record<string, any>) => {
   const search = new URLSearchParams();
   Object.keys(params).forEach((key) => {
@@ -219,11 +255,23 @@ export function useNfts() {
           try {
             const info = await queryContractSmart(contract, { nft_info: { token_id: tokenId } });
             const extension = info?.extension ?? {};
-            const image = extension.image || extension.image_url || extension.mediaUri || info?.token_uri;
+            let image = extension.image || extension.image_url || extension.mediaUri || info?.token_uri;
+            let name = extension.name || tokenId;
+            let description = extension.description;
+
+            // If no inline metadata provides image, attempt to fetch/parse the token_uri JSON
+            if ((!image || image === info?.token_uri) && typeof info?.token_uri === "string") {
+              const meta = await parseJsonMetadata(info.token_uri);
+              if (meta) {
+                image = meta.image || image;
+                name = meta.name || name;
+                description = meta.description || description;
+              }
+            }
             return {
               id: tokenId,
-              name: extension.name || tokenId,
-              description: extension.description,
+              name,
+              description,
               uri: info?.token_uri,
               image,
               data: info ?? null
