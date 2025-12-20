@@ -15,12 +15,10 @@ export function useSearch() {
   const error = ref<string | null>(null);
 
   const isBech32Address = (value: string) => {
-    // Allow known prefixes (RetroChain + Cosmos derivations)
+    // Allow common prefixes with flexible lengths (some CosmWasm addrs are longer)
     return (
-      /^retro[a-z0-9]{39}$/.test(value) ||
-      /^retrovaloper[a-z0-9]{39}$/.test(value) ||
-      /^cosmos[a-z0-9]{39}$/.test(value) ||
-      /^cosmosvaloper[a-z0-9]{39}$/.test(value)
+      /^(retro|retrovaloper)[a-z0-9]{38,74}$/.test(value) ||
+      /^(cosmos|cosmosvaloper)[a-z0-9]{38,74}$/.test(value)
     );
   };
 
