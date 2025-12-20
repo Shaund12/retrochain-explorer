@@ -36,6 +36,9 @@ const executeError = ref<string | null>(null);
 const lastTxHash = ref<string | null>(null);
 const executionHistory = ref<ContractExecutionRecord[]>([]);
 
+const hasStorage = typeof localStorage !== "undefined";
+const storageKey = (suffix: string) => `rc-contract-${contractAddress.value || "unknown"}-${suffix}`;
+
 const queryTemplates = [
   { label: "General · Contract info", payload: '{ "contract_info": {} }' },
   { label: "CW20 · Token info", payload: '{ "token_info": {} }' },
@@ -128,6 +131,18 @@ const applyExecutionTemplate = () => {
   }
 };
 
+const loadPersistedInputs = () => {
+  if (!hasStorage) return;
+  const savedQuery = localStorage.getItem(storageKey("smartQuery"));
+  const savedExec = localStorage.getItem(storageKey("execMsg"));
+  const savedFunds = localStorage.getItem(storageKey("execFunds"));
+  const savedMemo = localStorage.getItem(storageKey("execMemo"));
+  if (savedQuery) smartQueryInput.value = savedQuery;
+  if (savedExec) executeMsgInput.value = savedExec;
+  if (savedFunds) executeFunds.value = savedFunds;
+  if (savedMemo) executeMemo.value = savedMemo;
+};
+
 const topFunctionName = (msg: ContractExecutionRecord["msg"]) => {
   if (msg && typeof msg === "object" && !Array.isArray(msg)) {
     const key = Object.keys(msg)[0];
@@ -209,6 +224,9 @@ const runSmartQuery = async () => {
     }
     const result = await smartQueryContract(contractAddress.value, parsed);
     smartQueryResult.value = JSON.stringify(result, null, 2);
+    if (hasStorage) {
+      localStorage.setItem(storageKey("smartQuery"), smartQueryInput.value);
+    }
   } catch (err: any) {
     smartQueryError.value = err?.message ?? String(err);
   } finally {
@@ -255,6 +273,11 @@ const executeMessage = async () => {
     const result = await signAndBroadcast(chainId.value, [execMsg], fee, executeMemo.value || `Execute ${contractAddress.value}`);
     if (result.code !== 0) {
       throw new Error(result.rawLog || "Execution failed");
+    }
+    if (hasStorage) {
+      localStorage.setItem(storageKey("execMsg"), executeMsgInput.value);
+      localStorage.setItem(storageKey("execFunds"), executeFunds.value);
+      localStorage.setItem(storageKey("execMemo"), executeMemo.value);
     }
     lastTxHash.value = result.transactionHash || null;
     toast.showTxSuccess(result.transactionHash || "Execution broadcasted");
@@ -306,8 +329,13 @@ watch(
   () => contractAddress.value,
   () => {
     loadDetails();
+    loadPersistedInputs();
   }
 );
+
+onMounted(() => {
+  loadPersistedInputs();
+});
 </script>
 
 <template>

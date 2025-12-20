@@ -47,10 +47,18 @@ export function useSearch() {
         return;
       }
 
-      // Check if it's a bech32 account/validator address
+      // Check if it's a bech32 account/validator address or contract
       if (isBech32Address(trimmed)) {
-        await router.push({ name: "account", params: { address: trimmed } });
-        return;
+        try {
+          // Try contract lookup first for better UX
+          await api.get(`/cosmwasm/wasm/v1/contract/${trimmed}`);
+          await router.push({ name: "contract-detail", params: { address: trimmed } });
+          return;
+        } catch {
+          // Fall back to account route if not a contract
+          await router.push({ name: "account", params: { address: trimmed } });
+          return;
+        }
       }
 
       // If nothing matches, try searching as a transaction hash anyway
