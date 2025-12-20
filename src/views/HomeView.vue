@@ -334,7 +334,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
       </div>
 
       <!-- Search Bar -->
-      <div class="card">
+      <div class="card overflow-visible">
         <div class="flex items-center gap-3 mb-3">
           <div class="text-2xl"></div>
           <div>
