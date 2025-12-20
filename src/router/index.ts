@@ -36,6 +36,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/buy", name: "buy", component: BuyView },
   { path: "/dex", name: "dex", component: DexView },
   { path: "/tokens", name: "tokens", component: TokensView },
+  { path: "/nft/:id", name: "nft-detail", component: NftDetailView, props: true },
   { path: "/tokenomics", name: "tokenomics", component: TokenomicsView },
   { path: "/contracts", name: "contracts", component: ContractsView },
   { path: "/contracts/:address", name: "contract-detail", component: ContractDetailView, props: true },

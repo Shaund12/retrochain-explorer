@@ -291,10 +291,11 @@ const nftSourceLabel = (cls: { source?: string }) => {
         </div>
         <div v-if="nftClasses.length === 0" class="text-xs text-slate-400">No NFT classes have been registered yet.</div>
         <div v-else class="grid gap-3 md:grid-cols-2">
-          <article
+          <RouterLink
             v-for="cls in nftClasses"
             :key="cls.id"
-            class="rounded-2xl border border-white/10 bg-white/5 p-4"
+            :to="{ name: 'nft-detail', params: { id: cls.id } }"
+            class="rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-indigo-400/50 hover:-translate-y-[1px]"
           >
             <div class="flex items-center justify-between mb-2">
               <div>
@@ -311,7 +312,7 @@ const nftSourceLabel = (cls: { source?: string }) => {
             </p>
             <p v-if="cls.uri" class="text-[11px] text-indigo-300 truncate mt-2">{{ cls.uri }}</p>
             <p v-if="cls.data?.numTokens" class="text-[11px] text-slate-400 mt-1">{{ cls.data.numTokens }} tokens minted</p>
-          </article>
+          </RouterLink>
         </div>
       </div>
     </template>
