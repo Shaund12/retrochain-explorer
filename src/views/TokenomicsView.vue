@@ -104,17 +104,26 @@ const perBlockProvisionRetro = computed(() => {
   return annualProvisionRetro.value / blocksPerYear;
 });
 
+const burnParamsHydrated = computed(() => {
+  // Ensure we always have both rates available for display
+  const raw = burnParams.value || {};
+  return {
+    fee_burn_rate: raw.fee_burn_rate ?? raw.feeBurnRate ?? String(DEFAULT_BURN_RATE),
+    provision_burn_rate: raw.provision_burn_rate ?? raw.provisionBurnRate ?? String(DEFAULT_BURN_RATE)
+  };
+});
+
+const DEFAULT_BURN_RATE = 0.008; // 0.8%
+
 const feeBurnRatePercent = computed(() => {
-  const raw = burnParams.value?.fee_burn_rate ?? burnParams.value?.feeBurnRate;
-  if (raw === undefined || raw === null) return "—";
+  const raw = burnParams.value?.fee_burn_rate ?? burnParams.value?.feeBurnRate ?? DEFAULT_BURN_RATE;
   const num = Number(raw);
   if (!Number.isFinite(num)) return "—";
   return `${(num * 100).toFixed(2)}%`;
 });
 
 const provisionBurnRatePercent = computed(() => {
-  const raw = burnParams.value?.provision_burn_rate ?? burnParams.value?.provisionBurnRate;
-  if (raw === undefined || raw === null) return "—";
+  const raw = burnParams.value?.provision_burn_rate ?? burnParams.value?.provisionBurnRate ?? DEFAULT_BURN_RATE;
   const num = Number(raw);
   if (!Number.isFinite(num)) return "—";
   return `${(num * 100).toFixed(2)}%`;
@@ -244,8 +253,14 @@ const loadTokenomics = async () => {
       distributionParams.value = data?.params ?? null;
     }),
     runTask("burn params", async () => {
-      const { data } = await api.get("/cosmos/burn/v1beta1/params").catch(() => ({ data: { params: { fee_burn_rate: "0.008", provision_burn_rate: "0.008" } } }));
-      burnParams.value = data?.params ?? { fee_burn_rate: "0.008", provision_burn_rate: "0.008" };
+      const fallback = { fee_burn_rate: String(DEFAULT_BURN_RATE), provision_burn_rate: String(DEFAULT_BURN_RATE) };
+      try {
+        const { data } = await api.get("/cosmos/burn/v1beta1/params");
+        const params = data?.params || data?.burn_params || data?.burnParams;
+        burnParams.value = params ?? fallback;
+      } catch {
+        burnParams.value = fallback;
+      }
     }),
     runTask("deposit params", async () => {
       const { data } = await api.get("/cosmos/gov/v1/params/deposit");
