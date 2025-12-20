@@ -83,7 +83,7 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     decimals: 8,
     accent: "amber",
     description: "Wrapped Bitcoin bridged over IBC from Osmosis into RetroChain.",
-    logo: "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/wbtc.png"
+    logo: "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/wbtc.svg"
   },
   [DEFAULT_WBTC_DENOM_ON_COSMOS]: {
     denom: DEFAULT_WBTC_DENOM_ON_COSMOS,
@@ -94,7 +94,7 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     decimals: 8,
     accent: "amber",
     description: "Base denom for Wrapped Bitcoin on Cosmos-connected zones.",
-    logo: "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/wbtc.png"
+    logo: "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/wbtc.svg"
   },
   "ibc/99b00614ddbe6189aa03b77066ff8eb3f93680bd790c43cf56096b7f23542015": {
     denom: "ibc/99B00614DDBE6189AA03B77066FF8EB3F93680BD790C43CF56096B7F23542015",
@@ -105,7 +105,7 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     decimals: 8,
     accent: "amber",
     description: "IBC hash for Wrapped Bitcoin when routed through Cosmos Hub bridges.",
-    logo: "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/wbtc.png"
+    logo: "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/wbtc.svg"
   },
   uusdc: {
     denom: "uusdc",
