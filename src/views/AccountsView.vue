@@ -104,7 +104,7 @@ onMounted(() => {
             @click="fetchAccounts(100)"
             :disabled="loading"
           >
-            {{ loading ? 'Loading...' : '?? Refresh' }}
+            {{ loading ? 'Loading...' : '🔄 Refresh' }}
           </button>
         </div>
       </div>
@@ -161,20 +161,20 @@ onMounted(() => {
             :class="sortBy === 'balance' ? 'border-cyan-400/70 bg-cyan-500/10' : ''"
             @click="toggleSort('balance')"
           >
-            Balance {{ sortBy === 'balance' ? (sortOrder === 'desc' ? '?' : '?') : '' }}
+            Balance {{ sortBy === 'balance' ? (sortOrder === 'desc' ? '▼' : '▲') : '' }}
           </button>
           <button 
             class="btn"
             :class="sortBy === 'address' ? 'border-cyan-400/70 bg-cyan-500/10' : ''"
             @click="toggleSort('address')"
           >
-            Address {{ sortBy === 'address' ? (sortOrder === 'desc' ? '?' : '?') : '' }}
+            Address {{ sortBy === 'address' ? (sortOrder === 'desc' ? '▼' : '▲') : '' }}
           </button>
         </div>
       </div>
 
       <div v-if="filteredAccounts.length === 0" class="text-center py-12">
-        <div class="text-4xl mb-3">??</div>
+        <div class="text-4xl mb-3">😕</div>
         <div class="text-sm text-slate-400">No accounts found</div>
         <div class="text-xs text-slate-500 mt-1">Try adjusting your search</div>
       </div>
@@ -197,9 +197,9 @@ onMounted(() => {
               @click="router.push({ name: 'account', params: { address: account.address } })"
             >
               <td class="font-mono text-xs">
-                <span v-if="index === 0 && sortBy === 'balance' && sortOrder === 'desc'" class="text-yellow-300">??</span>
-                <span v-else-if="index === 1 && sortBy === 'balance' && sortOrder === 'desc'" class="text-slate-300">??</span>
-                <span v-else-if="index === 2 && sortBy === 'balance' && sortOrder === 'desc'" class="text-orange-300">??</span>
+                <span v-if="index === 0 && sortBy === 'balance' && sortOrder === 'desc'" class="text-yellow-300">🥇</span>
+                <span v-else-if="index === 1 && sortBy === 'balance' && sortOrder === 'desc'" class="text-slate-300">🥈</span>
+                <span v-else-if="index === 2 && sortBy === 'balance' && sortOrder === 'desc'" class="text-orange-300">🥉</span>
                 <span v-else>{{ index + 1 }}</span>
               </td>
               
@@ -237,7 +237,7 @@ onMounted(() => {
                   class="btn text-xs"
                   @click.stop="router.push({ name: 'account', params: { address: account.address } })"
                 >
-                  View ?
+                  View →
                 </button>
               </td>
             </tr>
@@ -248,13 +248,13 @@ onMounted(() => {
 
     <!-- Info -->
     <div class="card bg-slate-900/50 border-slate-700">
-      <h3 class="text-sm font-semibold mb-2 text-slate-100">?? About This Page</h3>
+      <h3 class="text-sm font-semibold mb-2 text-slate-100">ℹ️ About This Page</h3>
       <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
         <li>Displays paginated accounts returned by the Cosmos auth module</li>
         <li>Balances are fetched directly from the bank module in real-time</li>
         <li>Sorted by balance (highest first) by default</li>
         <li>Click any account to view detailed information</li>
-        <li>Top 3 accounts are highlighted with medals ??????</li>
+        <li>Top 3 accounts are highlighted with medals 🥇 🥈 🥉</li>
       </ul>
     </div>
   </div>
