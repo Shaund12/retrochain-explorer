@@ -373,7 +373,7 @@ export function useContracts() {
     if (!key) throw new Error("Contract address is required.");
     const encoded = encodeJsonToBase64(message);
     const res = await api.post(`/cosmwasm/wasm/v1/contract/${key}/smart`, {
-      query_data: encoded
+      query_msg: encoded
     });
     const payload = res.data?.data ?? res.data?.smart_response?.data;
     return decodeBase64Json(payload);
