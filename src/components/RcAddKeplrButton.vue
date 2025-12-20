@@ -3,6 +3,9 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, useAttrs } from "vue"
 import { useToast } from "@/composables/useToast";
 import { useKeplr } from "@/composables/useKeplr";
 import { useNetwork } from "@/composables/useNetwork";
+import { useAccount } from "@/composables/useAccount";
+import { formatAmount } from "@/utils/format";
+import { getTokenMeta } from "@/constants/tokens";
 
 defineOptions({ inheritAttrs: false });
 
@@ -21,6 +24,7 @@ declare global {
 const toast = useToast();
 const { isAvailable, connect, connecting, address } = useKeplr();
 const { restBase, rpcBase } = useNetwork();
+const { balances, loading: accountLoading, load } = useAccount();
 const attrs = useAttrs();
 
 const showModal = ref(false);
@@ -70,6 +74,32 @@ const buttonSubtext = computed(() => {
   }
   return "Keplr • Leap • Cosmostation";
 });
+
+const WBTC_IBC_DENOMS = ["ibc/CF57A83CED6CEC7D706631B5DC53ABC21B7EDA7DF7490732B4361E6D5DD19C73"]; // 8 decimals
+const wbtcDenomSet = new Set(WBTC_IBC_DENOMS.map((d) => d.toLowerCase()));
+
+const wbtcEntry = computed(() => balances.value.find((b) => wbtcDenomSet.has(b.denom.toLowerCase())));
+const wbtcBalanceDisplay = computed(() => {
+  if (!wbtcEntry.value) return null;
+  return formatAmount(wbtcEntry.value.amount, wbtcEntry.value.denom, {
+    minDecimals: 2,
+    maxDecimals: 8,
+    showZerosForIntegers: false
+  });
+});
+const wbtcMeta = computed(() => (wbtcEntry.value ? getTokenMeta(wbtcEntry.value.denom) : null));
+
+watch(
+  address,
+  async (addr) => {
+    if (addr) {
+      await load(addr);
+    } else {
+      balances.value = [];
+    }
+  },
+  { immediate: true }
+);
 
 const steps = [
   { title: "Install Keplr", detail: "Browser extension or mobile app", action: () => window.open(installUrl, "_blank") },
@@ -215,9 +245,24 @@ onBeforeUnmount(() => {
                     <dd class="font-mono text-xs text-indigo-200">{{ rpcDisplay }}</dd>
                   </div>
                 </dl>
-                <div v-if="address" class="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-2">
-                  <p class="text-[11px] uppercase tracking-widest text-emerald-200">Connected Address</p>
-                  <p class="font-mono text-xs text-white">{{ address }}</p>
+                <div v-if="address" class="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-3 space-y-2">
+                  <div>
+                    <p class="text-[11px] uppercase tracking-widest text-emerald-200">Connected Address</p>
+                    <p class="font-mono text-xs text-white break-all">{{ address }}</p>
+                  </div>
+                  <div class="grid gap-2 text-xs text-slate-200">
+                    <div class="flex items-center justify-between">
+                      <span class="text-slate-400">Balances</span>
+                      <span v-if="accountLoading" class="text-[10px] text-slate-500">Syncing…</span>
+                    </div>
+                    <div class="flex items-center justify-between" v-if="wbtcBalanceDisplay">
+                      <span class="flex items-center gap-1">
+                        <span>{{ wbtcMeta?.icon ?? "\uD83D\uDFE0" }}</span>
+                        <span>{{ wbtcMeta?.symbol ?? "WBTC" }}</span>
+                      </span>
+                      <span class="font-mono">{{ wbtcBalanceDisplay }}</span>
+                    </div>
+                  </div>
                 </div>
               </div>
             </div>

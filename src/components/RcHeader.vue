@@ -102,6 +102,10 @@
               <span>{{ atomMeta?.icon ?? "⚛️" }}</span>
               <span>{{ atomWalletBalance }}</span>
             </div>
+            <div v-if="wbtcWalletBalance" class="text-[11px] text-amber-200 flex items-center gap-1 mt-0.5">
+              <span>{{ wbtcMeta?.icon ?? "🟠" }}</span>
+              <span>{{ wbtcWalletBalance }}</span>
+            </div>
           </div>
           <div class="sm:hidden text-[11px] font-semibold text-emerald-200">
             <span v-if="accountLoading">Syncing…</span>
@@ -109,6 +113,10 @@
             <div v-if="atomWalletBalance" class="text-[10px] text-cyan-200 flex items-center gap-1">
               <span>{{ atomMeta?.icon ?? "⚛️" }}</span>
               <span>{{ atomWalletBalance }}</span>
+            </div>
+            <div v-if="wbtcWalletBalance" class="text-[10px] text-amber-200 flex items-center gap-1">
+              <span>{{ wbtcMeta?.icon ?? "🟠" }}</span>
+              <span>{{ wbtcWalletBalance }}</span>
             </div>
           </div>
           <div class="hidden sm:block h-8 w-px bg-white/10"></div>
@@ -234,6 +242,11 @@ const ATOM_IBC_DENOMS = [
 ];
 const atomDenomSet = new Set(ATOM_IBC_DENOMS.map((d) => d.toLowerCase()));
 
+const WBTC_IBC_DENOMS = [
+  "ibc/CF57A83CED6CEC7D706631B5DC53ABC21B7EDA7DF7490732B4361E6D5DD19C73"
+];
+const wbtcDenomSet = new Set(WBTC_IBC_DENOMS.map((d) => d.toLowerCase()));
+
 const walletBalance = computed(() => {
   const denom = walletDenom.value;
   const entry = balances.value.find((b) => b.denom === denom);
@@ -255,6 +268,22 @@ const atomWalletBalance = computed(() => {
 const atomMeta = computed(() => {
   if (!atomBalanceEntry.value) return null;
   return getTokenMeta(atomBalanceEntry.value.denom);
+});
+
+const wbtcBalanceEntry = computed(() => balances.value.find((b) => wbtcDenomSet.has(b.denom.toLowerCase())));
+
+const wbtcWalletBalance = computed(() => {
+  if (!wbtcBalanceEntry.value) return null;
+  return formatAmount(wbtcBalanceEntry.value.amount, wbtcBalanceEntry.value.denom, {
+    minDecimals: 2,
+    maxDecimals: 8,
+    showZerosForIntegers: false
+  });
+});
+
+const wbtcMeta = computed(() => {
+  if (!wbtcBalanceEntry.value) return null;
+  return getTokenMeta(wbtcBalanceEntry.value.denom);
 });
 
 interface NavLink {
