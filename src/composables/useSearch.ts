@@ -26,6 +26,7 @@ export function useSearch() {
 
   const search = async (query: string): Promise<void> => {
     if (!query || query.trim().length === 0) {
+      error.value = "Enter a block height, tx hash, or address.";
       return;
     }
 
@@ -33,46 +34,47 @@ export function useSearch() {
     loading.value = true;
     error.value = null;
 
+    let routeTarget: { name: string; params?: Record<string, any> } | null = null;
+
     try {
-      // Check if it's a block height (numeric)
+      // Block height (numeric)
       if (/^\d+$/.test(trimmed)) {
         const height = parseInt(trimmed, 10);
-        await router.push({ name: "block-detail", params: { height } });
-        return;
+        routeTarget = { name: "block-detail", params: { height } };
       }
 
-      // Check if it's a transaction hash (64 char hex)
-      if (/^[A-Fa-f0-9]{64}$/.test(trimmed)) {
-        await router.push({ name: "tx-detail", params: { hash: trimmed.toUpperCase() } });
-        return;
+      // Tx hash (64 hex)
+      if (!routeTarget && /^[A-Fa-f0-9]{64}$/.test(trimmed)) {
+        routeTarget = { name: "tx-detail", params: { hash: trimmed.toUpperCase() } };
       }
 
-      // Check if it's a bech32 account/validator address or contract
-      if (isBech32Address(trimmed)) {
+      // Bech32 account/validator/contract
+      if (!routeTarget && isBech32Address(trimmed)) {
         try {
-          // Try contract lookup first for better UX
           await api.get(`/cosmwasm/wasm/v1/contract/${trimmed}`);
-          await router.push({ name: "contract-detail", params: { address: trimmed } });
-          return;
+          routeTarget = { name: "contract-detail", params: { address: trimmed } };
         } catch {
-          // Fall back to account route if not a contract
-          await router.push({ name: "account", params: { address: trimmed } });
-          return;
+          routeTarget = { name: "account", params: { address: trimmed } };
         }
       }
 
-      // If nothing matches, try searching as a transaction hash anyway
-      try {
-        const txRes = await api.get(`/cosmos/tx/v1beta1/txs/${trimmed}`);
-        if (txRes.data?.tx_response) {
-          await router.push({ name: "tx-detail", params: { hash: trimmed } });
-          return;
+      // Fallback: attempt tx lookup
+      if (!routeTarget) {
+        try {
+          const txRes = await api.get(`/cosmos/tx/v1beta1/txs/${trimmed}`);
+          if (txRes.data?.tx_response) {
+            routeTarget = { name: "tx-detail", params: { hash: trimmed } };
+          }
+        } catch {
+          // ignore and fall through
         }
-      } catch {
-        // Continue to error
       }
 
-      error.value = "No results found. Search by block height, tx hash, or account address.";
+      if (routeTarget) {
+        await router.push(routeTarget);
+      } else {
+        error.value = "No results found. Search by block height, tx hash, or account address.";
+      }
     } catch (e: any) {
       error.value = e?.message || "Search failed";
     } finally {
