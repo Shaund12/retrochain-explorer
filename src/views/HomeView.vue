@@ -44,7 +44,6 @@ const dashboardCards = [
   { id: "health", title: "Chain Health & Fees", show: () => true },
   { id: "block-stats", title: "Block & Gas Stats", show: () => true },
   { id: "blocks", title: "Latest Blocks", show: () => true },
-  { id: "txs", title: "Recent Transactions", show: () => true },
   { id: "sessions", title: "Recent Game Sessions", show: () => true },
   { id: "achievements", title: "Latest Achievements", show: () => true },
   { id: "features", title: "RetroChain Feature Pack", show: () => true },
@@ -712,135 +711,139 @@ function sparkPath(data: number[], width = 160, height = 40) {
             </template>
 
             <template v-else-if="card.id === 'blocks'">
-              <div class="flex items-center justify-between mb-2">
-                <h2 class="text-sm font-semibold text-slate-100">Latest blocks</h2>
-                <div class="flex items-center gap-2">
-                  <button
-                    class="btn text-xs"
-                    :class="autoRefreshEnabled ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-                    @click="toggleAutoRefresh"
-                  >
-                    {{ autoRefreshEnabled ? `Auto (${countdown}s)` : "Paused" }}
-                  </button>
-                  <div class="flex items-center gap-1">
-                    <button class="btn text-[10px]" :disabled="blockPage === 0" @click="prevBlocksPage">Prev</button>
-                    <span class="text-[11px] text-slate-400">Page {{ blockPage + 1 }}</span>
-                    <button class="btn text-[10px]" :disabled="!canNextBlocks" @click="nextBlocksPage">Next</button>
+              <div class="grid gap-3 xl:grid-cols-2 min-w-0">
+                <div class="min-w-0 overflow-hidden">
+                  <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-sm font-semibold text-slate-100">Latest blocks</h2>
+                    <div class="flex items-center gap-2">
+                      <button
+                        class="btn text-xs"
+                        :class="autoRefreshEnabled ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+                        @click="toggleAutoRefresh"
+                      >
+                        {{ autoRefreshEnabled ? `Auto (${countdown}s)` : "Paused" }}
+                      </button>
+                      <div class="flex items-center gap-1">
+                        <button class="btn text-[10px]" :disabled="blockPage === 0" @click="prevBlocksPage">Prev</button>
+                        <span class="text-[11px] text-slate-400">Page {{ blockPage + 1 }}</span>
+                        <button class="btn text-[10px]" :disabled="!canNextBlocks" @click="nextBlocksPage">Next</button>
+                      </div>
+                      <button class="btn text-xs" @click="router.push({ name: 'blocks' })">
+                        View all
+                      </button>
+                    </div>
                   </div>
-                  <button class="btn text-xs" @click="router.push({ name: 'blocks' })">
-                    View all
-                  </button>
-                </div>
-              </div>
-              <div v-if="loadingBlocks" class="text-xs text-slate-400">
-                Loading latest blocks...
-              </div>
-              <div v-else class="overflow-x-auto">
-                <table class="table min-w-full">
-                  <colgroup>
-                    <col style="width: 120px" />
-                    <col />
-                    <col style="width: 90px" />
-                    <col style="width: 220px" />
-                  </colgroup>
-                  <thead>
-                    <tr class="text-slate-300 text-xs">
-                      <th>Height</th>
-                      <th>Hash</th>
-                      <th>Txs</th>
-                      <th>Time</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="b in blocks"
-                      :key="b.height"
-                      class="cursor-pointer hover:bg-white/5 transition-colors"
-                      @click="router.push({ name: 'block-detail', params: { height: b.height } })"
-                    >
-                      <td class="font-mono text-[12px] py-2">{{ b.height }}</td>
-                      <td class="font-mono text-[12px] py-2">
-                        <div class="flex items-center gap-2 whitespace-nowrap">
-                          <span class="truncate max-w-[180px] inline-block align-middle">{{ shortString(b.hash, 16) }}</span>
-                          <button class="btn text-[10px]" @click.stop="copy(b.hash)">Copy</button>
-                        </div>
-                      </td>
-                      <td class="text-xs py-2">
-                        <span class="badge" :class="b.txs > 0 ? 'border-cyan-400/60 text-cyan-200' : ''">
-                          {{ b.txs }}
-                        </span>
-                      </td>
-                      <td class="text-xs text-slate-300 py-2 whitespace-nowrap">
-                        <span v-if="b.time">{{ dayjs(b.time).format('YYYY-MM-DD HH:mm:ss') }}</span>
-                        <span v-else>-</span>
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
-              </div>
-            </template>
-
-            <template v-else-if="card.id === 'txs'">
-              <div class="flex items-center justify-between mb-2">
-                <h2 class="text-sm font-semibold text-slate-100">
-                  Recent transactions
-                </h2>
-                <div class="flex items-center gap-2">
-                  <div class="flex items-center gap-1">
-                    <button class="btn text-[10px]" :disabled="txPage === 0" @click="prevTxPage">Prev</button>
-                    <span class="text-[11px] text-slate-400">Page {{ txPage + 1 }}</span>
-                    <button class="btn text-[10px]" :disabled="txs.length < txPageSize" @click="nextTxPage">Next</button>
+                  <div v-if="loadingBlocks" class="text-xs text-slate-400">
+                    Loading latest blocks...
                   </div>
-                  <button class="btn text-xs" @click="router.push({ name: 'txs' })">
-                    View all txs
-                  </button>
-                </div>
-              </div>
-              <div v-if="loadingTxs" class="text-xs text-slate-400">
-                Loading recent transactions...
-              </div>
-              <div v-else-if="txs.length === 0" class="text-xs text-slate-400 py-4 text-center">
-                <div class="mb-2"></div>
-                <div>No transactions yet</div>
-                <div class="text-[11px] mt-1">
-                  Generate some activity using the CLI or faucet
-                </div>
-              </div>
-              <div v-else class="overflow-x-auto">
-                <table class="table min-w-full">
-                  <thead>
-                    <tr class="text-slate-300 text-xs">
-                      <th>Hash</th>
-                      <th>Height</th>
-                      <th>Code</th>
-                      <th>Gas</th>
-                    </tr>
-                  </thead>
-                  <tbody>
-                    <tr
-                      v-for="t in txs"
-                      :key="t.hash"
-                      class="cursor-pointer"
-                      @click="goToTx(t.hash)"
-                    >
-                      <td class="font-mono text-[11px]">
-                        {{ shortString(t.hash, 10) }}
-                      </td>
-                      <td class="font-mono text-[11px]">{{ t.height }}</td>
-                      <td class="text-xs">
-                        <span
-                          class="badge"
-                          :class="t.code === 0 ? 'border-emerald-400/60' : 'border-rose-400/60 text-rose-200'"
+                  <div v-else class="overflow-x-auto">
+                    <table class="table min-w-full">
+                      <colgroup>
+                        <col style="width: 120px" />
+                        <col />
+                        <col style="width: 90px" />
+                        <col style="width: 220px" />
+                      </colgroup>
+                      <thead>
+                        <tr class="text-slate-300 text-xs">
+                          <th>Height</th>
+                          <th>Hash</th>
+                          <th>Txs</th>
+                          <th>Time</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="b in blocks"
+                          :key="b.height"
+                          class="cursor-pointer hover:bg-white/5 transition-colors"
+                          @click="router.push({ name: 'block-detail', params: { height: b.height } })"
                         >
-                          {{ t.code ?? 0 }}
-                        </span>
-                      </td>
-                      <td class="text-[11px] text-slate-300">
-                        {{ t.gasUsed || '-' }} / {{ t.gasWanted || '-' }}
-                      </td>
-                    </tr>
-                  </tbody>
-                </table>
+                          <td class="font-mono text-[12px] py-2">{{ b.height }}</td>
+                          <td class="font-mono text-[12px] py-2">
+                            <div class="flex items-center gap-2 whitespace-nowrap">
+                              <span class="truncate max-w-[180px] inline-block align-middle">{{ shortString(b.hash, 16) }}</span>
+                              <button class="btn text-[10px]" @click.stop="copy(b.hash)">Copy</button>
+                            </div>
+                          </td>
+                          <td class="text-xs py-2">
+                            <span class="badge" :class="b.txs > 0 ? 'border-cyan-400/60 text-cyan-200' : ''">
+                              {{ b.txs }}
+                            </span>
+                          </td>
+                          <td class="text-xs text-slate-300 py-2 whitespace-nowrap">
+                            <span v-if="b.time">{{ dayjs(b.time).format('YYYY-MM-DD HH:mm:ss') }}</span>
+                            <span v-else>-</span>
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
+
+                <div class="min-w-0 overflow-hidden">
+                  <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-sm font-semibold text-slate-100">
+                      Recent transactions
+                    </h2>
+                    <div class="flex items-center gap-2">
+                      <div class="flex items-center gap-1">
+                        <button class="btn text-[10px]" :disabled="txPage === 0" @click="prevTxPage">Prev</button>
+                        <span class="text-[11px] text-slate-400">Page {{ txPage + 1 }}</span>
+                        <button class="btn text-[10px]" :disabled="txs.length < txPageSize" @click="nextTxPage">Next</button>
+                      </div>
+                      <button class="btn text-xs" @click="router.push({ name: 'txs' })">
+                        View all txs
+                      </button>
+                    </div>
+                  </div>
+                  <div v-if="loadingTxs" class="text-xs text-slate-400">
+                    Loading recent transactions...
+                  </div>
+                  <div v-else-if="txs.length === 0" class="text-xs text-slate-400 py-4 text-center">
+                    <div class="mb-2"></div>
+                    <div>No transactions yet</div>
+                    <div class="text-[11px] mt-1">
+                      Generate some activity using the CLI or faucet
+                    </div>
+                  </div>
+                  <div v-else class="overflow-x-auto">
+                    <table class="table min-w-full">
+                      <thead>
+                        <tr class="text-slate-300 text-xs">
+                          <th>Hash</th>
+                          <th>Height</th>
+                          <th>Code</th>
+                          <th>Gas</th>
+                        </tr>
+                      </thead>
+                      <tbody>
+                        <tr
+                          v-for="t in txs"
+                          :key="t.hash"
+                          class="cursor-pointer"
+                          @click="goToTx(t.hash)"
+                        >
+                          <td class="font-mono text-[11px]">
+                            {{ shortString(t.hash, 10) }}
+                          </td>
+                          <td class="font-mono text-[11px]">{{ t.height }}</td>
+                          <td class="text-xs">
+                            <span
+                              class="badge"
+                              :class="t.code === 0 ? 'border-emerald-400/60' : 'border-rose-400/60 text-rose-200'"
+                            >
+                              {{ t.code ?? 0 }}
+                            </span>
+                          </td>
+                          <td class="text-[11px] text-slate-300">
+                            {{ t.gasUsed || '-' }} / {{ t.gasWanted || '-' }}
+                          </td>
+                        </tr>
+                      </tbody>
+                    </table>
+                  </div>
+                </div>
               </div>
             </template>
 
