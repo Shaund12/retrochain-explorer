@@ -306,6 +306,7 @@ const navItems: NavItem[] = [
       { label: "Blocks", to: { name: "blocks" } },
       { label: "Transactions", to: { name: "txs" } },
       { label: "Accounts", to: { name: "accounts" } },
+      { label: "Ecosystem Wallets", to: { name: "ecosystem-accounts" } },
       { label: "Validators", to: { name: "validators" } },
       { label: "Contracts", to: { name: "contracts" } }
     ]
