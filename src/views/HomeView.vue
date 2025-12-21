@@ -38,11 +38,103 @@ const blockPageSize = 10;
 const txPage = ref(0);
 const txPageSize = 15;
 
+const CARD_STORAGE_KEY = "rc_home_cards_v1";
+const dashboardCards = [
+  { id: "network", title: "Network Pulse", show: () => true },
+  { id: "health", title: "Chain Health & Fees", show: () => true },
+  { id: "block-stats", title: "Block & Gas Stats", show: () => true },
+  { id: "blocks", title: "Latest Blocks", show: () => true },
+  { id: "txs", title: "Recent Transactions", show: () => true },
+  { id: "sessions", title: "Recent Game Sessions", show: () => true },
+  { id: "achievements", title: "Latest Achievements", show: () => true },
+  { id: "features", title: "RetroChain Feature Pack", show: () => true },
+  { id: "arcade", title: "Arcade Games", show: () => true },
+  { id: "leaderboard", title: "Global Leaderboard", show: () => true },
+  { id: "howto", title: "How to use this explorer", show: () => network.value !== "mainnet" }
+];
+
+const defaultOrderMap = dashboardCards.reduce<Record<string, number>>((map, card, idx) => {
+  map[card.id] = idx;
+  return map;
+}, {});
+
+const cardState = ref<Record<string, { order: number; collapsed: boolean }>>({});
+
 const blockStartHeight = (page: number) => {
   const latest = info.value.latestBlockHeight || blocks.value[0]?.height;
   if (!latest) return undefined;
   return Math.max(1, latest - page * blockPageSize);
 };
+
+const loadCardState = () => {
+  try {
+    const saved = localStorage.getItem(CARD_STORAGE_KEY);
+    if (saved) {
+      const parsed = JSON.parse(saved) as Record<string, { order: number; collapsed: boolean }>;
+      cardState.value = { ...parsed };
+    }
+  } catch (e) {
+    console.warn("Failed to load card layout", e);
+  }
+
+  cardState.value = dashboardCards.reduce<Record<string, { order: number; collapsed: boolean }>>((map, card) => {
+    const existing = cardState.value[card.id];
+    map[card.id] = {
+      order: existing?.order ?? defaultOrderMap[card.id],
+      collapsed: existing?.collapsed ?? false
+    };
+    return map;
+  }, {});
+};
+
+const persistCardState = () => {
+  try {
+    localStorage.setItem(CARD_STORAGE_KEY, JSON.stringify(cardState.value));
+  } catch (e) {
+    console.warn("Failed to persist card layout", e);
+  }
+};
+
+const getOrder = (id: string) => cardState.value[id]?.order ?? defaultOrderMap[id] ?? 0;
+const isCollapsed = (id: string) => cardState.value[id]?.collapsed ?? false;
+
+const toggleCollapse = (id: string) => {
+  const current = cardState.value[id] ?? { order: defaultOrderMap[id] ?? 0, collapsed: false };
+  cardState.value = {
+    ...cardState.value,
+    [id]: { ...current, collapsed: !current.collapsed }
+  };
+  persistCardState();
+};
+
+const moveCard = (id: string, delta: number) => {
+  const ordered = dashboardCards
+    .filter((c) => c.show())
+    .map((c) => ({ ...c, order: getOrder(c.id) }))
+    .sort((a, b) => a.order - b.order);
+
+  const index = ordered.findIndex((c) => c.id === id);
+  if (index === -1) return;
+  const targetIndex = index + delta;
+  if (targetIndex < 0 || targetIndex >= ordered.length) return;
+
+  const temp = ordered[index].order;
+  ordered[index].order = ordered[targetIndex].order;
+  ordered[targetIndex].order = temp;
+
+  ordered.forEach((c, idx) => {
+    cardState.value[c.id] = { order: idx, collapsed: cardState.value[c.id]?.collapsed ?? false };
+  });
+
+  persistCardState();
+};
+
+const orderedCards = computed(() => {
+  return dashboardCards
+    .filter((c) => c.show())
+    .map((c) => ({ ...c, order: getOrder(c.id) }))
+    .sort((a, b) => a.order - b.order);
+});
 
 const refreshAll = async () => {
   await Promise.all([
@@ -64,6 +156,7 @@ const { enabled: autoRefreshEnabled, countdown, toggle: toggleAutoRefresh } = us
 );
 
 onMounted(async () => {
+  loadCardState();
   await refreshAll();
 });
 
@@ -424,539 +517,551 @@ function sparkPath(data: number[], width = 160, height = 40) {
         <RcSearchBar />
       </div>
 
-      <!-- Network Pulse (promoted) -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-            Network Pulse
-          </h2>
-          <span class="text-[11px] text-slate-500">Live refresh every 10s</span>
-        </div>
-        <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-          <article class="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col gap-1">
-            <div class="text-xs uppercase tracking-wider text-slate-400">Status</div>
-            <div class="text-xl font-semibold flex items-center gap-2" :class="networkStatus.textClass">
-              <span class="w-2 h-2 rounded-full animate-pulse" :class="networkStatus.indicator"></span>
-              {{ networkStatus.label }}
-            </div>
-            <div class="text-[11px] text-slate-400">{{ networkStatus.subtext }}</div>
-          </article>
-          <article class="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 flex flex-col gap-1">
-            <div class="text-xs uppercase tracking-wider text-slate-400">Chain ID</div>
-            <div class="text-xl font-semibold text-white truncate">{{ info.chainId || '—' }}</div>
-            <div class="text-[11px] text-slate-500">REST {{ REST_DISPLAY }} · RPC {{ RPC_DISPLAY }}</div>
-          </article>
-          <article class="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 flex flex-col gap-1">
-            <div class="text-xs uppercase tracking-wider text-slate-400">Total Blocks</div>
-            <div class="text-2xl font-semibold text-white">{{ latestBlockHeightDisplay }}</div>
-            <div class="text-[11px] text-slate-500">Synced height</div>
-          </article>
-          <article class="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-4 flex flex-col gap-1">
-            <div class="text-xs uppercase tracking-wider text-slate-400">Total Txs</div>
-            <div class="text-2xl font-semibold text-white">{{ totalTxsDisplay }}</div>
-            <div class="text-[11px] text-slate-500">Rolling counter</div>
-          </article>
-        </div>
-      </div>
-
-      <!-- Chain Health & Fees -->
-      <div class="grid gap-3 xl:grid-cols-3">
-        <article class="card border-emerald-500/30 bg-emerald-500/5">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-sm font-semibold text-emerald-100">Chain Health</h2>
-            <span class="text-[11px] text-slate-400">Live sample</span>
-          </div>
-          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
-            <div>
-              <div class="text-[11px] uppercase tracking-wider text-slate-400">Avg Block Time</div>
-              <div class="text-base font-semibold text-slate-100">{{ avgBlockTimeDisplay }}</div>
-            </div>
-            <div>
-              <div class="text-[11px] uppercase tracking-wider text-slate-400">Online Validators</div>
-              <div class="text-base font-semibold text-slate-100">{{ onlineValidators || '—' }}</div>
-            </div>
-            <div>
-              <div class="text-[11px] uppercase tracking-wider text-slate-400">Block Sample</div>
-              <div class="text-base font-semibold text-slate-100">{{ blockSampleLabel }}</div>
-            </div>
-          </div>
-        </article>
-
-        <article class="card border-cyan-500/30 bg-cyan-500/5">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-sm font-semibold text-cyan-100">Mempool</h2>
-            <button class="btn text-[11px]" :disabled="loadingMempool" @click="refreshMempool">{{ loadingMempool ? '...' : 'Refresh' }}</button>
-          </div>
-          <div class="text-sm text-slate-200">Pending Txs: <span class="font-semibold text-white">{{ mempool.count }}</span></div>
-          <div class="text-xs text-slate-400">Size: {{ (mempool.totalBytes / 1024).toFixed(1) }} KB</div>
-          <div v-if="mempoolError" class="text-[11px] text-rose-300 mt-2">{{ mempoolError }}</div>
-        </article>
-
-        <article class="card border-amber-500/30 bg-amber-500/5">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-sm font-semibold text-amber-100">Fee Estimator</h2>
-            <span class="text-[11px] text-slate-400">Recent txs</span>
-          </div>
-          <div v-if="!gasPriceTiers" class="text-xs text-slate-400">Not enough fee data yet</div>
-          <div v-else class="grid grid-cols-3 gap-2 text-sm">
-            <div>
-              <div class="text-[11px] uppercase tracking-wider text-slate-500">Low</div>
-              <div class="font-semibold text-slate-100">{{ gasPriceDisplay(gasPriceTiers.low) }}</div>
-            </div>
-            <div>
-              <div class="text-[11px] uppercase tracking-wider text-slate-500">Mid</div>
-              <div class="font-semibold text-slate-100">{{ gasPriceDisplay(gasPriceTiers.mid) }}</div>
-            </div>
-            <div>
-              <div class="text-[11px] uppercase tracking-wider text-slate-500">High</div>
-              <div class="font-semibold text-slate-100">{{ gasPriceDisplay(gasPriceTiers.high) }}</div>
-            </div>
-          </div>
-        </article>
-      </div>
-
-      <div class="grid gap-4 xl:grid-cols-4">
-        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-800/40 p-5 shadow-xl shadow-black/30 flex flex-col gap-4 xl:col-span-2">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.35em] text-emerald-200">
-            <span>Latest Block</span>
-            <span class="text-[10px] text-slate-400 normal-case tracking-normal">{{ latestBlockTimeRelative }}</span>
-          </div>
-          <div class="flex flex-wrap items-end gap-3">
-            <div class="text-4xl font-bold text-white leading-none">
-              {{ loadingInfo ? '…' : latestBlockHeightDisplay }}
-            </div>
-            <span class="px-3 py-1 rounded-full text-[11px] uppercase tracking-[0.2em] border border-emerald-400/50 text-emerald-200">
-              {{ network === 'mainnet' ? 'Mainnet' : 'Testnet' }}
-            </span>
-          </div>
-          <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-xs text-slate-400">
-            <div>
-              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Timestamp</dt>
-              <dd class="text-sm text-slate-100 font-mono">{{ latestBlockTimeAbsolute }}</dd>
-            </div>
-            <div>
-              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Proposer</dt>
-              <dd class="text-sm text-slate-100 truncate" :title="latestProposerDisplay">{{ latestProposerShort }}</dd>
-            </div>
-            <div>
-              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Used</dt>
-              <dd class="text-sm text-slate-100">
-                {{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}
-              </dd>
-            </div>
-            <div>
-              <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Wanted</dt>
-              <dd class="text-sm text-slate-100">
-                {{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}
-              </dd>
-            </div>
-          </dl>
-        </article>
-
-        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 p-5 shadow-lg flex flex-col gap-3">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-emerald-200">
-            <span>Live Block Time</span>
-            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ blockSampleLabel }}</span>
-          </div>
-          <div class="text-4xl font-semibold text-white">
-            {{ avgBlockTimeDisplay }}
-          </div>
-          <svg :width="240" :height="60" class="-mx-2">
-            <path :d="sparkPath(blockTimeDeltas, 240, 60)" stroke="rgb(16 185 129)" fill="none" stroke-width="2" stroke-linecap="round" />
-          </svg>
-        </article>
-
-        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-5 shadow-lg flex flex-col gap-3">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-indigo-200">
-            <span>Tx Throughput</span>
-            <span class="text-[10px] text-slate-500 font-normal tracking-normal">20-block window</span>
-          </div>
-          <div class="text-4xl font-semibold text-white">
-            {{ avgTxPerBlockDisplay }}
-          </div>
-          <div class="text-[11px] text-slate-400">
-            Latest block: <span class="text-slate-100">{{ latestBlockSummary?.txs ?? 0 }}</span> txs · Window total: <span class="text-slate-100">{{ totalTxsWindowDisplay }}</span>
-          </div>
-          <svg :width="240" :height="60" class="-mx-2">
-            <path :d="sparkPath(txsPerBlock, 240, 60)" stroke="rgb(99 102 241)" fill="none" stroke-width="2" stroke-linecap="round" />
-          </svg>
-        </article>
-
-        <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-5 shadow-lg flex flex-col gap-3">
-          <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-amber-200">
-            <span>Gas Utilization</span>
-            <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ latestGasUtilizationDisplay }}</span>
-          </div>
-          <div class="text-4xl font-semibold text-white">
-            {{ latestGasUtilizationDisplay }}
-          </div>
-          <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
-            <div
-              class="h-full bg-gradient-to-r from-amber-400 to-orange-500"
-              :style="{ width: latestGasUtilizationPercent !== null ? `${latestGasUtilizationPercent}%` : '6%' }"
-            ></div>
-          </div>
-          <div class="text-[11px] text-slate-400 flex flex-col gap-1">
-            <span>Gas Used: <span class="text-slate-100">{{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}</span></span>
-            <span>Gas Wanted: <span class="text-slate-100">{{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}</span></span>
-          </div>
-        </article>
-      </div>
-
-      <div class="grid gap-3 xl:grid-cols-2 min-w-0">
-        <div class="card min-w-0 overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-sm font-semibold text-slate-100">Latest blocks</h2>
-            <div class="flex items-center gap-2">
-              <button
-                class="btn text-xs"
-                :class="autoRefreshEnabled ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-                @click="toggleAutoRefresh"
-              >
-                {{ autoRefreshEnabled ? `Auto (${countdown}s)` : "Paused" }}
-              </button>
-              <div class="flex items-center gap-1">
-                <button class="btn text-[10px]" :disabled="blockPage === 0" @click="prevBlocksPage">Prev</button>
-                <span class="text-[11px] text-slate-400">Page {{ blockPage + 1 }}</span>
-                <button class="btn text-[10px]" :disabled="!canNextBlocks" @click="nextBlocksPage">Next</button>
-              </div>
-              <button class="btn text-xs" @click="router.push({ name: 'blocks' })">
-                View all
+      <div class="flex flex-col gap-4">
+        <div
+          v-for="card in orderedCards"
+          :key="card.id"
+          class="card"
+          :style="{ order: getOrder(card.id) }"
+        >
+          <div class="flex items-center justify-between mb-3">
+            <h2 class="text-sm font-semibold text-slate-100">{{ card.title }}</h2>
+            <div class="flex items-center gap-1">
+              <button class="btn text-[10px]" @click="moveCard(card.id, -1)">↑</button>
+              <button class="btn text-[10px]" @click="moveCard(card.id, 1)">↓</button>
+              <button class="btn text-[10px]" @click="toggleCollapse(card.id)">
+                {{ isCollapsed(card.id) ? 'Expand' : 'Collapse' }}
               </button>
             </div>
           </div>
-          <div v-if="loadingBlocks" class="text-xs text-slate-400">
-            Loading latest blocks...
-          </div>
-          <div v-else class="overflow-x-auto">
-            <table class="table min-w-full">
-            <colgroup>
-              <col style="width: 120px" />
-              <col />
-              <col style="width: 90px" />
-              <col style="width: 220px" />
-            </colgroup>
-            <thead>
-              <tr class="text-slate-300 text-xs">
-                <th>Height</th>
-                <th>Hash</th>
-                <th>Txs</th>
-                <th>Time</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="b in blocks"
-                :key="b.height"
-                class="cursor-pointer hover:bg-white/5 transition-colors"
-                @click="router.push({ name: 'block-detail', params: { height: b.height } })"
-              >
-                <td class="font-mono text-[12px] py-2">{{ b.height }}</td>
-                <td class="font-mono text-[12px] py-2">
-                  <div class="flex items-center gap-2 whitespace-nowrap">
-                    <span class="truncate max-w-[180px] inline-block align-middle">{{ shortString(b.hash, 16) }}</span>
-                    <button class="btn text-[10px]" @click.stop="copy(b.hash)">Copy</button>
+
+          <div v-show="!isCollapsed(card.id)">
+            <template v-if="card.id === 'network'">
+              <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+                <article class="rounded-2xl border border-emerald-500/20 bg-emerald-500/5 p-4 flex flex-col gap-1">
+                  <div class="text-xs uppercase tracking-wider text-slate-400">Status</div>
+                  <div class="text-xl font-semibold flex items-center gap-2" :class="networkStatus.textClass">
+                    <span class="w-2 h-2 rounded-full animate-pulse" :class="networkStatus.indicator"></span>
+                    {{ networkStatus.label }}
                   </div>
-                </td>
-                <td class="text-xs py-2">
-                  <span class="badge" :class="b.txs > 0 ? 'border-cyan-400/60 text-cyan-200' : ''">
-                    {{ b.txs }}
-                  </span>
-                </td>
-                <td class="text-xs text-slate-300 py-2 whitespace-nowrap">
-                  <span v-if="b.time">{{ dayjs(b.time).format('YYYY-MM-DD HH:mm:ss') }}</span>
-                  <span v-else>-</span>
-                </td>
-              </tr>
-            </tbody>
-            </table>
-          </div>
-        </div>
-
-        <div class="card min-w-0 overflow-hidden">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-sm font-semibold text-slate-100">
-              Recent transactions
-            </h2>
-            <div class="flex items-center gap-2">
-              <div class="flex items-center gap-1">
-                <button class="btn text-[10px]" :disabled="txPage === 0" @click="prevTxPage">Prev</button>
-                <span class="text-[11px] text-slate-400">Page {{ txPage + 1 }}</span>
-                <button class="btn text-[10px]" :disabled="txs.length < txPageSize" @click="nextTxPage">Next</button>
+                  <div class="text-[11px] text-slate-400">{{ networkStatus.subtext }}</div>
+                </article>
+                <article class="rounded-2xl border border-indigo-500/20 bg-indigo-500/5 p-4 flex flex-col gap-1">
+                  <div class="text-xs uppercase tracking-wider text-slate-400">Chain ID</div>
+                  <div class="text-xl font-semibold text-white truncate">{{ info.chainId || '—' }}</div>
+                  <div class="text-[11px] text-slate-500">REST {{ REST_DISPLAY }} · RPC {{ RPC_DISPLAY }}</div>
+                </article>
+                <article class="rounded-2xl border border-blue-500/20 bg-blue-500/5 p-4 flex flex-col gap-1">
+                  <div class="text-xs uppercase tracking-wider text-slate-400">Total Blocks</div>
+                  <div class="text-2xl font-semibold text-white">{{ latestBlockHeightDisplay }}</div>
+                  <div class="text-[11px] text-slate-500">Synced height</div>
+                </article>
+                <article class="rounded-2xl border border-purple-500/20 bg-purple-500/5 p-4 flex flex-col gap-1">
+                  <div class="text-xs uppercase tracking-wider text-slate-400">Total Txs</div>
+                  <div class="text-2xl font-semibold text-white">{{ totalTxsDisplay }}</div>
+                  <div class="text-[11px] text-slate-500">Rolling counter</div>
+                </article>
               </div>
-              <button class="btn text-xs" @click="router.push({ name: 'txs' })">
-                View all txs
-              </button>
-            </div>
-          </div>
-          <div v-if="loadingTxs" class="text-xs text-slate-400">
-            Loading recent transactions...
-          </div>
-          <div v-else-if="txs.length === 0" class="text-xs text-slate-400 py-4 text-center">
-            <div class="mb-2"></div>
-            <div>No transactions yet</div>
-            <div class="text-[11px] mt-1">
-              Generate some activity using the CLI or faucet
-            </div>
-          </div>
-          <div v-else class="overflow-x-auto">
-            <table class="table min-w-full">
-            <thead>
-              <tr class="text-slate-300 text-xs">
-                <th>Hash</th>
-                <th>Height</th>
-                <th>Code</th>
-                <th>Gas</th>
-              </tr>
-            </thead>
-            <tbody>
-              <tr
-                v-for="t in txs"
-                :key="t.hash"
-                class="cursor-pointer"
-                @click="goToTx(t.hash)"
-              >
-                <td class="font-mono text-[11px]">
-                  {{ shortString(t.hash, 10) }}
-                </td>
-                <td class="font-mono text-[11px]">{{ t.height }}</td>
-                <td class="text-xs">
-                  <span
-                    class="badge"
-                    :class="t.code === 0 ? 'border-emerald-400/60' : 'border-rose-400/60 text-rose-200'"
+            </template>
+
+            <template v-else-if="card.id === 'health'">
+              <div class="grid gap-3 xl:grid-cols-3">
+                <article class="border border-emerald-500/30 bg-emerald-500/5 rounded-2xl p-4">
+                  <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-sm font-semibold text-emerald-100">Chain Health</h2>
+                    <span class="text-[11px] text-slate-400">Live sample</span>
+                  </div>
+                  <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <div class="text-[11px] uppercase tracking-wider text-slate-400">Avg Block Time</div>
+                      <div class="text-base font-semibold text-slate-100">{{ avgBlockTimeDisplay }}</div>
+                    </div>
+                    <div>
+                      <div class="text-[11px] uppercase tracking-wider text-slate-400">Online Validators</div>
+                      <div class="text-base font-semibold text-slate-100">{{ onlineValidators || '—' }}</div>
+                    </div>
+                    <div>
+                      <div class="text-[11px] uppercase tracking-wider text-slate-400">Block Sample</div>
+                      <div class="text-base font-semibold text-slate-100">{{ blockSampleLabel }}</div>
+                    </div>
+                  </div>
+                </article>
+
+                <article class="border border-cyan-500/30 bg-cyan-500/5 rounded-2xl p-4">
+                  <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-sm font-semibold text-cyan-100">Mempool</h2>
+                    <button class="btn text-[11px]" :disabled="loadingMempool" @click="refreshMempool">{{ loadingMempool ? '...' : 'Refresh' }}</button>
+                  </div>
+                  <div class="text-sm text-slate-200">Pending Txs: <span class="font-semibold text-white">{{ mempool.count }}</span></div>
+                  <div class="text-xs text-slate-400">Size: {{ (mempool.totalBytes / 1024).toFixed(1) }} KB</div>
+                  <div v-if="mempoolError" class="text-[11px] text-rose-300 mt-2">{{ mempoolError }}</div>
+                </article>
+
+                <article class="border border-amber-500/30 bg-amber-500/5 rounded-2xl p-4">
+                  <div class="flex items-center justify-between mb-2">
+                    <h2 class="text-sm font-semibold text-amber-100">Fee Estimator</h2>
+                    <span class="text-[11px] text-slate-400">Recent txs</span>
+                  </div>
+                  <div v-if="!gasPriceTiers" class="text-xs text-slate-400">Not enough fee data yet</div>
+                  <div v-else class="grid grid-cols-3 gap-2 text-sm">
+                    <div>
+                      <div class="text-[11px] uppercase tracking-wider text-slate-500">Low</div>
+                      <div class="font-semibold text-slate-100">{{ gasPriceDisplay(gasPriceTiers.low) }}</div>
+                    </div>
+                    <div>
+                      <div class="text-[11px] uppercase tracking-wider text-slate-500">Mid</div>
+                      <div class="font-semibold text-slate-100">{{ gasPriceDisplay(gasPriceTiers.mid) }}</div>
+                    </div>
+                    <div>
+                      <div class="text-[11px] uppercase tracking-wider text-slate-500">High</div>
+                      <div class="font-semibold text-slate-100">{{ gasPriceDisplay(gasPriceTiers.high) }}</div>
+                    </div>
+                  </div>
+                </article>
+              </div>
+            </template>
+
+            <template v-else-if="card.id === 'block-stats'">
+              <div class="grid gap-4 xl:grid-cols-4">
+                <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-800/40 p-5 shadow-xl shadow-black/30 flex flex-col gap-4 xl:col-span-2">
+                  <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.35em] text-emerald-200">
+                    <span>Latest Block</span>
+                    <span class="text-[10px] text-slate-400 normal-case tracking-normal">{{ latestBlockTimeRelative }}</span>
+                  </div>
+                  <div class="flex flex-wrap items-end gap-3">
+                    <div class="text-4xl font-bold text-white leading-none">
+                      {{ loadingInfo ? '…' : latestBlockHeightDisplay }}
+                    </div>
+                    <span class="px-3 py-1 rounded-full text-[11px] uppercase tracking-[0.2em] border border-emerald-400/50 text-emerald-200">
+                      {{ network === 'mainnet' ? 'Mainnet' : 'Testnet' }}
+                    </span>
+                  </div>
+                  <dl class="grid grid-cols-2 gap-x-4 gap-y-3 text-xs text-slate-400">
+                    <div>
+                      <dt class="uppercase tracking-wider text-[10px] text-slate-500">Timestamp</dt>
+                      <dd class="text-sm text-slate-100 font-mono">{{ latestBlockTimeAbsolute }}</dd>
+                    </div>
+                    <div>
+                      <dt class="uppercase tracking-wider text-[10px] text-slate-500">Proposer</dt>
+                      <dd class="text-sm text-slate-100 truncate" :title="latestProposerDisplay">{{ latestProposerShort }}</dd>
+                    </div>
+                    <div>
+                      <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Used</dt>
+                      <dd class="text-sm text-slate-100">
+                        {{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}
+                      </dd>
+                    </div>
+                    <div>
+                      <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Wanted</dt>
+                      <dd class="text-sm text-slate-100">
+                        {{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}
+                      </dd>
+                    </div>
+                  </dl>
+                </article>
+
+                <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10 p-5 shadow-lg flex flex-col gap-3">
+                  <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-emerald-200">
+                    <span>Live Block Time</span>
+                    <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ blockSampleLabel }}</span>
+                  </div>
+                  <div class="text-4xl font-semibold text-white">
+                    {{ avgBlockTimeDisplay }}
+                  </div>
+                  <svg :width="240" :height="60" class="-mx-2">
+                    <path :d="sparkPath(blockTimeDeltas, 240, 60)" stroke="rgb(16 185 129)" fill="none" stroke-width="2" stroke-linecap="round" />
+                  </svg>
+                </article>
+
+                <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-5 shadow-lg flex flex-col gap-3">
+                  <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-indigo-200">
+                    <span>Tx Throughput</span>
+                    <span class="text-[10px] text-slate-500 font-normal tracking-normal">20-block window</span>
+                  </div>
+                  <div class="text-4xl font-semibold text-white">
+                    {{ avgTxPerBlockDisplay }}
+                  </div>
+                  <div class="text-[11px] text-slate-400">
+                    Latest block: <span class="text-slate-100">{{ latestBlockSummary?.txs ?? 0 }}</span> txs · Window total: <span class="text-slate-100">{{ totalTxsWindowDisplay }}</span>
+                  </div>
+                  <svg :width="240" :height="60" class="-mx-2">
+                    <path :d="sparkPath(txsPerBlock, 240, 60)" stroke="rgb(99 102 241)" fill="none" stroke-width="2" stroke-linecap="round" />
+                  </svg>
+                </article>
+
+                <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-amber-500/10 to-orange-500/10 p-5 shadow-lg flex flex-col gap-3">
+                  <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-amber-200">
+                    <span>Gas Utilization</span>
+                    <span class="text-[10px] text-slate-600 dark:text-slate-300 font-normal tracking-normal">{{ latestGasUtilizationDisplay }}</span>
+                  </div>
+                  <div class="text-4xl font-semibold text-white">
+                    {{ latestGasUtilizationDisplay }}
+                  </div>
+                  <div class="w-full h-2 bg-white/10 rounded-full overflow-hidden">
+                    <div
+                      class="h-full bg-gradient-to-r from-amber-400 to-orange-500"
+                      :style="{ width: latestGasUtilizationPercent !== null ? `${latestGasUtilizationPercent}%` : '6%' }"
+                    ></div>
+                  </div>
+                  <div class="text-[11px] text-slate-400 flex flex-col gap-1">
+                    <span>Gas Used: <span class="text-slate-100">{{ latestBlockSummary?.gasUsed?.toLocaleString?.() ?? '—' }}</span></span>
+                    <span>Gas Wanted: <span class="text-slate-100">{{ latestBlockSummary?.gasWanted?.toLocaleString?.() ?? '—' }}</span></span>
+                  </div>
+                </article>
+              </div>
+            </template>
+
+            <template v-else-if="card.id === 'blocks'">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="text-sm font-semibold text-slate-100">Latest blocks</h2>
+                <div class="flex items-center gap-2">
+                  <button
+                    class="btn text-xs"
+                    :class="autoRefreshEnabled ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+                    @click="toggleAutoRefresh"
                   >
-                    {{ t.code ?? 0 }}
-                  </span>
-                </td>
-                <td class="text-[11px] text-slate-300">
-                  {{ t.gasUsed || '-' }} / {{ t.gasWanted || '-' }}
-                </td>
-              </tr>
-            </tbody>
-            </table>
-          </div>
-        </div>
-      </div>
-
-      <div class="grid gap-3 xl:grid-cols-2 min-w-0">
-        <div class="card">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-              <span class="text-xl">🎯</span>
-              Recent Game Sessions
-            </h2>
-          </div>
-          <div v-if="loadingArcade" class="text-xs text-slate-400">
-            Loading sessions...
-          </div>
-          <div v-else-if="sessions.length === 0" class="text-xs text-slate-400 py-4 text-center">
-            <div class="mb-2 text-2xl">🎯</div>
-            <div>No game sessions yet</div>
-            <div class="text-[11px] mt-1">
-              Start a game using MsgInsertCoin and MsgStartSession
-            </div>
-          </div>
-          <div v-else class="space-y-2">
-            <div
-              v-for="session in sessions"
-              :key="session.session_id"
-              class="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 hover:border-purple-400/40 transition-colors"
-            >
-              <div class="flex items-start justify-between mb-2">
-                <div>
-                  <div class="text-xs font-bold text-slate-100">{{ session.game_id }}</div>
-                  <div class="text-[11px] text-slate-400 font-mono">{{ shortString(session.player, 20) }}</div>
+                    {{ autoRefreshEnabled ? `Auto (${countdown}s)` : "Paused" }}
+                  </button>
+                  <div class="flex items-center gap-1">
+                    <button class="btn text-[10px]" :disabled="blockPage === 0" @click="prevBlocksPage">Prev</button>
+                    <span class="text-[11px] text-slate-400">Page {{ blockPage + 1 }}</span>
+                    <button class="btn text-[10px]" :disabled="!canNextBlocks" @click="nextBlocksPage">Next</button>
+                  </div>
+                  <button class="btn text-xs" @click="router.push({ name: 'blocks' })">
+                    View all
+                  </button>
                 </div>
-                <span
-                  class="badge text-[10px]"
-                  :class="
-                    session.status === 'active'
-                      ? 'text-emerald-200 border-emerald-500/40'
-                      : 'text-slate-300 border-slate-500/40'
-                  "
-                >
-                  {{ session.status }}
-                </span>
               </div>
-              <div class="flex items-center justify-between text-[11px]">
-                <span class="text-slate-300">Score: <span class="text-indigo-300 font-bold">{{ session.score }}</span></span>
-                <span class="text-slate-400">Level {{ session.level_reached }}</span>
+              <div v-if="loadingBlocks" class="text-xs text-slate-400">
+                Loading latest blocks...
               </div>
-            </div>
-          </div>
-        </div>
+              <div v-else class="overflow-x-auto">
+                <table class="table min-w-full">
+                  <colgroup>
+                    <col style="width: 120px" />
+                    <col />
+                    <col style="width: 90px" />
+                    <col style="width: 220px" />
+                  </colgroup>
+                  <thead>
+                    <tr class="text-slate-300 text-xs">
+                      <th>Height</th>
+                      <th>Hash</th>
+                      <th>Txs</th>
+                      <th>Time</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="b in blocks"
+                      :key="b.height"
+                      class="cursor-pointer hover:bg-white/5 transition-colors"
+                      @click="router.push({ name: 'block-detail', params: { height: b.height } })"
+                    >
+                      <td class="font-mono text-[12px] py-2">{{ b.height }}</td>
+                      <td class="font-mono text-[12px] py-2">
+                        <div class="flex items-center gap-2 whitespace-nowrap">
+                          <span class="truncate max-w-[180px] inline-block align-middle">{{ shortString(b.hash, 16) }}</span>
+                          <button class="btn text-[10px]" @click.stop="copy(b.hash)">Copy</button>
+                        </div>
+                      </td>
+                      <td class="text-xs py-2">
+                        <span class="badge" :class="b.txs > 0 ? 'border-cyan-400/60 text-cyan-200' : ''">
+                          {{ b.txs }}
+                        </span>
+                      </td>
+                      <td class="text-xs text-slate-300 py-2 whitespace-nowrap">
+                        <span v-if="b.time">{{ dayjs(b.time).format('YYYY-MM-DD HH:mm:ss') }}</span>
+                        <span v-else>-</span>
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
 
-        <div class="card">
-          <div class="flex items-center justify-between mb-2">
-            <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-              <span class="text-xl">🏅</span>
-              Latest Achievements
-            </h2>
-          </div>
-          <div v-if="loadingArcade" class="text-xs text-slate-400">
-            Loading achievements...
-          </div>
-          <div v-else-if="achievements.length === 0" class="text-xs text-slate-400 py-4 text-center">
-            <div class="mb-2 text-2xl">🏅</div>
-            <div>No achievements unlocked yet</div>
-            <div class="text-[11px] mt-1">
-              Unlock achievements by playing games!
-            </div>
-          </div>
-          <div v-else class="space-y-2">
-            <div
-              v-for="achievement in achievements"
-              :key="achievement.achievement_id"
-              class="p-3 rounded-lg bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:border-yellow-400/40 transition-colors"
-            >
-              <div class="flex items-start gap-3">
-                <div class="text-2xl">🏅</div>
-                <div class="flex-1">
-                  <div class="text-xs font-bold text-slate-100">{{ achievement.name }}</div>
-                  <div class="text-[11px] text-slate-300 mb-1">{{ achievement.description }}</div>
-                  <div class="flex items-center justify-between">
-                    <div class="text-[11px] text-slate-400 font-mono">{{ shortString(achievement.player, 16) }}</div>
-                    <div class="text-[10px] text-slate-500">{{ formatTime(achievement.unlocked_at) }}</div>
+            <template v-else-if="card.id === 'txs'">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="text-sm font-semibold text-slate-100">
+                  Recent transactions
+                </h2>
+                <div class="flex items-center gap-2">
+                  <div class="flex items-center gap-1">
+                    <button class="btn text-[10px]" :disabled="txPage === 0" @click="prevTxPage">Prev</button>
+                    <span class="text-[11px] text-slate-400">Page {{ txPage + 1 }}</span>
+                    <button class="btn text-[10px]" :disabled="txs.length < txPageSize" @click="nextTxPage">Next</button>
+                  </div>
+                  <button class="btn text-xs" @click="router.push({ name: 'txs' })">
+                    View all txs
+                  </button>
+                </div>
+              </div>
+              <div v-if="loadingTxs" class="text-xs text-slate-400">
+                Loading recent transactions...
+              </div>
+              <div v-else-if="txs.length === 0" class="text-xs text-slate-400 py-4 text-center">
+                <div class="mb-2"></div>
+                <div>No transactions yet</div>
+                <div class="text-[11px] mt-1">
+                  Generate some activity using the CLI or faucet
+                </div>
+              </div>
+              <div v-else class="overflow-x-auto">
+                <table class="table min-w-full">
+                  <thead>
+                    <tr class="text-slate-300 text-xs">
+                      <th>Hash</th>
+                      <th>Height</th>
+                      <th>Code</th>
+                      <th>Gas</th>
+                    </tr>
+                  </thead>
+                  <tbody>
+                    <tr
+                      v-for="t in txs"
+                      :key="t.hash"
+                      class="cursor-pointer"
+                      @click="goToTx(t.hash)"
+                    >
+                      <td class="font-mono text-[11px]">
+                        {{ shortString(t.hash, 10) }}
+                      </td>
+                      <td class="font-mono text-[11px]">{{ t.height }}</td>
+                      <td class="text-xs">
+                        <span
+                          class="badge"
+                          :class="t.code === 0 ? 'border-emerald-400/60' : 'border-rose-400/60 text-rose-200'"
+                        >
+                          {{ t.code ?? 0 }}
+                        </span>
+                      </td>
+                      <td class="text-[11px] text-slate-300">
+                        {{ t.gasUsed || '-' }} / {{ t.gasWanted || '-' }}
+                      </td>
+                    </tr>
+                  </tbody>
+                </table>
+              </div>
+            </template>
+
+            <template v-else-if="card.id === 'sessions'">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <span class="text-xl">🎯</span>
+                  Recent Game Sessions
+                </h2>
+              </div>
+              <div v-if="loadingArcade" class="text-xs text-slate-400">
+                Loading sessions...
+              </div>
+              <div v-else-if="sessions.length === 0" class="text-xs text-slate-400 py-4 text-center">
+                <div class="mb-2 text-2xl">🎯</div>
+                <div>No game sessions yet</div>
+                <div class="text-[11px] mt-1">
+                  Start a game using MsgInsertCoin and MsgStartSession
+                </div>
+              </div>
+              <div v-else class="space-y-2">
+                <div
+                  v-for="session in sessions"
+                  :key="session.session_id"
+                  class="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 hover:border-purple-400/40 transition-colors"
+                >
+                  <div class="flex items-start justify-between mb-2">
+                    <div>
+                      <div class="text-xs font-bold text-slate-100">{{ session.game_id }}</div>
+                      <div class="text-[11px] text-slate-400 font-mono">{{ shortString(session.player, 20) }}</div>
+                    </div>
+                    <span
+                      class="badge text-[10px]"
+                      :class="
+                        session.status === 'active'
+                          ? 'text-emerald-200 border-emerald-500/40'
+                          : 'text-slate-300 border-slate-500/40'
+                      "
+                    >
+                      {{ session.status }}
+                    </span>
+                  </div>
+                  <div class="flex items-center justify-between text-[11px]">
+                    <span class="text-slate-300">Score: <span class="text-indigo-300 font-bold">{{ session.score }}</span></span>
+                    <span class="text-slate-400">Level {{ session.level_reached }}</span>
                   </div>
                 </div>
               </div>
-            </div>
+            </template>
+
+            <template v-else-if="card.id === 'achievements'">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <span class="text-xl">🏅</span>
+                  Latest Achievements
+                </h2>
+              </div>
+              <div v-if="loadingArcade" class="text-xs text-slate-400">
+                Loading achievements...
+              </div>
+              <div v-else-if="achievements.length === 0" class="text-xs text-slate-400 py-4 text-center">
+                <div class="mb-2 text-2xl">🏅</div>
+                <div>No achievements unlocked yet</div>
+                <div class="text-[11px] mt-1">
+                  Unlock achievements by playing games!
+                </div>
+              </div>
+              <div v-else class="space-y-2">
+                <div
+                  v-for="achievement in achievements"
+                  :key="achievement.achievement_id"
+                  class="p-3 rounded-lg bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:border-yellow-400/40 transition-colors"
+                >
+                  <div class="flex items-start gap-3">
+                    <div class="text-2xl">🏅</div>
+                    <div class="flex-1">
+                      <div class="text-xs font-bold text-slate-100">{{ achievement.name }}</div>
+                      <div class="text-[11px] text-slate-300 mb-1">{{ achievement.description }}</div>
+                      <div class="flex items-center justify-between">
+                        <div class="text-[11px] text-slate-400 font-mono">{{ shortString(achievement.player, 16) }}</div>
+                        <div class="text-[10px] text-slate-500">{{ formatTime(achievement.unlocked_at) }}</div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              </div>
+            </template>
+
+            <template v-else-if="card.id === 'features'">
+              <div class="flex items-center justify-between mb-4">
+                <h2 class="text-lg font-bold text-white flex items-center gap-2">
+                  <span>✨</span>
+                  RetroChain Feature Pack
+                </h2>
+                <span class="text-[11px] text-slate-400">Explorer-native perks</span>
+              </div>
+              <div class="grid gap-3 md:grid-cols-2">
+                <article
+                  v-for="feature in featureHighlights"
+                  :key="feature.title"
+                  class="rounded-2xl border border-white/10 bg-white/5 p-4 flex gap-3"
+                >
+                  <div class="text-2xl">{{ feature.icon }}</div>
+                  <div>
+                    <h3 class="text-sm font-semibold text-white">{{ feature.title }}</h3>
+                    <p class="text-xs text-slate-300 leading-relaxed">{{ feature.body }}</p>
+                  </div>
+                </article>
+              </div>
+            </template>
+
+            <template v-else-if="card.id === 'arcade'">
+              <div class="flex items-center justify-between mb-3">
+                <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <span class="text-xl">🎮</span>
+                  Arcade Games
+                </h2>
+              </div>
+              <div v-if="loadingArcade" class="text-xs text-slate-400">
+                Loading arcade games...
+              </div>
+              <div v-else-if="games.length === 0" class="text-xs text-slate-400 py-4 text-center">
+                <div class="mb-2 text-2xl">🎮</div>
+                <div>No arcade games registered yet</div>
+                <div class="text-[11px] mt-1">
+                  Register games using the arcade module CLI
+                </div>
+              </div>
+              <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+                <RcArcadeGameCard
+                  v-for="game in games.slice(0, 4)"
+                  :key="game.game_id"
+                  :game="game"
+                  @click="() => {}"
+                />
+              </div>
+            </template>
+
+            <template v-else-if="card.id === 'leaderboard'">
+              <div class="flex items-center justify-between mb-2">
+                <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
+                  <span class="text-xl">🏆</span>
+                  Global Leaderboard
+                </h2>
+              </div>
+              <div v-if="loadingArcade" class="text-xs text-slate-400">
+                Loading leaderboard...
+              </div>
+              <div v-else-if="leaderboard.length === 0" class="text-xs text-slate-400 py-4 text-center">
+                <div class="mb-2 text-2xl">🏆</div>
+                <div>No leaderboard entries yet</div>
+                <div class="text-[11px] mt-1">
+                  Start playing games to appear on the leaderboard!
+                </div>
+              </div>
+              <table v-else class="table">
+                <thead>
+                  <tr class="text-slate-300 text-xs">
+                    <th>Rank</th>
+                    <th>Player</th>
+                    <th>Score</th>
+                    <th>Games</th>
+                  </tr>
+                </thead>
+                <tbody>
+                  <tr
+                    v-for="entry in leaderboard"
+                    :key="entry.rank"
+                    class="cursor-pointer"
+                    @click="router.push({ name: 'account', params: { address: entry.player } })"
+                  >
+                    <td class="font-mono text-[11px]">
+                      <span v-if="entry.rank === 1" class="text-yellow-300">🥇</span>
+                      <span v-else-if="entry.rank === 2" class="text-slate-300">🥈</span>
+                      <span v-else-if="entry.rank === 3" class="text-orange-300">🥉</span>
+                      <span v-else>{{ entry.rank }}</span>
+                    </td>
+                    <td class="font-mono text-[11px]">
+                      {{ shortString(entry.player, 12) }}
+                    </td>
+                    <td class="text-xs">
+                      <span class="badge border-indigo-400/60">
+                        {{ entry.total_score.toLocaleString() }}
+                      </span>
+                    </td>
+                    <td class="text-[11px] text-slate-300">
+                      {{ entry.games_played }}
+                    </td>
+                  </tr>
+                </tbody>
+              </table>
+            </template>
+
+            <template v-else-if="card.id === 'howto'">
+              <div class="text-xs text-slate-300 leading-relaxed">
+                <h3 class="text-sm font-semibold mb-1 text-slate-100 flex items-center gap-2">
+                  <span>ℹ️</span>
+                  How to use this explorer
+                </h3>
+                <ol class="list-decimal list-inside space-y-1">
+                  <li>Keep <code>ignite chain serve</code> running for RetroChain.</li>
+                  <li>
+                    Ensure REST API is reachable at the configured endpoint (default <code>/api</code> when proxied).
+                  </li>
+                  <li>
+                    Start this UI with
+                    <code>npm install && npm run dev</code>
+                    inside
+                    <code>vue/</code>.
+                  </li>
+                  <li>
+                    Use the faucet or CLI to generate traffic and watch blocks / txs update.
+                  </li>
+                  <li class="text-indigo-300">
+                    🎮 Use arcade module to register games, insert coins, and start sessions!
+                  </li>
+                </ol>
+              </div>
+            </template>
           </div>
         </div>
-      </div>
-
-      <!-- Feature Highlights -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-4">
-          <h2 class="text-lg font-bold text-white flex items-center gap-2">
-            <span>✨</span>
-            RetroChain Feature Pack
-          </h2>
-          <span class="text-[11px] text-slate-400">Explorer-native perks</span>
-        </div>
-        <div class="grid gap-3 md:grid-cols-2">
-          <article
-            v-for="feature in featureHighlights"
-            :key="feature.title"
-            class="rounded-2xl border border-white/10 bg-white/5 p-4 flex gap-3"
-          >
-            <div class="text-2xl">{{ feature.icon }}</div>
-            <div>
-              <h3 class="text-sm font-semibold text-white">{{ feature.title }}</h3>
-              <p class="text-xs text-slate-300 leading-relaxed">{{ feature.body }}</p>
-            </div>
-          </article>
-        </div>
-      </div>
-
-      <!-- 🎮 Arcade Games Section -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            <span class="text-xl">🎮</span>
-            Arcade Games
-          </h2>
-        </div>
-        <div v-if="loadingArcade" class="text-xs text-slate-400">
-          Loading arcade games...
-        </div>
-        <div v-else-if="games.length === 0" class="text-xs text-slate-400 py-4 text-center">
-          <div class="mb-2 text-2xl">🎮</div>
-          <div>No arcade games registered yet</div>
-          <div class="text-[11px] mt-1">
-            Register games using the arcade module CLI
-          </div>
-        </div>
-        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-          <RcArcadeGameCard
-            v-for="game in games.slice(0, 4)"
-            :key="game.game_id"
-            :game="game"
-            @click="() => {}"
-          />
-        </div>
-      </div>
-
-      <!-- 🏆 Global Leaderboard Section -->
-      <div class="card">
-        <div class="flex items-center justify-between mb-2">
-          <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-            <span class="text-xl">🏆</span>
-            Global Leaderboard
-          </h2>
-        </div>
-        <div v-if="loadingArcade" class="text-xs text-slate-400">
-          Loading leaderboard...
-        </div>
-        <div v-else-if="leaderboard.length === 0" class="text-xs text-slate-400 py-4 text-center">
-          <div class="mb-2 text-2xl">🏆</div>
-          <div>No leaderboard entries yet</div>
-          <div class="text-[11px] mt-1">
-            Start playing games to appear on the leaderboard!
-          </div>
-        </div>
-        <table v-else class="table">
-          <thead>
-            <tr class="text-slate-300 text-xs">
-              <th>Rank</th>
-              <th>Player</th>
-              <th>Score</th>
-              <th>Games</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="entry in leaderboard"
-              :key="entry.rank"
-              class="cursor-pointer"
-              @click="router.push({ name: 'account', params: { address: entry.player } })"
-            >
-              <td class="font-mono text-[11px]">
-                <span v-if="entry.rank === 1" class="text-yellow-300">🥇</span>
-                <span v-else-if="entry.rank === 2" class="text-slate-300">🥈</span>
-                <span v-else-if="entry.rank === 3" class="text-orange-300">🥉</span>
-                <span v-else>{{ entry.rank }}</span>
-              </td>
-              <td class="font-mono text-[11px]">
-                {{ shortString(entry.player, 12) }}
-              </td>
-              <td class="text-xs">
-                <span class="badge border-indigo-400/60">
-                  {{ entry.total_score.toLocaleString() }}
-                </span>
-              </td>
-              <td class="text-[11px] text-slate-300">
-                {{ entry.games_played }}
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-
-
-      <div v-if="network !== 'mainnet'" class="card text-xs text-slate-300 leading-relaxed">
-        <h3 class="text-sm font-semibold mb-1 text-slate-100 flex items-center gap-2">
-          <span>ℹ️</span>
-          How to use this explorer
-        </h3>
-        <ol class="list-decimal list-inside space-y-1">
-          <li>Keep <code>ignite chain serve</code> running for RetroChain.</li>
-          <li>
-            Ensure REST API is reachable at the configured endpoint (default <code>/api</code> when proxied).
-          </li>
-          <li>
-            Start this UI with
-            <code>npm install && npm run dev</code>
-            inside
-            <code>vue/</code>.
-          </li>
-          <li>
-            Use the faucet or CLI to generate traffic and watch blocks / txs update.
-          </li>
-          <li class="text-indigo-300">
-            🎮 Use arcade module to register games, insert coins, and start sessions!
-          </li>
-        </ol>
       </div>
 
     </section>
