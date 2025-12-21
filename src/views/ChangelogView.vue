@@ -103,76 +103,40 @@ interface Release {
 
 const releases: Release[] = [
   {
-    version: "2025.12.14",
-    codename: "Mainnet Polish",
-    date: "2025-12-14",
-    summary: "Messaging + analytics pass from MAINNET_LIVE_UPDATE.md to match the chain's third live day.",
+    version: "2025.12.20",
+    codename: "Dashboard Flex",
+    date: "2025-12-20",
+    summary: "Home dashboard got movable cards, persisted layout, richer telemetry, and paginated blocks/txs while search added saved-query support.",
     changes: [
       {
         type: "feature",
-        title: "DEX and Buy disclaimers now announce live trading",
-        description: "Updated the RcDisclaimer copy exactly as outlined in MAINNET_LIVE_UPDATE.md so /dex shows \"Native DEX  Mainnet Ready\" and /buy advertises cross-chain swaps instead of under-construction language."
+        title: "Movable & collapsible homepage cards",
+        description: "All hero dashboard cards can be reordered and collapsed, with preferences persisted to localStorage and a default reset on cache clear."
       },
       {
         type: "improvement",
-        title: "Consistent info tone across public pages",
-        description: "All public notices swapped from warning (yellow) to info (blue) so users immediately see that staking, bridging, and swapping already work on mainnet."
+        title: "Blocks & transactions side-by-side with pagination",
+        description: "Latest blocks and recent txs now share a single split card with prev/next paging controls, keeping both feeds visible at once."
       },
       {
-        type: "ops",
-        title: "Vercel Analytics instrumentation",
-        description: "Installed @vercel/analytics@1.1.1 and call inject() in src/main.ts per MAINNET_LIVE_UPDATE.md, giving the team real-time traffic, referrer, and performance data for the live explorer."
-      }
-    ]
-  },
-  {
-    version: "2025.12.13",
-    codename: "Real Transactions",
-    date: "2025-12-13",
-    summary: "Fulfilled the REAL_TRANSACTIONS.md and REWARDS_READY_TO_CLAIM.md plan so every button signs real Cosmos SDK messages.",
-    changes: [
-      {
         type: "feature",
-        title: "On-chain DEX, staking, and IBC flows",
-        description: "Swap, add liquidity, place limit orders, delegate, undelegate, claim rewards, and bridge via IBC exactly as documented in REAL_TRANSACTIONS.md  all actions now call Keplr and broadcast to the RetroChain RPC."
+        title: "Mempool snapshot + fee estimator",
+        description: "Added live mempool pending count/size and gas price tiers computed from recent tx fees (low/mid/high) to guide fee selection."
+      },
+      {
+        type: "improvement",
+        title: "Saved searches via ?q= query",
+        description: "Search bar now reads and writes the q querystring so searches can be bookmarked, shared, and auto-run on load."
       },
       {
         type: "fix",
-        title: "REST-based signing + registry patch",
-        description: "Adopted the TxRaw encoding + defaultRegistryTypes approach from REWARDS_READY_TO_CLAIM.md so there are no more \"invalid empty tx\" or \"Unregistered type url\" panics when withdrawing rewards."
-      },
-      {
-        type: "ops",
-        title: "Fee floor bumped to 50,000 uretro",
-        description: "Raised fees to 0.05 RETRO (per REWARDS_READY_TO_CLAIM.md) so transactions respect the chain's 0.025 uretro gas price requirement and reward claims succeed on the first attempt."
-      }
-    ]
-  },
-  {
-    version: "2025.12.12",
-    codename: "Launch Sprint",
-    date: "2025-12-12",
-    summary: "Launch-day UX upgrades captured in KEPLR_AUTO_CONNECT.md, NATIVE_DEX_USDC.md, AMAZING_DETAILS.md, and NEXT_LEVEL_ENHANCEMENTS.md.",
-    changes: [
-      {
-        type: "feature",
-        title: "Keplr auto-connect on Account view",
-        description: "AccountView.vue now auto-loads the connected wallet, shows the Your Wallet badge, and offers the quick-load banner exactly as described in KEPLR_AUTO_CONNECT.md."
-      },
-      {
-        type: "feature",
-        title: "Native DEX + bridge UI surfaces",
-        description: "Delivered the multi-tab /dex experience from NATIVE_DEX_USDC.md, including swap/limit/pool creation plus Noble + Axelar bridging with fee and ETA callouts."
+        title: "IBC denom helper copy",
+        description: "Escaped the literal <hash> placeholder in IBC denom resolver text to prevent Vue compile errors."
       },
       {
         type: "improvement",
-        title: "Homepage and footer redesign",
-        description: "Implemented the professional hero, stats, and 4-column footer documented in AMAZING_DETAILS.md so the explorer looks production-ready."
-      },
-      {
-        type: "improvement",
-        title: "Toast + disclaimer system",
-        description: "Shipped the Vue Toastification stack and RcDisclaimer usage from NEXT_LEVEL_ENHANCEMENTS.md, giving users contextual warnings, copy-to-clipboard feedback, and transaction toasts."
+        title: "Navigation link to Ecosystem Wallets",
+        description: "Header now includes a direct link to the Ecosystem Wallets page under Network, keeping IBC link hidden until ready."
       }
     ]
   }
