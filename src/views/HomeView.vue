@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed } from "vue";
+import { onMounted, computed, ref } from "vue";
 import { useChainInfo } from "@/composables/useChainInfo";
 import { useBlocks } from "@/composables/useBlocks";
 import { useTxs } from "@/composables/useTxs";
@@ -33,11 +33,22 @@ const {
   fetchLatestAchievements,
 } = useArcade();
 
+const blockPage = ref(0);
+const blockPageSize = 10;
+const txPage = ref(0);
+const txPageSize = 15;
+
+const blockStartHeight = (page: number) => {
+  const latest = info.value.latestBlockHeight || blocks.value[0]?.height;
+  if (!latest) return undefined;
+  return Math.max(1, latest - page * blockPageSize);
+};
+
 const refreshAll = async () => {
   await Promise.all([
     refresh(),
-    fetchLatest(10),
-    searchRecent(30),
+    fetchLatest(blockPageSize, blockStartHeight(blockPage.value)),
+    searchRecent(txPageSize, txPage.value),
     refreshMempool(),
     fetchValidators(),
     fetchGames(),
@@ -216,6 +227,34 @@ const blockSampleLabel = computed(() =>
     ? `Last ${blockTimeDeltas.value.length} blocks`
     : "Awaiting blocks"
 );
+
+const canNextBlocks = computed(() => {
+  const latest = info.value.latestBlockHeight || recentBlocks.value[0]?.height || 0;
+  return latest - (blockPage.value + 1) * blockPageSize > 0;
+});
+
+const nextBlocksPage = async () => {
+  if (!canNextBlocks.value) return;
+  blockPage.value += 1;
+  await fetchLatest(blockPageSize, blockStartHeight(blockPage.value));
+};
+
+const prevBlocksPage = async () => {
+  if (blockPage.value === 0) return;
+  blockPage.value -= 1;
+  await fetchLatest(blockPageSize, blockStartHeight(blockPage.value));
+};
+
+const nextTxPage = async () => {
+  txPage.value += 1;
+  await searchRecent(txPageSize, txPage.value);
+};
+
+const prevTxPage = async () => {
+  if (txPage.value === 0) return;
+  txPage.value -= 1;
+  await searchRecent(txPageSize, txPage.value);
+};
 
 const networkStatus = computed(() => {
   if (loadingInfo.value) {
@@ -576,6 +615,11 @@ function sparkPath(data: number[], width = 160, height = 40) {
               >
                 {{ autoRefreshEnabled ? `Auto (${countdown}s)` : "Paused" }}
               </button>
+              <div class="flex items-center gap-1">
+                <button class="btn text-[10px]" :disabled="blockPage === 0" @click="prevBlocksPage">Prev</button>
+                <span class="text-[11px] text-slate-400">Page {{ blockPage + 1 }}</span>
+                <button class="btn text-[10px]" :disabled="!canNextBlocks" @click="nextBlocksPage">Next</button>
+              </div>
               <button class="btn text-xs" @click="router.push({ name: 'blocks' })">
                 View all
               </button>
@@ -634,9 +678,16 @@ function sparkPath(data: number[], width = 160, height = 40) {
             <h2 class="text-sm font-semibold text-slate-100">
               Recent transactions
             </h2>
-            <button class="btn text-xs" @click="router.push({ name: 'txs' })">
-              View all txs
-            </button>
+            <div class="flex items-center gap-2">
+              <div class="flex items-center gap-1">
+                <button class="btn text-[10px]" :disabled="txPage === 0" @click="prevTxPage">Prev</button>
+                <span class="text-[11px] text-slate-400">Page {{ txPage + 1 }}</span>
+                <button class="btn text-[10px]" :disabled="txs.length < txPageSize" @click="nextTxPage">Next</button>
+              </div>
+              <button class="btn text-xs" @click="router.push({ name: 'txs' })">
+                View all txs
+              </button>
+            </div>
           </div>
           <div v-if="loadingTxs" class="text-xs text-slate-400">
             Loading recent transactions...

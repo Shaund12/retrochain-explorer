@@ -38,33 +38,32 @@ export function useBlocks() {
     return res.data;
   };
 
-  // Fetch latest N blocks by walking down from latest height
-  const fetchLatest = async (limit = 20) => {
+  // Fetch latest N blocks by walking down from start height (default latest)
+  const fetchLatest = async (limit = 20, startHeight?: number) => {
     loading.value = true;
     error.value = null;
 
     try {
-      // 1) Get latest block so we know the tip height
-      const latestRes = await api.get(
-        "/cosmos/base/tendermint/v1beta1/blocks/latest"
-      );
-      const latestBlock = latestRes.data?.block;
-      if (!latestBlock) {
-        throw new Error("Latest block not found");
-      }
+      let latestHeight = startHeight ?? 0;
+      if (!latestHeight) {
+        // 1) Get latest block so we know the tip height
+        const latestRes = await api.get(
+          "/cosmos/base/tendermint/v1beta1/blocks/latest"
+        );
+        const latestBlock = latestRes.data?.block;
+        if (!latestBlock) {
+          throw new Error("Latest block not found");
+        }
 
-      const latestHeight = parseInt(latestBlock.header.height ?? "0", 10);
-      if (!latestHeight || Number.isNaN(latestHeight)) {
-        throw new Error("Invalid latest block height");
+        latestHeight = parseInt(latestBlock.header.height ?? "0", 10);
+        if (!latestHeight || Number.isNaN(latestHeight)) {
+          throw new Error("Invalid latest block height");
+        }
       }
 
       // 2) Decide which heights to fetch
       const heights: number[] = [];
-      for (
-        let h = latestHeight;
-        h > 0 && heights.length < limit;
-        h -= 1
-      ) {
+      for (let h = latestHeight; h > 0 && heights.length < limit; h -= 1) {
         heights.push(h);
       }
 

@@ -245,7 +245,7 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
     return enriched.filter(Boolean) as TxSummary[];
   };
 
-  const searchRecent = async (limit = 20) => {
+  const searchRecent = async (limit = 20, page = 0) => {
     loading.value = true;
     error.value = null;
     txs.value = []; // Clear previous data
@@ -254,8 +254,8 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
       const base = api.defaults.baseURL || "";
       const proxyAvailable = !base || base.startsWith("/");
 
-      if (proxyAvailable) {
-        // Try fast aggregator first
+      if (proxyAvailable && page === 0) {
+        // Try fast aggregator first only for first page
         const fast = await api.get(`/recent-txs`, { params: { limit } });
         const hydrated = await hydrateFastTxs(fast.data?.txs ?? [], limit);
         if (hydrated.length) {
@@ -276,6 +276,8 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
         const collected: TxSummary[] = [];
         let nextKey: string | undefined;
 
+        const offset = page * limit;
+        let fetched = 0;
         while (collected.length < limit) {
           const pageLimit = Math.min(50, limit - collected.length);
 
@@ -284,6 +286,7 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
               events: "tx.height>0",
               order_by: "ORDER_BY_DESC",
               "pagination.limit": String(pageLimit),
+              ...(offset ? { "pagination.offset": String(offset + fetched) } : {}),
               ...(nextKey ? { "pagination.key": nextKey } : {})
             },
             paramsSerializer: (params) => {
@@ -321,7 +324,9 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
           }
 
           nextKey = res.data?.pagination?.next_key || undefined;
-          if (!nextKey) break;
+          if (!nextKey && !offset) break;
+          fetched += responses.length;
+          if (!nextKey && offset) break;
         }
 
         if (collected.length) {
