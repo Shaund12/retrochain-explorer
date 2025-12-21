@@ -23,12 +23,11 @@ export function useSearch() {
   };
 
   const search = async (query: string): Promise<void> => {
-    if (!query || query.trim().length === 0) {
+    const trimmed = String(query ?? "").trim();
+    if (!trimmed.length) {
       error.value = "Enter a block height, tx hash, or address.";
       return;
     }
-
-    const trimmed = query.trim();
     loading.value = true;
     error.value = null;
 

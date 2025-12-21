@@ -40,8 +40,9 @@ export function useBtcStake() {
 
   let pollHandle: number | null = null;
 
-  const allowedDenom = computed(() => params.value?.allowed_denom || "");
-  const hasValidDenom = computed(() => !!allowedDenom.value && allowedDenom.value.startsWith("ibc/"));
+  const allowedDenom = computed(() => params.value?.allowed_denom || (params.value as any)?.allowedDenom || "");
+  // Consider any non-empty denom as valid; some deployments may use native (non-IBC) denoms for WBTC
+  const hasValidDenom = computed(() => !!allowedDenom.value);
 
   const fetchParams = async () => {
     try {

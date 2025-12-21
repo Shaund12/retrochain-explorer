@@ -59,8 +59,8 @@ const pendingRewardsDisplay = computed(() => formatRetro(pendingRewards.value?.p
 const userBalanceDisplay = computed(() => formatWbtc(userBalance.value));
 const userBalanceBase = computed(() => userBalance.value ?? "0");
 
-const allowedTokenMeta = computed(() => getTokenMeta(allowedDenom.value));
-const allowedTokenSymbol = computed(() => allowedTokenMeta.value.symbol);
+const allowedTokenMeta = computed(() => getTokenMeta(allowedDenom.value) || { symbol: allowedDenom.value || "" });
+const allowedTokenSymbol = computed(() => allowedTokenMeta.value.symbol || allowedDenom.value || "");
 
 const shortAddress = (addr?: string | null, size = 10) => {
   if (!addr) return "—";
@@ -324,7 +324,7 @@ watch(
       <div class="card">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-sm font-semibold text-white">Your Position</h2>
-          <button class="btn text-[11px]" @click="refreshAll(address)">
+          <button class="btn text-[11px]" @click="refreshAll(address.value)">
             {{ loading ? 'Refreshing…' : 'Refresh' }}
           </button>
         </div>
