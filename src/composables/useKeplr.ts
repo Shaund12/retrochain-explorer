@@ -1,13 +1,14 @@
 // src/composables/useKeplr.ts
 import { ref } from "vue";
 import { SigningStargateClient, defaultRegistryTypes } from "@cosmjs/stargate";
-import { Registry, encodePubkey, makeAuthInfoBytes, makeSignDoc as makeSignDocDirect } from "@cosmjs/proto-signing";
+import { Registry, encodePubkey, makeAuthInfoBytes, makeSignDoc as makeSignDocDirect, GeneratedType } from "@cosmjs/proto-signing";
 import { encodeSecp256k1Pubkey } from "@cosmjs/amino";
 import { TxRaw, AuthInfo, TxBody } from "cosmjs-types/cosmos/tx/v1beta1/tx";
 import { toBase64, fromBase64 } from "@cosmjs/encoding";
 import { Int53 } from "@cosmjs/math";
 import { useNetwork } from "./useNetwork";
 import { useApi } from "./useApi";
+import _m0 from "protobufjs/minimal";
 
 declare global {
   interface Window {
@@ -67,6 +68,120 @@ const MIN_GAS_LIMIT = 200000;
 const MIN_TOTAL_FEE = 5000; // minimum fee in uretro to satisfy chain requirements
 const COSMOS_CHAIN_ID = import.meta.env.VITE_COSMOS_CHAIN_ID || "cosmoshub-4";
 const COSMOS_RPC_URL = (import.meta.env.VITE_COSMOS_RPC_URL || "").trim();
+
+// --- Custom message types (btcstake) ---
+interface MsgStake {
+  creator: string;
+  amount: string;
+}
+
+interface MsgUnstake {
+  creator: string;
+  amount: string;
+}
+
+interface MsgClaimRewards {
+  creator: string;
+}
+
+const createMsgStake = (msg: MsgStake) => msg;
+const createMsgUnstake = (msg: MsgUnstake) => msg;
+const createMsgClaimRewards = (msg: MsgClaimRewards) => msg;
+
+const MsgStakeType: GeneratedType = {
+  encode(message: MsgStake, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.creator) writer.uint32(10).string(message.creator);
+    if (message.amount) writer.uint32(18).string(message.amount);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgStake {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgStake = { creator: "", amount: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.creator = reader.string();
+          break;
+        case 2:
+          message.amount = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgStake>): MsgStake {
+    return { creator: object.creator ?? "", amount: object.amount ?? "" };
+  }
+};
+
+const MsgUnstakeType: GeneratedType = {
+  encode(message: MsgUnstake, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.creator) writer.uint32(10).string(message.creator);
+    if (message.amount) writer.uint32(18).string(message.amount);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgUnstake {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgUnstake = { creator: "", amount: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.creator = reader.string();
+          break;
+        case 2:
+          message.amount = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgUnstake>): MsgUnstake {
+    return { creator: object.creator ?? "", amount: object.amount ?? "" };
+  }
+};
+
+const MsgClaimRewardsType: GeneratedType = {
+  encode(message: MsgClaimRewards, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.creator) writer.uint32(10).string(message.creator);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgClaimRewards {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgClaimRewards = { creator: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.creator = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgClaimRewards>): MsgClaimRewards {
+    return { creator: object.creator ?? "" };
+  }
+};
+
+const retroBtcStakeTypes: ReadonlyArray<[string, GeneratedType]> = [
+  ["/retrochain.btcstake.v1.MsgStake", MsgStakeType],
+  ["/retrochain.btcstake.v1.MsgUnstake", MsgUnstakeType],
+  ["/retrochain.btcstake.v1.MsgClaimRewards", MsgClaimRewardsType]
+];
 
 function buildChainInfo() {
   // Build absolute URLs - Keplr requires full URIs
@@ -202,7 +317,7 @@ export function useKeplr() {
       const signerAddress = accounts[0].address;
       const signerPubkey = accounts[0].pubkey;
 
-      const registry = new Registry(defaultRegistryTypes);
+      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes]);
       const anyMsgs = msgs.map((msg) => registry.encodeAsAny(msg));
       const txBody = TxBody.fromPartial({ messages: anyMsgs, memo: memo || "" });
       const txBodyBytes = TxBody.encode(txBody).finish();
@@ -348,7 +463,8 @@ export function useKeplr() {
       const offlineSigner = window.keplr.getOfflineSigner(chainId);
       const accounts = await offlineSigner.getAccounts();
 
-      const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner);
+      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes]);
+      const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner, { registry });
       return client.signAndBroadcast(accounts[0].address, msgs, fee, memo);
     };
 
