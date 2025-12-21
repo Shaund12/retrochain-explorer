@@ -74,6 +74,17 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     description: "Alias used before the canonical ATOM denom hash is available.",
     logo: "https://raw.githubusercontent.com/cosmos/chain-registry/master/cosmoshub/images/atom.png"
   },
+  "ibc/0471f1c4e7afd3f07702bef6dc365268d64570f7c1fdc98ea6098dd6de59817b": {
+    denom: "ibc/0471F1C4E7AFD3F07702BEF6DC365268D64570F7C1FDC98EA6098DD6DE59817B",
+    symbol: "OSMO",
+    name: "Osmosis",
+    chain: "Osmosis via IBC",
+    icon: "🪐",
+    decimals: 6,
+    accent: "violet",
+    description: "Osmosis staking/gas token routed into RetroChain over IBC.",
+    logo: "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/osmo.png"
+  },
   [DEFAULT_WBTC_IBC_DENOM_ON_RETRO.toLowerCase()]: {
     denom: DEFAULT_WBTC_IBC_DENOM_ON_RETRO,
     symbol: "WBTC",
