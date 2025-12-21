@@ -21,6 +21,7 @@ import NotFoundView from "@/views/NotFoundView.vue";
 import ApiTestView from "@/views/ApiTestView.vue";
 import LegalView from "@/views/LegalView.vue";
 import ChangelogView from "@/views/ChangelogView.vue";
+import EcosystemWalletsView from "@/views/EcosystemWalletsView.vue";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", name: "home", component: HomeView },
@@ -30,6 +31,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/txs/:hash", name: "tx-detail", component: TxDetailView, props: true },
   { path: "/account/:address?", name: "account", component: AccountView, props: true },
   { path: "/accounts", name: "accounts", component: AccountsView },
+  { path: "/accounts/ecosystem", name: "ecosystem-accounts", component: EcosystemWalletsView },
   { path: "/validators", name: "validators", component: ValidatorsView },
   { path: "/governance", name: "governance", component: GovernanceView },
   { path: "/staking", name: "staking", component: StakingView },

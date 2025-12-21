@@ -26,16 +26,12 @@ const labeledAccounts = computed<LabeledWallet[]>(() =>
   }))
 );
 
-const ecosystemAccounts = computed(() =>
-  labeledAccounts.value.filter(acc => !!acc.knownLabel)
-);
-
 const communityAccounts = computed(() =>
   labeledAccounts.value.filter(acc => !acc.knownLabel)
 );
 
-const filterAndSort = (list: LabeledWallet[]) => {
-  let filtered = list;
+const filteredCommunityAccounts = computed(() => {
+  let filtered = communityAccounts.value;
 
   if (searchQuery.value) {
     filtered = filtered.filter(a =>
@@ -53,10 +49,7 @@ const filterAndSort = (list: LabeledWallet[]) => {
   });
 
   return filtered;
-};
-
-const filteredCommunityAccounts = computed(() => filterAndSort(communityAccounts.value));
-const filteredEcosystemAccounts = computed(() => filterAndSort(ecosystemAccounts.value));
+});
 
 const totalBalance = computed(() => {
   return accounts.value.reduce((sum, acc) => sum + parseInt(acc.balance || '0'), 0);
@@ -100,7 +93,7 @@ onMounted(() => {
         </p>
         
         <!-- Search -->
-        <div class="flex gap-2">
+        <div class="flex flex-wrap gap-2">
           <input
             v-model="searchQuery"
             type="text"
@@ -113,6 +106,12 @@ onMounted(() => {
             :disabled="loading"
           >
             {{ loading ? 'Loading...' : '🔄 Refresh' }}
+          </button>
+          <button 
+            class="btn text-xs" 
+            @click="router.push({ name: 'ecosystem-accounts' })"
+          >
+            Ecosystem Wallets →
           </button>
         </div>
       </div>
@@ -240,72 +239,6 @@ onMounted(() => {
                 </span>
               </td>
               
-              <td>
-                <button 
-                  class="btn text-xs"
-                  @click.stop="router.push({ name: 'account', params: { address: account.address } })"
-                >
-                  View →
-                </button>
-              </td>
-            </tr>
-          </tbody>
-        </table>
-      </div>
-    </div>
-
-    <!-- Ecosystem Wallets -->
-    <div v-if="filteredEcosystemAccounts.length > 0" class="card border-amber-400/40 bg-amber-500/5">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold text-amber-100">
-          Ecosystem Wallets ({{ filteredEcosystemAccounts.length }})
-        </h2>
-        <p class="text-xs text-amber-200/80">Separated so medals go to community wallets</p>
-      </div>
-
-      <div class="overflow-x-auto">
-        <table class="table">
-          <thead>
-            <tr class="text-xs text-amber-100/80">
-              <th>Address</th>
-              <th>Label</th>
-              <th class="text-right">Balance</th>
-              <th>Actions</th>
-            </tr>
-          </thead>
-          <tbody>
-            <tr
-              v-for="account in filteredEcosystemAccounts"
-              :key="account.address"
-              class="cursor-pointer hover:bg-amber-500/5 transition-colors"
-              @click="router.push({ name: 'account', params: { address: account.address } })"
-            >
-              <td class="text-xs font-mono">
-                <div class="flex items-center gap-2">
-                  <span>{{ account.address.slice(0, 12) }}...{{ account.address.slice(-8) }}</span>
-                  <button 
-                    class="btn text-[10px]" 
-                    @click.stop="copy(account.address)"
-                  >
-                    Copy
-                  </button>
-                </div>
-              </td>
-              <td class="text-xs">
-                <div
-                  v-if="account.knownLabel"
-                  class="inline-flex items-center gap-2 rounded-full border border-amber-400/40 bg-amber-500/10 px-3 py-1 text-[11px] font-semibold uppercase tracking-wide text-amber-100 font-sans"
-                  :title="account.knownLabel.description"
-                >
-                  <span class="text-base leading-none">{{ account.knownLabel.icon }}</span>
-                  <span>{{ account.knownLabel.label }}</span>
-                </div>
-              </td>
-              <td class="text-right text-sm">
-                <span class="font-mono text-amber-100">
-                  {{ formatAmount(account.balance, account.denom, { minDecimals: 2, maxDecimals: 6 }) }}
-                </span>
-              </td>
               <td>
                 <button 
                   class="btn text-xs"
