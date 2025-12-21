@@ -107,6 +107,17 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     description: "Base denom for Wrapped Bitcoin on Cosmos-connected zones.",
     logo: "https://assets.coingecko.com/coins/images/7598/thumb/wrapped_bitcoin_wbtc.png"
   },
+  stwbtc: {
+    denom: "stwbtc",
+    symbol: "STWBTC",
+    name: "Staked WBTC",
+    chain: "RetroChain btcstake",
+    icon: "🛡️",
+    decimals: 8,
+    accent: "amber",
+    description: "Staked WBTC derivative minted by the btcstake module on RetroChain.",
+    logo: "https://assets.coingecko.com/coins/images/7598/thumb/wrapped_bitcoin_wbtc.png"
+  },
   "ibc/99b00614ddbe6189aa03b77066ff8eb3f93680bd790c43cf56096b7f23542015": {
     denom: "ibc/99B00614DDBE6189AA03B77066FF8EB3F93680BD790C43CF56096B7F23542015",
     symbol: "WBTC",

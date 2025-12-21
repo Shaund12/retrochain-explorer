@@ -40,6 +40,7 @@ const unstakeAmount = ref("");
 const txLoading = ref(false);
 const lastRefreshedLabel = computed(() => (lastUpdated.value ? dayjs(lastUpdated.value).fromNow() : "never"));
 const btcPriceUsd = ref<number | null>(null);
+const lastTxHash = ref<string | null>(null);
 
 const formatFromBase = (value?: string | null, decimals = 6, symbol = "") => {
   const num = Number(value ?? "0");
@@ -67,6 +68,7 @@ const userStakedDisplay = computed(() => formatWbtc(userStake.value?.staked_amou
 const pendingRewardsDisplay = computed(() => formatRetro(pendingRewards.value?.pending_uretro));
 const userBalanceDisplay = computed(() => formatWbtc(userBalance.value));
 const userBalanceBase = computed(() => userBalance.value ?? "0");
+const isWbtcBalanceZero = computed(() => !userBalanceBase.value || Number(userBalanceBase.value) === 0);
 
 const allowedTokenMeta = computed(() => getTokenMeta(allowedDenom.value) || { symbol: allowedDenom.value || "" });
 const allowedTokenSymbol = computed(() => allowedTokenMeta.value.symbol || allowedDenom.value || "");
@@ -150,6 +152,12 @@ const setStakePercent = (percent: number) => {
   stakeAmount.value = amount;
 };
 
+const setStakeMaxMinusBuffer = (buffer = 0.00001) => {
+  const base = Number(userBalanceBase.value) / Math.pow(10, WBTC_DECIMALS);
+  if (!Number.isFinite(base) || base <= buffer) return;
+  stakeAmount.value = (base - buffer).toFixed(WBTC_DECIMALS);
+};
+
 const validateStakeInput = () => parseHumanAmount(stakeAmount.value, WBTC_DECIMALS);
 const validateUnstakeInput = () => parseHumanAmount(unstakeAmount.value, WBTC_DECIMALS);
 
@@ -160,6 +168,7 @@ const runTx = async (msgs: any[], memo: string) => {
     if (result.code === 0) {
       const hash = result.txhash || result.transactionHash || "";
       toast.showTxSuccess(hash || "");
+      lastTxHash.value = hash || null;
       await refreshAll(address.value);
     } else {
       throw new Error(result.rawLog || result.log || "Transaction failed");
@@ -286,25 +295,50 @@ watch(
 
       <div class="card grid gap-3 md:grid-cols-3 text-sm">
         <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex items-start gap-2">
-          <span class="text-lg">⚡</span>
+        <span class="text-lg" title="Rewards streamed by the btcstake module">⚡</span>
         <div>
           <p class="font-semibold text-emerald-100">On-chain yields</p>
           <p class="text-[11px] text-emerald-200/80">Claim RETRO rewards streamed from btcstake pool accounting.</p>
         </div>
       </div>
       <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex items-start gap-2">
-          <span class="text-lg">🛰️</span>
+        <span class="text-lg" title="Health of REST / RPC endpoints">🛰️</span>
         <div>
           <p class="font-semibold text-amber-100">Live module telemetry</p>
           <p class="text-[11px] text-amber-200/80">REST and RPC health badges reflect current endpoints.</p>
         </div>
       </div>
       <div class="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-3 flex items-start gap-2">
-          <span class="text-lg">🛡️</span>
+        <span class="text-lg" title="Your assets stay in your wallet until you stake">🛡️</span>
         <div>
           <p class="font-semibold text-indigo-100">Non-custodial</p>
           <p class="text-[11px] text-indigo-200/80">Your WBTC stays in your wallet until staked; withdraw anytime.</p>
         </div>
+      </div>
+    </div>
+
+    <!-- Hero metrics band -->
+    <div class="card-soft border border-white/5 bg-gradient-to-r from-slate-900/70 to-slate-800/40 grid gap-3 sm:grid-cols-3 text-sm">
+      <div class="flex items-center justify-between rounded-xl border border-emerald-500/20 bg-emerald-500/5 px-4 py-3">
+        <div>
+          <p class="text-[11px] uppercase tracking-wider text-emerald-200/80" title="Total WBTC currently staked">Staked WBTC</p>
+          <p class="text-xl font-semibold text-emerald-100">{{ poolTotalStaked }}</p>
+        </div>
+        <span class="text-lg">⚡</span>
+      </div>
+      <div class="flex items-center justify-between rounded-xl border border-amber-500/20 bg-amber-500/5 px-4 py-3">
+        <div>
+          <p class="text-[11px] uppercase tracking-wider text-amber-200/80" title="TVL uses current BTC/USD price">Pool TVL</p>
+          <p class="text-xl font-semibold text-amber-100">{{ tvlUsd !== null ? `$${tvlUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—' }}</p>
+        </div>
+        <span class="text-lg">💰</span>
+      </div>
+      <div class="flex items-center justify-between rounded-xl border border-indigo-500/20 bg-indigo-500/5 px-4 py-3">
+        <div>
+          <p class="text-[11px] uppercase tracking-wider text-indigo-200/80" title="Price pulled from CoinGecko">BTC Price</p>
+          <p class="text-xl font-semibold text-indigo-100">{{ btcPriceUsd ? `$${btcPriceUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—' }}</p>
+        </div>
+        <span class="text-lg">₿</span>
       </div>
     </div>
 
@@ -347,6 +381,11 @@ watch(
 
     <div v-if="error" class="card border-rose-500/40 bg-rose-500/5">
       <p class="text-xs text-rose-200">{{ error }}</p>
+    </div>
+
+    <div v-if="restHealthy === false || rpcHealthy === false" class="card border-rose-500/50 bg-rose-500/10 text-sm text-rose-100">
+      <p class="font-semibold mb-1">Endpoint health warning</p>
+      <p class="text-[11px] text-rose-100/80">One or more endpoints are unhealthy. Transactions may fail until REST/RPC recover.</p>
     </div>
 
     <div class="grid gap-3 md:grid-cols-2">
@@ -414,11 +453,15 @@ watch(
           </div>
           <div>
             <p class="text-[10px] uppercase tracking-wider text-slate-500">Allowed Denom</p>
-            <p class="text-xs font-mono text-slate-200 break-all">{{ allowedDenom || '�' }}</p>
+            <div class="flex items-center gap-2">
+              <p class="text-xs font-mono text-slate-200 break-all">{{ allowedDenom || '—' }}</p>
+              <button v-if="allowedDenom" class="btn text-[10px]" @click="copy(allowedDenom)">Copy</button>
+            </div>
           </div>
         </div>
         <p class="text-[11px] text-slate-500 mt-2">
-          Last refreshed {{ lastRefreshedLabel }} � Address {{ shortAddress(address || undefined, 12) }}
+          Last refreshed {{ lastRefreshedLabel }} · Address {{ shortAddress(address || undefined, 12) }}
+          <button v-if="address" class="btn text-[10px] ml-2" @click="copy(address)">Copy address</button>
         </p>
       </div>
     </div>
@@ -427,6 +470,13 @@ watch(
       <div class="card">
         <h3 class="text-sm font-semibold text-white mb-3">Stake WBTC</h3>
         <div class="space-y-3">
+          <div class="text-[11px] text-slate-400 grid gap-1">
+            <div>Preflight: 
+              <span :class="address ? 'text-emerald-300' : 'text-amber-300'">{{ address ? 'Wallet connected' : 'Connect wallet' }}</span>,
+              <span :class="allowedDenom ? 'text-emerald-300' : 'text-amber-300'">{{ allowedDenom ? 'Denom ready' : 'Denom missing' }}</span>,
+              <span :class="restHealthy && rpcHealthy ? 'text-emerald-300' : 'text-amber-300'">Endpoints {{ restHealthy && rpcHealthy ? 'healthy' : 'check REST/RPC' }}</span>
+            </div>
+          </div>
           <div>
             <label class="text-xs text-slate-400 mb-1 block">Amount (WBTC)</label>
             <div class="space-y-2">
@@ -445,6 +495,7 @@ watch(
                   <button class="btn text-[10px]" @click="setStakePercent(0.5)" :disabled="!address">50%</button>
                   <button class="btn text-[10px]" @click="setStakePercent(0.75)" :disabled="!address">75%</button>
                   <button class="btn text-[10px]" @click="setStakePercent(1)" :disabled="!address">Max</button>
+                  <button class="btn text-[10px]" @click="setStakeMaxMinusBuffer()" :disabled="!address">Max - gas</button>
                 </div>
               </div>
             </div>
@@ -489,6 +540,8 @@ watch(
         <li>Use the percentage buttons to quickly allocate your WBTC balance.</li>
         <li>Rewards accrue in <code>uretro</code>; claim whenever pending rewards are non-zero.</li>
         <li>Monitor REST/RPC health badges above before submitting transactions.</li>
+        <li>TVL and BTC price refresh with the page; click Refresh to update pool stats.</li>
+        <li>If your WBTC balance is zero, use the Get WBTC link to acquire funds before staking.</li>
       </ul>
     </div>
 
