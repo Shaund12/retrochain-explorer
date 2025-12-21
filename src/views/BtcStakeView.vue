@@ -92,7 +92,7 @@ const fetchBtcPrice = async () => {
 };
 
 const shortAddress = (addr?: string | null, size = 10) => {
-  if (!addr) return "ó";
+  if (!addr) return "‚Äî";
   return `${addr.slice(0, size)}...${addr.slice(-6)}`;
 };
 
@@ -274,9 +274,9 @@ watch(
 
 <template>
   <div class="space-y-4">
-    <RcDisclaimer type="info" title="? Bitcoin Liquid Staking on RetroChain">
+    <RcDisclaimer type="info" title="‚Çø Bitcoin Liquid Staking on RetroChain">
       <p>
-        Stake wrapped Bitcoin (WBTC) via RetroChainís <code class="text-emerald-300">btcstake</code> module to earn RETRO-denominated rewards.
+        Stake wrapped Bitcoin (WBTC) via RetroChain‚Äôs <code class="text-emerald-300">btcstake</code> module to earn RETRO-denominated rewards.
         Transactions are live on <strong>retrochain-mainnet</strong> and routed directly to the module endpoints.
       </p>
       <p class="mt-2 text-[11px] text-slate-400">
@@ -284,23 +284,23 @@ watch(
       </p>
     </RcDisclaimer>
 
-    <div class="card grid gap-3 md:grid-cols-3 text-sm">
-      <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex items-start gap-2">
-        <span class="text-lg">?</span>
+      <div class="card grid gap-3 md:grid-cols-3 text-sm">
+        <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex items-start gap-2">
+          <span class="text-lg">‚ö°</span>
         <div>
           <p class="font-semibold text-emerald-100">On-chain yields</p>
           <p class="text-[11px] text-emerald-200/80">Claim RETRO rewards streamed from btcstake pool accounting.</p>
         </div>
       </div>
       <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex items-start gap-2">
-        <span class="text-lg">??</span>
+          <span class="text-lg">üõ∞Ô∏è</span>
         <div>
           <p class="font-semibold text-amber-100">Live module telemetry</p>
           <p class="text-[11px] text-amber-200/80">REST and RPC health badges reflect current endpoints.</p>
         </div>
       </div>
       <div class="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-3 flex items-start gap-2">
-        <span class="text-lg">???</span>
+          <span class="text-lg">üõ°Ô∏è</span>
         <div>
           <p class="font-semibold text-indigo-100">Non-custodial</p>
           <p class="text-[11px] text-indigo-200/80">Your WBTC stays in your wallet until staked; withdraw anytime.</p>
@@ -329,7 +329,7 @@ watch(
           </div>
         </div>
         <div class="text-[11px] text-slate-500">
-          REST: <code>{{ restBase }}</code> ∑ RPC: <code>{{ rpcBase }}</code>
+          REST: <code>{{ restBase }}</code> ¬∑ RPC: <code>{{ rpcBase }}</code>
         </div>
         <div v-if="allowedDenom" class="text-[11px] text-slate-400 flex items-center gap-2">
           <span class="px-2 py-1 rounded-full border border-white/10 bg-white/5 text-slate-200">Allowed denom: <code>{{ allowedDenom }}</code></span>
@@ -361,7 +361,7 @@ watch(
         <div class="grid grid-cols-2 gap-3 text-sm">
           <div>
             <p class="text-[10px] uppercase tracking-wider text-slate-500">Allowed Denom</p>
-            <p class="font-mono text-xs text-slate-100 break-all">{{ allowedDenom || 'ó' }}</p>
+            <p class="font-mono text-xs text-slate-100 break-all">{{ allowedDenom || '‚Äî' }}</p>
             <p v-if="allowedDenom" class="text-[11px] text-slate-500 mt-0.5">Symbol: {{ allowedTokenSymbol }}</p>
           </div>
           <div>
@@ -378,11 +378,11 @@ watch(
           </div>
           <div>
             <p class="text-[10px] uppercase tracking-wider text-slate-500">BTC Price</p>
-            <p class="text-lg font-semibold text-amber-200">{{ btcPriceUsd ? `$${btcPriceUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'ó' }}</p>
+            <p class="text-lg font-semibold text-amber-200">{{ btcPriceUsd ? `$${btcPriceUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '‚Äî' }}</p>
           </div>
           <div>
             <p class="text-[10px] uppercase tracking-wider text-slate-500">Pool TVL (USD)</p>
-            <p class="text-lg font-semibold text-emerald-200">{{ tvlUsd !== null ? `$${tvlUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : 'ó' }}</p>
+            <p class="text-lg font-semibold text-emerald-200">{{ tvlUsd !== null ? `$${tvlUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '‚Äî' }}</p>
           </div>
         </div>
       </div>
@@ -391,7 +391,7 @@ watch(
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-sm font-semibold text-white">Your Position</h2>
           <button class="btn text-[11px]" @click="refreshAll(address.value)">
-            {{ loading ? 'RefreshingÖ' : 'Refresh' }}
+            {{ loading ? 'Refreshing‚Ä¶' : 'Refresh' }}
           </button>
         </div>
         <div class="grid grid-cols-2 gap-3">
@@ -414,11 +414,11 @@ watch(
           </div>
           <div>
             <p class="text-[10px] uppercase tracking-wider text-slate-500">Allowed Denom</p>
-            <p class="text-xs font-mono text-slate-200 break-all">{{ allowedDenom || 'ó' }}</p>
+            <p class="text-xs font-mono text-slate-200 break-all">{{ allowedDenom || 'ÔøΩ' }}</p>
           </div>
         </div>
         <p class="text-[11px] text-slate-500 mt-2">
-          Last refreshed {{ lastRefreshedLabel }} ∑ Address {{ shortAddress(address || undefined, 12) }}
+          Last refreshed {{ lastRefreshedLabel }} ÔøΩ Address {{ shortAddress(address || undefined, 12) }}
         </p>
       </div>
     </div>
@@ -450,7 +450,7 @@ watch(
             </div>
           </div>
           <button class="btn btn-primary w-full" @click="handleStake" :disabled="txLoading || !address || denomWarning">
-            {{ txLoading ? 'ProcessingÖ' : address ? 'Stake WBTC' : 'Connect Wallet' }}
+            {{ txLoading ? 'Processing‚Ä¶' : address ? 'Stake WBTC' : 'Connect Wallet' }}
           </button>
           <p class="text-[11px] text-slate-500">Stake to earn RETRO rewards. Gas is paid in uretro.</p>
         </div>
@@ -475,7 +475,7 @@ watch(
             <p class="text-[11px] text-slate-500 mt-1">Available: {{ userStakedDisplay }}</p>
           </div>
           <button class="btn btn-primary w-full" @click="handleUnstake" :disabled="txLoading || !address || denomWarning">
-            {{ txLoading ? 'ProcessingÖ' : 'Unstake' }}
+            {{ txLoading ? 'Processing‚Ä¶' : 'Unstake' }}
           </button>
           <p class="text-[11px] text-slate-500">Unstake returns WBTC to your wallet after the on-chain action completes.</p>
         </div>
