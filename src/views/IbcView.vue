@@ -105,7 +105,7 @@ onMounted(() => {
     <div class="card">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-semibold text-slate-100">Resolve IBC Denom</h2>
-        <span class="text-[11px] text-slate-400">ibc/<hash> ? base denom + path</span>
+        <span class="text-[11px] text-slate-400">ibc/&lt;hash&gt; ? base denom + path</span>
       </div>
       <div class="flex flex-wrap gap-2 mb-3">
         <input
