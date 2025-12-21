@@ -1,12 +1,13 @@
 <script setup lang="ts">
-import { ref } from "vue";
-import { useRouter } from "vue-router";
+import { onMounted, ref } from "vue";
+import { useRoute, useRouter } from "vue-router";
 import { useSearch } from "@/composables/useSearch";
 import { useToast } from "@/composables/useToast";
 
 const { search, loading, error } = useSearch();
 const { notify } = useToast();
 const router = useRouter();
+const route = useRoute();
 
 const query = ref("");
 const showDropdown = ref(false);
@@ -18,6 +19,7 @@ const handleSearch = async () => {
   }
   
   showDropdown.value = false;
+  router.replace({ query: { ...route.query, q: query.value } });
   await search(query.value);
   
   if (error.value) {
@@ -57,6 +59,14 @@ const selectQuickSearch = (q: string) => {
   query.value = q;
   handleSearch();
 };
+
+onMounted(() => {
+  const initial = route.query.q as string | undefined;
+  if (initial) {
+    query.value = String(initial);
+    handleSearch();
+  }
+});
 </script>
 
 <template>

@@ -17,6 +17,7 @@ export interface TxSummary {
     denom: string;
     direction: "in" | "out" | "self";
   }>;
+  fees?: Array<{ amount: string; denom: string }>;
 }
 
 const extractMessageTypes = (txResponse: any): string[] => {
@@ -109,7 +110,8 @@ const buildSummaryFromResponse = (resp: any, fallback: { hash: string; height: n
   gasUsed: resp?.gas_used,
   timestamp: resp?.timestamp || fallback.timestamp,
   messageTypes: extractMessageTypes(resp),
-  transfers: []
+  transfers: [],
+  fees: resp?.tx?.auth_info?.fee?.amount || []
 });
 
 const txContainsAddress = (txResponse: any, address: string) => {
@@ -441,7 +443,8 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
               gasUsed: resp.gas_used,
               timestamp: resp.timestamp,
               messageTypes: extractMessageTypes(resp),
-              transfers: parseTransfers(resp?.logs, address)
+              transfers: parseTransfers(resp?.logs, address),
+              fees: resp?.tx?.auth_info?.fee?.amount || []
             };
             collected.push(summary);
           }

@@ -3,6 +3,8 @@ import { onMounted, computed } from "vue";
 import { useChainInfo } from "@/composables/useChainInfo";
 import { useBlocks } from "@/composables/useBlocks";
 import { useTxs } from "@/composables/useTxs";
+import { useMempool } from "@/composables/useMempool";
+import { useValidators } from "@/composables/useValidators";
 import { useArcade } from "@/composables/useArcade";
 import { useAutoRefresh } from "@/composables/useAutoRefresh";
 import RcStatCard from "@/components/RcStatCard.vue";
@@ -17,6 +19,8 @@ const router = useRouter();
 const { info, loading: loadingInfo, refresh } = useChainInfo();
 const { blocks, loading: loadingBlocks, fetchLatest } = useBlocks();
 const { txs, loading: loadingTxs, searchRecent } = useTxs();
+const { snapshot: mempool, loading: loadingMempool, error: mempoolError, refresh: refreshMempool } = useMempool();
+const { validators, fetchValidators } = useValidators();
 const {
   games,
   leaderboard,
@@ -33,7 +37,9 @@ const refreshAll = async () => {
   await Promise.all([
     refresh(),
     fetchLatest(10),
-    searchRecent(10),
+    searchRecent(30),
+    refreshMempool(),
+    fetchValidators(),
     fetchGames(),
     fetchLeaderboard(5),
     fetchRecentSessions(5),
@@ -97,6 +103,36 @@ const avgBlockTimeDisplay = computed(() => {
   if (avgBlockTimeSeconds.value === null) return "—";
   return `${avgBlockTimeSeconds.value.toFixed(2)}s`;
 });
+
+// Gas price tiers (micro denom per gas unit) from recent txs with fee info
+const gasPriceTiers = computed(() => {
+  const prices: number[] = [];
+  txs.value.forEach((tx) => {
+    const gasWanted = Number(tx.gasWanted ?? 0);
+    if (!gasWanted || !Array.isArray(tx.fees)) return;
+    tx.fees.forEach((fee) => {
+      const amt = Number(fee?.amount ?? 0);
+      if (amt > 0 && gasWanted > 0) {
+        prices.push(amt / gasWanted);
+      }
+    });
+  });
+  if (!prices.length) return null;
+  const sorted = prices.sort((a, b) => a - b);
+  const pick = (p: number) => sorted[Math.min(sorted.length - 1, Math.floor(p * sorted.length))];
+  return {
+    low: pick(0.1),
+    mid: pick(0.5),
+    high: pick(0.9)
+  };
+});
+
+const gasPriceDisplay = (value?: number | null) => {
+  if (!value || !Number.isFinite(value)) return "—";
+  return `${value.toFixed(3)} uretro/gas`;
+};
+
+const onlineValidators = computed(() => validators.value.filter(v => v.status === "BOND_STATUS_BONDED" && !v.jailed).length);
 
 const avgTxPerBlock = computed(() => {
   if (!recentBlocks.value.length) return null;
@@ -382,6 +418,62 @@ function sparkPath(data: number[], width = 160, height = 40) {
             <div class="text-[11px] text-slate-500">Rolling counter</div>
           </article>
         </div>
+      </div>
+
+      <!-- Chain Health & Fees -->
+      <div class="grid gap-3 xl:grid-cols-3">
+        <article class="card border-emerald-500/30 bg-emerald-500/5">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-semibold text-emerald-100">Chain Health</h2>
+            <span class="text-[11px] text-slate-400">Live sample</span>
+          </div>
+          <div class="grid grid-cols-2 sm:grid-cols-3 gap-2 text-sm">
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Avg Block Time</div>
+              <div class="text-base font-semibold text-slate-100">{{ avgBlockTimeDisplay }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Online Validators</div>
+              <div class="text-base font-semibold text-slate-100">{{ onlineValidators || '—' }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Block Sample</div>
+              <div class="text-base font-semibold text-slate-100">{{ blockSampleLabel }}</div>
+            </div>
+          </div>
+        </article>
+
+        <article class="card border-cyan-500/30 bg-cyan-500/5">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-semibold text-cyan-100">Mempool</h2>
+            <button class="btn text-[11px]" :disabled="loadingMempool" @click="refreshMempool">{{ loadingMempool ? '...' : 'Refresh' }}</button>
+          </div>
+          <div class="text-sm text-slate-200">Pending Txs: <span class="font-semibold text-white">{{ mempool.count }}</span></div>
+          <div class="text-xs text-slate-400">Size: {{ (mempool.totalBytes / 1024).toFixed(1) }} KB</div>
+          <div v-if="mempoolError" class="text-[11px] text-rose-300 mt-2">{{ mempoolError }}</div>
+        </article>
+
+        <article class="card border-amber-500/30 bg-amber-500/5">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-semibold text-amber-100">Fee Estimator</h2>
+            <span class="text-[11px] text-slate-400">Recent txs</span>
+          </div>
+          <div v-if="!gasPriceTiers" class="text-xs text-slate-400">Not enough fee data yet</div>
+          <div v-else class="grid grid-cols-3 gap-2 text-sm">
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-500">Low</div>
+              <div class="font-semibold text-slate-100">{{ gasPriceDisplay(gasPriceTiers.low) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-500">Mid</div>
+              <div class="font-semibold text-slate-100">{{ gasPriceDisplay(gasPriceTiers.mid) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-500">High</div>
+              <div class="font-semibold text-slate-100">{{ gasPriceDisplay(gasPriceTiers.high) }}</div>
+            </div>
+          </div>
+        </article>
       </div>
 
       <div class="grid gap-4 xl:grid-cols-4">
