@@ -12,6 +12,11 @@ export interface TxSummary {
   gasUsed?: string;
   timestamp?: string;
   messageTypes?: string[];
+  transfers?: Array<{
+    amount: number;
+    denom: string;
+    direction: "in" | "out" | "self";
+  }>;
 }
 
 const extractMessageTypes = (txResponse: any): string[] => {
@@ -20,6 +25,58 @@ const extractMessageTypes = (txResponse: any): string[] => {
   return messages
     .map((msg) => msg?.["@type"] || msg?.type || "")
     .filter((type: string) => typeof type === "string" && type.length > 0);
+};
+
+const parseTransfers = (logs: any[], address: string): TxSummary["transfers"] => {
+  if (!Array.isArray(logs)) return [];
+  const addr = address.toLowerCase();
+  const transfers: TxSummary["transfers"] = [];
+
+  logs.forEach((log) => {
+    const events: any[] = log?.events || [];
+    events.forEach((evt) => {
+      if (evt?.type !== "transfer") return;
+      const attrs: any[] = evt.attributes || [];
+      const senders: string[] = [];
+      const recipients: string[] = [];
+      const amounts: string[] = [];
+
+      attrs.forEach((a) => {
+        const key = String(a?.key || "").toLowerCase();
+        const value = String(a?.value || "");
+        if (key === "sender") senders.push(value);
+        if (key === "recipient") recipients.push(value);
+        if (key === "amount") amounts.push(value);
+      });
+
+      const maxLen = Math.max(senders.length, recipients.length, amounts.length);
+      for (let i = 0; i < maxLen; i++) {
+        const sender = (senders[i] || "").toLowerCase();
+        const recipient = (recipients[i] || "").toLowerCase();
+        const rawAmount = amounts[i] || amounts[amounts.length - 1] || "";
+        if (!rawAmount) continue;
+
+        const parts = rawAmount.split(",").map((p) => p.trim()).filter(Boolean);
+        parts.forEach((p) => {
+          const match = p.match(/^(\d+)([a-zA-Z/]+)$/);
+          if (!match) return;
+          const amt = Number(match[1]);
+          const denom = match[2];
+          const involvedSender = sender === addr;
+          const involvedRecipient = recipient === addr;
+          if (!involvedSender && !involvedRecipient) return;
+          const direction: "in" | "out" | "self" = involvedSender && involvedRecipient
+            ? "self"
+            : involvedRecipient
+              ? "in"
+              : "out";
+          transfers.push({ amount: amt, denom, direction });
+        });
+      }
+    });
+  });
+
+  return transfers;
 };
 
 const bytesToHex = (bytes: Uint8Array) =>
@@ -51,7 +108,8 @@ const buildSummaryFromResponse = (resp: any, fallback: { hash: string; height: n
   gasWanted: resp?.gas_wanted,
   gasUsed: resp?.gas_used,
   timestamp: resp?.timestamp || fallback.timestamp,
-  messageTypes: extractMessageTypes(resp)
+  messageTypes: extractMessageTypes(resp),
+  transfers: []
 });
 
 const txContainsAddress = (txResponse: any, address: string) => {
@@ -118,17 +176,17 @@ export function useTxs() {
 
         try {
           const detail = await api.get(`/cosmos/tx/v1beta1/txs/${hash}`);
-          const resp = detail.data?.tx_response;
-          if (!resp) continue;
-          if (!txContainsAddress(resp, address)) continue;
+            const resp = detail.data?.tx_response;
+            if (!resp) continue;
+            if (!txContainsAddress(resp, address)) continue;
 
-          matches.push(
-            buildSummaryFromResponse(resp, {
+            const summary = buildSummaryFromResponse(resp, {
               hash,
               height,
               timestamp: blockTime
-            })
-          );
+            });
+            summary.transfers = parseTransfers(resp?.logs, address);
+            matches.push(summary);
         } catch (txErr) {
           console.warn(`Failed to inspect tx ${hash}`, txErr);
         }
@@ -139,7 +197,7 @@ export function useTxs() {
   };
 
   // NOTE: pagination.limit is the correct param for this endpoint.
-  const hydrateFastTxs = async (list: any[], limit: number): Promise<TxSummary[]> => {
+const hydrateFastTxs = async (list: any[], limit: number, address?: string): Promise<TxSummary[]> => {
     if (!Array.isArray(list) || !list.length) return [];
     const trimmed = list.filter(Boolean).slice(0, limit);
 
@@ -164,11 +222,15 @@ export function useTxs() {
           const detail = await api.get(`/cosmos/tx/v1beta1/txs/${hash}`);
           const resp = detail.data?.tx_response;
           if (resp) {
-            return buildSummaryFromResponse(resp, {
+            const summary = buildSummaryFromResponse(resp, {
               hash,
               height: fallbackSummary.height,
               timestamp: fallbackSummary.timestamp
             });
+            if (address) {
+              summary.transfers = parseTransfers(resp?.logs, address);
+            }
+            return summary;
           }
         } catch (err) {
           console.warn(`Failed to hydrate tx ${hash}`, err);
@@ -370,7 +432,7 @@ export function useTxs() {
             const hash = resp.txhash;
             if (!hash || seen.has(hash)) continue;
             seen.add(hash);
-            collected.push({
+            const summary: TxSummary = {
               hash,
               height: parseInt(resp.height ?? "0", 10),
               codespace: resp.codespace,
@@ -378,8 +440,10 @@ export function useTxs() {
               gasWanted: resp.gas_wanted,
               gasUsed: resp.gas_used,
               timestamp: resp.timestamp,
-              messageTypes: extractMessageTypes(resp)
-            });
+              messageTypes: extractMessageTypes(resp),
+              transfers: parseTransfers(resp?.logs, address)
+            };
+            collected.push(summary);
           }
         } catch (filterErr) {
           const message = filterErr?.response?.data?.message || filterErr?.message || "";

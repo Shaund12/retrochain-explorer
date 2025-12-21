@@ -14,7 +14,7 @@ import { getTokenMeta, type TokenAccent, type TokenMeta } from "@/constants/toke
 
 const route = useRoute();
 const router = useRouter();
-const { balances, bech32Address, accountInfo, loading, error, load } = useAccount();
+const { balances, bech32Address, accountInfo, delegations, rewards, unbondings, loading, error, load } = useAccount();
 const { txs, searchByAddress } = useTxs();
 const { notify } = useToast();
 const { address: keplrAddress } = useKeplr();
@@ -77,6 +77,99 @@ const totalBalance = computed(() => {
   const coin = balances.value.find(b => b.denom === "uretro") || balances.value[0];
   if (!coin) return "0.000000 RETRO";
   return fmtAmount(coin.amount, coin.denom, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
+});
+
+const liquidUretro = computed(() => {
+  const liquid = balances.value.find(b => b.denom === "uretro");
+  return Number(liquid?.amount ?? "0");
+});
+
+const stakedUretro = computed(() => {
+  return delegations.value.reduce((sum, d) => sum + Number(d?.balance?.amount ?? 0), 0);
+});
+
+const rewardsUretro = computed(() => {
+  return rewards.value
+    .filter((r: any) => r?.denom === "uretro")
+    .reduce((sum: number, r: any) => sum + Number(r?.amount ?? 0), 0);
+});
+
+const unbondingUretro = computed(() => {
+  return unbondings.value.reduce((sum, u) => {
+    const entries: any[] = u?.entries || [];
+    const sub = entries.reduce((s, e) => s + Number(e?.balance ?? 0), 0);
+    return sum + sub;
+  }, 0);
+});
+
+const vestingUretro = computed(() => {
+  const base = accountInfo.value?.base_vesting_account;
+  if (!base?.original_vesting) return 0;
+  return base.original_vesting
+    .filter((c: any) => c?.denom === "uretro")
+    .reduce((sum: number, c: any) => sum + Number(c?.amount ?? 0), 0);
+});
+
+const portfolioBreakdown = computed(() => {
+  const entries = [
+    { label: "Liquid", amount: liquidUretro.value, color: "emerald" },
+    { label: "Staked", amount: stakedUretro.value, color: "cyan" },
+    { label: "Rewards", amount: rewardsUretro.value, color: "amber" },
+    { label: "Unbonding", amount: unbondingUretro.value, color: "indigo" },
+    { label: "Vesting", amount: vestingUretro.value, color: "violet" }
+  ];
+  const total = entries.reduce((s, e) => s + e.amount, 0) || 1;
+  return entries.map(e => ({
+    ...e,
+    share: (e.amount / total) * 100,
+    display: fmtAmount(String(e.amount), "uretro", { minDecimals: 2, maxDecimals: 2 })
+  }));
+});
+
+const delegationDistribution = computed(() => {
+  const total = stakedUretro.value || 1;
+  return delegations.value
+    .map((d: any) => {
+      const amount = Number(d?.balance?.amount ?? 0);
+      return {
+        validator: d?.delegation?.validator_address || "-",
+        amount,
+        share: (amount / total) * 100
+      };
+    })
+    .sort((a, b) => b.amount - a.amount);
+});
+
+const transferFlows = computed(() => {
+  const map = new Map<string, { incoming: number; outgoing: number }>();
+  txs.value.forEach((tx) => {
+    const date = (tx.timestamp || "").slice(0, 10);
+    if (!date) return;
+    const bucket = map.get(date) || { incoming: 0, outgoing: 0 };
+    (tx.transfers || []).forEach((tr) => {
+      if (tr.denom !== "uretro") return;
+      if (tr.direction === "in") bucket.incoming += tr.amount;
+      if (tr.direction === "out") bucket.outgoing += tr.amount;
+    });
+    map.set(date, bucket);
+  });
+  const ordered = Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
+  const recent = ordered.slice(-14);
+  return recent.map(([date, v]) => ({ date, incoming: v.incoming, outgoing: v.outgoing, net: v.incoming - v.outgoing }));
+});
+
+const activityByType = computed(() => {
+  const counts: Record<string, { count: number; lastHeight: number }> = {};
+  txs.value.forEach((tx) => {
+    (tx.messageTypes || []).forEach((type) => {
+      if (!counts[type]) counts[type] = { count: 0, lastHeight: 0 };
+      counts[type].count += 1;
+      counts[type].lastHeight = Math.max(counts[type].lastHeight, tx.height || 0);
+    });
+  });
+  return Object.entries(counts)
+    .map(([type, meta]) => ({ type, ...meta }))
+    .sort((a, b) => b.count - a.count);
 });
 
 const knownAccount = computed(() => getAccountLabel(bech32Address.value || addressInput.value));
@@ -456,6 +549,45 @@ const closeTokenDetails = () => {
         </div>
       </div>
 
+      <!-- Account Insights -->
+      <div class="card">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-slate-100">Account Insights</h2>
+          <span class="text-[11px] text-slate-400">Live from bank / staking / distribution</span>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-5 gap-3">
+          <div
+            v-for="entry in portfolioBreakdown"
+            :key="entry.label"
+            class="p-3 rounded-xl border bg-slate-900/60"
+            :class="{
+              'border-emerald-400/40 bg-emerald-500/5': entry.color === 'emerald',
+              'border-cyan-400/40 bg-cyan-500/5': entry.color === 'cyan',
+              'border-amber-400/40 bg-amber-500/5': entry.color === 'amber',
+              'border-indigo-400/40 bg-indigo-500/5': entry.color === 'indigo',
+              'border-violet-400/40 bg-violet-500/5': entry.color === 'violet'
+            }"
+          >
+            <div class="text-[11px] uppercase tracking-widest text-slate-400 mb-1">{{ entry.label }}</div>
+            <div class="text-sm font-semibold text-slate-100">{{ entry.display }}</div>
+            <div class="mt-2 h-2 rounded-full bg-slate-800 overflow-hidden">
+              <div
+                class="h-full"
+                :class="{
+                  'bg-emerald-400': entry.color === 'emerald',
+                  'bg-cyan-400': entry.color === 'cyan',
+                  'bg-amber-400': entry.color === 'amber',
+                  'bg-indigo-400': entry.color === 'indigo',
+                  'bg-violet-400': entry.color === 'violet'
+                }"
+                :style="{ width: entry.share.toFixed(1) + '%' }"
+              ></div>
+            </div>
+            <div class="text-[11px] text-slate-500 mt-1">{{ entry.share.toFixed(1) }}% of total</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Account Meta + Balances Table -->
       <div class="card">
         <h2 class="text-sm font-semibold text-slate-100 mb-3">Account</h2>
@@ -523,6 +655,30 @@ const closeTokenDetails = () => {
         </div>
       </div>
 
+      <!-- Delegation Distribution -->
+      <div class="card" v-if="delegationDistribution.length">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-slate-100">Delegation Distribution</h2>
+          <span class="text-[11px] text-slate-400">Total staked: {{ fmtAmount(String(stakedUretro), 'uretro', { minDecimals: 2, maxDecimals: 2 }) }}</span>
+        </div>
+        <div class="space-y-2">
+          <div
+            v-for="row in delegationDistribution"
+            :key="row.validator"
+            class="p-3 rounded-lg bg-slate-900/60 border border-slate-800"
+          >
+            <div class="flex items-center justify-between text-xs mb-1">
+              <div class="font-mono text-[11px] text-cyan-200">{{ row.validator }}</div>
+              <div class="text-slate-200 font-semibold">{{ fmtAmount(String(row.amount), 'uretro', { minDecimals: 2, maxDecimals: 2 }) }}</div>
+            </div>
+            <div class="h-2 rounded-full bg-slate-800 overflow-hidden">
+              <div class="h-full bg-cyan-400" :style="{ width: row.share.toFixed(1) + '%' }"></div>
+            </div>
+            <div class="text-[11px] text-slate-500 mt-1">{{ row.share.toFixed(1) }}% of staked</div>
+          </div>
+        </div>
+      </div>
+
       <!-- Recent Transactions -->
       <div class="card">
         <div class="flex items-center justify-between mb-3">
@@ -567,6 +723,53 @@ const closeTokenDetails = () => {
               </tr>
             </tbody>
           </table>
+        </div>
+      </div>
+
+      <!-- Transfer Flows -->
+      <div class="card" v-if="transferFlows.length">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-slate-100">Net Transfers (last 14 days)</h2>
+          <div class="text-[11px] text-slate-400">Incoming vs Outgoing uretro</div>
+        </div>
+        <div class="space-y-2">
+          <div
+            v-for="day in transferFlows"
+            :key="day.date"
+            class="p-3 rounded-lg bg-slate-900/60 border border-slate-800"
+          >
+            <div class="flex items-center justify-between text-xs mb-2">
+              <div class="text-slate-300 font-mono">{{ day.date }}</div>
+              <div class="flex gap-3 text-[11px] text-slate-400">
+                <span class="text-emerald-300">+{{ fmtAmount(String(day.incoming), 'uretro', { minDecimals: 2, maxDecimals: 2 }) }}</span>
+                <span class="text-rose-300">-{{ fmtAmount(String(day.outgoing), 'uretro', { minDecimals: 2, maxDecimals: 2 }) }}</span>
+                <span :class="day.net >= 0 ? 'text-emerald-200' : 'text-rose-200'">Net {{ fmtAmount(String(day.net), 'uretro', { minDecimals: 2, maxDecimals: 2 }) }}</span>
+              </div>
+            </div>
+            <div class="h-2 rounded-full bg-slate-800 overflow-hidden flex">
+              <div class="h-full bg-emerald-400" :style="{ width: Math.min(100, (day.incoming / (day.incoming + day.outgoing || 1)) * 100) + '%' }"></div>
+              <div class="h-full bg-rose-400" :style="{ width: Math.min(100, (day.outgoing / (day.incoming + day.outgoing || 1)) * 100) + '%' }"></div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <!-- Activity By Type -->
+      <div class="card" v-if="activityByType.length">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-sm font-semibold text-slate-100">Activity by Message Type</h2>
+          <div class="text-[11px] text-slate-400">Grouped from recent transactions</div>
+        </div>
+        <div class="grid grid-cols-1 sm:grid-cols-2 md:grid-cols-3 gap-2">
+          <div
+            v-for="entry in activityByType"
+            :key="entry.type"
+            class="p-3 rounded-lg bg-slate-900/60 border border-slate-800"
+          >
+            <div class="text-[11px] uppercase tracking-widest text-slate-400 mb-1">{{ entry.type.split('.').pop() }}</div>
+            <div class="text-lg font-bold text-slate-100">{{ entry.count }}</div>
+            <div class="text-[11px] text-slate-500">Last seen at height {{ entry.lastHeight }}</div>
+          </div>
         </div>
       </div>
     </template>
