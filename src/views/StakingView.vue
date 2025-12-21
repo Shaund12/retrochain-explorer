@@ -34,6 +34,8 @@ const activeTab = ref<'overview' | 'delegate' | 'redelegate' | 'undelegate' | 'r
 const selectedValidator = ref<string>("");
 const amount = ref("");
 const txLoading = ref(false);
+const validatorSearch = ref("");
+const showInactive = ref(false);
 
 const tokenDenom = computed(() => 'uretro');
 const tokenSymbol = computed(() => 'RETRO');
@@ -95,6 +97,12 @@ const setMaxAmount = () => {
   amount.value = walletBalanceFloat.value.toFixed(6);
 };
 
+const setAmountPercent = (percent: number) => {
+  if (walletBalanceFloat.value <= 0) return;
+  const val = walletBalanceFloat.value * percent;
+  amount.value = val.toFixed(6);
+};
+
 const refreshUserState = async () => {
   if (!address.value) return;
   const run = async () => {
@@ -116,10 +124,18 @@ const refreshUserState = async () => {
 const shortAddress = (addr: string, size = 10) => `${addr?.slice(0, size)}...${addr?.slice(-6)}`;
 
 const availableValidators = computed(() => {
-  return validators.value.filter(v => 
-    v.status === 'BOND_STATUS_BONDED' && 
-    !v.jailed
-  );
+  const term = validatorSearch.value.trim().toLowerCase();
+  let list = validators.value.filter(v => !v.jailed);
+  if (!showInactive.value) {
+    list = list.filter(v => v.status === 'BOND_STATUS_BONDED');
+  }
+  if (term) {
+    list = list.filter(v =>
+      v.description?.moniker?.toLowerCase().includes(term) ||
+      v.operatorAddress.toLowerCase().includes(term)
+    );
+  }
+  return list;
 });
 
 onMounted(async () => {
@@ -572,12 +588,26 @@ const copy = async (text: string) => {
       <h2 class="text-sm font-semibold text-slate-100 mb-3">Delegate Tokens</h2>
       
       <div class="space-y-3">
-        <div>
-          <label class="text-xs text-slate-400 mb-2 block">Select Validator</label>
+        <div class="space-y-2">
+          <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-2">
+            <label class="text-xs text-slate-400">Select Validator</label>
+            <div class="flex items-center gap-2 text-[11px] text-slate-400">
+              <label class="inline-flex items-center gap-1">
+                <input type="checkbox" v-model="showInactive" class="w-4 h-4 rounded border-slate-600 bg-slate-900/80 text-emerald-400 focus:ring-emerald-400" />
+                Show inactive
+              </label>
+              <input
+                v-model="validatorSearch"
+                type="text"
+                placeholder="Search validator"
+                class="px-2 py-1 rounded bg-slate-900/60 border border-slate-700 text-slate-200 text-[11px] w-40"
+              />
+            </div>
+          </div>
           <select v-model="selectedValidator" class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
             <option value="">Choose a validator...</option>
             <option v-for="v in availableValidators" :key="v.operatorAddress" :value="v.operatorAddress">
-              {{ v.description?.moniker || v.operatorAddress.slice(0, 20) }}...
+              {{ v.description?.moniker || v.operatorAddress.slice(0, 20) }}... • {{ (parseFloat(v.commission?.commissionRates?.rate || '0') * 100).toFixed(1) }}% fee
             </option>
           </select>
         </div>
@@ -591,11 +621,14 @@ const copy = async (text: string) => {
             placeholder="0.000000"
             class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
           />
-          <div class="flex items-center justify-between text-[11px] text-slate-500 mt-1">
+          <div class="flex items-center justify-between text-[11px] text-slate-500 mt-1 flex-wrap gap-2">
             <span>Available: <span class="font-mono text-slate-300">{{ walletBalanceDisplay }}</span></span>
-            <button class="btn text-[10px]" @click="setMaxAmount" :disabled="walletBalanceFloat <= 0">
-              Max
-            </button>
+            <div class="flex items-center gap-1">
+              <button class="btn text-[10px]" @click="setAmountPercent(0.25)" :disabled="walletBalanceFloat <= 0">25%</button>
+              <button class="btn text-[10px]" @click="setAmountPercent(0.5)" :disabled="walletBalanceFloat <= 0">50%</button>
+              <button class="btn text-[10px]" @click="setAmountPercent(0.75)" :disabled="walletBalanceFloat <= 0">75%</button>
+              <button class="btn text-[10px]" @click="setMaxAmount" :disabled="walletBalanceFloat <= 0">Max</button>
+            </div>
           </div>
         </div>
 
@@ -697,7 +730,19 @@ const copy = async (text: string) => {
     <div v-if="!address" class="card">
       <h2 class="text-sm font-semibold text-slate-100 mb-3">Active Validators</h2>
       <div v-if="validatorsLoading" class="text-xs text-slate-400">Loading validators...</div>
-      <div v-else class="space-y-2">
+      <div v-else class="space-y-3">
+        <div class="flex items-center justify-between gap-2 text-[11px] text-slate-400">
+          <input
+            v-model="validatorSearch"
+            type="text"
+            placeholder="Search validator"
+            class="px-2 py-1 rounded bg-slate-900/60 border border-slate-700 text-slate-200 text-[11px] w-44"
+          />
+          <label class="inline-flex items-center gap-1">
+            <input type="checkbox" v-model="showInactive" class="w-4 h-4 rounded border-slate-600 bg-slate-900/80 text-emerald-400 focus:ring-emerald-400" />
+            Show inactive
+          </label>
+        </div>
         <div 
           v-for="v in availableValidators.slice(0, 5)" 
           :key="v.operatorAddress"
