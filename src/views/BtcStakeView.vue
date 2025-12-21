@@ -39,6 +39,7 @@ const stakeAmount = ref("");
 const unstakeAmount = ref("");
 const txLoading = ref(false);
 const lastRefreshedLabel = computed(() => (lastUpdated.value ? dayjs(lastUpdated.value).fromNow() : "never"));
+const btcPriceUsd = ref<number | null>(null);
 
 const formatFromBase = (value?: string | null, decimals = 6, symbol = "") => {
   const num = Number(value ?? "0");
@@ -53,6 +54,14 @@ const formatRetro = (value?: string | null) => formatFromBase(value, RETRO_DECIM
 const poolTotalStaked = computed(() => formatWbtc(pool.value?.total_staked_amount));
 const poolRewardBalance = computed(() => formatRetro(pool.value?.reward_balance_uretro));
 const poolUndistributed = computed(() => formatRetro(pool.value?.undistributed_uretro));
+const poolTotalStakedNumber = computed(() => {
+  const raw = Number(pool.value?.total_staked_amount ?? 0);
+  return Number.isFinite(raw) ? raw / Math.pow(10, WBTC_DECIMALS) : 0;
+});
+const tvlUsd = computed(() => {
+  if (!btcPriceUsd.value) return null;
+  return poolTotalStakedNumber.value * btcPriceUsd.value;
+});
 
 const userStakedDisplay = computed(() => formatWbtc(userStake.value?.staked_amount));
 const pendingRewardsDisplay = computed(() => formatRetro(pendingRewards.value?.pending_uretro));
@@ -61,6 +70,26 @@ const userBalanceBase = computed(() => userBalance.value ?? "0");
 
 const allowedTokenMeta = computed(() => getTokenMeta(allowedDenom.value) || { symbol: allowedDenom.value || "" });
 const allowedTokenSymbol = computed(() => allowedTokenMeta.value.symbol || allowedDenom.value || "");
+
+const copy = async (text: string) => {
+  try {
+    await navigator.clipboard?.writeText?.(text);
+  } catch (err) {
+    console.warn("Clipboard unavailable", err);
+  }
+};
+
+const fetchBtcPrice = async () => {
+  try {
+    const res = await fetch("https://api.coingecko.com/api/v3/simple/price?ids=bitcoin&vs_currencies=usd");
+    const data = await res.json();
+    const price = data?.bitcoin?.usd;
+    btcPriceUsd.value = Number.isFinite(price) ? Number(price) : null;
+  } catch (err) {
+    console.warn("Failed to load BTC price", err);
+    btcPriceUsd.value = null;
+  }
+};
 
 const shortAddress = (addr?: string | null, size = 10) => {
   if (!addr) return "—";
@@ -226,6 +255,7 @@ const connectWallet = async () => {
 
 onMounted(async () => {
   await refreshAll(address.value);
+  await fetchBtcPrice();
   startPolling(address.value);
 });
 
@@ -244,15 +274,39 @@ watch(
 
 <template>
   <div class="space-y-4">
-    <RcDisclaimer type="info" title="? Bitcoin Liquid Staking">
+    <RcDisclaimer type="info" title="? Bitcoin Liquid Staking on RetroChain">
       <p>
-        Stake wrapped Bitcoin (WBTC) using RetroChain's <code class="text-emerald-300">btcstake</code> module to earn RETRO-denominated rewards.
-        This interface talks directly to the on-chain module—transactions are live on <strong>retrochain-mainnet</strong>.
+        Stake wrapped Bitcoin (WBTC) via RetroChain’s <code class="text-emerald-300">btcstake</code> module to earn RETRO-denominated rewards.
+        Transactions are live on <strong>retrochain-mainnet</strong> and routed directly to the module endpoints.
       </p>
       <p class="mt-2 text-[11px] text-slate-400">
-        Rewards are distributed in <code>uretro</code>. Always double-check amounts before signing transactions.
+        Rewards are distributed in <code>uretro</code>. Double-check amounts and gas before signing.
       </p>
     </RcDisclaimer>
+
+    <div class="card grid gap-3 md:grid-cols-3 text-sm">
+      <div class="rounded-xl border border-emerald-500/30 bg-emerald-500/5 p-3 flex items-start gap-2">
+        <span class="text-lg">?</span>
+        <div>
+          <p class="font-semibold text-emerald-100">On-chain yields</p>
+          <p class="text-[11px] text-emerald-200/80">Claim RETRO rewards streamed from btcstake pool accounting.</p>
+        </div>
+      </div>
+      <div class="rounded-xl border border-amber-500/30 bg-amber-500/5 p-3 flex items-start gap-2">
+        <span class="text-lg">??</span>
+        <div>
+          <p class="font-semibold text-amber-100">Live module telemetry</p>
+          <p class="text-[11px] text-amber-200/80">REST and RPC health badges reflect current endpoints.</p>
+        </div>
+      </div>
+      <div class="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-3 flex items-start gap-2">
+        <span class="text-lg">???</span>
+        <div>
+          <p class="font-semibold text-indigo-100">Non-custodial</p>
+          <p class="text-[11px] text-indigo-200/80">Your WBTC stays in your wallet until staked; withdraw anytime.</p>
+        </div>
+      </div>
+    </div>
 
     <div class="card relative overflow-hidden">
       <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-amber-500/15 to-rose-500/10 rounded-full blur-3xl"></div>
@@ -277,13 +331,17 @@ watch(
         <div class="text-[11px] text-slate-500">
           REST: <code>{{ restBase }}</code> · RPC: <code>{{ rpcBase }}</code>
         </div>
+        <div v-if="allowedDenom" class="text-[11px] text-slate-400 flex items-center gap-2">
+          <span class="px-2 py-1 rounded-full border border-white/10 bg-white/5 text-slate-200">Allowed denom: <code>{{ allowedDenom }}</code></span>
+          <button class="btn text-[10px]" @click="copy(allowedDenom)">Copy</button>
+        </div>
       </div>
     </div>
 
     <div v-if="denomWarning" class="card border-rose-500/40 bg-rose-500/5">
       <p class="text-sm text-rose-200 font-semibold mb-1">WBTC denom unavailable</p>
       <p class="text-xs text-rose-100/80">
-        The btcstake module has not announced an IBC denom yet. Once governance enables the pool, the allowed denom will appear automatically.
+        The btcstake module has not announced an allowed denom yet. Once governance enables the pool, it will appear automatically.
       </p>
     </div>
 
@@ -318,6 +376,14 @@ watch(
             <p class="text-[10px] uppercase tracking-wider text-slate-500">Undistributed Rewards</p>
             <p class="text-lg font-semibold text-indigo-200">{{ poolUndistributed }}</p>
           </div>
+          <div>
+            <p class="text-[10px] uppercase tracking-wider text-slate-500">BTC Price</p>
+            <p class="text-lg font-semibold text-amber-200">{{ btcPriceUsd ? `$${btcPriceUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—' }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] uppercase tracking-wider text-slate-500">Pool TVL (USD)</p>
+            <p class="text-lg font-semibold text-emerald-200">{{ tvlUsd !== null ? `$${tvlUsd.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}` : '—' }}</p>
+          </div>
         </div>
       </div>
 
@@ -341,6 +407,14 @@ watch(
                 Claim
               </button>
             </p>
+          </div>
+          <div>
+            <p class="text-[10px] uppercase tracking-wider text-slate-500">Wallet WBTC Balance</p>
+            <p class="text-sm font-semibold text-amber-200">{{ userBalanceDisplay }}</p>
+          </div>
+          <div>
+            <p class="text-[10px] uppercase tracking-wider text-slate-500">Allowed Denom</p>
+            <p class="text-xs font-mono text-slate-200 break-all">{{ allowedDenom || '—' }}</p>
           </div>
         </div>
         <p class="text-[11px] text-slate-500 mt-2">
@@ -378,6 +452,7 @@ watch(
           <button class="btn btn-primary w-full" @click="handleStake" :disabled="txLoading || !address || denomWarning">
             {{ txLoading ? 'Processing…' : address ? 'Stake WBTC' : 'Connect Wallet' }}
           </button>
+          <p class="text-[11px] text-slate-500">Stake to earn RETRO rewards. Gas is paid in uretro.</p>
         </div>
       </div>
 
@@ -402,8 +477,19 @@ watch(
           <button class="btn btn-primary w-full" @click="handleUnstake" :disabled="txLoading || !address || denomWarning">
             {{ txLoading ? 'Processing…' : 'Unstake' }}
           </button>
+          <p class="text-[11px] text-slate-500">Unstake returns WBTC to your wallet after the on-chain action completes.</p>
         </div>
       </div>
+    </div>
+
+    <div class="card">
+      <h3 class="text-sm font-semibold text-white mb-2">Quick Tips</h3>
+      <ul class="text-xs text-slate-300 space-y-1.5 list-disc list-inside">
+        <li>Keep a small uretro balance to cover gas for stake, unstake, and claim actions.</li>
+        <li>Use the percentage buttons to quickly allocate your WBTC balance.</li>
+        <li>Rewards accrue in <code>uretro</code>; claim whenever pending rewards are non-zero.</li>
+        <li>Monitor REST/RPC health badges above before submitting transactions.</li>
+      </ul>
     </div>
 
     <div v-if="!address" class="card border-amber-500/30 bg-amber-500/5">
