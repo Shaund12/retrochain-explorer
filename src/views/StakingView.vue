@@ -276,8 +276,14 @@ const handleClaimRewards = async (validatorAddress?: string) => {
 
 const handleUndelegate = async () => {
   if (!undelegateValidator.value) {
-    toast.showError("Select a delegation first");
-    return;
+    // Fallback: auto-pick the first delegation if available
+    const first = myDelegations.value[0];
+    if (first?.validatorAddress) {
+      undelegateValidator.value = first.validatorAddress;
+    } else {
+      toast.showError("Select a delegation first");
+      return;
+    }
   }
   if (!undelegateAmount.value || Number(undelegateAmount.value) <= 0) {
     toast.showError("Enter an amount to undelegate");
