@@ -2,6 +2,7 @@
 import { onMounted, ref, computed } from "vue";
 import { useRoute } from "vue-router";
 import { useTxs } from "@/composables/useTxs";
+import { getTokenMeta } from "@/constants/tokens";
 import dayjs from "dayjs";
 import { formatCoins } from "@/utils/format";
 
@@ -181,6 +182,63 @@ const getMessageDetails = (msg: any): MessageDetail[] => {
 
   return entries.length ? entries : base;
 };
+
+const parseAmountDenom = (raw?: string | null) => {
+  if (!raw || typeof raw !== "string") return null;
+  const match = raw.match(/^(-?\d+)([a-zA-Z\/:].+)$/);
+  if (!match) return null;
+  return { amount: match[1], denom: match[2] };
+};
+
+const formatTokenAmount = (rawAmount: string, denom: string) => {
+  const meta = getTokenMeta(denom);
+  const decimals = typeof meta.decimals === "number" ? meta.decimals : 6;
+  const int = BigInt(rawAmount);
+  const divisor = 10n ** BigInt(Math.max(decimals, 0));
+  const whole = Number(int) / Math.pow(10, decimals);
+  const formatted = Number.isFinite(whole)
+    ? whole.toLocaleString(undefined, { minimumFractionDigits: Math.min(2, decimals), maximumFractionDigits: Math.min(6, decimals) })
+    : rawAmount;
+  return `${formatted} ${meta.symbol || denom.toUpperCase()}`;
+};
+
+const transferEvents = computed(() => {
+  const logs = txResponse.value?.logs;
+  if (!Array.isArray(logs)) return [] as any[];
+  const transfers: {
+    sender?: string | null;
+    recipient?: string | null;
+    amount?: string | null;
+    denom?: string | null;
+    formatted?: string;
+    meta?: ReturnType<typeof getTokenMeta>;
+  }[] = [];
+
+  logs.forEach((log) => {
+    const evs = Array.isArray(log?.events) ? log.events : [];
+    evs.forEach((ev: any) => {
+      if (ev?.type !== "transfer") return;
+      const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
+      const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
+        if (curr?.key) acc[curr.key] = curr.value;
+        return acc;
+      }, {} as Record<string, string>);
+      const parsed = parseAmountDenom(map.amount);
+      if (!parsed) return;
+      const meta = getTokenMeta(parsed.denom);
+      transfers.push({
+        sender: map.sender || null,
+        recipient: map.recipient || map.receiver || null,
+        amount: parsed.amount,
+        denom: parsed.denom,
+        formatted: formatTokenAmount(parsed.amount, parsed.denom),
+        meta
+      });
+    });
+  });
+
+  return transfers;
+});
 
 const copyToClipboard = async (text: string) => {
   try {
@@ -392,6 +450,38 @@ onMounted(async () => {
       </div>
 
       <div class="flex flex-col gap-3">
+        <div v-if="transferEvents.length" class="card">
+          <h2 class="text-sm font-semibold mb-2 text-slate-100">Transfers</h2>
+          <div class="space-y-2 text-xs text-slate-300">
+            <div
+              v-for="(tr, i) in transferEvents"
+              :key="`${tr.denom}-${tr.amount}-${i}`"
+              class="p-3 rounded-lg bg-slate-900/60 border border-slate-700"
+            >
+              <div class="flex items-center justify-between mb-1">
+                <div class="text-slate-100 font-semibold">{{ tr.formatted || `${tr.amount} ${tr.denom}` }}</div>
+                <span class="badge text-[10px]" :class="tr.meta?.accent === 'amber' ? 'border-amber-400/60 text-amber-200' : 'border-slate-400/60 text-slate-200'">
+                  {{ tr.meta?.symbol || tr.denom?.toUpperCase() }}
+                </span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-400">
+                <div v-if="tr.sender">
+                  <span class="text-slate-500">From</span>
+                  <div class="font-mono break-all text-slate-200">{{ tr.sender }}</div>
+                </div>
+                <div v-if="tr.recipient">
+                  <span class="text-slate-500">To</span>
+                  <div class="font-mono break-all text-slate-200">{{ tr.recipient }}</div>
+                </div>
+                <div>
+                  <span class="text-slate-500">Denom</span>
+                  <div class="font-mono break-all text-slate-200">{{ tr.denom }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div class="card">
           <h2 class="text-sm font-semibold mb-2 text-slate-100">
             Execution Metrics

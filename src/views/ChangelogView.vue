@@ -103,6 +103,34 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "2025.12.22",
+    codename: "Stake & Trace",
+    date: "2025-12-22",
+    summary: "BTC staking UX got richer guidance, chain metadata adds stWBTC and Noble USDC, and tx details now surface parsed transfers with token context.",
+    changes: [
+      {
+        type: "improvement",
+        title: "Stake WBTC preflight and safety controls",
+        description: "Added preflight checklist, max-minus-gas helper, copy buttons, and zero-balance CTA to the BTC staking page for safer sends."
+      },
+      {
+        type: "feature",
+        title: "stWBTC visible in wallet metadata",
+        description: "Registered the stWBTC module denom in chain metadata/Keplr suggestion so the derivative shows with proper symbol/decimals instead of unknown denom."
+      },
+      {
+        type: "feature",
+        title: "Noble USDC IBC hash recognized",
+        description: "Added Noble → Osmosis → RetroChain USDC IBC hash with icon/decimals so balances render correctly across explorer pages."
+      },
+      {
+        type: "feature",
+        title: "Transfers card on tx detail",
+        description: "Transaction details now parse transfer events, format amounts with token metadata (including IBC denoms), and show sender/recipient for quick at-a-glance context."
+      }
+    ]
+  },
+  {
     version: "2025.12.20",
     codename: "Dashboard Flex",
     date: "2025-12-20",
