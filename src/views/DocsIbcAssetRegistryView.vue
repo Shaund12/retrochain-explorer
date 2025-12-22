@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import RcBackLink from "@/components/RcBackLink.vue";
+import RcDocsPager from "@/components/RcDocsPager.vue";
 import { useApi } from "@/composables/useApi";
 import { getTokenMeta } from "@/constants/tokens";
 
@@ -93,13 +94,80 @@ const enrichRow = async (row: AssetRow): Promise<AssetRow> => {
 
 const rows = ref<AssetRow[]>([]);
 
+const discoveredIbcDenoms = ref<string[]>([]);
+const discoveryWarning = ref<string | null>(null);
+
+const uniqLower = (items: string[]) => {
+  const set = new Set<string>();
+  const out: string[] = [];
+  items.forEach((d) => {
+    const key = (d || "").toLowerCase();
+    if (!key || set.has(key)) return;
+    set.add(key);
+    out.push(d);
+  });
+  return out;
+};
+
+const fetchAllDenomsMetadata = async (limit = 500) => {
+  const collected: any[] = [];
+  let nextKey: string | undefined;
+
+  while (collected.length < limit) {
+    const pageLimit = Math.min(200, limit - collected.length);
+    const res = await api.get("/cosmos/bank/v1beta1/denoms_metadata", {
+      params: {
+        "pagination.limit": String(pageLimit),
+        ...(nextKey ? { "pagination.key": nextKey } : {})
+      }
+    });
+
+    const list: any[] = Array.isArray(res.data?.metadatas) ? res.data.metadatas : [];
+    if (!list.length) break;
+    collected.push(...list);
+
+    nextKey = res.data?.pagination?.next_key || undefined;
+    if (!nextKey) break;
+  }
+
+  return collected;
+};
+
+const discoverIbcDenoms = async () => {
+  discoveryWarning.value = null;
+  try {
+    const metadatas = await fetchAllDenomsMetadata(1000);
+    const denoms = metadatas
+      .map((m) => String(m?.base ?? ""))
+      .filter((d) => d.toLowerCase().startsWith("ibc/"));
+    discoveredIbcDenoms.value = uniqLower(denoms);
+  } catch (e: any) {
+    // Not all nodes expose metadata; keep docs functional with curated list.
+    discoveredIbcDenoms.value = [];
+    const msg = e?.response?.data?.message || e?.message || "Denom metadata endpoint unavailable";
+    discoveryWarning.value = msg;
+  }
+};
+
 const load = async () => {
   loading.value = true;
   error.value = null;
 
   try {
     await loadHeight();
-    rows.value = await Promise.all(curated.map(enrichRow));
+    await discoverIbcDenoms();
+
+    const combinedDenoms = uniqLower([
+      ...curated.map((c) => c.denom),
+      ...discoveredIbcDenoms.value
+    ]);
+
+    const combinedRows: AssetRow[] = combinedDenoms.map((denom) => {
+      const isCurated = curated.some((c) => c.denom.toLowerCase() === denom.toLowerCase());
+      return { denom, source: isCurated ? "curated" : "live" };
+    });
+
+    rows.value = await Promise.all(combinedRows.map(enrichRow));
   } catch (e: any) {
     error.value = e?.message ?? String(e);
     rows.value = [];
@@ -136,7 +204,23 @@ const resolve = async () => {
   }
 };
 
-const hasCurated = computed(() => rows.value.length > 0);
+const hasRows = computed(() => rows.value.length > 0);
+
+const curatedCount = computed(() => rows.value.filter((r) => r.source === "curated").length);
+const discoveredCount = computed(() => rows.value.filter((r) => r.source === "live").length);
+
+const headerStats = computed(() => {
+  if (!hasRows.value) return "No entries";
+  if (discoveredCount.value > 0) {
+    return `${rows.value.length} total · ${discoveredCount.value} discovered · ${curatedCount.value} curated`;
+  }
+  return `${rows.value.length} total · ${curatedCount.value} curated`;
+});
+
+const sourceBadgeClass = (source?: "live" | "curated") => {
+  if (source === "curated") return "border-indigo-400/30 text-indigo-200 bg-indigo-500/10";
+  return "border-emerald-400/30 text-emerald-200 bg-emerald-500/10";
+};
 
 onMounted(() => {
   load();
@@ -167,7 +251,8 @@ onMounted(() => {
 
     <RcDisclaimer type="info" title="How to use this">
       <ul class="text-sm text-slate-300 list-disc list-inside space-y-1">
-        <li><strong>Curated</strong> entries are “known good” and can be extended as new routes get adopted.</li>
+        <li><strong>Automatic discovery</strong> attempts to list all <code>ibc/</code> denoms from <code>/cosmos/bank/v1beta1/denoms_metadata</code>.</li>
+        <li><strong>Curated</strong> entries are kept as “known good” fallbacks and to provide icons/decimals.</li>
         <li><strong>Live resolver</strong> queries <code>/ibc/apps/transfer/v1/denom_traces/&lt;hash&gt;</code> for any hash.</li>
         <li>Symbols/decimals/icons are pulled from the explorer’s token metadata mapping when available.</li>
       </ul>
@@ -225,7 +310,13 @@ onMounted(() => {
         <button class="btn text-xs" @click="load">Refresh</button>
       </div>
 
-      <div v-if="!hasCurated" class="text-sm text-slate-400 mt-3">No curated entries yet.</div>
+      <div class="mt-2 text-[11px] text-slate-500">{{ headerStats }}</div>
+
+      <div v-if="discoveryWarning" class="mt-2 text-[11px] text-amber-200">
+        Auto-discovery warning: {{ discoveryWarning }}
+      </div>
+
+      <div v-if="!hasRows" class="text-sm text-slate-400 mt-3">No IBC denoms discovered.</div>
 
       <div v-else class="overflow-x-auto mt-3">
         <table class="table">
@@ -235,6 +326,7 @@ onMounted(() => {
               <th>Denom</th>
               <th>Base denom</th>
               <th>Path</th>
+              <th>Source</th>
             </tr>
           </thead>
           <tbody>
@@ -247,6 +339,14 @@ onMounted(() => {
               <td class="font-mono text-xs text-slate-300">{{ row.denom }}</td>
               <td class="font-mono text-xs text-slate-300">{{ row.baseDenom ?? '—' }}</td>
               <td class="font-mono text-[11px] text-slate-500">{{ row.path ?? '—' }}</td>
+              <td>
+                <span
+                  class="px-2 py-0.5 rounded-full text-[11px] border whitespace-nowrap"
+                  :class="sourceBadgeClass(row.source)"
+                >
+                  {{ row.source === 'curated' ? 'Curated' : 'Discovered' }}
+                </span>
+              </td>
             </tr>
           </tbody>
         </table>
@@ -264,5 +364,7 @@ onMounted(() => {
 retrochaind query bank balances &lt;address&gt;
 retrochaind query bank supply</code></pre>
     </div>
+
+    <RcDocsPager />
   </div>
 </template>

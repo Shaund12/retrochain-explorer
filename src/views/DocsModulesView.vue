@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import RcBackLink from "@/components/RcBackLink.vue";
+import RcDocsPager from "@/components/RcDocsPager.vue";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
 
 type ModuleDoc = {

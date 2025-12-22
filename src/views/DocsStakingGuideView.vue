@@ -3,6 +3,7 @@ import { onMounted, ref } from "vue";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import RcBackLink from "@/components/RcBackLink.vue";
+import RcDocsPager from "@/components/RcDocsPager.vue";
 import { useApi } from "@/composables/useApi";
 
 const api = useApi();
