@@ -39,6 +39,58 @@ const loadMore = () => {
 const { current: network } = useNetwork();
 const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || "/api";
 
+const blockTimes = computed(() =>
+  blocks.value
+    .map((b) => (b.time ? new Date(b.time).getTime() : null))
+    .filter((t): t is number => typeof t === "number" && Number.isFinite(t))
+);
+
+const blockTimeDeltas = computed(() => {
+  const arr: number[] = [];
+  for (let i = 1; i < blockTimes.value.length; i++) {
+    const delta = Math.abs((blockTimes.value[i - 1] - blockTimes.value[i]) / 1000);
+    if (Number.isFinite(delta) && delta > 0) arr.push(delta);
+  }
+  return arr;
+});
+
+const avgBlockTimeSeconds = computed(() => {
+  if (!blockTimeDeltas.value.length) return null;
+  return blockTimeDeltas.value.reduce((a, b) => a + b, 0) / blockTimeDeltas.value.length;
+});
+
+const avgBlockTimeDisplay = computed(() => {
+  if (avgBlockTimeSeconds.value === null) return "—";
+  return `${avgBlockTimeSeconds.value.toFixed(2)}s`;
+});
+
+const avgTxPerBlock = computed(() => {
+  if (!blocks.value.length) return null;
+  const total = blocks.value.reduce((sum, b) => sum + (b.txs || 0), 0);
+  return total / blocks.value.length;
+});
+
+const avgTxPerBlockDisplay = computed(() => {
+  if (avgTxPerBlock.value === null) return "—";
+  return avgTxPerBlock.value < 1 ? avgTxPerBlock.value.toFixed(2) : avgTxPerBlock.value.toFixed(1);
+});
+
+const avgGasUtilization = computed(() => {
+  const vals = blocks.value
+    .map((b) => (typeof b.gasUtilization === "number" ? b.gasUtilization : null))
+    .filter((v): v is number => v !== null && Number.isFinite(v));
+  if (!vals.length) return null;
+  const avg = vals.reduce((a, b) => a + b, 0) / vals.length;
+  return avg;
+});
+
+const avgGasUtilizationDisplay = computed(() => {
+  if (avgGasUtilization.value === null) return "—";
+  return `${(avgGasUtilization.value * 100).toFixed(1)}%`;
+});
+
+const sampleWindowDisplay = computed(() => `${blocks.value.length || 0} block sample`);
+
 const formatNumber = (value?: number | null) => {
   if (value === null || value === undefined) return "—";
   return value.toLocaleString();
@@ -52,6 +104,29 @@ const formatPercent = (value?: number | null, digits = 1) => {
 
 <template>
   <div class="space-y-3">
+    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div class="card-soft border border-emerald-500/30 bg-emerald-500/5">
+        <div class="text-[11px] uppercase tracking-[0.2em] text-emerald-300">Latest Height</div>
+        <div class="text-2xl font-bold text-white mt-1">{{ latestHeight ?? '—' }}</div>
+        <div class="text-[11px] text-slate-500">Network: {{ network === 'mainnet' ? 'Mainnet' : 'Testnet' }}</div>
+      </div>
+      <div class="card-soft border border-indigo-500/30 bg-indigo-500/5">
+        <div class="text-[11px] uppercase tracking-[0.2em] text-indigo-300">Avg Block Time</div>
+        <div class="text-2xl font-bold text-white mt-1">{{ avgBlockTimeDisplay }}</div>
+        <div class="text-[11px] text-slate-500">{{ sampleWindowDisplay }}</div>
+      </div>
+      <div class="card-soft border border-cyan-500/30 bg-cyan-500/5">
+        <div class="text-[11px] uppercase tracking-[0.2em] text-cyan-300">Avg Tx / Block</div>
+        <div class="text-2xl font-bold text-white mt-1">{{ avgTxPerBlockDisplay }}</div>
+        <div class="text-[11px] text-slate-500">Based on loaded blocks</div>
+      </div>
+      <div class="card-soft border border-amber-500/30 bg-amber-500/5">
+        <div class="text-[11px] uppercase tracking-[0.2em] text-amber-300">Avg Gas Utilization</div>
+        <div class="text-2xl font-bold text-white mt-1">{{ avgGasUtilizationDisplay }}</div>
+        <div class="text-[11px] text-slate-500">Across sample</div>
+      </div>
+    </div>
+
     <div class="card flex items-center justify-between">
       <div>
         <h1 class="text-2xl font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">Blocks</h1>
@@ -87,9 +162,10 @@ const formatPercent = (value?: number | null, digits = 1) => {
       <p class="text-sm text-slate-400">Loading blocks...</p>
     </div>
 
-    <div v-if="!loading && !error && blocks.length === 0" class="card">
-      <p class="text-sm text-slate-400">
-        No blocks found yet.
+    <div v-if="!loading && !error && blocks.length === 0" class="card text-center border border-dashed border-slate-800">
+      <div class="text-3xl mb-2">7e4</div>
+      <p class="text-sm text-slate-300">No blocks found yet.</p>
+      <p class="text-xs text-slate-500 mt-1">
         <span v-if="network !== 'mainnet'">
           Ensure your node is running and REST API is reachable at
           <code class="text-emerald-400">{{ REST_DISPLAY }}</code>.
