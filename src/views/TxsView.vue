@@ -4,6 +4,7 @@ import { useTxs } from "@/composables/useTxs";
 import { useRouter } from "vue-router";
 import dayjs from "dayjs";
 import { formatCoins } from "@/utils/format";
+import { getTokenMeta } from "@/constants/tokens";
 
 const { txs, loading, error, searchRecent } = useTxs();
 const router = useRouter();
@@ -25,6 +26,14 @@ const avgFeeDisplay = computed(() => {
   const fees = txs.value.flatMap((t) => (Array.isArray(t.fees) ? t.fees : [])).filter((f) => f?.amount && f?.denom);
   if (!fees.length) return "—";
   return formatCoins(fees.slice(0, 3), { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
+});
+const avgFeeUsd = computed(() => {
+  const usdVals = txs.value
+    .map((t) => feeUsdValue(t.fees as any))
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  if (!usdVals.length) return null;
+  const avg = usdVals.reduce((a, b) => a + b, 0) / usdVals.length;
+  return avg;
 });
 const topMessageQuickFilters = computed(() => availableMessageTypes.value.slice(0, 4));
 
@@ -76,6 +85,54 @@ const formatFee = (fees?: { amount: string; denom: string }[]) => {
 
 const relativeTime = (value?: string | null) => (value ? dayjs(value).fromNow() : "—");
 
+const formatUsd = (value: number | null | undefined) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return null;
+  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const USD_PRICE_HINTS: Record<string, number | undefined> = {
+  USDC: 1,
+  OSMO: Number(import.meta.env.VITE_PRICE_OSMO_USD ?? "0") || 0.6,
+  ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? "0") || 10,
+  RETRO: Number(import.meta.env.VITE_PRICE_RETRO_USD ?? "0") || 0
+};
+
+const getUsdEstimate = (rawAmount: string | undefined | null, denom: string | undefined | null): number | null => {
+  if (!rawAmount || !denom) return null;
+  const meta = getTokenMeta(denom);
+  const symbol = meta.symbol?.toUpperCase();
+  const hint = symbol ? USD_PRICE_HINTS[symbol] : undefined;
+  if (hint === undefined || hint === null) return null;
+  if (hint < 0) return null;
+  const decimals = typeof meta.decimals === "number" ? meta.decimals : 6;
+  const num = Number(rawAmount) / Math.pow(10, decimals);
+  if (!Number.isFinite(num)) return null;
+  return num * hint;
+};
+
+const feeUsdValue = (fees?: { amount: string; denom: string }[]) => {
+  if (!Array.isArray(fees) || !fees.length) return null;
+  const totals = fees
+    .map((f) => getUsdEstimate(f.amount, f.denom))
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  if (!totals.length) return null;
+  return totals.reduce((a, b) => a + b, 0);
+};
+
+const transferValueDisplay = (valueTransfers?: { amount: string; denom: string }[]) => {
+  if (!Array.isArray(valueTransfers) || !valueTransfers.length) return null;
+  return formatCoins(valueTransfers, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
+};
+
+const transferUsdValue = (valueTransfers?: { amount: string; denom: string }[]) => {
+  if (!Array.isArray(valueTransfers) || !valueTransfers.length) return null;
+  const totals = valueTransfers
+    .map((v) => getUsdEstimate(v.amount, v.denom))
+    .filter((n): n is number => typeof n === "number" && Number.isFinite(n));
+  if (!totals.length) return null;
+  return totals.reduce((a, b) => a + b, 0);
+};
+
 const loadMore = async () => {
   limit.value += 20;
   await searchRecent(limit.value);
@@ -105,6 +162,7 @@ onMounted(async () => {
         <div class="text-[11px] uppercase tracking-[0.2em] text-indigo-300">Avg Gas Used</div>
         <div class="text-lg font-semibold text-indigo-100">{{ avgGasUsed ? avgGasUsed.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—' }}</div>
         <div class="text-[10px] text-slate-400">Avg fee: {{ avgFeeDisplay }}</div>
+        <div class="text-[10px] text-emerald-300" v-if="avgFeeUsd !== null">≈ {{ formatUsd(avgFeeUsd) }}</div>
       </div>
     </div>
 
@@ -173,7 +231,7 @@ onMounted(async () => {
           <th>Hash &amp; Status</th>
           <th>Height</th>
           <th>Messages</th>
-          <th>Gas / Fee</th>
+          <th>Gas / Fee / Assets</th>
           <th>Time</th>
         </tr>
       </thead>
@@ -217,6 +275,9 @@ onMounted(async () => {
           <td class="text-[11px] text-slate-300">
             {{ formatGas(t.gasUsed) }} / {{ formatGas(t.gasWanted) }}
             <div class="text-[10px] text-slate-500 mt-0.5">{{ formatFee(t.fees as any) }}</div>
+            <div v-if="feeUsdValue(t.fees as any) !== null" class="text-[10px] text-emerald-300">≈ {{ formatUsd(feeUsdValue(t.fees as any)) }}</div>
+            <div v-if="transferValueDisplay(t.valueTransfers as any)" class="text-[10px] text-slate-400 mt-1">Moved: {{ transferValueDisplay(t.valueTransfers as any) }}</div>
+            <div v-if="transferUsdValue(t.valueTransfers as any) !== null" class="text-[10px] text-emerald-300">≈ {{ formatUsd(transferUsdValue(t.valueTransfers as any)) }}</div>
           </td>
           <td class="text-[11px] text-slate-300">
             <span v-if="t.timestamp" class="flex flex-col">

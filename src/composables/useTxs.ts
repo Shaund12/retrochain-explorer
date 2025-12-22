@@ -17,6 +17,7 @@ export interface TxSummary {
     denom: string;
     direction: "in" | "out" | "self";
   }>;
+  valueTransfers?: Array<{ amount: string; denom: string }>;
   fees?: Array<{ amount: string; denom: string }>;
 }
 
@@ -26,6 +27,38 @@ const extractMessageTypes = (txResponse: any): string[] => {
   return messages
     .map((msg) => msg?.["@type"] || msg?.type || "")
     .filter((type: string) => typeof type === "string" && type.length > 0);
+};
+
+const aggregateTransferTotals = (logs: any[] | undefined | null): TxSummary["valueTransfers"] => {
+  if (!Array.isArray(logs)) return [];
+  const totals = new Map<string, bigint>();
+
+  logs.forEach((log) => {
+    const events: any[] = log?.events || [];
+    events.forEach((evt) => {
+      if (evt?.type !== "transfer") return;
+      const attrs: any[] = evt.attributes || [];
+      attrs.forEach((a) => {
+        const key = String(a?.key || "").toLowerCase();
+        if (key !== "amount") return;
+        const value = String(a?.value || "");
+        value
+          .split(",")
+          .map((p) => p.trim())
+          .filter(Boolean)
+          .forEach((p) => {
+            const match = p.match(/^(-?\d+)([a-zA-Z\/]+)$/);
+            if (!match) return;
+            const amt = BigInt(match[1]);
+            const denom = match[2];
+            const prev = totals.get(denom) ?? 0n;
+            totals.set(denom, prev + amt);
+          });
+      });
+    });
+  });
+
+  return Array.from(totals.entries()).map(([denom, amount]) => ({ denom, amount: amount.toString() }));
 };
 
 const parseTransfers = (logs: any[], address: string): TxSummary["transfers"] => {
@@ -111,6 +144,7 @@ const buildSummaryFromResponse = (resp: any, fallback: { hash: string; height: n
   timestamp: resp?.timestamp || fallback.timestamp,
   messageTypes: extractMessageTypes(resp),
   transfers: [],
+  valueTransfers: aggregateTransferTotals(resp?.logs),
   fees: resp?.tx?.auth_info?.fee?.amount || []
 });
 
@@ -315,7 +349,9 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
               gasWanted: resp.gas_wanted,
               gasUsed: resp.gas_used,
               timestamp: resp.timestamp,
-              messageTypes: extractMessageTypes(resp)
+              messageTypes: extractMessageTypes(resp),
+              valueTransfers: aggregateTransferTotals(resp?.logs),
+              fees: resp?.tx?.auth_info?.fee?.amount || []
             });
 
             if (collected.length >= limit) {
@@ -370,7 +406,9 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
                     gasWanted: r.gas_wanted,
                     gasUsed: r.gas_used,
                     timestamp: r.timestamp || time,
-                    messageTypes: extractMessageTypes(r)
+                    messageTypes: extractMessageTypes(r),
+                    valueTransfers: aggregateTransferTotals(r?.logs),
+                    fees: r?.tx?.auth_info?.fee?.amount || []
                   };
                 }
               } catch {}
@@ -449,6 +487,7 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
               timestamp: resp.timestamp,
               messageTypes: extractMessageTypes(resp),
               transfers: parseTransfers(resp?.logs, address),
+              valueTransfers: aggregateTransferTotals(resp?.logs),
               fees: resp?.tx?.auth_info?.fee?.amount || []
             };
             collected.push(summary);
