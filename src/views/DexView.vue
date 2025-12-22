@@ -18,6 +18,7 @@ interface TokenOption {
 }
 
 type BridgeAssetKind = "RETRO" | "ATOM" | "WBTC";
+type DexTab = "swap" | "pools" | "limit" | "bridge" | "create";
 
 const { address, connect, isAvailable } = useKeplr();
 const { pools, loading: dexLoading, fetchPools, simulateSwap, calculatePoolPrice, isModuleAvailable } = useDex();
@@ -26,7 +27,7 @@ const { current: network } = useNetwork();
 const toast = useToast();
 const { balances, loading: accountLoading, load: loadAccount } = useAccount();
 
-const activeTab = ref<'swap' | 'pools' | 'limit' | 'bridge' | 'create'>('bridge');
+const activeTab = ref<DexTab>('bridge');
 const swapTab = ref<'market' | 'limit'>('market');
 const dexFeaturesEnabled = import.meta.env.VITE_ENABLE_DEX === "true";
 
@@ -96,6 +97,10 @@ const tokenSymbol = computed(() => network.value === 'mainnet' ? 'RETRO' : 'DRET
 const retroToCosmosAssetLabel = computed(() => (retroToCosmosAsset.value === "RETRO" ? tokenSymbol.value : retroToCosmosAsset.value));
 const cosmosToRetroAssetLabel = computed(() => (cosmosToRetroAsset.value === "RETRO" ? tokenSymbol.value : cosmosToRetroAsset.value));
 const dexAvailable = computed(() => isModuleAvailable.value);
+const dexLive = computed(() => dexFeaturesEnabled && dexAvailable.value);
+const poolCount = computed(() => pools.value.length);
+const ibcCosmosLabel = computed(() => `Retro ${retroToCosmosChannel} / Cosmos ${cosmosToRetroChannel || '—'}`);
+const ibcOsmosisLabel = computed(() => `Retro ${retroToOsmosisChannel} / Osmosis ${osmosisToRetroChannel}`);
 
 const availableTokens = computed<TokenOption[]>(() => [
   { symbol: tokenSymbol.value, denom: tokenDenom.value, icon: "🎮", decimals: 6 },
@@ -150,6 +155,10 @@ const wbtcBalanceDisplay = computed(() => {
     maxDecimals: 8
   });
 });
+
+const setTab = (tab: DexTab) => {
+  activeTab.value = tab;
+};
 
 const assetDecimals = (asset: BridgeAssetKind) => (asset === "WBTC" ? 8 : 6);
 const toBaseAmount = (amountFloat: number, asset: BridgeAssetKind) => {
@@ -814,6 +823,62 @@ const handleCreatePool = async () => {
       Use the IBC bridge below to move assets between RetroChain and Cosmos Hub (or Noble/other chains) until trading is re-enabled.
     </p>
   </RcDisclaimer>
+
+  <!-- DEX Status / Quick Actions -->
+  <div class="grid gap-3 lg:grid-cols-3">
+    <div class="card-soft border border-white/10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Status</div>
+        <span class="badge text-[10px]" :class="dexLive ? 'border-emerald-400/60 text-emerald-200' : 'border-amber-400/60 text-amber-200'">
+          {{ dexLive ? 'Live' : 'Paused' }} · {{ isMainnet ? 'Mainnet' : 'Testnet' }}
+        </span>
+      </div>
+      <div class="text-xl font-semibold text-white mb-1">Native DEX</div>
+      <p class="text-xs text-slate-400">Trade, provide liquidity, place limit orders, and bridge via IBC.</p>
+      <div class="flex flex-wrap gap-2 mt-3">
+        <button class="btn text-[11px]" @click="setTab('swap')">Swap</button>
+        <button class="btn text-[11px]" @click="setTab('pools')">Pools</button>
+        <button class="btn text-[11px]" @click="setTab('bridge')">Bridge</button>
+        <button class="btn text-[11px]" @click="setTab('create')">Create Pool</button>
+      </div>
+    </div>
+
+    <div class="card-soft border border-white/10 bg-slate-900/60">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs uppercase tracking-[0.2em] text-slate-400">Liquidity</div>
+        <span class="text-[10px] text-slate-500">Live Pools</span>
+      </div>
+      <div class="text-3xl font-bold text-white">{{ poolCount }}</div>
+      <p class="text-xs text-slate-400">Active pools detected from on-chain DEX module.</p>
+      <div class="mt-3 text-[11px] text-slate-500 flex items-center gap-2">
+        <span class="badge border-indigo-400/40 text-indigo-100">{{ tokenSymbol }}/USDC</span>
+        <span class="badge border-indigo-400/40 text-indigo-100">{{ tokenSymbol }}/ATOM</span>
+        <span class="badge border-indigo-400/40 text-indigo-100">USDC/ATOM</span>
+      </div>
+    </div>
+
+    <div class="card-soft border border-white/10 bg-gradient-to-br from-emerald-500/10 to-cyan-500/10">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-xs uppercase tracking-[0.2em] text-slate-400">IBC Routes</div>
+        <span class="text-[10px] text-slate-500">Channels</span>
+      </div>
+      <div class="text-sm text-slate-100 space-y-1">
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-slate-300">Cosmos Hub</span>
+          <code class="text-[11px] text-emerald-200">{{ ibcCosmosLabel }}</code>
+        </div>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-slate-300">Osmosis</span>
+          <code class="text-[11px] text-emerald-200">{{ ibcOsmosisLabel }}</code>
+        </div>
+        <div class="flex items-center justify-between gap-2">
+          <span class="text-slate-300">Noble → Osmosis</span>
+          <code class="text-[11px] text-emerald-200">{{ nobleToOsmosisChannel }}</code>
+        </div>
+      </div>
+      <p class="text-[11px] text-slate-500 mt-2">Use bridge tab for two-hop Noble USDC via Osmosis → Retro.</p>
+    </div>
+  </div>
 
   <!-- Header -->
     <div class="card-soft relative overflow-hidden">
