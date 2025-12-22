@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted } from "vue";
+import { computed, onMounted, ref } from "vue";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import { useAssets, type BankToken, type Cw20Token } from "@/composables/useAssets";
@@ -9,7 +9,42 @@ const { bankTokens, ibcTokens, cw20Tokens, nftClasses, loading, error, fetchAsse
 
 onMounted(() => {
   fetchAssets();
+  fetchLivePrices();
 });
+
+const USD_PRICE_HINTS: Record<string, number | undefined> = {
+  USDC: 1,
+  OSMO: Number(import.meta.env.VITE_PRICE_OSMO_USD ?? "0") || 0.6,
+  ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? "0") || 10
+};
+
+const priceOverrides = ref<Record<string, number>>({});
+const priceLookup = computed(() => ({ ...USD_PRICE_HINTS, ...priceOverrides.value }));
+
+const formatUsd = (value: number | null | undefined) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const fetchLivePrices = async () => {
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=osmosis,cosmos,usd-coin&vs_currencies=usd",
+      { cache: "no-store" }
+    );
+    const data = await res.json();
+    const overrides: Record<string, number> = {};
+    const osmo = Number(data?.osmosis?.usd);
+    if (Number.isFinite(osmo) && osmo > 0) overrides.OSMO = osmo;
+    const atom = Number(data?.cosmos?.usd);
+    if (Number.isFinite(atom) && atom > 0) overrides.ATOM = atom;
+    const usdc = Number(data?.["usd-coin"]?.usd);
+    if (Number.isFinite(usdc) && usdc > 0) overrides.USDC = usdc;
+    priceOverrides.value = overrides;
+  } catch (err) {
+    console.warn("Failed to fetch live prices", err);
+  }
+};
 
 const nativeTokens = computed(() => bankTokens.value.filter((token) => !token.isFactory));
 const factoryTokens = computed(() => bankTokens.value.filter((token) => token.isFactory));
@@ -62,6 +97,22 @@ const tokenAvatarText = (token: BankToken) => {
   return raw.slice(0, 4).toUpperCase();
 };
 
+const ibcTotalUsd = computed(() => {
+  const totals = ibcTokens.value
+    .map((token) => {
+      const symbol = token.tokenMeta?.symbol?.toUpperCase();
+      if (!symbol) return null;
+      const price = priceLookup.value[symbol];
+      if (!price || price <= 0) return null;
+      const amount = Number(token.amount) / Math.pow(10, token.decimals || 6);
+      if (!Number.isFinite(amount)) return null;
+      return amount * price;
+    })
+    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
+  if (!totals.length) return null;
+  return totals.reduce((a, b) => a + b, 0);
+});
+
 const formatCw20Supply = (token: Cw20Token) => {
   const decimals = Number(token.decimals ?? 6);
   const divisor = Math.pow(10, Math.max(decimals, 0));
@@ -112,6 +163,7 @@ const nftSourceLabel = (cls: { source?: string }) => {
           <div class="rounded-2xl border border-indigo-400/30 bg-indigo-500/10 p-3">
             <p class="text-indigo-200 uppercase tracking-wider">IBC Assets</p>
             <p class="text-2xl font-bold text-white">{{ stats.ibc }}</p>
+            <p class="text-[11px] text-indigo-100" v-if="ibcTotalUsd !== null">≈ {{ formatUsd(ibcTotalUsd) }}</p>
           </div>
           <div class="rounded-2xl border border-fuchsia-400/30 bg-fuchsia-500/10 p-3">
             <p class="text-fuchsia-200 uppercase tracking-wider">CW20 Tokens</p>
