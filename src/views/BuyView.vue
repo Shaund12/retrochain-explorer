@@ -16,6 +16,12 @@ const poolAmount1 = ref("");
 const poolAmount2 = ref("");
 const selectedPool = ref("RETRO/USDC");
 
+// IBC routing (defaults can be overridden via env)
+const retroToOsmosisChannel = import.meta.env.VITE_IBC_CHANNEL_RETRO_OSMOSIS || "channel-1";
+const osmosisToRetroChannel = import.meta.env.VITE_IBC_CHANNEL_OSMOSIS_RETRO || "channel-108593";
+const cosmosToRetroChannel = import.meta.env.VITE_IBC_CHANNEL_COSMOS_RETRO || "channel-1638";
+const nobleToOsmosisChannel = import.meta.env.VITE_IBC_CHANNEL_NOBLE_OSMOSIS || "channel-750";
+
 // Real Osmosis pool IDs (these would be actual pool IDs once RETRO is listed)
 const liquidityPools = [
   {
@@ -75,11 +81,13 @@ const bridgeOptions = [
   }
 ];
 
+const retroChainId = computed(() => (network.value === 'mainnet' ? 'retrochain-mainnet' : 'retrochain-devnet-1'));
+
 const tokenInfo = computed(() => ({
   symbol: network.value === 'mainnet' ? 'RETRO' : 'DRETRO',
   denom: network.value === 'mainnet' ? 'uretro' : 'udretro',
   decimals: 6,
-  chainId: 'retrochain-1'
+  chainId: retroChainId.value
 }));
 
 const copyAddress = async () => {
@@ -436,12 +444,29 @@ const openBridge = (url: string) => {
             <div class="text-sm text-slate-400 mb-3">{{ bridge.description }}</div>
             
             <!-- IBC Instructions -->
-            <div v-if="bridge.instructions" class="text-xs text-slate-500 space-y-1">
-              <div>1. Open Keplr wallet extension</div>
-              <div>2. Click "Send" and select "IBC Transfer"</div>
-              <div>3. Choose RetroChain as destination</div>
-              <div>4. Enter amount and confirm</div>
-              <div>5. Tokens arrive in ~60 seconds</div>
+            <div v-if="bridge.instructions" class="text-xs text-slate-400 space-y-2">
+              <div class="text-[11px] uppercase tracking-wider text-slate-500">Inbound to Retro (manual/advanced)</div>
+              <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700 space-y-1">
+                <div class="text-slate-300 font-semibold">Osmosis → RetroChain</div>
+                <div>• Keplr: switch to <strong>Osmosis</strong>, click <em>Send → IBC Transfer</em>.</div>
+                <div>• Toggle <strong>Advanced</strong> and set <strong>Destination Channel: {{ osmosisToRetroChannel }}</strong> (Osmosis → Retro).</div>
+                <div>• Destination chain ID: <code>{{ retroChainId }}</code>. Recipient: your RetroChain address.</div>
+                <div>• Works for OSMO/USDC/ATOM already on Osmosis.</div>
+              </div>
+              <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700 space-y-1">
+                <div class="text-slate-300 font-semibold">Cosmos Hub → RetroChain</div>
+                <div>• Keplr: switch to <strong>Cosmos Hub</strong>, click <em>Send → IBC Transfer</em>.</div>
+                <div>• Toggle <strong>Advanced</strong> and set <strong>Destination Channel: {{ cosmosToRetroChannel }}</strong> (Cosmos → Retro).</div>
+                <div>• Destination chain ID: <code>{{ retroChainId }}</code>. Recipient: your RetroChain address.</div>
+                <div>• Asset: ATOM (uatom).</div>
+              </div>
+              <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700 space-y-1">
+                <div class="text-slate-300 font-semibold">Noble USDC (two-hop)</div>
+                <div>1) Noble → Osmosis: Advanced IBC channel <strong>{{ nobleToOsmosisChannel }}</strong>, receiver: your Osmosis address.</div>
+                <div>2) Osmosis → RetroChain: Advanced IBC channel <strong>{{ osmosisToRetroChannel }}</strong>, receiver: your RetroChain address.</div>
+                <div>• Token stays as USDC; expect two IBC packets.</div>
+              </div>
+              <div class="text-[11px] text-amber-300">If the destination chain isn’t auto-listed, the Advanced channel field is required for the transfer to succeed.</div>
             </div>
           </div>
           <div v-if="!bridge.instructions" class="text-slate-400">→</div>
