@@ -175,13 +175,16 @@ const delegationDistribution = computed(() => {
 });
 
 const transferFlows = computed(() => {
-  const map = new Map<string, { incoming: number; outgoing: number }>();
+  const nativeDenoms = ["uretro", "udretro"];
+  const map = new Map<string, { incoming: number; outgoing: number; denom: string }>();
   txs.value.forEach((tx) => {
     const date = (tx.timestamp || "").slice(0, 10);
     if (!date) return;
-    const bucket = map.get(date) || { incoming: 0, outgoing: 0 };
+    const bucket = map.get(date) || { incoming: 0, outgoing: 0, denom: nativeDenoms[0] };
     (tx.transfers || []).forEach((tr) => {
-      if (tr.denom !== "uretro") return;
+      const denom = (tr.denom || "").toLowerCase();
+      if (!nativeDenoms.includes(denom)) return;
+      bucket.denom = denom;
       if (tr.direction === "in") bucket.incoming += tr.amount;
       if (tr.direction === "out") bucket.outgoing += tr.amount;
     });
@@ -189,7 +192,7 @@ const transferFlows = computed(() => {
   });
   const ordered = Array.from(map.entries()).sort(([a], [b]) => a.localeCompare(b));
   const recent = ordered.slice(-14);
-  return recent.map(([date, v]) => ({ date, incoming: v.incoming, outgoing: v.outgoing, net: v.incoming - v.outgoing }));
+  return recent.map(([date, v]) => ({ date, incoming: v.incoming, outgoing: v.outgoing, net: v.incoming - v.outgoing, denom: v.denom }));
 });
 
 const activityByType = computed(() => {
@@ -743,9 +746,18 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
             :class="bal.accent.card"
           >
             <div class="flex items-center gap-3">
-              <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-2xl emoji-text"
+              <div class="h-12 w-12 rounded-2xl flex items-center justify-center text-2xl emoji-text overflow-hidden"
                    :class="bal.accent.icon">
-                {{ bal.meta.icon }}
+                <img
+                  v-if="bal.meta.logo"
+                  :src="bal.meta.logo"
+                  :alt="`${bal.meta.symbol} logo`"
+                  class="h-full w-full object-contain"
+                  loading="lazy"
+                />
+                <span v-else>
+                  {{ bal.meta.icon }}
+                </span>
               </div>
               <div class="flex-1">
                 <div class="flex items-center gap-2 text-sm font-semibold text-white">
@@ -919,9 +931,9 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
             <div class="flex items-center justify-between text-xs mb-2">
               <div class="text-slate-300 font-mono">{{ day.date }}</div>
               <div class="flex gap-3 text-[11px] text-slate-400">
-                <span class="text-emerald-300">+{{ fmtAmount(String(day.incoming), 'uretro', { minDecimals: 2, maxDecimals: 2 }) }}</span>
-                <span class="text-rose-300">-{{ fmtAmount(String(day.outgoing), 'uretro', { minDecimals: 2, maxDecimals: 2 }) }}</span>
-                <span :class="day.net >= 0 ? 'text-emerald-200' : 'text-rose-200'">Net {{ fmtAmount(String(day.net), 'uretro', { minDecimals: 2, maxDecimals: 2 }) }}</span>
+                <span class="text-emerald-300">+{{ fmtAmount(String(day.incoming), day.denom, { minDecimals: 2, maxDecimals: 2 }) }}</span>
+                <span class="text-rose-300">-{{ fmtAmount(String(day.outgoing), day.denom, { minDecimals: 2, maxDecimals: 2 }) }}</span>
+                <span :class="day.net >= 0 ? 'text-emerald-200' : 'text-rose-200'">Net {{ fmtAmount(String(day.net), day.denom, { minDecimals: 2, maxDecimals: 2 }) }}</span>
               </div>
             </div>
             <div class="h-2 rounded-full bg-slate-800 overflow-hidden flex">
