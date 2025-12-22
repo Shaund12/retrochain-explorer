@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, ref } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
 import { useGovernance } from "@/composables/useGovernance";
 import type { Proposal } from "@/composables/useGovernance";
 import dayjs from "dayjs";
@@ -10,9 +10,26 @@ dayjs.extend(relativeTime);
 const { proposals, loading, error, fetchProposals } = useGovernance();
 const activeProposal = ref<Proposal | null>(null);
 const isModalOpen = ref(false);
+const statusFilter = ref("all");
+const searchTerm = ref("");
+const statusParam = computed(() => {
+  if (statusFilter.value === "voting") return "PROPOSAL_STATUS_VOTING_PERIOD";
+  if (statusFilter.value === "deposit") return "PROPOSAL_STATUS_DEPOSIT_PERIOD";
+  if (statusFilter.value === "passed") return "PROPOSAL_STATUS_PASSED";
+  if (statusFilter.value === "rejected") return "PROPOSAL_STATUS_REJECTED";
+  if (statusFilter.value === "failed") return "PROPOSAL_STATUS_FAILED";
+  if (statusFilter.value === "closed") return undefined; // show all then filter locally
+  if (statusFilter.value === "active") return undefined; // fetch all, filter client-side
+  return undefined;
+});
 
 onMounted(() => {
   fetchProposals();
+});
+
+// Refetch when backend-friendly filter changes (others are client-only)
+watch(statusParam, (val) => {
+  fetchProposals(val);
 });
 
 const openProposalModal = (proposal: Proposal) => {
@@ -34,6 +51,17 @@ const getStatusBadge = (status: string) => {
     PROPOSAL_STATUS_FAILED: { text: "Failed", class: "border-rose-400/60 text-rose-200" }
   };
   return statusMap[status] || { text: status, class: "border-slate-400/60 text-slate-300" };
+};
+
+const statusGroups: Record<string, string[]> = {
+  all: [],
+  active: ["PROPOSAL_STATUS_VOTING_PERIOD", "PROPOSAL_STATUS_DEPOSIT_PERIOD"],
+  voting: ["PROPOSAL_STATUS_VOTING_PERIOD"],
+  deposit: ["PROPOSAL_STATUS_DEPOSIT_PERIOD"],
+  passed: ["PROPOSAL_STATUS_PASSED"],
+  rejected: ["PROPOSAL_STATUS_REJECTED"],
+  failed: ["PROPOSAL_STATUS_FAILED"],
+  closed: ["PROPOSAL_STATUS_PASSED", "PROPOSAL_STATUS_REJECTED", "PROPOSAL_STATUS_FAILED"]
 };
 
 const formatTime = (time?: string) => {
@@ -101,33 +129,110 @@ const voteCategories = [
   { key: "noWithVeto", label: "Veto", bar: "bg-amber-500", text: "text-amber-300" },
   { key: "abstain", label: "Abstain", bar: "bg-slate-500", text: "text-slate-400" }
 ] as const;
+
+const filteredProposals = computed(() => {
+  const term = searchTerm.value.trim().toLowerCase();
+  const allowed = statusGroups[statusFilter.value] || [];
+
+  return [...proposals.value]
+    .filter((p) => {
+      if (allowed.length && !allowed.includes(p.status)) return false;
+      if (!term) return true;
+      const title = getProposalTitle(p).toLowerCase();
+      const summary = getProposalSummary(p).toLowerCase();
+      return (
+        title.includes(term) ||
+        summary.includes(term) ||
+        p.proposalId.toLowerCase().includes(term)
+      );
+    })
+    .sort((a, b) => Number(b.proposalId) - Number(a.proposalId));
+});
+
+const stats = computed(() => {
+  const total = proposals.value.length;
+  const voting = proposals.value.filter((p) => p.status === "PROPOSAL_STATUS_VOTING_PERIOD").length;
+  const deposit = proposals.value.filter((p) => p.status === "PROPOSAL_STATUS_DEPOSIT_PERIOD").length;
+  const passed = proposals.value.filter((p) => p.status === "PROPOSAL_STATUS_PASSED").length;
+  const rejected = proposals.value.filter((p) => p.status === "PROPOSAL_STATUS_REJECTED").length;
+  return { total, voting, deposit, passed, rejected };
+});
 </script>
 
 <template>
   <div class="space-y-4">
-    <div class="flex items-center justify-between">
+    <div class="flex flex-wrap items-center justify-between gap-3">
       <div>
         <h1 class="text-2xl font-bold text-slate-50">Governance</h1>
         <p class="text-sm text-slate-400 mt-1">
           On-chain proposals and voting
         </p>
       </div>
-      <button class="btn text-xs" @click="fetchProposals()" :disabled="loading">
-        {{ loading ? "Loading..." : "Refresh" }}
-      </button>
+      <div class="flex flex-wrap items-center gap-2 text-xs">
+        <select
+          v-model="statusFilter"
+          class="px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+        >
+          <option value="all">All statuses</option>
+          <option value="active">Active</option>
+          <option value="voting">Voting</option>
+          <option value="deposit">Deposit</option>
+          <option value="passed">Passed</option>
+          <option value="rejected">Rejected</option>
+          <option value="failed">Failed</option>
+          <option value="closed">Closed</option>
+        </select>
+        <input
+          v-model="searchTerm"
+          type="text"
+          placeholder="Search proposals..."
+          class="px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400"
+        />
+        <button class="btn text-xs" @click="fetchProposals(statusParam || undefined)" :disabled="loading">
+          {{ loading ? "Loading..." : "Refresh" }}
+        </button>
+      </div>
+    </div>
+
+    <div class="grid grid-cols-2 sm:grid-cols-3 lg:grid-cols-5 gap-3">
+      <div class="card-soft border border-emerald-500/30 bg-emerald-500/5">
+        <div class="text-[11px] uppercase tracking-widest text-emerald-200">Total</div>
+        <div class="text-2xl font-semibold text-white">{{ stats.total }}</div>
+        <div class="text-[11px] text-slate-400">All proposals</div>
+      </div>
+      <div class="card-soft border border-indigo-500/30 bg-indigo-500/5">
+        <div class="text-[11px] uppercase tracking-widest text-indigo-200">Voting</div>
+        <div class="text-2xl font-semibold text-white">{{ stats.voting }}</div>
+        <div class="text-[11px] text-slate-400">In voting period</div>
+      </div>
+      <div class="card-soft border border-amber-500/30 bg-amber-500/5">
+        <div class="text-[11px] uppercase tracking-widest text-amber-200">Deposit</div>
+        <div class="text-2xl font-semibold text-white">{{ stats.deposit }}</div>
+        <div class="text-[11px] text-slate-400">Collecting deposits</div>
+      </div>
+      <div class="card-soft border border-cyan-500/30 bg-cyan-500/5">
+        <div class="text-[11px] uppercase tracking-widest text-cyan-200">Passed</div>
+        <div class="text-2xl font-semibold text-white">{{ stats.passed }}</div>
+        <div class="text-[11px] text-slate-400">Approved on-chain</div>
+      </div>
+      <div class="card-soft border border-rose-500/30 bg-rose-500/5">
+        <div class="text-[11px] uppercase tracking-widest text-rose-200">Rejected</div>
+        <div class="text-2xl font-semibold text-white">{{ stats.rejected }}</div>
+        <div class="text-[11px] text-slate-400">Did not pass</div>
+      </div>
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
       <p class="text-sm text-rose-300">{{ error }}</p>
     </div>
 
-    <div v-if="loading && proposals.length === 0" class="card">
+    <div v-if="loading && filteredProposals.length === 0" class="card">
       <p class="text-sm text-slate-400">Loading proposals...</p>
     </div>
 
-    <div v-else-if="proposals.length > 0" class="space-y-3">
+    <div v-else-if="filteredProposals.length > 0" class="space-y-3">
       <div
-        v-for="proposal in proposals"
+        v-for="proposal in filteredProposals"
         :key="proposal.proposalId"
         class="card hover:border-emerald-500/50 transition-all cursor-pointer"
         @click="openProposalModal(proposal)"
@@ -143,6 +248,9 @@ const voteCategories = [
                 :class="getStatusBadge(proposal.status).class"
               >
                 {{ getStatusBadge(proposal.status).text }}
+              </span>
+              <span v-if="proposal.votingEndTime" class="text-[11px] text-slate-500">
+                • Ends {{ formatTime(proposal.votingEndTime) }}
               </span>
             </div>
             
@@ -274,6 +382,16 @@ const voteCategories = [
           >
             <div class="text-[10px] text-slate-500 mb-1">{{ msg["@type"] || msg.type || 'Msg' }}</div>
             <pre class="whitespace-pre-wrap break-words">{{ JSON.stringify(msg, null, 2) }}</pre>
+          </div>
+        </div>
+      </div>
+
+      <div v-if="activeProposal.totalDeposit?.length" class="mt-6">
+        <div class="text-sm font-semibold text-slate-200 mb-2">Deposits</div>
+        <div class="space-y-1 text-xs text-slate-300">
+          <div v-for="(coin, idx) in activeProposal.totalDeposit" :key="idx" class="flex items-center justify-between">
+            <span class="font-mono">{{ coin.amount }} {{ coin.denom }}</span>
+            <span class="text-slate-500">on-chain</span>
           </div>
         </div>
       </div>
