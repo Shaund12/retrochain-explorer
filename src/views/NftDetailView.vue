@@ -161,14 +161,15 @@ const goBack = () => router.push({ name: "tokens" });
       <div class="card">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-base font-semibold text-white">Minted NFTs</h2>
-          <span class="text-xs text-slate-400">{{ tokens.length }} found</span>
+          <span class="text-xs text-slate-400">Filtered {{ filteredTokens.length }} / {{ tokens.length }}</span>
         </div>
-        <div v-if="tokens.length === 0" class="text-xs text-slate-400">No NFTs discovered for this collection.</div>
+        <div v-if="filteredTokens.length === 0" class="text-xs text-slate-400">No NFTs match the current filters.</div>
         <div v-else class="grid gap-3 md:grid-cols-3">
           <article
-            v-for="token in tokens"
+            v-for="token in filteredTokens"
             :key="token.id"
-            class="rounded-2xl border border-white/10 bg-white/5 p-3 flex flex-col gap-2"
+            class="rounded-2xl border border-white/10 bg-white/5 p-3 flex flex-col gap-2 hover:border-emerald-400/50 hover:-translate-y-[1px] transition cursor-pointer"
+            @click="openTokenModal(token)"
           >
             <div class="aspect-square w-full rounded-xl overflow-hidden bg-black/30 flex items-center justify-center">
               <img
