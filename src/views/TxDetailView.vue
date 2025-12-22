@@ -202,6 +202,31 @@ const formatTokenAmount = (rawAmount: string, denom: string) => {
   return `${formatted} ${meta.symbol || denom.toUpperCase()}`;
 };
 
+const formatUsd = (value: number | null | undefined) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return null;
+  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
+const getUsdEstimate = (rawAmount: string | undefined | null, denom: string | undefined | null): number | null => {
+  if (!rawAmount || !denom) return null;
+  const meta = getTokenMeta(denom);
+  if (meta.symbol?.toUpperCase() !== "USDC") return null;
+  const decimals = typeof meta.decimals === "number" ? meta.decimals : 6;
+  const num = Number(rawAmount) / Math.pow(10, decimals);
+  if (!Number.isFinite(num)) return null;
+  return num;
+};
+
+const decodeBase64Json = (data?: string) => {
+  if (!data) return null;
+  try {
+    const text = atob(data);
+    return JSON.parse(text);
+  } catch {
+    return null;
+  }
+};
+
 const transferEvents = computed(() => {
   const logs = txResponse.value?.logs;
   if (!Array.isArray(logs)) return [] as any[];
@@ -212,17 +237,20 @@ const transferEvents = computed(() => {
     denom?: string | null;
     formatted?: string;
     meta?: ReturnType<typeof getTokenMeta>;
+    usd?: number | null;
   }[] = [];
 
   const pushTransfer = (amount: string, denom: string, sender?: string | null, recipient?: string | null) => {
     const meta = getTokenMeta(denom);
+    const usd = getUsdEstimate(amount, denom);
     transfers.push({
       sender: sender || null,
       recipient: recipient || null,
       amount,
       denom,
       formatted: formatTokenAmount(amount, denom),
-      meta
+      meta,
+      usd
     });
   };
 
@@ -267,7 +295,91 @@ const transferEvents = computed(() => {
     }
   });
 
-  return transfers;
+  const deduped: typeof transfers = [];
+  const seen: Record<string, number> = {};
+
+  transfers.forEach((tr) => {
+    const key = `${tr.meta?.symbol || tr.denom || "denom"}-${tr.amount || "amt"}-${tr.sender || "from"}-${tr.recipient || "to"}`;
+    const existingIdx = seen[key];
+    if (existingIdx === undefined) {
+      seen[key] = deduped.length;
+      deduped.push(tr);
+      return;
+    }
+    const existing = deduped[existingIdx];
+    const preferNew = (!existing.meta?.logo && tr.meta?.logo) || (!existing.meta?.symbol && tr.meta?.symbol);
+    if (preferNew) {
+      deduped[existingIdx] = tr;
+    }
+  });
+
+  return deduped;
+});
+
+const ibcPackets = computed(() => {
+  const responseEvents = Array.isArray(txResponse.value?.events) ? txResponse.value?.events : [];
+  const packets: {
+    type: string;
+    sequence?: string;
+    source?: string;
+    dest?: string;
+    amount?: string;
+    denom?: string;
+    sender?: string;
+    receiver?: string;
+    decoded?: any;
+    meta?: ReturnType<typeof getTokenMeta>;
+    formatted?: string;
+    usd?: number | null;
+  }[] = [];
+
+  responseEvents.forEach((ev: any) => {
+    if (ev?.type !== "recv_packet" && ev?.type !== "write_acknowledgement" && ev?.type !== "fungible_token_packet") return;
+    const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
+    const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
+      if (curr?.key) acc[curr.key] = curr.value;
+      return acc;
+    }, {} as Record<string, string>);
+
+    const decoded = decodeBase64Json(map.packet_data_base64);
+    const jsonFromHex = (() => {
+      if (!map.packet_data_hex) return null;
+      try {
+        const bytes = map.packet_data_hex.match(/.{1,2}/g)?.map((b) => parseInt(b, 16)) ?? [];
+        const text = String.fromCharCode(...bytes);
+        return JSON.parse(text);
+      } catch {
+        return null;
+      }
+    })();
+
+    const decodedData = decoded || jsonFromHex;
+    const amount = decodedData?.amount || map.amount;
+    const denom = decodedData?.denom || map.denom;
+    const sender = decodedData?.sender || map.sender;
+    const receiver = decodedData?.receiver || map.recipient;
+
+    const meta = denom ? getTokenMeta(denom) : undefined;
+    const formatted = amount && denom ? formatTokenAmount(amount, denom) : undefined;
+    const usd = getUsdEstimate(amount, denom);
+
+    packets.push({
+      type: ev?.type,
+      sequence: map.packet_sequence,
+      source: map.packet_src_channel ? `${map.packet_src_port || "transfer"}/${map.packet_src_channel}` : undefined,
+      dest: map.packet_dst_channel ? `${map.packet_dst_port || "transfer"}/${map.packet_dst_channel}` : undefined,
+      amount,
+      denom,
+      sender,
+      receiver,
+      decoded: decodedData,
+      meta,
+      formatted,
+      usd
+    });
+  });
+
+  return packets;
 });
 
 const copyToClipboard = async (text: string) => {
@@ -335,6 +447,44 @@ onMounted(async () => {
         </div>
       </div>
     </div>
+
+        <div v-if="ibcPackets.length" class="card">
+          <h2 class="text-sm font-semibold mb-2 text-slate-100">IBC Packet Data</h2>
+          <div class="space-y-2 text-xs text-slate-300">
+            <div
+              v-for="(pkt, i) in ibcPackets"
+              :key="`${pkt.type}-${pkt.sequence}-${i}`"
+              class="p-3 rounded-lg bg-slate-900/60 border border-indigo-500/30"
+            >
+              <div class="flex items-center justify-between mb-1">
+                <div class="text-slate-100 font-semibold">{{ pkt.type }} · Seq {{ pkt.sequence || '—' }}</div>
+                <span class="badge text-[10px] border-indigo-400/60 text-indigo-200">IBC</span>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-400">
+                <div v-if="pkt.amount && pkt.denom">
+                  <span class="text-slate-500">Amount</span>
+                  <div class="font-mono break-all text-slate-200">{{ pkt.amount }} {{ pkt.denom }}</div>
+                </div>
+                <div v-if="pkt.sender">
+                  <span class="text-slate-500">Sender</span>
+                  <div class="font-mono break-all text-slate-200">{{ pkt.sender }}</div>
+                </div>
+                <div v-if="pkt.receiver">
+                  <span class="text-slate-500">Receiver</span>
+                  <div class="font-mono break-all text-slate-200">{{ pkt.receiver }}</div>
+                </div>
+                <div v-if="pkt.source || pkt.dest">
+                  <span class="text-slate-500">Path</span>
+                  <div class="font-mono break-all text-slate-200">{{ pkt.source || '—' }} → {{ pkt.dest || '—' }}</div>
+                </div>
+                <div v-if="pkt.decoded" class="sm:col-span-2">
+                  <span class="text-slate-500">Decoded Data</span>
+                  <pre class="mt-1 p-2 rounded bg-slate-900/80 overflow-auto max-h-32 text-[10px]">{{ JSON.stringify(pkt.decoded, null, 2) }}</pre>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
 
     <div class="grid gap-3 grid-cols-1 lg:grid-cols-3">
       <div class="lg:col-span-2">
@@ -488,11 +638,17 @@ onMounted(async () => {
               :key="`${tr.denom}-${tr.amount}-${i}`"
               class="p-3 rounded-lg bg-slate-900/60 border border-slate-700"
             >
-              <div class="flex items-center justify-between mb-1">
-                <div class="text-slate-100 font-semibold">{{ tr.formatted || `${tr.amount} ${tr.denom}` }}</div>
-                <span class="badge text-[10px]" :class="tr.meta?.accent === 'amber' ? 'border-amber-400/60 text-amber-200' : 'border-slate-400/60 text-slate-200'">
-                  {{ tr.meta?.symbol || tr.denom?.toUpperCase() }}
-                </span>
+              <div class="flex items-center justify-between mb-1 gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <img v-if="tr.meta?.logo" :src="tr.meta.logo" alt="" class="w-6 h-6 rounded-full border border-white/10" />
+                  <div class="text-slate-100 font-semibold truncate">{{ tr.formatted || `${tr.amount} ${tr.denom}` }}</div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span v-if="tr.usd !== null && tr.usd !== undefined" class="text-[11px] text-emerald-300 font-semibold">≈ {{ formatUsd(tr.usd) }}</span>
+                  <span class="badge text-[10px]" :class="tr.meta?.accent === 'amber' ? 'border-amber-400/60 text-amber-200' : 'border-slate-400/60 text-slate-200'">
+                    {{ tr.meta?.symbol || tr.denom?.toUpperCase() }}
+                  </span>
+                </div>
               </div>
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-400">
                 <div v-if="tr.sender">
