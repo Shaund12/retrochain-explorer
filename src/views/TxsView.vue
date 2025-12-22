@@ -133,6 +133,18 @@ const transferUsdValue = (valueTransfers?: { amount: string; denom: string }[]) 
   return totals.reduce((a, b) => a + b, 0);
 };
 
+const gasPriceDisplay = (fees?: { amount: string; denom: string }[], gasUsed?: string | number | null) => {
+  const primary = Array.isArray(fees) && fees.length ? fees[0] : null;
+  const used = Number(gasUsed);
+  if (!primary || !Number.isFinite(used) || used <= 0) return null;
+  const price = Number(primary.amount) / used;
+  if (!Number.isFinite(price)) return null;
+  const precision = price >= 1 ? 2 : price >= 0.01 ? 4 : 6;
+  return `${price.toFixed(precision)} ${primary.denom}/gas`;
+};
+
+const hasResults = computed(() => filteredTxs.value.length > 0);
+
 const loadMore = async () => {
   limit.value += 20;
   await searchRecent(limit.value);
@@ -221,6 +233,11 @@ onMounted(async () => {
         <div class="text-xs text-slate-500 mt-1">Scanning latest blocks</div>
       </div>
     </div>
+    <div v-else-if="!loading && !hasResults" class="text-xs text-slate-400 py-10 text-center border border-dashed border-slate-800 rounded-lg">
+      <div class="text-3xl mb-2">🛰️</div>
+      <div>No transactions match your filters</div>
+      <div class="text-[11px] text-slate-500 mt-1">Try widening status/message filters or refresh</div>
+    </div>
     <div v-if="error" class="text-xs text-rose-300 mb-2">
       {{ error }}
     </div>
@@ -276,6 +293,7 @@ onMounted(async () => {
             {{ formatGas(t.gasUsed) }} / {{ formatGas(t.gasWanted) }}
             <div class="text-[10px] text-slate-500 mt-0.5">{{ formatFee(t.fees as any) }}</div>
             <div v-if="feeUsdValue(t.fees as any) !== null" class="text-[10px] text-emerald-300">≈ {{ formatUsd(feeUsdValue(t.fees as any)) }}</div>
+            <div v-if="gasPriceDisplay(t.fees as any, t.gasUsed)" class="text-[10px] text-cyan-300">Gas price: {{ gasPriceDisplay(t.fees as any, t.gasUsed) }}</div>
             <div v-if="transferValueDisplay(t.valueTransfers as any)" class="text-[10px] text-slate-400 mt-1">Moved: {{ transferValueDisplay(t.valueTransfers as any) }}</div>
             <div v-if="transferUsdValue(t.valueTransfers as any) !== null" class="text-[10px] text-emerald-300">≈ {{ formatUsd(transferUsdValue(t.valueTransfers as any)) }}</div>
           </td>
