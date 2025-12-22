@@ -204,7 +204,8 @@ function buildChainInfo() {
       bech32PrefixConsPub: "cosmosvalconspub"
     },
     currencies: [
-      { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 }
+      { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
+      { coinDenom: "stWBTC", coinMinimalDenom: "stwbtc", coinDecimals: 8 }
     ],
     feeCurrencies: [{
       coinDenom: "RETRO",

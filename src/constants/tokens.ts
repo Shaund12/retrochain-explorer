@@ -129,6 +129,17 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     description: "IBC hash for Wrapped Bitcoin when routed through Cosmos Hub bridges.",
     logo: "https://assets.coingecko.com/coins/images/7598/thumb/wrapped_bitcoin_wbtc.png"
   },
+  "ibc/6b199312b29cf047bf8b1337450ef3aa0475fe0c312db94055f2d5b22cd1e71a": {
+    denom: "ibc/6B199312B29CF047BF8B1337450EF3AA0475FE0C312DB94055F2D5B22CD1E71A",
+    symbol: "USDC",
+    name: "USD Coin (Noble → Osmosis → RetroChain)",
+    chain: "Noble via Osmosis IBC",
+    icon: "💵",
+    decimals: 6,
+    accent: "amber",
+    description: "USDC bridged from Noble and routed over Osmosis into RetroChain.",
+    logo: "https://assets.coingecko.com/coins/images/6319/thumb/USD_Coin_icon.png"
+  },
   uusdc: {
     denom: "uusdc",
     symbol: "USDC",
