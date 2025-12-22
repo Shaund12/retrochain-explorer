@@ -21,6 +21,10 @@ const stats = computed(() => {
   const totalContracts = contracts.value.length;
   const totalCodes = codes.value.length;
   const managed = contracts.value.filter((c) => !!c.admin).length;
+  const uniqueAdmins = new Set<string>();
+  contracts.value.forEach((c) => {
+    if (c.admin) uniqueAdmins.add(c.admin);
+  });
   const heights = contracts.value
     .map((c) => Number(c.createdHeight))
     .filter((n) => Number.isFinite(n) && n > 0);
@@ -30,8 +34,25 @@ const stats = computed(() => {
     totalContracts,
     totalCodes,
     managed,
+    uniqueAdmins: uniqueAdmins.size,
     latestHeight
   };
+});
+
+const codeAggregates = computed(() => {
+  const map = new Map<string, { count: number; managed: number; latestHeight: number }>();
+  contracts.value.forEach((c) => {
+    const key = c.codeId;
+    if (!map.has(key)) map.set(key, { count: 0, managed: 0, latestHeight: 0 });
+    const entry = map.get(key)!;
+    entry.count += 1;
+    if (c.admin) entry.managed += 1;
+    const h = Number(c.createdHeight) || 0;
+    if (h > entry.latestHeight) entry.latestHeight = h;
+  });
+  return Array.from(map.entries())
+    .map(([codeId, meta]) => ({ codeId, ...meta }))
+    .sort((a, b) => Number(b.codeId) - Number(a.codeId));
 });
 
 const codeOptions = computed(() => {
@@ -75,7 +96,7 @@ const refresh = async () => {
 };
 
 const formatHeight = (value?: string) => {
-  if (!value) return "";
+  if (!value) return "—";
   const num = Number(value);
   if (!Number.isFinite(num)) return value;
   return num.toLocaleString();
@@ -127,6 +148,11 @@ onMounted(async () => {
         <div class="text-3xl font-semibold text-white">{{ stats.latestHeight ? stats.latestHeight.toLocaleString() : "" }}</div>
         <p class="text-xs text-slate-400">Block height of newest instantiation</p>
       </article>
+      <article class="card-soft border border-emerald-400/30 bg-emerald-500/5">
+        <div class="text-[11px] uppercase tracking-wider text-emerald-200">Unique Admins</div>
+        <div class="text-3xl font-semibold text-white">{{ stats.uniqueAdmins }}</div>
+        <p class="text-xs text-slate-400">Distinct contract admins observed</p>
+      </article>
     </div>
 
     <section class="card">
@@ -137,7 +163,8 @@ onMounted(async () => {
         </div>
         <div class="flex items-center gap-2">
           <button class="btn text-xs" :disabled="loading" @click="refresh">
-            {{ loading ? "Refreshing" : "Refresh" }}
+" : "Refresh" }}
+            {{ loading ? "Refreshing…" : "Refresh" }}
           </button>
         </div>
       </div>
@@ -149,6 +176,7 @@ onMounted(async () => {
           placeholder="Search label, address, or creator"
           class="flex-1 min-w-[200px] px-4 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
         />
+        <button class="btn text-[11px]" v-if="search" @click="search = ''">Clear</button>
         <select
           v-model="codeFilter"
           class="px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-sm text-slate-100 focus:outline-none focus:ring-2 focus:ring-indigo-400"
@@ -164,13 +192,18 @@ onMounted(async () => {
           />
           Only contracts with admin
         </label>
+        <div class="flex items-center gap-2 text-xs">
+          <button class="btn text-[11px]" @click="adminOnly = true">Admin Only</button>
+          <button class="btn text-[11px]" @click="adminOnly = false">All</button>
+        </div>
       </div>
 
       <div v-if="error" class="mb-3 text-xs text-rose-300">
         {{ error }}
       </div>
 
-      <div v-if="loading" class="text-xs text-slate-400">Loading contracts</div>
+</div>
+      <div v-if="loading" class="text-xs text-slate-400">Loading contracts…</div>
       <div v-else-if="filteredContracts.length === 0" class="text-xs text-slate-400">
         No contracts match the current filters.
       </div>
@@ -222,6 +255,41 @@ onMounted(async () => {
                 >
                   Inspect
                 </button>
+              </td>
+            </tr>
+          </tbody>
+        </table>
+      </div>
+    </section>
+
+    <section class="card">
+      <div class="flex items-center justify-between mb-3">
+        <div>
+          <h2 class="text-base font-semibold text-slate-100">Code ID Rollup</h2>
+          <p class="text-xs text-slate-500">Contracts per code, admin presence, newest height</p>
+        </div>
+        <button class="btn text-xs" @click="codeFilter = 'all'">Reset Filter</button>
+      </div>
+      <div v-if="codeAggregates.length === 0" class="text-xs text-slate-400">No code stats available.</div>
+      <div v-else class="overflow-x-auto">
+        <table class="table">
+          <thead>
+            <tr class="text-xs text-slate-300">
+              <th>Code ID</th>
+              <th>Contracts</th>
+              <th>With Admin</th>
+              <th>Latest Height</th>
+              <th></th>
+            </tr>
+          </thead>
+          <tbody>
+            <tr v-for="row in codeAggregates" :key="row.codeId" class="text-sm text-slate-200">
+              <td><span class="badge border-indigo-400/60 text-indigo-200">{{ row.codeId }}</span></td>
+              <td>{{ row.count.toLocaleString() }}</td>
+              <td>{{ row.managed.toLocaleString() }}</td>
+              <td>{{ row.latestHeight ? row.latestHeight.toLocaleString() : '—' }}</td>
+              <td>
+                <button class="btn text-[11px]" @click="codeFilter = row.codeId">Filter</button>
               </td>
             </tr>
           </tbody>
