@@ -185,6 +185,28 @@ const formatUsd = (value: number | null | undefined) => {
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const priceOverrides = ref<Record<string, number>>({});
+
+const priceLookup = computed(() => ({ ...USD_PRICE_HINTS, ...priceOverrides.value }));
+
+const fetchLivePrices = async () => {
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=osmosis,cosmos&vs_currencies=usd",
+      { cache: "no-store" }
+    );
+    const data = await res.json();
+    const overrides: Record<string, number> = {};
+    const osmo = Number(data?.osmosis?.usd);
+    if (Number.isFinite(osmo) && osmo > 0) overrides.OSMO = osmo;
+    const atom = Number(data?.cosmos?.usd);
+    if (Number.isFinite(atom) && atom > 0) overrides.ATOM = atom;
+    priceOverrides.value = overrides;
+  } catch (err) {
+    console.warn("Failed to fetch live prices", err);
+  }
+};
+
 const submit = async () => {
   if (!addressInput.value) {
     notify("Enter a RetroChain address first.");
@@ -267,7 +289,7 @@ const decoratedBalances = computed<DecoratedBalance[]>(() => {
       const localeAmount = Number.isFinite(numeric)
         ? `${numeric.toLocaleString(undefined, { maximumFractionDigits: Math.min(6, decimals) })} ${meta.symbol}`
         : formatAmount(coin.amount, coin.denom);
-      const priceHint = meta.symbol ? USD_PRICE_HINTS[meta.symbol.toUpperCase()] : undefined;
+      const priceHint = meta.symbol ? priceLookup.value[meta.symbol.toUpperCase()] : undefined;
       const usdValue = Number.isFinite(numeric) && priceHint && priceHint > 0 ? numeric * priceHint : null;
 
       return {
@@ -300,6 +322,8 @@ const { current: network } = useNetwork();
 onMounted(async () => {
   // Load address book
   loadAddressBook();
+  // Fetch live USD prices for supported assets (fallback to env hints)
+  fetchLivePrices();
   
   // If route has an address, use it
   if (addressInput.value) {
