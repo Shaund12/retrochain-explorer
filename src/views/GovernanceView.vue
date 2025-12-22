@@ -74,6 +74,11 @@ const getProposalTitle = (proposal: Proposal) => {
   return proposal.title || proposal.metadata?.title || proposal.content?.title || typeName || `Proposal #${proposal.proposalId}`;
 };
 
+const getProposalKind = (proposal: Proposal) => {
+  const typeName = proposal.content?.["@type"]?.split(".").pop() || "Proposal";
+  return typeName.replace(/Proposal/gi, "").replace(/Msg/gi, " ").trim() || "Governance";
+};
+
 const getProposalSummary = (proposal: Proposal) => {
   return (
     proposal.summary ||
@@ -121,6 +126,18 @@ const formatVoteCount = (value?: string) => {
   const number = Number(value ?? "0");
   if (!Number.isFinite(number)) return "0";
   return new Intl.NumberFormat("en-US").format(Math.floor(number));
+};
+
+const formatCountdown = (time?: string) => {
+  if (!time) return null;
+  const diff = dayjs(time).diff(dayjs(), "second");
+  if (diff <= 0) return "Ended";
+  const days = Math.floor(diff / 86400);
+  const hours = Math.floor((diff % 86400) / 3600);
+  const mins = Math.floor((diff % 3600) / 60);
+  if (days > 0) return `${days}d ${hours}h left`;
+  if (hours > 0) return `${hours}h ${mins}m left`;
+  return `${mins}m left`;
 };
 
 const voteCategories = [
@@ -249,6 +266,9 @@ const stats = computed(() => {
               >
                 {{ getStatusBadge(proposal.status).text }}
               </span>
+              <span class="badge text-[10px] border-cyan-400/50 text-cyan-100">
+                {{ getProposalKind(proposal) }}
+              </span>
               <span v-if="proposal.votingEndTime" class="text-[11px] text-slate-500">
                 • Ends {{ formatTime(proposal.votingEndTime) }}
               </span>
@@ -274,6 +294,9 @@ const stats = computed(() => {
               <div v-if="proposal.votingEndTime">
                 <span class="text-slate-500">Ends:</span>
                 {{ formatTime(proposal.votingEndTime) }}
+                <span v-if="proposal.votingEndTime" class="ml-2 px-2 py-0.5 rounded-full bg-slate-800/80 border border-slate-700 text-[10px] text-emerald-200">
+                  {{ formatCountdown(proposal.votingEndTime) }}
+                </span>
               </div>
             </div>
           </div>
@@ -369,6 +392,17 @@ const stats = computed(() => {
               </span>
             </div>
           </div>
+        </div>
+      </div>
+
+      <div class="mt-6 grid grid-cols-1 sm:grid-cols-2 gap-3 text-xs text-slate-400">
+        <div class="p-3 rounded-lg bg-slate-800/40 border border-slate-700">
+          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Type</div>
+          <div class="text-slate-200 font-semibold">{{ getProposalKind(activeProposal) }}</div>
+        </div>
+        <div class="p-3 rounded-lg bg-slate-800/40 border border-slate-700">
+          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Voting Ends In</div>
+          <div class="text-emerald-300 font-semibold">{{ formatCountdown(activeProposal.votingEndTime) || 'Ended' }}</div>
         </div>
       </div>
 
