@@ -267,7 +267,7 @@ const loadTransactions = async () => {
   if (!addressInput.value) return;
   loadingTxs.value = true;
   try {
-    await searchByAddress(addressInput.value, txPageSize.value + 1, txPage.value - 1);
+    await searchByAddress(addressInput.value, txPageSize.value, txPage.value - 1);
   } catch (e) {
     console.error("Failed to load transactions:", e);
   } finally {

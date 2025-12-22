@@ -439,7 +439,11 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
     loading.value = true;
     error.value = null;
     try {
-      const offset = Math.max(0, page) * limit;
+      const pageSize = Math.max(1, limit);
+      const pageIndex = Math.max(0, page);
+      // fetch enough to cover current page window plus one extra for hasMore detection
+      const fetchCount = pageSize * (pageIndex + 1) + 1;
+
       const filters = [
         `message.sender='${address}'`,
         `transfer.recipient='${address}'`,
@@ -456,8 +460,7 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
             params: {
               events: filter,
               order_by: "ORDER_BY_DESC",
-              "pagination.limit": String(limit),
-              ...(offset ? { "pagination.offset": String(offset) } : {})
+              "pagination.limit": String(fetchCount)
             },
             paramsSerializer: (params) => {
               const search = new URLSearchParams();
@@ -503,8 +506,10 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
         }
       }
 
-      collected.sort((a, b) => b.height - a.height);
-      txs.value = collected;
+      collected.sort((a, b) => b.height - a.height || b.timestamp?.localeCompare?.(a.timestamp || "") || 0);
+      const start = pageIndex * pageSize;
+      const end = start + pageSize + 1;
+      txs.value = collected.slice(start, end);
     } catch (e: any) {
       error.value = e?.message ?? String(e);
       txs.value = [];
