@@ -163,7 +163,7 @@ const formatPercent = (value?: number | null, digits = 1) => {
     </div>
 
     <div v-if="!loading && !error && blocks.length === 0" class="card text-center border border-dashed border-slate-800">
-      <div class="text-3xl mb-2">7e4</div>
+      <div class="text-3xl mb-2">🔍</div>
       <p class="text-sm text-slate-300">No blocks found yet.</p>
       <p class="text-xs text-slate-500 mt-1">
         <span v-if="network !== 'mainnet'">

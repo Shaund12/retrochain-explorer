@@ -161,6 +161,50 @@ const burnRollingWindowDisplay = computed(() => {
   return `${formatRetro(burnRollingWindowAmount.value, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
 });
 
+const burnAveragePerBlock = computed(() => {
+  const deltas = burnSnapshots.value
+    .map((snap) => (snap.burned ?? 0))
+    .filter((n) => Number.isFinite(n));
+  if (!deltas.length) return null;
+  // Only count burns (balance decreases) as positive contribution; ignore inflows
+  const burnsOnly = deltas.map((n) => (n > 0 ? n : 0));
+  const avg = burnsOnly.reduce((a, b) => a + b, 0) / burnsOnly.length;
+  return avg;
+});
+
+const burnAveragePerBlockDisplay = computed(() =>
+  burnAveragePerBlock.value === null
+    ? "—"
+    : `${formatRetro(burnAveragePerBlock.value, { maximumFractionDigits: 3, minimumFractionDigits: 3 })} RETRO`
+);
+
+const burnEstimatedDaily = computed(() => {
+  if (burnAveragePerBlock.value === null) return null;
+  const blocksPerYear = Number(mintParams.value?.blocks_per_year ?? mintParams.value?.blocksPerYear ?? 0);
+  if (!blocksPerYear) return null;
+  const blocksPerDay = blocksPerYear / 365;
+  return burnAveragePerBlock.value * blocksPerDay;
+});
+
+const burnEstimatedDailyDisplay = computed(() =>
+  burnEstimatedDaily.value === null
+    ? "—"
+    : `${formatRetro(burnEstimatedDaily.value, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`
+);
+
+const burnVsProvisionRatio = computed(() => {
+  if (burnAveragePerBlock.value === null || perBlockProvisionRetro.value === null) return null;
+  // perBlockProvisionRetro is already in RETRO units; convert burn to RETRO as well
+  const burnRetro = burnAveragePerBlock.value / 1_000_000;
+  if (burnRetro <= 0 || perBlockProvisionRetro.value <= 0) return null;
+  return burnRetro / perBlockProvisionRetro.value;
+});
+
+const burnVsProvisionDisplay = computed(() => {
+  if (burnVsProvisionRatio.value === null) return "—";
+  return `${(burnVsProvisionRatio.value * 100).toFixed(2)}% of mint per block (sample)`;
+});
+
 const burnHistoryLabel = computed(() =>
   burnSnapshots.value.length ? `Last ${burnSnapshots.value.length} blocks` : "Awaiting burn telemetry"
 );
@@ -567,6 +611,23 @@ const minDepositRetro = computed(() => {
             <p class="text-xs text-indigo-200 uppercase tracking-wider">Rolling window</p>
             <p class="text-2xl font-bold text-indigo-100">{{ burnRollingWindowDisplay }}</p>
             <p class="text-[11px] text-indigo-200/70">{{ burnHistoryLabel }}</p>
+          </div>
+        </div>
+        <div class="grid gap-3 md:grid-cols-3 text-sm text-slate-300">
+          <div class="rounded-xl border border-white/10 bg-white/5 p-4">
+            <p class="text-xs text-slate-400 uppercase tracking-wider">Avg burned / block</p>
+            <p class="text-lg font-semibold text-white">{{ burnAveragePerBlockDisplay }}</p>
+            <p class="text-[11px] text-slate-500">Observed from recent blocks</p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/5 p-4">
+            <p class="text-xs text-slate-400 uppercase tracking-wider">Est. daily burn (sample)</p>
+            <p class="text-lg font-semibold text-white">{{ burnEstimatedDailyDisplay }}</p>
+            <p class="text-[11px] text-slate-500">Uses blocks_per_year from mint params</p>
+          </div>
+          <div class="rounded-xl border border-white/10 bg-white/5 p-4">
+            <p class="text-xs text-slate-400 uppercase tracking-wider">Burn vs mint (sample)</p>
+            <p class="text-lg font-semibold text-white">{{ burnVsProvisionDisplay }}</p>
+            <p class="text-[11px] text-slate-500">Higher staking rewards → higher burn share</p>
           </div>
         </div>
         <div v-if="burnLoading" class="text-xs text-slate-400">Syncing burn telemetry…</div>
