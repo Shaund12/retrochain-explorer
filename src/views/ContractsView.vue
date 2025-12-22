@@ -145,7 +145,7 @@ onMounted(async () => {
       </article>
       <article class="card-soft border border-amber-500/30 bg-amber-500/5">
         <div class="text-[11px] uppercase tracking-wider text-amber-200">Latest Height</div>
-        <div class="text-3xl font-semibold text-white">{{ stats.latestHeight ? stats.latestHeight.toLocaleString() : "" }}</div>
+        <div class="text-3xl font-semibold text-white">{{ stats.latestHeight ? stats.latestHeight.toLocaleString() : "—" }}</div>
         <p class="text-xs text-slate-400">Block height of newest instantiation</p>
       </article>
       <article class="card-soft border border-emerald-400/30 bg-emerald-500/5">

@@ -79,6 +79,35 @@ const totalBalance = computed(() => {
   return fmtAmount(coin.amount, coin.denom, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
 });
 
+const retroPrice = computed(() => {
+  const hint = priceLookup.value.RETRO;
+  return hint && hint > 0 ? hint : null;
+});
+
+const totalUretroAll = computed(() => liquidUretro.value + stakedUretro.value + rewardsUretro.value + unbondingUretro.value + vestingUretro.value);
+
+const totalRetroDisplay = computed(() => fmtAmount(String(totalUretroAll.value), "uretro", { minDecimals: 2, maxDecimals: 2, showZerosForIntegers: true }));
+
+const totalRetroUsd = computed(() => {
+  if (!retroPrice.value) return null;
+  return (totalUretroAll.value / 1_000_000) * retroPrice.value;
+});
+
+const quickRetroStats = computed(() => {
+  const items = [
+    { label: "Liquid", amount: liquidUretro.value },
+    { label: "Staked", amount: stakedUretro.value },
+    { label: "Rewards", amount: rewardsUretro.value },
+    { label: "Unbonding", amount: unbondingUretro.value },
+    { label: "Vesting", amount: vestingUretro.value }
+  ];
+  return items.map((item) => {
+    const display = fmtAmount(String(item.amount), "uretro", { minDecimals: 2, maxDecimals: 2 });
+    const usd = retroPrice.value ? (item.amount / 1_000_000) * retroPrice.value : null;
+    return { ...item, display, usd };
+  });
+});
+
 const liquidUretro = computed(() => {
   const liquid = balances.value.find(b => b.denom === "uretro");
   return Number(liquid?.amount ?? "0");
@@ -519,10 +548,13 @@ const closeTokenDetails = () => {
             Total Balance
           </div>
           <div class="text-2xl font-bold text-emerald-400 mb-1">
-            {{ totalBalance }}
+            {{ totalRetroDisplay }}
           </div>
-          <div class="text-xs text-emerald-200" v-if="totalPortfolioUsd !== null">
-            ≈ {{ formatUsd(totalPortfolioUsd) }}
+          <div class="text-xs text-emerald-200" v-if="totalRetroUsd !== null">
+            ≈ {{ formatUsd(totalRetroUsd) }} (RETRO)
+          </div>
+          <div class="text-[11px] text-slate-400" v-if="totalPortfolioUsd !== null">
+            Incl. IBC/USD assets: {{ formatUsd(totalPortfolioUsd) }}
           </div>
           <div class="text-xs text-slate-400 mb-3">
             Address: <code class="text-[10px]">{{ bech32Address.slice(0, 16) }}...</code>
@@ -571,6 +603,15 @@ const closeTokenDetails = () => {
           </div>
           <div class="text-xs text-slate-400">
             Different denominations
+          </div>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-[11px]" v-if="quickRetroStats.length">
+            <div v-for="item in quickRetroStats" :key="item.label" class="p-2 rounded-lg bg-slate-900/60 border border-slate-700">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400 uppercase tracking-wider">{{ item.label }}</span>
+                <span class="font-semibold text-slate-100">{{ item.display }}</span>
+              </div>
+              <div v-if="item.usd !== null" class="text-emerald-300">≈ {{ formatUsd(item.usd) }}</div>
+            </div>
           </div>
         </div>
 
@@ -646,15 +687,15 @@ const closeTokenDetails = () => {
         <div v-if="accountInfo" class="grid grid-cols-1 sm:grid-cols-3 gap-3 text-xs mb-3">
           <div class="p-3 rounded bg-slate-900/60 border border-slate-700">
             <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Account Number</div>
-            <div class="font-mono">{{ accountInfo.account_number || accountInfo.base_account?.account_number || '' }}</div>
+            <div class="font-mono">{{ accountInfo.account_number || accountInfo.base_account?.account_number || '—' }}</div>
           </div>
           <div class="p-3 rounded bg-slate-900/60 border border-slate-700">
             <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Sequence</div>
-            <div class="font-mono">{{ accountInfo.sequence || accountInfo.base_account?.sequence || '' }}</div>
+            <div class="font-mono">{{ accountInfo.sequence || accountInfo.base_account?.sequence || '—' }}</div>
           </div>
           <div class="p-3 rounded bg-slate-900/60 border border-slate-700 overflow-hidden">
             <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">PubKey</div>
-            <code class="text-[10px] break-all">{{ accountInfo.pub_key?.key || accountInfo.base_account?.pub_key?.key || '' }}</code>
+            <code class="text-[10px] break-all">{{ accountInfo.pub_key?.key || accountInfo.base_account?.pub_key?.key || '—' }}</code>
           </div>
         </div>
         <h3 class="text-sm font-semibold text-slate-100 mb-2">Balances</h3>
@@ -987,7 +1028,7 @@ const closeTokenDetails = () => {
                 class="btn text-xs text-rose-300 hover:text-rose-200"
                 @click="removeFromAddressBook(index)"
               >
-                ???
+                Remove
               </button>
             </div>
             <div v-if="addressBook.length === 0" class="text-xs text-slate-500 text-center py-4">
