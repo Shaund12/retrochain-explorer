@@ -250,7 +250,12 @@ const USD_PRICE_HINTS: Record<string, number | undefined> = {
 const getUsdEstimate = (rawAmount: string | undefined | null, denom: string | undefined | null): number | null => {
   if (!rawAmount || !denom) return null;
   const meta = getTokenMeta(denom);
-  const symbol = meta.symbol?.toUpperCase();
+  const normalizeSymbol = (val?: string | null) => {
+    if (!val) return undefined;
+    const clean = val.replace(/^ibc\//i, "");
+    return clean.replace(/^u/, "").toUpperCase();
+  };
+  const symbol = normalizeSymbol(meta.symbol) || normalizeSymbol((meta as any)?.display) || normalizeSymbol((meta as any)?.name) || normalizeSymbol(denom);
   const hint = symbol ? priceLookup.value[symbol] ?? USD_PRICE_HINTS[symbol] : undefined;
   if (!hint || hint <= 0) return null;
   const decimals = typeof meta.decimals === "number" ? meta.decimals : 6;
@@ -508,6 +513,10 @@ onMounted(async () => {
                 <div v-if="pkt.amount && pkt.denom">
                   <span class="text-slate-500">Amount</span>
                   <div class="font-mono break-all text-slate-200">{{ pkt.amount }} {{ pkt.denom }}</div>
+                </div>
+                <div v-if="pkt.usd !== null && pkt.usd !== undefined">
+                  <span class="text-slate-500">USD (est.)</span>
+                  <div class="text-emerald-300 font-semibold">≈ {{ formatUsd(pkt.usd) }}</div>
                 </div>
                 <div v-if="pkt.sender">
                   <span class="text-slate-500">Sender</span>
