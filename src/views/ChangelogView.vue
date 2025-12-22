@@ -103,6 +103,57 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "2025.12.22-2",
+    codename: "GitBook Sprint",
+    date: "2025-12-22",
+    summary:
+      "Introduced a GitBook-style Docs hub with a full explorer-focused documentation set, automatic IBC denom registry discovery, and consistent navigation between docs pages.",
+    changes: [
+      {
+        type: "feature",
+        title: "Docs hub (GitBook-style)",
+        description:
+          "Added a dedicated /docs landing page with card layout, searchable list, and tag filtering to quickly access explorer documentation."
+      },
+      {
+        type: "feature",
+        title: "New docs pages (IBC + explorer ops)",
+        description:
+          "Added docs routes for IBC packets & timeouts, IBC relayers, IBC asset registry, fee collector flow, and validator uptime."
+      },
+      {
+        type: "improvement",
+        title: "Back navigation on every docs page",
+        description:
+          "All docs views now include a consistent back link that uses history when available and falls back to the Docs hub."
+      },
+      {
+        type: "feature",
+        title: "Next/Previous docs navigation",
+        description:
+          "Added a canonical docs ordering and inserted Previous/Next navigation cards on docs pages for quick sequential reading."
+      },
+      {
+        type: "feature",
+        title: "Automatic IBC Asset Registry discovery",
+        description:
+          "IBC Asset Registry now auto-fetches /cosmos/bank/v1beta1/denoms_metadata, detects all ibc/ denoms, merges them with curated entries, and labels each row as Curated or Discovered."
+      },
+      {
+        type: "improvement",
+        title: "Expanded curated IBC denom list",
+        description:
+          "Seeded the registry with known RetroChain IBC denoms for ATOM, OSMO, USDC, and WBTC (including aliases) so icons/decimals render even if metadata endpoints are missing."
+      },
+      {
+        type: "improvement",
+        title: "Holiday theme persistence",
+        description:
+          "Holiday mode now defaults to Off, remembers the user’s selection (including snow level) via localStorage, and Auto mode still picks the correct seasonal theme based on the current date."
+      }
+    ]
+  },
+  {
     version: "2025.12.22",
     codename: "Stake & Trace",
     date: "2025-12-22",

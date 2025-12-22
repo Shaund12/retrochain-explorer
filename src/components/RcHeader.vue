@@ -278,7 +278,7 @@ import { getTokenMeta } from "@/constants/tokens";
 const props = defineProps<{ holidayMode?: string; activeHoliday?: string; snowLevel?: string }>();
 const emit = defineEmits(["set-holiday-mode", "set-snow-level"]);
 
-const holidayMode = computed(() => props.holidayMode || "auto");
+const holidayMode = computed(() => props.holidayMode || "off");
 const activeHoliday = computed(() => props.activeHoliday || "off");
 const snowLevel = computed(() => props.snowLevel || "medium");
 

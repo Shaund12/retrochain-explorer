@@ -10,9 +10,31 @@ const { restBase, rpcBase } = useNetwork();
 const { info, refresh } = useChainInfo();
 
 type HolidayMode = "auto" | "off" | "christmas" | "halloween" | "thanksgiving" | "easter";
-const holidayMode = ref<HolidayMode>("auto");
+const holidayMode = ref<HolidayMode>("off");
 type SnowLevel = "light" | "medium" | "blizzard";
 const snowLevel = ref<SnowLevel>("medium");
+
+const STORAGE_KEYS = {
+  holidayMode: "retrochain.holidayMode",
+  snowLevel: "retrochain.snowLevel"
+} as const;
+
+const safeRead = (key: string) => {
+  try {
+    return typeof window !== "undefined" ? window.localStorage.getItem(key) : null;
+  } catch {
+    return null;
+  }
+};
+
+const safeWrite = (key: string, value: string) => {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(key, value);
+  } catch {
+    // ignore
+  }
+};
 
 const isOnline = computed(() => !!info.value.latestBlockHeight);
 const displayRpc = computed(() => rpcBase.value || import.meta.env.VITE_RPC_URL || "/rpc");
@@ -86,13 +108,23 @@ const holidayDisplay = computed(() => {
 
 const setHolidayMode = (mode: HolidayMode) => {
   holidayMode.value = mode;
+  safeWrite(STORAGE_KEYS.holidayMode, mode);
 };
 
 const setSnowLevel = (level: SnowLevel) => {
   snowLevel.value = level;
+  safeWrite(STORAGE_KEYS.snowLevel, level);
 };
 
 onMounted(() => {
+  const storedMode = safeRead(STORAGE_KEYS.holidayMode) as HolidayMode | null;
+  if (storedMode && ["auto", "off", "christmas", "halloween", "thanksgiving", "easter"].includes(storedMode)) {
+    holidayMode.value = storedMode;
+  }
+  const storedSnow = safeRead(STORAGE_KEYS.snowLevel) as SnowLevel | null;
+  if (storedSnow && ["light", "medium", "blizzard"].includes(storedSnow)) {
+    snowLevel.value = storedSnow;
+  }
   refresh();
 });
 </script>
