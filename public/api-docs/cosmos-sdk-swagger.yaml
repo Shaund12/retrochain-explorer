@@ -6,7 +6,7 @@ info:
     Minimal OpenAPI spec intended to provide working API docs inside the RetroChain explorer.
 
     Note: Cosmos SDK endpoints vary by chain build/modules. This spec focuses on commonly available endpoints
-    (auth, bank, staking, distribution, gov, tx, tendermint).
+    (auth, bank, staking, distribution, gov, tx, tendermint) plus IBC, CosmWasm, tokenfactory, and nft.
 servers:
   - url: "/api"
     description: "Explorer REST proxy (/api -> configured REST endpoint)"
@@ -153,6 +153,18 @@ paths:
           schema: { type: string }
       responses:
         "200": { description: "OK" }
+    post:
+      tags: [tx]
+      summary: "Broadcast tx"
+      description: "Broadcast a signed transaction."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200": { description: "OK" }
 
   /cosmos/tx/v1beta1/txs/{hash}:
     get:
@@ -161,6 +173,57 @@ paths:
       parameters:
         - in: path
           name: hash
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/txs/encode:
+    post:
+      tags: [tx]
+      summary: "Encode tx"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/txs/decode:
+    post:
+      tags: [tx]
+      summary: "Decode tx"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/simulate:
+    post:
+      tags: [tx]
+      summary: "Simulate tx"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/txs/block/{height}:
+    get:
+      tags: [tx]
+      summary: "Txs by block height"
+      parameters:
+        - in: path
+          name: height
           required: true
           schema: { type: string }
       responses:
@@ -312,101 +375,6 @@ paths:
         - in: path
           name: address
           required: true
-          schema: { type: string }
-      responses:
-        "200": { description: "OK" }
-
-  /cosmos/tx/v1beta1/txs:
-    post:
-      tags: [tx]
-      summary: "Broadcast tx"
-      description: "Broadcast a signed transaction."
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        "200": { description: "OK" }
-
-  /cosmos/tx/v1beta1/txs/encode:
-    post:
-      tags: [tx]
-      summary: "Encode tx"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        "200": { description: "OK" }
-
-  /cosmos/tx/v1beta1/txs/decode:
-    post:
-      tags: [tx]
-      summary: "Decode tx"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        "200": { description: "OK" }
-
-  /cosmos/tx/v1beta1/simulate:
-    post:
-      tags: [tx]
-      summary: "Simulate tx"
-      requestBody:
-        required: true
-        content:
-          application/json:
-            schema:
-              type: object
-      responses:
-        "200": { description: "OK" }
-
-  /cosmos/tx/v1beta1/txs/block/{height}:
-    get:
-      tags: [tx]
-      summary: "Txs by block height"
-      parameters:
-        - in: path
-          name: height
-          required: true
-          schema: { type: string }
-      responses:
-        "200": { description: "OK" }
-
-  /cosmos/tx/v1beta1/txs/{hash}:
-    get:
-      tags: [tx]
-      summary: "Tx by hash"
-      parameters:
-        - in: path
-          name: hash
-          required: true
-          schema: { type: string }
-      responses:
-        "200": { description: "OK" }
-
-  /cosmos/tx/v1beta1/txs:
-    get:
-      tags: [tx]
-      summary: "Search txs"
-      parameters:
-        - in: query
-          name: events
-          required: false
-          schema:
-            type: array
-            items: { type: string }
-        - in: query
-          name: pagination.limit
-          required: false
           schema: { type: string }
       responses:
         "200": { description: "OK" }

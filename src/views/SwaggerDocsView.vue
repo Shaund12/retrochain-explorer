@@ -12,10 +12,10 @@ const swaggerJsUrl = "https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js";
 const loading = ref(true);
 const error = ref<string | null>(null);
 
-const specUrl = computed(() => {
-  // Serve the spec from our own origin so it works in prod and dev.
-  return "/swagger/cosmos-sdk-swagger.yaml";
-});
+const specCandidates = computed(() => [
+  "./api-docs/cosmos-sdk-swagger.yaml",
+  "/api-docs/cosmos-sdk-swagger.yaml"
+]);
 
 const effectiveRestBase = computed(() => restBase.value || "/api");
 
@@ -45,14 +45,14 @@ const loadCss = (href: string) => {
   document.head.appendChild(l);
 };
 
-const initSwagger = () => {
+const initSwagger = (spec: string) => {
   const w = window as any;
   const SwaggerUIBundle = w.SwaggerUIBundle;
   if (!SwaggerUIBundle) throw new Error("Swagger UI not available");
 
   SwaggerUIBundle({
     dom_id: "#swagger-ui",
-    url: specUrl.value,
+    url: spec,
     deepLinking: true,
     persistAuthorization: true,
     displayRequestDuration: true,
@@ -73,11 +73,32 @@ const initSwagger = () => {
   });
 };
 
+const checkSpecReachable = async (url: string) => {
+  const res = await fetch(url, { method: "GET" });
+  if (!res.ok) throw new Error(`Spec fetch failed (${res.status}) ${url}`);
+};
+
 onMounted(async () => {
   try {
     loadCss(swaggerCssUrl);
     await loadScript(swaggerJsUrl);
-    initSwagger();
+
+    let chosen: string | null = null;
+    for (const candidate of specCandidates.value) {
+      try {
+        await checkSpecReachable(candidate);
+        chosen = candidate;
+        break;
+      } catch {
+        // try next
+      }
+    }
+
+    if (!chosen) {
+      throw new Error("Swagger spec not reachable. Ensure the file exists at /public/swagger/cosmos-sdk-swagger.yaml and is served by your host.");
+    }
+
+    initSwagger(chosen);
   } catch (e: any) {
     error.value = e?.message || String(e);
   } finally {
@@ -99,7 +120,7 @@ onMounted(async () => {
 
     <RcDisclaimer type="info" title="How this works">
       <ul class="text-sm text-slate-300 list-disc list-inside space-y-1">
-        <li>The swagger spec is served from <code class="text-xs">{{ specUrl }}</code>.</li>
+        <li>The swagger spec is served from <code class="text-xs">/api-docs/cosmos-sdk-swagger.yaml</code>.</li>
         <li>
           "Try it out" requests are routed through <code class="text-xs">{{ effectiveRestBase }}</code> so dev/prod stay same-origin.
         </li>
