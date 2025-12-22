@@ -36,7 +36,7 @@ const {
 const blockPage = ref(0);
 const blockPageSize = 10;
 const txPage = ref(0);
-const txPageSize = 15;
+const txPageSize = 10;
 
 const CARD_STORAGE_KEY = "rc_home_cards_v1";
 const dashboardCards = [
