@@ -145,6 +145,11 @@ const gasPriceDisplay = (fees?: { amount: string; denom: string }[], gasUsed?: s
 
 const hasResults = computed(() => filteredTxs.value.length > 0);
 
+const isIbcTx = (tx: any) => {
+  const types: string[] = Array.isArray(tx?.messageTypes) ? tx.messageTypes : [];
+  return types.some((t) => typeof t === "string" && t.toLowerCase().includes("ibc"));
+};
+
 const loadMore = async () => {
   limit.value += 20;
   await searchRecent(limit.value);
@@ -276,6 +281,7 @@ onMounted(async () => {
           <td class="font-mono text-[11px]">{{ t.height }}</td>
           <td class="text-xs text-slate-300">
             <div v-if="t.messageTypes?.length" class="flex flex-wrap gap-1">
+              <span v-if="isIbcTx(t)" class="badge text-[10px] border-emerald-400/60 text-emerald-200">IBC</span>
               <span
                 v-for="(msg, idx) in t.messageTypes.slice(0, 3)"
                 :key="`${msg}-${idx}`"
