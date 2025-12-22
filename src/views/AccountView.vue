@@ -177,7 +177,8 @@ const knownAccount = computed(() => getAccountLabel(bech32Address.value || addre
 const USD_PRICE_HINTS: Record<string, number | undefined> = {
   USDC: 1,
   OSMO: Number(import.meta.env.VITE_PRICE_OSMO_USD ?? "0") || 0.6,
-  ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? "0") || 10
+  ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? "0") || 10,
+  WBTC: Number(import.meta.env.VITE_PRICE_WBTC_USD ?? "0") || 40000
 };
 
 const formatUsd = (value: number | null | undefined) => {
@@ -192,7 +193,7 @@ const priceLookup = computed(() => ({ ...USD_PRICE_HINTS, ...priceOverrides.valu
 const fetchLivePrices = async () => {
   try {
     const res = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=osmosis,cosmos&vs_currencies=usd",
+      "https://api.coingecko.com/api/v3/simple/price?ids=osmosis,cosmos,wrapped-bitcoin&vs_currencies=usd",
       { cache: "no-store" }
     );
     const data = await res.json();
@@ -201,6 +202,8 @@ const fetchLivePrices = async () => {
     if (Number.isFinite(osmo) && osmo > 0) overrides.OSMO = osmo;
     const atom = Number(data?.cosmos?.usd);
     if (Number.isFinite(atom) && atom > 0) overrides.ATOM = atom;
+    const wbtc = Number(data?.["wrapped-bitcoin"]?.usd);
+    if (Number.isFinite(wbtc) && wbtc > 0) overrides.WBTC = wbtc;
     priceOverrides.value = overrides;
   } catch (err) {
     console.warn("Failed to fetch live prices", err);
