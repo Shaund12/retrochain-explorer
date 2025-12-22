@@ -69,6 +69,21 @@ const themeClass = computed(() => {
   }
 });
 
+const holidayDisplay = computed(() => {
+  switch (activeHoliday.value) {
+    case "christmas":
+      return { label: "Christmas Cheer", emoji: "🎄" };
+    case "halloween":
+      return { label: "Spooky Halloween", emoji: "🎃" };
+    case "thanksgiving":
+      return { label: "Harvest Thanks", emoji: "🦃" };
+    case "easter":
+      return { label: "Easter Bloom", emoji: "🐣" };
+    default:
+      return null;
+  }
+});
+
 const setHolidayMode = (mode: HolidayMode) => {
   holidayMode.value = mode;
 };
@@ -98,6 +113,11 @@ onMounted(() => {
   <div v-if="activeHoliday === 'thanksgiving'" class="thankful-glow" aria-hidden="true"></div>
   <div v-if="activeHoliday === 'easter'" class="easter-eggs" aria-hidden="true"></div>
   <div v-if="activeHoliday === 'easter'" class="easter-confetti" aria-hidden="true"></div>
+  <div v-if="holidayDisplay" class="holiday-banner">
+    <span class="text-xl">{{ holidayDisplay.emoji }}</span>
+    <span class="font-semibold">{{ holidayDisplay.label }}</span>
+    <span class="text-sm text-slate-200/80">Seasonal magic is ON</span>
+  </div>
   <RcMaintenanceBanner />
   <RcHeader
     :holiday-mode="holidayMode"
@@ -491,4 +511,26 @@ onMounted(() => {
   0%, 100% { opacity: 0.5; transform: translateY(0); }
   50% { opacity: 1; transform: translateY(-8px); }
 }
+
+.holiday-banner {
+  position: sticky;
+  top: 0;
+  z-index: 40;
+  margin: 0.5rem auto;
+  max-width: 72rem;
+  display: flex;
+  align-items: center;
+  gap: 0.75rem;
+  padding: 0.65rem 1rem;
+  border-radius: 999px;
+  border: 1px solid rgba(255, 255, 255, 0.2);
+  background: linear-gradient(90deg, rgba(255,255,255,0.08), rgba(255,255,255,0.02));
+  backdrop-filter: blur(8px);
+  box-shadow: 0 12px 40px rgba(0,0,0,0.25);
+}
+
+.festive-bg .holiday-banner { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 10px 30px rgba(16,185,129,0.25); }
+.halloween-bg .holiday-banner { border-color: rgba(249, 115, 22, 0.4); box-shadow: 0 10px 30px rgba(249,115,22,0.25); }
+.fall-bg .holiday-banner { border-color: rgba(244, 114, 182, 0.35); box-shadow: 0 10px 30px rgba(244,114,182,0.2); }
+.easter-bg .holiday-banner { border-color: rgba(94, 234, 212, 0.35); box-shadow: 0 10px 30px rgba(94,234,212,0.2); }
 </style>
