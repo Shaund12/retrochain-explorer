@@ -22,6 +22,12 @@ const USD_PRICE_HINTS: Record<string, number | undefined> = {
 const priceOverrides = ref<Record<string, number>>({});
 const priceLookup = computed(() => ({ ...USD_PRICE_HINTS, ...priceOverrides.value }));
 
+// UI filters
+const tokenSearch = ref("");
+const tokenKind = ref<"all" | "native" | "factory">("all");
+const ibcSearch = ref("");
+const nftSearch = ref("");
+
 const formatUsd = (value: number | null | undefined) => {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -51,6 +57,59 @@ const fetchLivePrices = async () => {
 
 const nativeTokens = computed(() => bankTokens.value.filter((token) => !token.isFactory));
 const factoryTokens = computed(() => bankTokens.value.filter((token) => token.isFactory));
+
+const filteredBankTokens = computed(() => {
+  const term = tokenSearch.value.trim().toLowerCase();
+  return bankTokens.value
+    .filter((token) => {
+      if (tokenKind.value === "native" && token.isFactory) return false;
+      if (tokenKind.value === "factory" && !token.isFactory) return false;
+      if (!term) return true;
+      const symbol = friendlySymbol(token).toLowerCase();
+      const name = friendlyName(token).toLowerCase();
+      const denom = (token.denom || "").toLowerCase();
+      return symbol.includes(term) || name.includes(term) || denom.includes(term);
+    })
+    .sort((a, b) => friendlySymbol(a).localeCompare(friendlySymbol(b)));
+});
+
+const filteredIbcTokens = computed(() => {
+  const term = ibcSearch.value.trim().toLowerCase();
+  if (!term) return ibcTokens.value;
+  return ibcTokens.value.filter((token) => {
+    return (
+      (token.tokenMeta?.symbol || "").toLowerCase().includes(term) ||
+      (token.baseDenom || "").toLowerCase().includes(term) ||
+      (token.denom || "").toLowerCase().includes(term) ||
+      (token.tracePath || "").toLowerCase().includes(term)
+    );
+  });
+});
+
+const filteredCw20 = computed(() => {
+  const term = tokenSearch.value.trim().toLowerCase();
+  if (!term) return cw20Tokens.value;
+  return cw20Tokens.value.filter((t) => {
+    return (
+      (t.symbol || "").toLowerCase().includes(term) ||
+      (t.name || "").toLowerCase().includes(term) ||
+      (t.address || "").toLowerCase().includes(term)
+    );
+  });
+});
+
+const filteredNfts = computed(() => {
+  const term = nftSearch.value.trim().toLowerCase();
+  if (!term) return nftClasses.value;
+  return nftClasses.value.filter((cls) => {
+    return (
+      (cls.name || "").toLowerCase().includes(term) ||
+      (cls.id || "").toLowerCase().includes(term) ||
+      (cls.description || "").toLowerCase().includes(term) ||
+      (cls.symbol || "").toLowerCase().includes(term)
+    );
+  });
+});
 
 const stats = computed(() => ({
   native: nativeTokens.value.length,
@@ -169,25 +228,68 @@ const nftSourceLabel = (cls: { source?: string }) => {
           <div class="rounded-2xl border border-emerald-400/30 bg-emerald-500/10 p-3">
             <p class="text-emerald-200 uppercase tracking-wider">Native Tokens</p>
             <p class="text-2xl font-bold text-white">{{ stats.native }}</p>
+            <p class="text-[11px] text-slate-400">Filtered: {{ filteredBankTokens.filter(t => !t.isFactory).length }}</p>
           </div>
           <div class="rounded-2xl border border-cyan-400/30 bg-cyan-500/10 p-3">
             <p class="text-cyan-200 uppercase tracking-wider">Factory Tokens</p>
             <p class="text-2xl font-bold text-white">{{ stats.factory }}</p>
+            <p class="text-[11px] text-slate-400">Filtered: {{ filteredBankTokens.filter(t => t.isFactory).length }}</p>
           </div>
           <div class="rounded-2xl border border-indigo-400/30 bg-indigo-500/10 p-3">
             <p class="text-indigo-200 uppercase tracking-wider">IBC Assets</p>
             <p class="text-2xl font-bold text-white">{{ stats.ibc }}</p>
+            <p class="text-[11px] text-slate-400">Filtered: {{ filteredIbcTokens.length }}</p>
             <p class="text-[11px] text-indigo-100" v-if="ibcTotalUsd !== null">≈ {{ formatUsd(ibcTotalUsd) }}</p>
             <p v-if="ibcTotalUsd !== null" class="text-[10px] text-emerald-200 mt-1">🎉 Chain-wide IBC liquidity in USD</p>
           </div>
           <div class="rounded-2xl border border-fuchsia-400/30 bg-fuchsia-500/10 p-3">
             <p class="text-fuchsia-200 uppercase tracking-wider">CW20 Tokens</p>
             <p class="text-2xl font-bold text-white">{{ stats.cw20 }}</p>
+            <p class="text-[11px] text-slate-400">Filtered: {{ filteredCw20.length }}</p>
           </div>
           <div class="rounded-2xl border border-amber-400/30 bg-amber-500/10 p-3">
             <p class="text-amber-200 uppercase tracking-wider">NFT Collections</p>
             <p class="text-2xl font-bold text-white">{{ stats.nft }}</p>
+            <p class="text-[11px] text-slate-400">Filtered: {{ filteredNfts.length }}</p>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <!-- Quick filters -->
+    <div class="card grid gap-3 md:grid-cols-3">
+      <div class="space-y-2">
+        <div class="text-[11px] uppercase tracking-widest text-slate-500">Search tokens</div>
+        <input
+          v-model="tokenSearch"
+          type="text"
+          placeholder="Symbol, name, denom"
+          class="w-full px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-100 text-sm"
+        />
+      </div>
+      <div class="space-y-2">
+        <div class="text-[11px] uppercase tracking-widest text-slate-500">Token type</div>
+        <div class="flex flex-wrap gap-2 text-[11px]">
+          <button class="btn" :class="tokenKind === 'all' ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : ''" @click="tokenKind = 'all'">All</button>
+          <button class="btn" :class="tokenKind === 'native' ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : ''" @click="tokenKind = 'native'">Native</button>
+          <button class="btn" :class="tokenKind === 'factory' ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : ''" @click="tokenKind = 'factory'">Factory</button>
+        </div>
+      </div>
+      <div class="space-y-2">
+        <div class="text-[11px] uppercase tracking-widest text-slate-500">Search IBC / NFTs</div>
+        <div class="grid grid-cols-2 gap-2">
+          <input
+            v-model="ibcSearch"
+            type="text"
+            placeholder="Search IBC tokens"
+            class="w-full px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-100 text-sm"
+          />
+          <input
+            v-model="nftSearch"
+            type="text"
+            placeholder="Search NFT collections"
+            class="w-full px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-100 text-sm"
+          />
         </div>
       </div>
     </div>
@@ -213,7 +315,8 @@ const nftSourceLabel = (cls: { source?: string }) => {
           <h2 class="text-base font-semibold text-white">Native &amp; Factory Tokens</h2>
           <button class="btn text-xs" @click="fetchAssets">Refresh</button>
         </div>
-        <div v-if="bankTokens.length === 0" class="text-xs text-slate-400">No fungible tokens discovered yet.</div>
+        <div class="text-[11px] text-slate-500 mb-2">Showing {{ filteredBankTokens.length }} of {{ bankTokens.length }} tokens</div>
+        <div v-if="filteredBankTokens.length === 0" class="text-xs text-slate-400">No fungible tokens match the current filters.</div>
         <div v-else class="overflow-x-auto">
           <table class="table">
             <thead>
@@ -226,7 +329,7 @@ const nftSourceLabel = (cls: { source?: string }) => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="token in bankTokens" :key="token.denom" class="text-sm">
+              <tr v-for="token in filteredBankTokens" :key="token.denom" class="text-sm">
                 <td class="py-3">
                   <div class="flex items-center gap-3">
                     <div
@@ -272,6 +375,7 @@ const nftSourceLabel = (cls: { source?: string }) => {
           <h2 class="text-base font-semibold text-white">CW20 Tokens</h2>
           <span class="text-xs text-slate-400">Discovered via smart contract queries</span>
         </div>
+        <div class="text-[11px] text-slate-500 mb-2">Showing {{ filteredCw20.length }} of {{ cw20Tokens.length }}</div>
         <div class="overflow-x-auto">
           <table class="table">
             <thead>
@@ -285,7 +389,7 @@ const nftSourceLabel = (cls: { source?: string }) => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="token in cw20Tokens" :key="token.address" class="text-sm">
+              <tr v-for="token in filteredCw20" :key="token.address" class="text-sm">
                 <td class="py-3">
                   <div class="font-semibold text-white">{{ token.symbol }}</div>
                   <div class="text-xs text-slate-400">{{ token.name }}</div>
@@ -306,7 +410,8 @@ const nftSourceLabel = (cls: { source?: string }) => {
           <h2 class="text-base font-semibold text-white">IBC Tokens</h2>
           <span class="text-xs text-slate-400">Path &amp; source chain are derived from denom traces.</span>
         </div>
-        <div v-if="ibcTokens.length === 0" class="text-xs text-slate-400">No inbound IBC assets detected.</div>
+        <div class="text-[11px] text-slate-500 mb-2">Showing {{ filteredIbcTokens.length }} of {{ ibcTokens.length }}</div>
+        <div v-if="filteredIbcTokens.length === 0" class="text-xs text-slate-400">No inbound IBC assets match the current search.</div>
         <div v-else class="overflow-x-auto">
           <table class="table">
             <thead>
@@ -319,7 +424,7 @@ const nftSourceLabel = (cls: { source?: string }) => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="token in ibcTokens" :key="token.denom" class="text-sm">
+              <tr v-for="token in filteredIbcTokens" :key="token.denom" class="text-sm">
                 <td>
                   <div class="flex items-center gap-3">
                     <div
@@ -361,10 +466,11 @@ const nftSourceLabel = (cls: { source?: string }) => {
           <h2 class="text-base font-semibold text-white">NFT Collections</h2>
           <span class="text-xs text-slate-400">Aggregated from x/nft, ICS-721 traces, and CW721 contracts.</span>
         </div>
-        <div v-if="nftClasses.length === 0" class="text-xs text-slate-400">No NFT classes have been registered yet.</div>
+        <div class="text-[11px] text-slate-500 mb-2">Showing {{ filteredNfts.length }} of {{ nftClasses.length }}</div>
+        <div v-if="filteredNfts.length === 0" class="text-xs text-slate-400">No NFT classes match the current search.</div>
         <div v-else class="grid gap-3 md:grid-cols-2">
           <RouterLink
-            v-for="cls in nftClasses"
+            v-for="cls in filteredNfts"
             :key="cls.id"
             :to="{ name: 'nft-detail', params: { id: cls.id } }"
             class="rounded-2xl border border-white/10 bg-white/5 p-4 transition hover:border-indigo-400/50 hover:-translate-y-[1px]"
