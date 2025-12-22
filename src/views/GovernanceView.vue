@@ -165,6 +165,21 @@ const isDuplicate = (proposal: Proposal) => {
   return (duplicateMap.value.get(key) || 0) > 1;
 };
 
+const duplicateGroups = computed(() => {
+  const groups = new Map<string, Proposal[]>();
+  proposals.value.forEach((p) => {
+    const title = getProposalTitle(p).toLowerCase().trim();
+    const summary = getProposalSummary(p).toLowerCase().trim();
+    const key = `${title}|${summary}`;
+    if (!groups.has(key)) groups.set(key, []);
+    groups.get(key)!.push(p);
+  });
+  return Array.from(groups.entries())
+    .map(([key, list]) => ({ key, list }))
+    .filter((g) => g.list.length > 1)
+    .sort((a, b) => b.list.length - a.list.length);
+});
+
 const filteredProposals = computed(() => {
   const term = searchTerm.value.trim().toLowerCase();
   const allowed = statusGroups[statusFilter.value] || [];
@@ -254,6 +269,32 @@ const stats = computed(() => {
         <div class="text-[11px] uppercase tracking-widest text-rose-200">Rejected</div>
         <div class="text-2xl font-semibold text-white">{{ stats.rejected }}</div>
         <div class="text-[11px] text-slate-400">Did not pass</div>
+      </div>
+    </div>
+
+    <div v-if="duplicateGroups.length" class="card border border-rose-500/30 bg-rose-500/5">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-rose-100">Duplicate clusters</h2>
+        <span class="text-[11px] text-rose-200">{{ duplicateGroups.length }} groups</span>
+      </div>
+      <div class="space-y-3 text-xs text-slate-100">
+        <div v-for="group in duplicateGroups" :key="group.key" class="p-3 rounded-lg bg-slate-900/60 border border-rose-500/30">
+          <div class="flex items-center justify-between gap-2 mb-2">
+            <div class="font-semibold text-rose-100">{{ getProposalTitle(group.list[0]) }}</div>
+            <span class="badge text-[10px] border-rose-400/60 text-rose-200">{{ group.list.length }} copies</span>
+          </div>
+          <div class="text-[11px] text-slate-400 line-clamp-2 mb-2">{{ getProposalSummary(group.list[0]) }}</div>
+          <div class="flex flex-wrap gap-2">
+            <button
+              v-for="p in group.list"
+              :key="p.proposalId"
+              class="btn text-[10px]"
+              @click="openProposalModal(p)"
+            >
+              #{{ p.proposalId }} · {{ getStatusBadge(p.status).text }}
+            </button>
+          </div>
+        </div>
       </div>
     </div>
 
