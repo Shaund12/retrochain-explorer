@@ -91,9 +91,13 @@ onMounted(() => {
   <div v-if="activeHoliday === 'christmas'" class="festive-ornaments" aria-hidden="true">
     <span v-for="n in 12" :key="`orn-${n}`" class="ornament" :style="{ '--i': n }"></span>
   </div>
+  <div v-if="activeHoliday === 'christmas'" class="festive-sparkles" aria-hidden="true"></div>
   <div v-if="activeHoliday === 'halloween'" class="spooky-bats" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'halloween'" class="pumpkin-glow" aria-hidden="true"></div>
   <div v-if="activeHoliday === 'thanksgiving'" class="fall-leaves" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'thanksgiving'" class="thankful-glow" aria-hidden="true"></div>
   <div v-if="activeHoliday === 'easter'" class="easter-eggs" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'easter'" class="easter-confetti" aria-hidden="true"></div>
   <RcMaintenanceBanner />
   <RcHeader
     :holiday-mode="holidayMode"
@@ -343,6 +347,24 @@ onMounted(() => {
   z-index: 4;
 }
 
+.festive-sparkles {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(2px 2px at 10% 20%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(3px 3px at 30% 50%, rgba(236, 72, 153, 0.6), transparent),
+    radial-gradient(2px 2px at 70% 30%, rgba(129, 140, 248, 0.7), transparent),
+    radial-gradient(3px 3px at 85% 60%, rgba(16, 185, 129, 0.6), transparent);
+  animation: sparkles 6s ease-in-out infinite;
+  z-index: 4;
+}
+
+@keyframes sparkles {
+  0%, 100% { opacity: 0.5; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-6px); }
+}
+
 .ornament {
   position: absolute;
   width: 16px;
@@ -364,8 +386,8 @@ onMounted(() => {
 }
 
 .halloween-bg {
-  background: radial-gradient(circle at 20% 20%, rgba(249, 115, 22, 0.08), transparent 35%),
-              radial-gradient(circle at 80% 10%, rgba(217, 70, 239, 0.08), transparent 35%),
+  background: radial-gradient(circle at 20% 20%, rgba(249, 115, 22, 0.12), transparent 35%),
+              radial-gradient(circle at 80% 10%, rgba(217, 70, 239, 0.12), transparent 35%),
               #0b0a13;
 }
 
@@ -386,9 +408,19 @@ onMounted(() => {
   100% { background-position: 40px 60px, -40px 30px; }
 }
 
+.pumpkin-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 40% 30%, rgba(249, 115, 22, 0.25), transparent 45%),
+              radial-gradient(circle at 70% 60%, rgba(234, 179, 8, 0.18), transparent 55%);
+  filter: blur(8px);
+  z-index: 3;
+}
+
 .fall-bg {
-  background: radial-gradient(circle at 30% 20%, rgba(245, 158, 11, 0.1), transparent 40%),
-              radial-gradient(circle at 70% 30%, rgba(249, 115, 22, 0.08), transparent 40%),
+  background: radial-gradient(circle at 30% 20%, rgba(245, 158, 11, 0.14), transparent 40%),
+              radial-gradient(circle at 70% 30%, rgba(249, 115, 22, 0.12), transparent 40%),
               #0b0a13;
 }
 
@@ -409,9 +441,19 @@ onMounted(() => {
   100% { transform: translateY(30px); }
 }
 
+.thankful-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 25% 25%, rgba(251, 146, 60, 0.18), transparent 40%),
+              radial-gradient(circle at 75% 45%, rgba(244, 63, 94, 0.14), transparent 45%);
+  filter: blur(8px);
+  z-index: 3;
+}
+
 .easter-bg {
-  background: radial-gradient(circle at 20% 30%, rgba(94, 234, 212, 0.08), transparent 35%),
-              radial-gradient(circle at 70% 20%, rgba(244, 114, 182, 0.08), transparent 35%),
+  background: radial-gradient(circle at 20% 30%, rgba(94, 234, 212, 0.12), transparent 35%),
+              radial-gradient(circle at 70% 20%, rgba(244, 114, 182, 0.12), transparent 35%),
               #0b0a13;
 }
 
@@ -430,5 +472,23 @@ onMounted(() => {
 @keyframes eggs {
   0%, 100% { transform: translateY(0); }
   50% { transform: translateY(-6px); }
+}
+
+.easter-confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(2px 2px at 10% 20%, rgba(244, 114, 182, 0.8), transparent),
+    radial-gradient(2px 2px at 40% 40%, rgba(129, 140, 248, 0.8), transparent),
+    radial-gradient(2px 2px at 70% 25%, rgba(52, 211, 153, 0.8), transparent),
+    radial-gradient(3px 3px at 85% 55%, rgba(236, 72, 153, 0.7), transparent);
+  animation: confetti 7s ease-in-out infinite;
+  z-index: 4;
+}
+
+@keyframes confetti {
+  0%, 100% { opacity: 0.5; transform: translateY(0); }
+  50% { opacity: 1; transform: translateY(-8px); }
 }
 </style>
