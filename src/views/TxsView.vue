@@ -3,6 +3,7 @@ import { onMounted, ref, computed } from "vue";
 import { useTxs } from "@/composables/useTxs";
 import { useRouter } from "vue-router";
 import dayjs from "dayjs";
+import { formatCoins } from "@/utils/format";
 
 const { txs, loading, error, searchRecent } = useTxs();
 const router = useRouter();
@@ -10,6 +11,22 @@ const router = useRouter();
 const statusFilter = ref<"all" | "success" | "failed">("all");
 const messageFilter = ref<string>("all");
 const limit = ref(20);
+
+const totalTxs = computed(() => txs.value.length);
+const successCount = computed(() => txs.value.filter((t) => (t.code ?? 0) === 0).length);
+const failedCount = computed(() => totalTxs.value - successCount.value);
+const successRate = computed(() => (totalTxs.value ? (successCount.value / totalTxs.value) * 100 : null));
+const avgGasUsed = computed(() => {
+  const nums = txs.value.map((t) => Number(t.gasUsed)).filter((n) => Number.isFinite(n) && n > 0);
+  if (!nums.length) return null;
+  return nums.reduce((a, b) => a + b, 0) / nums.length;
+});
+const avgFeeDisplay = computed(() => {
+  const fees = txs.value.flatMap((t) => (Array.isArray(t.fees) ? t.fees : [])).filter((f) => f?.amount && f?.denom);
+  if (!fees.length) return "—";
+  return formatCoins(fees.slice(0, 3), { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
+});
+const topMessageQuickFilters = computed(() => availableMessageTypes.value.slice(0, 4));
 
 const availableMessageTypes = computed(() => {
   const counts = new Map<string, number>();
@@ -52,6 +69,13 @@ const formatGas = (value?: string | number | null) => {
   return num.toLocaleString();
 };
 
+const formatFee = (fees?: { amount: string; denom: string }[]) => {
+  if (!Array.isArray(fees) || !fees.length) return "—";
+  return formatCoins(fees, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
+};
+
+const relativeTime = (value?: string | null) => (value ? dayjs(value).fromNow() : "—");
+
 const loadMore = async () => {
   limit.value += 20;
   await searchRecent(limit.value);
@@ -64,6 +88,26 @@ onMounted(async () => {
 
 <template>
   <div class="card">
+    <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 text-xs">
+      <div class="p-3 rounded-lg border border-slate-800 bg-slate-900/60">
+        <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Total</div>
+        <div class="text-lg font-semibold text-slate-100">{{ totalTxs }}</div>
+      </div>
+      <div class="p-3 rounded-lg border border-emerald-500/20 bg-emerald-500/5">
+        <div class="text-[11px] uppercase tracking-[0.2em] text-emerald-300">Success</div>
+        <div class="text-lg font-semibold text-emerald-200">{{ successCount }}<span v-if="successRate !== null" class="text-[11px] text-emerald-300 ml-2">({{ successRate.toFixed(1) }}%)</span></div>
+      </div>
+      <div class="p-3 rounded-lg border border-rose-500/20 bg-rose-500/5">
+        <div class="text-[11px] uppercase tracking-[0.2em] text-rose-300">Failed</div>
+        <div class="text-lg font-semibold text-rose-200">{{ failedCount }}</div>
+      </div>
+      <div class="p-3 rounded-lg border border-indigo-500/20 bg-indigo-500/5">
+        <div class="text-[11px] uppercase tracking-[0.2em] text-indigo-300">Avg Gas Used</div>
+        <div class="text-lg font-semibold text-indigo-100">{{ avgGasUsed ? avgGasUsed.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—' }}</div>
+        <div class="text-[10px] text-slate-400">Avg fee: {{ avgFeeDisplay }}</div>
+      </div>
+    </div>
+
     <div class="flex items-center justify-between mb-3">
       <div>
         <h1 class="text-sm font-semibold text-slate-100">Transactions</h1>
@@ -84,6 +128,17 @@ onMounted(async () => {
               {{ prettyMessageType(type) }}
             </option>
           </select>
+          <div class="flex flex-wrap gap-1">
+            <button
+              v-for="type in topMessageQuickFilters"
+              :key="type"
+              class="btn text-[10px]"
+              :class="messageFilter === type ? 'border-indigo-400/70 bg-indigo-500/10' : 'border-slate-700'"
+              @click="messageFilter = type"
+            >
+              {{ prettyMessageType(type) }}
+            </button>
+          </div>
         </div>
       </div>
       <div class="flex gap-2">
@@ -118,7 +173,7 @@ onMounted(async () => {
           <th>Hash &amp; Status</th>
           <th>Height</th>
           <th>Messages</th>
-          <th>Gas</th>
+          <th>Gas / Fee</th>
           <th>Time</th>
         </tr>
       </thead>
@@ -161,9 +216,13 @@ onMounted(async () => {
           </td>
           <td class="text-[11px] text-slate-300">
             {{ formatGas(t.gasUsed) }} / {{ formatGas(t.gasWanted) }}
+            <div class="text-[10px] text-slate-500 mt-0.5">{{ formatFee(t.fees as any) }}</div>
           </td>
           <td class="text-[11px] text-slate-300">
-            <span v-if="t.timestamp">{{ dayjs(t.timestamp).format('YYYY-MM-DD HH:mm:ss') }}</span>
+            <span v-if="t.timestamp" class="flex flex-col">
+              <span>{{ dayjs(t.timestamp).format('YYYY-MM-DD HH:mm:ss') }}</span>
+              <span class="text-[10px] text-slate-500">{{ relativeTime(t.timestamp) }}</span>
+            </span>
             <span v-else>-</span>
           </td>
         </tr>
