@@ -12,6 +12,7 @@ const activeProposal = ref<Proposal | null>(null);
 const isModalOpen = ref(false);
 const statusFilter = ref("all");
 const searchTerm = ref("");
+const hideDuplicates = ref(true);
 const statusParam = computed(() => {
   if (statusFilter.value === "voting") return "PROPOSAL_STATUS_VOTING_PERIOD";
   if (statusFilter.value === "deposit") return "PROPOSAL_STATUS_DEPOSIT_PERIOD";
@@ -187,6 +188,7 @@ const filteredProposals = computed(() => {
   return [...proposals.value]
     .filter((p) => {
       if (allowed.length && !allowed.includes(p.status)) return false;
+      if (hideDuplicates.value && isDuplicate(p)) return false;
       if (!term) return true;
       const title = getProposalTitle(p).toLowerCase();
       const summary = getProposalSummary(p).toLowerCase();
@@ -238,6 +240,10 @@ const stats = computed(() => {
           placeholder="Search proposals..."
           class="px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-100 focus:outline-none focus:ring-2 focus:ring-emerald-400"
         />
+        <label class="inline-flex items-center gap-2 px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-100 cursor-pointer">
+          <input type="checkbox" v-model="hideDuplicates" class="w-4 h-4 rounded border-slate-600 bg-slate-900/80 text-rose-400 focus:ring-rose-400" />
+          <span class="text-[11px]">Hide duplicates</span>
+        </label>
         <button class="btn text-xs" @click="fetchProposals(statusParam || undefined)" :disabled="loading">
           {{ loading ? "Loading..." : "Refresh" }}
         </button>
