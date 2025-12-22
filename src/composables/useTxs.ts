@@ -61,10 +61,22 @@ const aggregateTransferTotals = (logs: any[] | undefined | null): TxSummary["val
   return Array.from(totals.entries()).map(([denom, amount]) => ({ denom, amount: amount.toString() }));
 };
 
-const parseTransfers = (logs: any[], address: string): TxSummary["transfers"] => {
-  if (!Array.isArray(logs)) return [];
+const parseTransfers = (logsOrEvents: any, address: string): TxSummary["transfers"] => {
+  if (!logsOrEvents) return [];
   const addr = address.toLowerCase();
   const transfers: TxSummary["transfers"] = [];
+
+  // Normalize into an array of { events } objects
+  let logs: any[] = [];
+  if (Array.isArray(logsOrEvents) && logsOrEvents.length && logsOrEvents[0]?.events) {
+    logs = logsOrEvents as any[];
+  } else if (Array.isArray(logsOrEvents) && logsOrEvents.length && logsOrEvents[0]?.type && logsOrEvents[0]?.attributes) {
+    logs = [{ events: logsOrEvents }];
+  } else if (Array.isArray(logsOrEvents) && !logsOrEvents.length) {
+    logs = [];
+  }
+
+  if (!Array.isArray(logs)) return [];
 
   logs.forEach((log) => {
     const events: any[] = log?.events || [];
