@@ -11,6 +11,7 @@ import { useFaucet } from "@/composables/useFaucet";
 import { formatAmount as fmtAmount } from "@/utils/format";
 import { getAccountLabel } from "@/constants/accountLabels";
 import { getTokenMeta, type TokenAccent, type TokenMeta } from "@/constants/tokens";
+import dayjs from "dayjs";
 
 const route = useRoute();
 const router = useRouter();
@@ -25,6 +26,8 @@ const addressInput = ref<string>((route.params.address as string) || "");
 const loadingTxs = ref(false);
 const txPage = ref(1);
 const txPageSize = ref(20);
+const txHasMore = computed(() => txs.value.length > txPageSize.value);
+const visibleTxs = computed(() => txs.value.slice(0, txPageSize.value));
 
 // Transfer state
 const showTransferModal = ref(false);
@@ -264,7 +267,7 @@ const loadTransactions = async () => {
   if (!addressInput.value) return;
   loadingTxs.value = true;
   try {
-    await searchByAddress(addressInput.value, txPageSize.value, txPage.value - 1);
+    await searchByAddress(addressInput.value, txPageSize.value + 1, txPage.value - 1);
   } catch (e) {
     console.error("Failed to load transactions:", e);
   } finally {
@@ -487,6 +490,21 @@ const openTokenDetails = (bal: DecoratedBalance) => {
 const closeTokenDetails = () => {
   showTokenDetails.value = false;
   selectedToken.value = null;
+};
+
+const formatFeeCoins = (fees?: Array<{ amount: string; denom: string }>) => {
+  if (!fees || !fees.length) return "—";
+  return fees
+    .slice(0, 3)
+    .map((f) => fmtAmount(f.amount, f.denom, { minDecimals: 2, maxDecimals: 2 }))
+    .join(", ");
+};
+
+const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>) => {
+  if (!values || !values.length) return "—";
+  return values
+    .map((v) => `${fmtAmount(v.amount, v.denom, { minDecimals: 2, maxDecimals: 2 })}`)
+    .join(", ");
 };
 </script>
 
@@ -817,12 +835,16 @@ const closeTokenDetails = () => {
                 <th>Hash</th>
                 <th>Height</th>
                 <th>Status</th>
+                <th>Msgs</th>
+                <th>Transfers</th>
+                <th>Fee</th>
                 <th>Gas</th>
+                <th>Time</th>
               </tr>
             </thead>
             <tbody>
               <tr
-                v-for="t in txs"
+                v-for="t in visibleTxs"
                 :key="t.hash"
                 class="cursor-pointer animate-fade-in"
                 @click="router.push({ name: 'tx-detail', params: { hash: t.hash } })"
@@ -838,7 +860,28 @@ const closeTokenDetails = () => {
                   </span>
                 </td>
                 <td class="text-xs text-slate-300">
-                  {{ t.gasUsed || '-' }}
+                  <div class="flex flex-wrap gap-1">
+                    <span
+                      v-for="m in (t.messageTypes || []).slice(0, 3)"
+                      :key="m"
+                      class="badge text-[10px] border-indigo-400/40 text-indigo-100"
+                    >
+                      {{ m.split('.').pop() || m }}
+                    </span>
+                    <span v-if="(t.messageTypes?.length || 0) > 3" class="text-[10px] text-slate-500">+{{ t.messageTypes.length - 3 }}</span>
+                  </div>
+                </td>
+                <td class="text-[11px] text-slate-200 whitespace-nowrap max-w-[200px] truncate" :title="formatValueTransfers(t.valueTransfers)">
+                  {{ formatValueTransfers(t.valueTransfers) }}
+                </td>
+                <td class="text-[11px] text-slate-300" :title="formatFeeCoins(t.fees)">
+                  {{ formatFeeCoins(t.fees) }}
+                </td>
+                <td class="text-xs text-slate-300">
+                  {{ t.gasUsed || '-' }} / {{ t.gasWanted || '-' }}
+                </td>
+                <td class="text-[11px] text-slate-400 whitespace-nowrap">
+                  {{ t.timestamp ? dayjs(t.timestamp).format('YYYY-MM-DD HH:mm:ss') : '—' }}
                 </td>
               </tr>
             </tbody>
@@ -851,7 +894,7 @@ const closeTokenDetails = () => {
               </button>
               <button
                 class="btn text-[11px]"
-                :disabled="txs.length < txPageSize || loadingTxs"
+                :disabled="!txHasMore || loadingTxs"
                 @click="txPage += 1; loadTransactions();"
               >
                 Next

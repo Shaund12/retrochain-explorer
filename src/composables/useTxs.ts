@@ -504,7 +504,7 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
       }
 
       collected.sort((a, b) => b.height - a.height);
-      txs.value = collected.slice(0, limit);
+      txs.value = collected;
     } catch (e: any) {
       error.value = e?.message ?? String(e);
       txs.value = [];
