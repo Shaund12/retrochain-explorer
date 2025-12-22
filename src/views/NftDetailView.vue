@@ -12,6 +12,7 @@ const searchTerm = ref("");
 const withImagesOnly = ref(false);
 const selectedToken = ref<any | null>(null);
 const showTokenModal = ref(false);
+const festiveMode = ref(false);
 
 const load = () => {
   const id = route.params.id as string;
@@ -72,7 +73,8 @@ const goBack = () => router.push({ name: "tokens" });
 </script>
 
 <template>
-  <div class="space-y-4">
+  <div class="space-y-4 relative">
+    <div v-if="festiveMode" class="snow-overlay" aria-hidden="true"></div>
     <div class="card relative overflow-hidden">
       <div class="absolute inset-0 bg-gradient-to-r from-indigo-600/20 via-purple-600/20 to-emerald-500/20 blur-3xl"></div>
       <div class="relative flex flex-col gap-4">
@@ -90,10 +92,17 @@ const goBack = () => router.push({ name: "tokens" });
               <a v-if="classDetail?.uri" :href="classDetail?.uri" target="_blank" class="btn text-[10px]">Open URI</a>
             </div>
           </div>
-          <div class="flex items-center gap-2">
+          <div class="flex items-center gap-2 flex-wrap justify-end">
+            <button class="btn text-xs" :class="festiveMode ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : ''" @click="festiveMode = !festiveMode">
+              {{ festiveMode ? '?? Festive On' : '?? Festive Off' }}
+            </button>
             <button class="btn text-xs" @click="load">Refresh</button>
             <button class="btn text-xs" @click="goBack">Back to Tokens</button>
           </div>
+        </div>
+
+        <div v-if="festiveMode" class="festive-lights" aria-hidden="true">
+          <span v-for="n in 24" :key="n" class="bulb" :style="{ '--i': n }"></span>
         </div>
 
         <div class="grid gap-3 lg:grid-cols-3">
@@ -118,6 +127,14 @@ const goBack = () => router.push({ name: "tokens" });
                 <div class="p-2 rounded-lg bg-slate-900/60 border border-slate-700">
                   <div class="uppercase tracking-widest text-slate-500">Images</div>
                   <div class="text-white text-lg font-semibold">{{ tokens.filter(t => t.image).length }}</div>
+                </div>
+                <div v-if="festiveMode" class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-500/30">
+                  <div class="uppercase tracking-widest text-emerald-300">Wreaths</div>
+                  <div class="text-white text-lg font-semibold">????</div>
+                </div>
+                <div v-if="festiveMode" class="p-2 rounded-lg bg-amber-500/10 border border-amber-500/30">
+                  <div class="uppercase tracking-widest text-amber-200">Ornaments</div>
+                  <div class="text-white text-lg font-semibold">?????</div>
                 </div>
               </div>
             </div>
