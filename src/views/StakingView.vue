@@ -175,12 +175,20 @@ watch(
 );
 
 const syncUndelegateDefaults = () => {
-  if (activeTab.value === 'undelegate' && !undelegateValidator.value && myDelegations.value.length) {
-    undelegateValidator.value = myDelegations.value[0].validatorAddress;
+  if (activeTab.value === 'undelegate' && myDelegations.value.length) {
+    if (!undelegateValidator.value) {
+      undelegateValidator.value = myDelegations.value[0].validatorAddress;
+    }
+  } else if (myDelegations.value.length === 0) {
+    undelegateValidator.value = "";
   }
 };
 
 watch([activeTab, myDelegations], () => {
+  syncUndelegateDefaults();
+});
+
+watch(myDelegations, () => {
   syncUndelegateDefaults();
 });
 
@@ -276,14 +284,14 @@ const handleClaimRewards = async (validatorAddress?: string) => {
 
 const handleUndelegate = async () => {
   if (!undelegateValidator.value) {
-    // Fallback: auto-pick the first delegation if available
     const first = myDelegations.value[0];
     if (first?.validatorAddress) {
       undelegateValidator.value = first.validatorAddress;
-    } else {
-      toast.showError("Select a delegation first");
-      return;
     }
+  }
+  if (!undelegateValidator.value) {
+    toast.showError("Select a delegation first");
+    return;
   }
   if (!undelegateAmount.value || Number(undelegateAmount.value) <= 0) {
     toast.showError("Enter an amount to undelegate");
