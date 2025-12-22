@@ -6,16 +6,75 @@ import { useNetwork } from "@/composables/useNetwork";
 import { useChainInfo } from "@/composables/useChainInfo";
 import { computed, onMounted, ref } from "vue";
 
-const { current: network, restBase, rpcBase } = useNetwork();
+const { restBase, rpcBase } = useNetwork();
 const { info, refresh } = useChainInfo();
-const festiveMode = ref(false);
+
+type HolidayMode = "auto" | "off" | "christmas" | "halloween" | "thanksgiving" | "easter";
+const holidayMode = ref<HolidayMode>("auto");
+type SnowLevel = "light" | "medium" | "blizzard";
+const snowLevel = ref<SnowLevel>("medium");
 
 const isOnline = computed(() => !!info.value.latestBlockHeight);
-const displayRpc = computed(() => rpcBase.value || import.meta.env.VITE_RPC_URL || '/rpc');
-const displayRest = computed(() => restBase.value || import.meta.env.VITE_REST_API_URL || '/api');
+const displayRpc = computed(() => rpcBase.value || import.meta.env.VITE_RPC_URL || "/rpc");
+const displayRest = computed(() => restBase.value || import.meta.env.VITE_REST_API_URL || "/api");
 
-const toggleFestive = () => {
-  festiveMode.value = !festiveMode.value;
+const detectHolidayForDate = (date: Date): HolidayMode => {
+  const m = date.getMonth() + 1; // 1-12
+  const d = date.getDate();
+
+  // Christmas season: Dec 1-31
+  if (m === 12) return "christmas";
+
+  // Halloween: October
+  if (m === 10) return "halloween";
+
+  // Thanksgiving (US): 4th Thursday of November
+  if (m === 11) {
+    const firstDay = new Date(date.getFullYear(), 10, 1); // Nov 1
+    const firstThursday = 1 + ((11 - firstDay.getDay()) % 7); // day of month of first Thursday
+    const thanksgiving = firstThursday + 21; // 4th Thursday
+    if (d >= thanksgiving - 3 && d <= thanksgiving + 3) return "thanksgiving";
+  }
+
+  // Easter (approx): first Sunday of April window
+  if (m === 3 || m === 4) {
+    const easterStart = new Date(date.getFullYear(), 3, 1); // April 1
+    const day = easterStart.getDay();
+    const firstSunday = day === 0 ? 1 : 8 - day;
+    if (m === 4 && d >= firstSunday - 3 && d <= firstSunday + 7) return "easter";
+  }
+
+  return "off";
+};
+
+const activeHoliday = computed<HolidayMode>(() => {
+  if (holidayMode.value === "auto") {
+    return detectHolidayForDate(new Date());
+  }
+  return holidayMode.value;
+});
+
+const themeClass = computed(() => {
+  switch (activeHoliday.value) {
+    case "christmas":
+      return "festive-bg";
+    case "halloween":
+      return "halloween-bg";
+    case "thanksgiving":
+      return "fall-bg";
+    case "easter":
+      return "easter-bg";
+    default:
+      return "";
+  }
+});
+
+const setHolidayMode = (mode: HolidayMode) => {
+  holidayMode.value = mode;
+};
+
+const setSnowLevel = (level: SnowLevel) => {
+  snowLevel.value = level;
 };
 
 onMounted(() => {
@@ -24,25 +83,25 @@ onMounted(() => {
 </script>
 
 <template>
-<div class="min-h-screen flex flex-col" :class="{ 'festive-bg': festiveMode }">
-  <div v-if="festiveMode" class="festive-snow" aria-hidden="true"></div>
-  <div v-if="festiveMode" class="festive-lights" aria-hidden="true">
+<div class="min-h-screen flex flex-col" :class="themeClass">
+  <div v-if="activeHoliday === 'christmas'" class="festive-snow" :class="`snow-${snowLevel}`" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'christmas'" class="festive-lights" aria-hidden="true">
     <span v-for="n in 32" :key="n" class="bulb" :style="{ '--i': n }"></span>
   </div>
-  <div v-if="festiveMode" class="festive-ornaments" aria-hidden="true">
+  <div v-if="activeHoliday === 'christmas'" class="festive-ornaments" aria-hidden="true">
     <span v-for="n in 12" :key="`orn-${n}`" class="ornament" :style="{ '--i': n }"></span>
   </div>
-  <button
-    class="fixed top-4 right-4 z-50 btn text-xs shadow-lg backdrop-blur"
-    :class="festiveMode ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : 'border-indigo-400/60'"
-    @click="toggleFestive"
-  >
-    {{ festiveMode ? '🎄 Festive On' : '🎄 Festive Off' }}
-  </button>
+  <div v-if="activeHoliday === 'halloween'" class="spooky-bats" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'thanksgiving'" class="fall-leaves" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'easter'" class="easter-eggs" aria-hidden="true"></div>
   <RcMaintenanceBanner />
-  <RcHeader />
-  <RcMaintenanceBanner />
-  <RcHeader :festive-mode="festiveMode" @toggle-festive="toggleFestive" />
+  <RcHeader
+    :holiday-mode="holidayMode"
+    :active-holiday="activeHoliday"
+    :snow-level="snowLevel"
+    @set-holiday-mode="setHolidayMode"
+    @set-snow-level="setSnowLevel"
+  />
   <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 relative z-10">
     <RouterView />
   </main>
@@ -58,9 +117,9 @@ onMounted(() => {
               </div>
               <div>
                 <div class="font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-2">
-                  <span v-if="festiveMode">🎀</span>
+                  <span v-if="activeHoliday !== 'off'">🎀</span>
                   <span>RetroChain</span>
-                  <span v-if="festiveMode">🎀</span>
+                  <span v-if="activeHoliday !== 'off'">🎀</span>
                 </div>
                 <div class="text-[10px] text-slate-500 uppercase tracking-wider">
                   Arcade Explorer
@@ -245,6 +304,10 @@ onMounted(() => {
   100% { transform: translateY(20px); }
 }
 
+.snow-light { opacity: 0.6; animation-duration: 14s; }
+.snow-medium { opacity: 0.8; animation-duration: 10s; }
+.snow-blizzard { opacity: 1; animation-duration: 6s; filter: drop-shadow(0 0 6px rgba(255,255,255,0.3)); }
+
 .festive-lights {
   position: fixed;
   top: 0;
@@ -298,5 +361,74 @@ onMounted(() => {
 @keyframes float {
   0%, 100% { transform: translateY(0) scale(1); opacity: 0.7; }
   50% { transform: translateY(-10px) scale(1.08); opacity: 1; }
+}
+
+.halloween-bg {
+  background: radial-gradient(circle at 20% 20%, rgba(249, 115, 22, 0.08), transparent 35%),
+              radial-gradient(circle at 80% 10%, rgba(217, 70, 239, 0.08), transparent 35%),
+              #0b0a13;
+}
+
+.spooky-bats {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(2px 2px at 20% 30%, rgba(255, 255, 255, 0.15), transparent),
+    radial-gradient(2px 2px at 60% 10%, rgba(255, 255, 255, 0.12), transparent);
+  mask-image: radial-gradient(circle at 50% 50%, black 60%, transparent 90%);
+  animation: bats 8s linear infinite;
+  z-index: 4;
+}
+
+@keyframes bats {
+  0% { background-position: 0 0, 0 0; }
+  100% { background-position: 40px 60px, -40px 30px; }
+}
+
+.fall-bg {
+  background: radial-gradient(circle at 30% 20%, rgba(245, 158, 11, 0.1), transparent 40%),
+              radial-gradient(circle at 70% 30%, rgba(249, 115, 22, 0.08), transparent 40%),
+              #0b0a13;
+}
+
+.fall-leaves {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(3px 3px at 20% 10%, rgba(251, 146, 60, 0.6), transparent),
+    radial-gradient(3px 3px at 60% 30%, rgba(234, 179, 8, 0.6), transparent),
+    radial-gradient(4px 4px at 80% 15%, rgba(244, 63, 94, 0.5), transparent);
+  animation: leaves 12s linear infinite;
+  z-index: 4;
+}
+
+@keyframes leaves {
+  0% { transform: translateY(-10px); }
+  100% { transform: translateY(30px); }
+}
+
+.easter-bg {
+  background: radial-gradient(circle at 20% 30%, rgba(94, 234, 212, 0.08), transparent 35%),
+              radial-gradient(circle at 70% 20%, rgba(244, 114, 182, 0.08), transparent 35%),
+              #0b0a13;
+}
+
+.easter-eggs {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(8px 10px at 15% 20%, rgba(94, 234, 212, 0.5), transparent),
+    radial-gradient(8px 10px at 45% 25%, rgba(244, 114, 182, 0.5), transparent),
+    radial-gradient(8px 10px at 75% 30%, rgba(129, 140, 248, 0.5), transparent);
+  animation: eggs 9s ease-in-out infinite;
+  z-index: 4;
+}
+
+@keyframes eggs {
+  0%, 100% { transform: translateY(0); }
+  50% { transform: translateY(-6px); }
 }
 </style>

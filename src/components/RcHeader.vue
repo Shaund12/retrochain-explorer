@@ -83,14 +83,42 @@
 
       <!-- Wallet Connection -->
       <div class="flex items-center gap-3">
-        <button
-          class="hidden lg:inline-flex items-center gap-2 px-3 py-2 rounded-2xl text-[11px] border transition-all"
-          :class="festiveMode ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : 'border-indigo-400/60 text-slate-200 hover:text-white hover:border-indigo-300/80'"
-          @click="$emit('toggle-festive')"
-        >
-          <span>🎄</span>
-          <span>{{ festiveMode ? 'Festive On' : 'Festive Off' }}</span>
-        </button>
+        <div class="hidden lg:block relative">
+          <button
+            class="inline-flex items-center gap-2 px-3 py-2 rounded-2xl text-[11px] border transition-all"
+            :class="holidayButtonClass"
+            @click="showHolidayMenu = !showHolidayMenu"
+          >
+            <span>{{ holidayIcon }}</span>
+            <span>{{ holidayLabel }}</span>
+          </button>
+          <div
+            v-if="showHolidayMenu"
+            class="absolute right-0 mt-2 w-48 rounded-xl border border-white/10 bg-[rgba(10,14,39,0.98)] shadow-2xl shadow-black/40 py-2 z-50"
+          >
+            <button
+              v-for="option in holidayOptions"
+              :key="option.value"
+              class="w-full px-4 py-2 text-left text-sm transition-colors"
+              :class="holidayMode === option.value ? 'text-white bg-white/5' : 'text-slate-300 hover:text-white hover:bg-white/5'"
+              @click="$emit('set-holiday-mode', option.value); showHolidayMenu = false"
+            >
+              <span class="mr-2">{{ option.icon }}</span>{{ option.label }}
+            </button>
+            <div v-if="activeHoliday === 'christmas'" class="px-4 pt-2 pb-1 text-[11px] uppercase tracking-wider text-slate-500">Snow Level</div>
+            <div v-if="activeHoliday === 'christmas'" class="px-3 pb-2 flex gap-2">
+              <button
+                v-for="level in ['light','medium','blizzard']"
+                :key="level"
+                class="flex-1 px-2 py-1 rounded-lg border text-[11px]"
+                :class="snowLevel === level ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : 'border-white/10 text-slate-300 hover:border-emerald-300/50 hover:text-white'"
+                @click="$emit('set-snow-level', level); showHolidayMenu = false"
+              >
+                {{ level.charAt(0).toUpperCase() + level.slice(1) }}
+              </button>
+            </div>
+          </div>
+        </div>
         <div class="hidden lg:block w-[260px]">
           <RcAddKeplrButton class="w-full" />
         </div>
@@ -201,12 +229,35 @@
         <div class="mt-3 px-4">
           <button
             class="w-full mb-2 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-2xl text-[11px] border transition-all"
-            :class="festiveMode ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : 'border-indigo-400/60 text-slate-200 hover:text-white hover:border-indigo-300/80'"
-            @click="$emit('toggle-festive')"
+            :class="holidayButtonClass"
+            @click="showHolidayMenuMobile = !showHolidayMenuMobile"
           >
-            <span>🎄</span>
-            <span>{{ festiveMode ? 'Festive On' : 'Festive Off' }}</span>
+            <span>{{ holidayIcon }}</span>
+            <span>{{ holidayLabel }}</span>
           </button>
+          <div v-if="showHolidayMenuMobile" class="border border-white/10 rounded-xl overflow-hidden bg-white/5">
+            <button
+              v-for="option in holidayOptions"
+              :key="option.value"
+              class="w-full px-4 py-2 text-left text-sm"
+              :class="holidayMode === option.value ? 'text-white bg-white/10' : 'text-slate-300 hover:text-white hover:bg-white/5'"
+              @click="$emit('set-holiday-mode', option.value); showHolidayMenuMobile = false"
+            >
+              <span class="mr-2">{{ option.icon }}</span>{{ option.label }}
+            </button>
+            <div v-if="activeHoliday === 'christmas'" class="px-4 pt-2 pb-1 text-[11px] uppercase tracking-wider text-slate-500">Snow Level</div>
+            <div v-if="activeHoliday === 'christmas'" class="px-3 pb-3 grid grid-cols-3 gap-2">
+              <button
+                v-for="level in ['light','medium','blizzard']"
+                :key="level"
+                class="px-2 py-1 rounded-lg border text-[11px]"
+                :class="snowLevel === level ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : 'border-white/10 text-slate-300 hover:border-emerald-300/50 hover:text-white'"
+                @click="$emit('set-snow-level', level); showHolidayMenuMobile = false"
+              >
+                {{ level.charAt(0).toUpperCase() + level.slice(1) }}
+              </button>
+            </div>
+          </div>
           <RcAddKeplrButton class="w-full inline-flex justify-center" />
         </div>
       </nav>
@@ -224,8 +275,51 @@ import { formatAmount } from "@/utils/format";
 import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
 import { getTokenMeta } from "@/constants/tokens";
 
-const props = defineProps<{ festiveMode?: boolean }>();
-defineEmits(["toggle-festive"]);
+const props = defineProps<{ holidayMode?: string; activeHoliday?: string; snowLevel?: string }>();
+const emit = defineEmits(["set-holiday-mode", "set-snow-level"]);
+
+const holidayMode = computed(() => props.holidayMode || "auto");
+const activeHoliday = computed(() => props.activeHoliday || "off");
+const snowLevel = computed(() => props.snowLevel || "medium");
+
+const showHolidayMenu = ref(false);
+const showHolidayMenuMobile = ref(false);
+
+const holidayOptions = [
+  { value: "auto", label: "Auto", icon: "⏱️" },
+  { value: "off", label: "Off", icon: "🚫" },
+  { value: "christmas", label: "Christmas", icon: "🎄" },
+  { value: "halloween", label: "Halloween", icon: "🎃" },
+  { value: "thanksgiving", label: "Thanksgiving", icon: "🦃" },
+  { value: "easter", label: "Easter", icon: "🥚" }
+];
+
+const holidayIcon = computed(() => {
+  switch (activeHoliday.value) {
+    case "christmas":
+      return "🎄";
+    case "halloween":
+      return "🎃";
+    case "thanksgiving":
+      return "🦃";
+    case "easter":
+      return "🥚";
+    default:
+      return "⏱️";
+  }
+});
+
+const holidayLabel = computed(() => {
+  if (holidayMode.value === "auto") return "Holiday Auto";
+  if (holidayMode.value === "off") return "Holiday Off";
+  return holidayMode.value.charAt(0).toUpperCase() + holidayMode.value.slice(1);
+});
+
+const holidayButtonClass = computed(() =>
+  activeHoliday.value && activeHoliday.value !== "off"
+    ? "border-emerald-400/60 bg-emerald-500/10 text-emerald-200"
+    : "border-indigo-400/60 text-slate-200 hover:text-white hover:border-indigo-300/80"
+);
 
 const route = useRoute();
 const router = useRouter();
