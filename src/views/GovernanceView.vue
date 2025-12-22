@@ -147,6 +147,24 @@ const voteCategories = [
   { key: "abstain", label: "Abstain", bar: "bg-slate-500", text: "text-slate-400" }
 ] as const;
 
+const duplicateMap = computed(() => {
+  const map = new Map<string, number>();
+  proposals.value.forEach((p) => {
+    const title = getProposalTitle(p).toLowerCase().trim();
+    const summary = getProposalSummary(p).toLowerCase().trim();
+    const key = `${title}|${summary}`;
+    map.set(key, (map.get(key) || 0) + 1);
+  });
+  return map;
+});
+
+const isDuplicate = (proposal: Proposal) => {
+  const title = getProposalTitle(proposal).toLowerCase().trim();
+  const summary = getProposalSummary(proposal).toLowerCase().trim();
+  const key = `${title}|${summary}`;
+  return (duplicateMap.value.get(key) || 0) > 1;
+};
+
 const filteredProposals = computed(() => {
   const term = searchTerm.value.trim().toLowerCase();
   const allowed = statusGroups[statusFilter.value] || [];
@@ -265,6 +283,9 @@ const stats = computed(() => {
                 :class="getStatusBadge(proposal.status).class"
               >
                 {{ getStatusBadge(proposal.status).text }}
+              </span>
+              <span v-if="isDuplicate(proposal)" class="badge text-[10px] border-rose-400/60 text-rose-200">
+                Duplicate
               </span>
               <span class="badge text-[10px] border-cyan-400/50 text-cyan-100">
                 {{ getProposalKind(proposal) }}
@@ -418,6 +439,10 @@ const stats = computed(() => {
             <pre class="whitespace-pre-wrap break-words">{{ JSON.stringify(msg, null, 2) }}</pre>
           </div>
         </div>
+      </div>
+
+      <div v-if="isDuplicate(activeProposal)" class="mt-4 p-3 rounded-lg border border-rose-500/40 bg-rose-500/10 text-xs text-rose-200">
+        This proposal appears to be a duplicate of another submission (same title/summary).
       </div>
 
       <div v-if="activeProposal.totalDeposit?.length" class="mt-6">
