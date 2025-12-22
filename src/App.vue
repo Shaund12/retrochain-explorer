@@ -129,8 +129,20 @@ onMounted(() => {
   <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 relative z-10">
     <RouterView />
   </main>
-    <footer class="border-t border-indigo-500/20 relative z-10 backdrop-blur-sm bg-[rgba(10,14,39,0.6)]">
+    <footer class="border-t border-indigo-500/20 relative z-10 backdrop-blur-sm bg-[rgba(10,14,39,0.6)] footer-aurora overflow-hidden">
       <div class="max-w-7xl mx-auto px-4 py-8">
+        <div class="footer-cta card-like mb-8">
+          <div>
+            <div class="text-xs uppercase tracking-[0.3em] text-indigo-200">Stay connected</div>
+            <h3 class="text-lg font-semibold text-white mt-1">RetroChain community updates & tooling drops</h3>
+            <p class="text-sm text-slate-300/90 mt-1">Join the builders, validators, and IBC explorers keeping RetroChain vibrant.</p>
+          </div>
+          <div class="flex flex-wrap gap-2">
+            <a href="https://discord.gg/h89FnjjnrD" target="_blank" class="btn btn-primary text-xs">💬 Join Discord</a>
+            <a href="https://github.com/Shaund12/RetroChain/issues" target="_blank" class="btn text-xs">🐛 File Feedback</a>
+            <a href="/changelog" class="btn text-xs">🗒️ View Changelog</a>
+          </div>
+        </div>
         <!-- Main Footer Content -->
         <div class="grid grid-cols-1 md:grid-cols-4 gap-8 mb-8">
           <!-- Brand Section -->
@@ -533,4 +545,38 @@ onMounted(() => {
 .halloween-bg .holiday-banner { border-color: rgba(249, 115, 22, 0.4); box-shadow: 0 10px 30px rgba(249,115,22,0.25); }
 .fall-bg .holiday-banner { border-color: rgba(244, 114, 182, 0.35); box-shadow: 0 10px 30px rgba(244,114,182,0.2); }
 .easter-bg .holiday-banner { border-color: rgba(94, 234, 212, 0.35); box-shadow: 0 10px 30px rgba(94,234,212,0.2); }
+
+.footer-aurora::before,
+.footer-aurora::after {
+  content: "";
+  position: absolute;
+  inset: -40% -10%;
+  background: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.25), transparent 40%),
+              radial-gradient(circle at 80% 0%, rgba(236, 72, 153, 0.2), transparent 35%),
+              radial-gradient(circle at 50% 100%, rgba(16, 185, 129, 0.2), transparent 50%);
+  filter: blur(60px);
+  opacity: 0.4;
+  pointer-events: none;
+  z-index: 0;
+}
+
+.footer-aurora::after {
+  inset: -30% -20%;
+  background: radial-gradient(circle at 70% 30%, rgba(56, 189, 248, 0.25), transparent 45%),
+              radial-gradient(circle at 30% 80%, rgba(244, 114, 182, 0.2), transparent 40%);
+}
+
+.card-like {
+  position: relative;
+  z-index: 1;
+  border: 1px solid rgba(255, 255, 255, 0.08);
+  background: rgba(8, 12, 30, 0.7);
+  border-radius: 16px;
+  padding: 1.25rem;
+  display: flex;
+  justify-content: space-between;
+  gap: 1rem;
+  align-items: center;
+  box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
 </style>
