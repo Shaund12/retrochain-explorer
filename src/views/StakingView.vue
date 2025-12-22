@@ -31,8 +31,10 @@ const toast = useToast();
 const { balances, loading: accountLoading, load: loadAccount } = useAccount();
 
 const activeTab = ref<'overview' | 'delegate' | 'redelegate' | 'undelegate' | 'rewards'>('overview');
-const selectedValidator = ref<string>("");
-const amount = ref("");
+const delegateValidator = ref<string>("");
+const delegateAmount = ref("");
+const undelegateValidator = ref<string>("");
+const undelegateAmount = ref("");
 const txLoading = ref(false);
 const validatorSearch = ref("");
 const showInactive = ref(false);
@@ -92,15 +94,25 @@ const walletBalanceDisplay = computed(() =>
 
 const walletBalanceFloat = computed(() => parseInt(walletBalanceMicro.value || "0", 10) / 1_000_000);
 
-const setMaxAmount = () => {
+const setMaxDelegateAmount = () => {
   if (walletBalanceFloat.value <= 0) return;
-  amount.value = walletBalanceFloat.value.toFixed(6);
+  delegateAmount.value = walletBalanceFloat.value.toFixed(6);
 };
 
-const setAmountPercent = (percent: number) => {
+const setDelegateAmountPercent = (percent: number) => {
   if (walletBalanceFloat.value <= 0) return;
   const val = walletBalanceFloat.value * percent;
-  amount.value = val.toFixed(6);
+  delegateAmount.value = val.toFixed(6);
+};
+
+const selectedUndelegateBalance = computed(() => {
+  const entry = myDelegations.value.find((d) => d.validatorAddress === undelegateValidator.value);
+  return entry?.amount ?? 0;
+});
+
+const setMaxUndelegateAmount = () => {
+  if (!selectedUndelegateBalance.value) return;
+  undelegateAmount.value = (selectedUndelegateBalance.value / 1_000_000).toFixed(6);
 };
 
 const refreshUserState = async () => {
@@ -163,19 +175,19 @@ watch(
 );
 
 const handleDelegate = async () => {
-if (!selectedValidator.value || !amount.value) return;
+if (!delegateValidator.value || !delegateAmount.value) return;
 if (!address.value) return;
   
 txLoading.value = true;
 try {
   const chainId = 'retrochain-mainnet';
-  const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
+  const amountBase = Math.floor(parseFloat(delegateAmount.value) * 1_000_000).toString();
 
     const msg = {
       typeUrl: "/cosmos.staking.v1beta1.MsgDelegate",
       value: {
         delegatorAddress: address.value,
-        validatorAddress: selectedValidator.value,
+        validatorAddress: delegateValidator.value,
         amount: {
           denom: tokenDenom.value,
           amount: amountBase
@@ -193,8 +205,8 @@ try {
     if (result.code === 0) {
       console.log("Delegation successful!", result);
       await refreshUserState();
-      amount.value = "";
-      selectedValidator.value = "";
+      delegateAmount.value = "";
+      delegateValidator.value = "";
       toast.showSuccess("Delegation successful!");
     } else {
       throw new Error(`Transaction failed: ${result.rawLog}`);
@@ -253,19 +265,19 @@ const handleClaimRewards = async (validatorAddress?: string) => {
 };
 
 const handleUndelegate = async () => {
-  if (!selectedValidator.value || !amount.value) return;
+  if (!undelegateValidator.value || !undelegateAmount.value) return;
   if (!address.value) return;
   
   txLoading.value = true;
   try {
     const chainId = 'retrochain-mainnet';
-    const amountBase = Math.floor(parseFloat(amount.value) * 1_000_000).toString();
+    const amountBase = Math.floor(parseFloat(undelegateAmount.value) * 1_000_000).toString();
 
     const msg = {
       typeUrl: "/cosmos.staking.v1beta1.MsgUndelegate",
       value: {
         delegatorAddress: address.value,
-        validatorAddress: selectedValidator.value,
+        validatorAddress: undelegateValidator.value,
         amount: {
           denom: tokenDenom.value,
           amount: amountBase
@@ -283,8 +295,8 @@ const handleUndelegate = async () => {
     if (result.code === 0) {
       console.log("Undelegation successful!", result);
       await refreshUserState();
-      amount.value = "";
-      selectedValidator.value = "";
+      undelegateAmount.value = "";
+      undelegateValidator.value = "";
       toast.showSuccess("Undelegation successful! Tokens will be available in 21 days.");
     } else {
       throw new Error(`Transaction failed: ${result.rawLog}`);
@@ -465,14 +477,14 @@ const copy = async (text: string) => {
       <button 
         class="btn text-xs whitespace-nowrap"
         :class="activeTab === 'delegate' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-        @click="activeTab = 'delegate'"
+        @click="activeTab = 'delegate'; undelegateValidator = ''; undelegateAmount = ''"
       >
         ➕ Delegate
       </button>
       <button 
         class="btn text-xs whitespace-nowrap"
         :class="activeTab === 'undelegate' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-        @click="activeTab = 'undelegate'"
+        @click="activeTab = 'undelegate'; delegateValidator = ''; delegateAmount = ''"
       >
         ➖ Undelegate
       </button>
@@ -604,7 +616,7 @@ const copy = async (text: string) => {
               />
             </div>
           </div>
-          <select v-model="selectedValidator" class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
+          <select v-model="delegateValidator" class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
             <option value="">Choose a validator...</option>
             <option v-for="v in availableValidators" :key="v.operatorAddress" :value="v.operatorAddress">
               {{ v.description?.moniker || v.operatorAddress.slice(0, 20) }}... • {{ (parseFloat(v.commission?.commissionRates?.rate || '0') * 100).toFixed(1) }}% fee
@@ -615,7 +627,7 @@ const copy = async (text: string) => {
         <div>
           <label class="text-xs text-slate-400 mb-2 block">Amount ({{ tokenSymbol }})</label>
           <input 
-            v-model="amount" 
+            v-model="delegateAmount" 
             type="number" 
             step="0.000001"
             placeholder="0.000000"
@@ -624,10 +636,10 @@ const copy = async (text: string) => {
           <div class="flex items-center justify-between text-[11px] text-slate-500 mt-1 flex-wrap gap-2">
             <span>Available: <span class="font-mono text-slate-300">{{ walletBalanceDisplay }}</span></span>
             <div class="flex items-center gap-1">
-              <button class="btn text-[10px]" @click="setAmountPercent(0.25)" :disabled="walletBalanceFloat <= 0">25%</button>
-              <button class="btn text-[10px]" @click="setAmountPercent(0.5)" :disabled="walletBalanceFloat <= 0">50%</button>
-              <button class="btn text-[10px]" @click="setAmountPercent(0.75)" :disabled="walletBalanceFloat <= 0">75%</button>
-              <button class="btn text-[10px]" @click="setMaxAmount" :disabled="walletBalanceFloat <= 0">Max</button>
+              <button class="btn text-[10px]" @click="setDelegateAmountPercent(0.25)" :disabled="walletBalanceFloat <= 0">25%</button>
+              <button class="btn text-[10px]" @click="setDelegateAmountPercent(0.5)" :disabled="walletBalanceFloat <= 0">50%</button>
+              <button class="btn text-[10px]" @click="setDelegateAmountPercent(0.75)" :disabled="walletBalanceFloat <= 0">75%</button>
+              <button class="btn text-[10px]" @click="setMaxDelegateAmount" :disabled="walletBalanceFloat <= 0">Max</button>
             </div>
           </div>
         </div>
@@ -635,7 +647,7 @@ const copy = async (text: string) => {
         <button 
           class="btn btn-primary w-full"
           @click="handleDelegate"
-          :disabled="!selectedValidator || !amount || txLoading"
+          :disabled="!delegateValidator || !delegateAmount || txLoading"
         >
           {{ txLoading ? 'Processing...' : 'Delegate' }}
         </button>
@@ -655,7 +667,7 @@ const copy = async (text: string) => {
       <div class="space-y-3">
         <div>
           <label class="text-xs text-slate-400 mb-2 block">Select Delegation</label>
-          <select v-model="selectedValidator" class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
+          <select v-model="undelegateValidator" class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
             <option value="">Choose a delegation...</option>
             <option v-for="d in myDelegations" :key="d.validatorAddress" :value="d.validatorAddress">
               {{ d.validatorName }} - {{ formatAmount(d.amount.toString(), tokenDenom, { maxDecimals: 2 }) }}
@@ -665,8 +677,12 @@ const copy = async (text: string) => {
 
         <div>
           <label class="text-xs text-slate-400 mb-2 block">Amount ({{ tokenSymbol }})</label>
+          <div class="flex items-center justify-between text-[11px] text-slate-500 mb-1" v-if="undelegateValidator">
+            <span>Delegated: <span class="font-mono text-slate-300">{{ formatAmount(selectedUndelegateBalance.toString(), tokenDenom, { minDecimals: 2, maxDecimals: 2 }) }}</span></span>
+            <button class="btn text-[10px]" @click="setMaxUndelegateAmount" :disabled="!selectedUndelegateBalance">Max</button>
+          </div>
           <input 
-            v-model="amount" 
+            v-model="undelegateAmount" 
             type="number" 
             step="0.000001"
             placeholder="0.000000"
@@ -677,7 +693,7 @@ const copy = async (text: string) => {
         <button 
           class="btn btn-primary w-full"
           @click="handleUndelegate"
-          :disabled="!selectedValidator || !amount || txLoading"
+          :disabled="!undelegateValidator || !undelegateAmount || txLoading"
         >
           {{ txLoading ? 'Processing...' : 'Undelegate' }}
         </button>
