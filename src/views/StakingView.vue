@@ -110,6 +110,11 @@ const selectedUndelegateBalance = computed(() => {
   return entry?.amount ?? 0;
 });
 
+const canUndelegate = computed(() => {
+  const amt = Number(undelegateAmount.value || 0);
+  return !!undelegateValidator.value && amt > 0 && !txLoading.value;
+});
+
 const setMaxUndelegateAmount = () => {
   if (!selectedUndelegateBalance.value) return;
   undelegateAmount.value = (selectedUndelegateBalance.value / 1_000_000).toFixed(6);
@@ -173,6 +178,16 @@ watch(
     }
   }
 );
+
+const syncUndelegateDefaults = () => {
+  if (activeTab.value === 'undelegate' && !undelegateValidator.value && myDelegations.value.length) {
+    undelegateValidator.value = myDelegations.value[0].validatorAddress;
+  }
+};
+
+watch([activeTab, myDelegations], () => {
+  syncUndelegateDefaults();
+});
 
 const handleDelegate = async () => {
 if (!delegateValidator.value || !delegateAmount.value) return;
@@ -693,7 +708,7 @@ const copy = async (text: string) => {
         <button 
           class="btn btn-primary w-full"
           @click="handleUndelegate"
-          :disabled="!undelegateValidator || !undelegateAmount || txLoading"
+          :disabled="!canUndelegate"
         >
           {{ txLoading ? 'Processing...' : 'Undelegate' }}
         </button>
