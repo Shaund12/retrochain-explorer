@@ -2,6 +2,7 @@
 import { computed, onMounted, ref } from "vue";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
+import RcBackLink from "@/components/RcBackLink.vue";
 import { useApi } from "@/composables/useApi";
 import { getTokenMeta } from "@/constants/tokens";
 
@@ -27,6 +28,30 @@ type AssetRow = {
 const curated: AssetRow[] = [
   {
     denom: "ibc/27394fb092d2eccd56123c74f36e4c1f926001ceada9ca97ea622b25f41e5eb2",
+    source: "curated"
+  },
+  {
+    denom: "ibc/0471f1c4e7afd3f07702bef6dc365268d64570f7c1fdc98ea6098dd6de59817b",
+    source: "curated"
+  },
+  {
+    denom: "ibc/6b199312b29cf047bf8b1337450ef3aa0475fe0c312db94055f2d5b22cd1e71a",
+    source: "curated"
+  },
+  {
+    denom: "ibc/cf57a83ced6cec7d706631b5dc53abc21b7eda7df7490732b4361e6d5dd19c73",
+    source: "curated"
+  },
+  {
+    denom: "ibc/99b00614ddbe6189aa03b77066ff8eb3f93680bd790c43cf56096b7f23542015",
+    source: "curated"
+  },
+  {
+    denom: "ibc/atom",
+    source: "curated"
+  },
+  {
+    denom: "ibc/usdc",
     source: "curated"
   }
 ];
@@ -120,6 +145,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-4">
+    <RcBackLink />
     <div class="card">
       <h1 class="text-xl font-bold text-slate-50">IBC Asset Registry</h1>
       <p class="text-sm text-slate-400 mt-1">

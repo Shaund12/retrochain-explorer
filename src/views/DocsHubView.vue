@@ -55,6 +55,12 @@ const docs = computed<DocLink[]>(() => [
     tag: "Interchain"
   },
   {
+    title: "IBC Relayers",
+    description: "Relayer responsibilities, monitoring, and common failure modes.",
+    to: { name: "docs-ibc-relayers" },
+    tag: "Interchain"
+  },
+  {
     title: "Accounts & Addresses",
     description: "Address types, sequences, and module accounts explorers commonly surface.",
     to: { name: "docs-accounts" },
@@ -77,6 +83,18 @@ const docs = computed<DocLink[]>(() => [
     description: "Fee model, minimum gas prices, fee collector flow, and explorer UX best practices.",
     to: { name: "docs-fees" },
     tag: "Fees"
+  },
+  {
+    title: "Fee Collector Flow",
+    description: "How fees move through module accounts (fee collector, burn, community pool).",
+    to: { name: "docs-fees-flow" },
+    tag: "Fees"
+  },
+  {
+    title: "Validator Uptime",
+    description: "Missed blocks, signing info, jail duration, and how explorers estimate liveness.",
+    to: { name: "docs-validator-uptime" },
+    tag: "Validators"
   },
   {
     title: "Consensus & Validator Ops",
@@ -132,9 +150,8 @@ const go = (link: DocLink) => router.push(link.to);
     <section class="card-soft border border-indigo-400/30 bg-indigo-500/5">
       <h2 class="text-lg font-semibold text-white mb-2">Planned docs (next batches)</h2>
       <ul class="list-disc list-inside text-sm text-slate-200 space-y-1">
-        <li>IBC relayers (recommended configs, common failure modes, monitoring)</li>
-        <li>Fee collector flow (chain-specific routing and burn split visibility)</li>
-        <li>Validator uptime (missed blocks, signing info, jail duration)</li>
+        <li>Genesis & upgrades (how to verify genesis checksum, upgrade plan tracking)</li>
+        <li>Events & indexing (how explorers should index tx events reliably)</li>
       </ul>
     </section>
   </div>

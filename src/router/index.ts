@@ -26,6 +26,9 @@ import DocsConsensusOpsView from "@/views/DocsConsensusOpsView.vue";
 import DocsIbcChannelsView from "@/views/DocsIbcChannelsView.vue";
 import DocsIbcPacketsView from "@/views/DocsIbcPacketsView.vue";
 import DocsIbcAssetRegistryView from "@/views/DocsIbcAssetRegistryView.vue";
+import DocsIbcRelayersView from "@/views/DocsIbcRelayersView.vue";
+import DocsFeeCollectorFlowView from "@/views/DocsFeeCollectorFlowView.vue";
+import DocsValidatorUptimeView from "@/views/DocsValidatorUptimeView.vue";
 import TokensView from "@/views/TokensView.vue";
 import NftDetailView from "@/views/NftDetailView.vue";
 import ContractsView from "@/views/ContractsView.vue";
@@ -71,6 +74,9 @@ const routes: RouteRecordRaw[] = [
   { path: "/docs/ibc-channels", name: "docs-ibc-channels", component: DocsIbcChannelsView },
   { path: "/docs/ibc-packets", name: "docs-ibc-packets", component: DocsIbcPacketsView },
   { path: "/docs/ibc-assets", name: "docs-ibc-assets", component: DocsIbcAssetRegistryView },
+  { path: "/docs/ibc-relayers", name: "docs-ibc-relayers", component: DocsIbcRelayersView },
+  { path: "/docs/fees-flow", name: "docs-fees-flow", component: DocsFeeCollectorFlowView },
+  { path: "/docs/validator-uptime", name: "docs-validator-uptime", component: DocsValidatorUptimeView },
   { path: "/contracts", name: "contracts", component: ContractsView },
   { path: "/contracts/:address", name: "contract-detail", component: ContractDetailView, props: true },
   { path: "/changelog", name: "changelog", component: ChangelogView },

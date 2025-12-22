@@ -1,4 +1,5 @@
 <script setup lang="ts">
+import RcBackLink from "@/components/RcBackLink.vue";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
 
 type ModuleDoc = {
@@ -44,6 +45,7 @@ const modules: ModuleDoc[] = [
 
 <template>
   <div class="space-y-4">
+    <RcBackLink />
     <div class="card">
       <h1 class="text-xl font-bold text-slate-50">Modules</h1>
       <p class="text-sm text-slate-400 mt-1">

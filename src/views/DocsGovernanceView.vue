@@ -2,6 +2,7 @@
 import { onMounted, ref, computed } from "vue";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
+import RcBackLink from "@/components/RcBackLink.vue";
 import { useApi } from "@/composables/useApi";
 
 const api = useApi();
@@ -59,6 +60,7 @@ onMounted(() => {
 
 <template>
   <div class="space-y-4">
+    <RcBackLink />
     <div class="card">
       <h1 class="text-xl font-bold text-slate-50">Governance Guide</h1>
       <p class="text-sm text-slate-400 mt-1">
