@@ -12,11 +12,18 @@ servers:
     description: "Explorer REST proxy (/api -> configured REST endpoint)"
 tags:
   - name: tendermint
-  - naswagger: '2.0'
-info:
-  title: Cosmos SDK - gRPC Gateway docs
-  description: A REST interface for state queries.
-  version: 1.0.0
+  - name: Query
+  - name: Service
+
+# NOTE: This file is intended to be OpenAPI 3.0. The following vendor extension
+# preserves the original Swagger 2.0 metadata that was accidentally merged into
+# this document.
+x-swagger2:
+  swagger: '2.0'
+  info:
+    title: Cosmos SDK - gRPC Gateway docs
+    description: A REST interface for state queries.
+    version: 1.0.0
 paths:
   /cosmos/auth/v1beta1/account_info/{address}:
     get:
@@ -66381,7 +66388,7 @@ definitions:
 
               field's configuration is global (not module specific).
     description: QueryConfigRequest is the Query/Config response type.
-me: tx
+name: tx
   - name: bank
   - name: staking
   - name: distribution
