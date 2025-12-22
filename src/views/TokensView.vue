@@ -28,6 +28,11 @@ const tokenKind = ref<"all" | "native" | "factory">("all");
 const ibcSearch = ref("");
 const nftSearch = ref("");
 
+// Detail modal state
+const showAssetModal = ref(false);
+const modalKind = ref<"bank" | "ibc" | "cw20">("bank");
+const modalAsset = ref<any | null>(null);
+
 const formatUsd = (value: number | null | undefined) => {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
@@ -110,6 +115,17 @@ const filteredNfts = computed(() => {
     );
   });
 });
+
+const openAssetModal = (asset: any, kind: "bank" | "ibc" | "cw20") => {
+  modalAsset.value = asset;
+  modalKind.value = kind;
+  showAssetModal.value = true;
+};
+
+const closeAssetModal = () => {
+  showAssetModal.value = false;
+  modalAsset.value = null;
+};
 
 const stats = computed(() => ({
   native: nativeTokens.value.length,
@@ -329,7 +345,12 @@ const nftSourceLabel = (cls: { source?: string }) => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="token in filteredBankTokens" :key="token.denom" class="text-sm">
+              <tr
+                v-for="token in filteredBankTokens"
+                :key="token.denom"
+                class="text-sm cursor-pointer hover:bg-white/5"
+                @click="openAssetModal(token, 'bank')"
+              >
                 <td class="py-3">
                   <div class="flex items-center gap-3">
                     <div
@@ -389,7 +410,12 @@ const nftSourceLabel = (cls: { source?: string }) => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="token in filteredCw20" :key="token.address" class="text-sm">
+              <tr
+                v-for="token in filteredCw20"
+                :key="token.address"
+                class="text-sm cursor-pointer hover:bg-white/5"
+                @click="openAssetModal(token, 'cw20')"
+              >
                 <td class="py-3">
                   <div class="font-semibold text-white">{{ token.symbol }}</div>
                   <div class="text-xs text-slate-400">{{ token.name }}</div>
@@ -424,7 +450,12 @@ const nftSourceLabel = (cls: { source?: string }) => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="token in filteredIbcTokens" :key="token.denom" class="text-sm">
+              <tr
+                v-for="token in filteredIbcTokens"
+                :key="token.denom"
+                class="text-sm cursor-pointer hover:bg-white/5"
+                @click="openAssetModal(token, 'ibc')"
+              >
                 <td>
                   <div class="flex items-center gap-3">
                     <div
@@ -494,5 +525,82 @@ const nftSourceLabel = (cls: { source?: string }) => {
         </div>
       </div>
     </template>
+  </div>
+
+  <!-- Asset Detail Modal -->
+  <div
+    v-if="showAssetModal && modalAsset"
+    class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+    @click.self="closeAssetModal"
+  >
+    <div class="card w-full max-w-3xl">
+      <div class="flex items-start justify-between mb-4">
+        <div>
+          <p class="text-[11px] uppercase tracking-widest text-slate-500">{{ modalKind.toUpperCase() }} Asset</p>
+          <h2 class="text-xl font-bold text-white">
+            <template v-if="modalKind === 'bank'">
+              {{ friendlySymbol(modalAsset) }}
+            </template>
+            <template v-else-if="modalKind === 'ibc'">
+              {{ modalAsset.tokenMeta?.symbol || modalAsset.denom }}
+            </template>
+            <template v-else>
+              {{ modalAsset.symbol }}
+            </template>
+          </h2>
+          <p class="text-xs text-slate-400 break-all">
+            <template v-if="modalKind === 'bank'">{{ modalAsset.denom }}</template>
+            <template v-else-if="modalKind === 'ibc'">{{ modalAsset.denom }}</template>
+            <template v-else>{{ modalAsset.address }}</template>
+          </p>
+        </div>
+        <button class="btn text-xs" @click="closeAssetModal">✖ Close</button>
+      </div>
+
+      <div class="grid gap-3 md:grid-cols-2 text-sm text-slate-300">
+        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
+          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Supply / Amount</div>
+          <div class="text-white font-semibold">
+            <template v-if="modalKind === 'bank'">{{ modalAsset.displayAmount }}</template>
+            <template v-else-if="modalKind === 'ibc'">{{ modalAsset.displayAmount }}</template>
+            <template v-else>{{ formatCw20Supply(modalAsset) }}</template>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
+          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Chain / Type</div>
+          <div class="text-white font-semibold">
+            <template v-if="modalKind === 'bank'">{{ tokenTypeLabel(modalAsset) }}</template>
+            <template v-else-if="modalKind === 'ibc'">IBC</template>
+            <template v-else>CW20</template>
+          </div>
+          <div class="text-xs text-slate-400" v-if="modalKind === 'ibc'">Base: {{ modalAsset.baseDenom || '—' }}</div>
+          <div class="text-xs text-slate-400" v-if="modalKind === 'ibc'">Path: {{ modalAsset.tracePath || '—' }}</div>
+        </div>
+
+        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700" v-if="modalKind === 'cw20'">
+          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Decimals</div>
+          <div class="text-white font-semibold">{{ modalAsset.decimals }}</div>
+        </div>
+
+        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700" v-if="modalKind === 'cw20'">
+          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Code ID / Minter</div>
+          <div class="text-white font-semibold">{{ modalAsset.codeId }}</div>
+          <div class="text-xs text-slate-400 break-all">{{ modalAsset.minter || '—' }}</div>
+        </div>
+
+        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700" v-if="modalKind === 'bank'">
+          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Metadata</div>
+          <div class="text-xs text-slate-200 break-words">
+            {{ modalAsset.tokenMeta?.description || modalAsset.metadata?.description || 'No description' }}
+          </div>
+        </div>
+      </div>
+
+      <div class="mt-4 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-xs text-slate-300">
+        <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Raw JSON</div>
+        <pre class="whitespace-pre-wrap break-words max-h-72 overflow-auto">{{ JSON.stringify(modalAsset, null, 2) }}</pre>
+      </div>
+    </div>
   </div>
 </template>
