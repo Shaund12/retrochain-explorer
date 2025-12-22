@@ -19,6 +19,39 @@ const messages = computed(() => {
   return tx.value?.tx?.body?.messages || [];
 });
 
+const priceOverrides = ref<Record<string, number>>({});
+const priceLookup = computed(() => {
+  const hints: Record<string, number | undefined> = {
+    USDC: 1,
+    OSMO: Number(import.meta.env.VITE_PRICE_OSMO_USD ?? "0") || 0.6,
+    ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? "0") || 10,
+    WBTC: Number(import.meta.env.VITE_PRICE_WBTC_USD ?? "0") || 40000
+  };
+  return { ...hints, ...priceOverrides.value };
+});
+
+const fetchLivePrices = async () => {
+  try {
+    const res = await fetch(
+      "https://api.coingecko.com/api/v3/simple/price?ids=osmosis,cosmos,usd-coin,wrapped-bitcoin&vs_currencies=usd",
+      { cache: "no-store" }
+    );
+    const data = await res.json();
+    const overrides: Record<string, number> = {};
+    const osmo = Number(data?.osmosis?.usd);
+    if (Number.isFinite(osmo) && osmo > 0) overrides.OSMO = osmo;
+    const atom = Number(data?.cosmos?.usd);
+    if (Number.isFinite(atom) && atom > 0) overrides.ATOM = atom;
+    const usdc = Number(data?.["usd-coin"]?.usd);
+    if (Number.isFinite(usdc) && usdc > 0) overrides.USDC = usdc;
+    const wbtc = Number(data?.["wrapped-bitcoin"]?.usd);
+    if (Number.isFinite(wbtc) && wbtc > 0) overrides.WBTC = wbtc;
+    priceOverrides.value = overrides;
+  } catch (err) {
+    console.warn("Failed to fetch live prices", err);
+  }
+};
+
 const getMessageType = (msg: any) => {
   const type = msg["@type"] || msg.type || "";
   return type.split(".").pop() || type;
@@ -210,14 +243,15 @@ const formatUsd = (value: number | null | undefined) => {
 const USD_PRICE_HINTS: Record<string, number | undefined> = {
   USDC: 1,
   OSMO: Number(import.meta.env.VITE_PRICE_OSMO_USD ?? "0") || 0.6,
-  ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? "0") || 10
+  ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? "0") || 10,
+  WBTC: Number(import.meta.env.VITE_PRICE_WBTC_USD ?? "0") || 40000
 };
 
 const getUsdEstimate = (rawAmount: string | undefined | null, denom: string | undefined | null): number | null => {
   if (!rawAmount || !denom) return null;
   const meta = getTokenMeta(denom);
   const symbol = meta.symbol?.toUpperCase();
-  const hint = symbol ? USD_PRICE_HINTS[symbol] : undefined;
+  const hint = symbol ? priceLookup.value[symbol] ?? USD_PRICE_HINTS[symbol] : undefined;
   if (!hint || hint <= 0) return null;
   const decimals = typeof meta.decimals === "number" ? meta.decimals : 6;
   const num = Number(rawAmount) / Math.pow(10, decimals);
@@ -412,6 +446,7 @@ onMounted(async () => {
   loading.value = true;
   error.value = null;
   try {
+    fetchLivePrices();
     const res = await getTx(hash);
     tx.value = res;
   } catch (e: any) {
