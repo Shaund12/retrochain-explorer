@@ -113,6 +113,16 @@ const ibcTotalUsd = computed(() => {
   return totals.reduce((a, b) => a + b, 0);
 });
 
+const ibcTokenUsd = (token: BankToken) => {
+  const symbol = token.tokenMeta?.symbol?.toUpperCase();
+  if (!symbol) return null;
+  const price = priceLookup.value[symbol];
+  if (!price || price <= 0) return null;
+  const amount = Number(token.amount) / Math.pow(10, token.decimals || 6);
+  if (!Number.isFinite(amount)) return null;
+  return amount * price;
+};
+
 const formatCw20Supply = (token: Cw20Token) => {
   const decimals = Number(token.decimals ?? 6);
   const divisor = Math.pow(10, Math.max(decimals, 0));
@@ -164,6 +174,7 @@ const nftSourceLabel = (cls: { source?: string }) => {
             <p class="text-indigo-200 uppercase tracking-wider">IBC Assets</p>
             <p class="text-2xl font-bold text-white">{{ stats.ibc }}</p>
             <p class="text-[11px] text-indigo-100" v-if="ibcTotalUsd !== null">≈ {{ formatUsd(ibcTotalUsd) }}</p>
+            <p v-if="ibcTotalUsd !== null" class="text-[10px] text-emerald-200 mt-1">🎉 Chain-wide IBC liquidity in USD</p>
           </div>
           <div class="rounded-2xl border border-fuchsia-400/30 bg-fuchsia-500/10 p-3">
             <p class="text-fuchsia-200 uppercase tracking-wider">CW20 Tokens</p>
@@ -300,6 +311,7 @@ const nftSourceLabel = (cls: { source?: string }) => {
                 <th>Base Denom</th>
                 <th>IBC Path</th>
                 <th>Supply</th>
+                <th>USD</th>
               </tr>
             </thead>
             <tbody>
