@@ -346,6 +346,10 @@ const nftSourceLabel = (cls: { source?: string }) => {
                 <td class="text-xs text-slate-300">{{ token.baseDenom || '—' }}</td>
                 <td class="text-xs text-slate-400 font-mono">{{ token.tracePath || '—' }}</td>
                 <td class="text-slate-100">{{ token.displayAmount }}</td>
+                <td class="text-xs text-emerald-200 font-semibold whitespace-nowrap">
+                  <span v-if="ibcTokenUsd(token) !== null">{{ formatUsd(ibcTokenUsd(token)) }}</span>
+                  <span v-else class="text-slate-500">—</span>
+                </td>
               </tr>
             </tbody>
           </table>
