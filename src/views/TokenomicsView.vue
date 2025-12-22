@@ -393,12 +393,6 @@ const treasuryTransfers = [
   { height: 146, from: "shaun_profit", to: "foundation_validator", amount: 2_000_000 }
 ];
 
-const testerDistributions = [
-  { height: 19255, address: "cosmos1xct40mu2p6sl54w5cw9yad07tcff5eqvkp65r6" },
-  { height: 27508, address: "cosmos1ful20t02g95zjq5j8kghunhcu82l8nj36jaseq" },
-  { height: 27893, address: "cosmos1esun5s55tn0hhd287fjwxkc28sp0ueqtrhtx4k" }
-];
-
 const retroMythos = [
   {
     emoji: "🕶️",
@@ -781,20 +775,6 @@ const minDepositRetro = computed(() => {
           <li v-for="entry in treasuryTransfers" :key="entry.height">
             <span class="text-slate-500">Height {{ entry.height }}:</span>
             {{ entry.from }} → {{ entry.to }} — {{ entry.amount.toLocaleString() }} RETRO
-          </li>
-        </ul>
-      </div>
-
-      <!-- Tester distributions -->
-      <div class="card space-y-2">
-        <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-          <span>🎮</span>
-          <span>Tester Distributions</span>
-        </h2>
-        <p class="text-xs text-slate-500">dev_fund wallet payouts (500,000 RETRO each)</p>
-        <ul class="text-sm text-slate-300 space-y-1">
-          <li v-for="tester in testerDistributions" :key="tester.height">
-            Height {{ tester.height }} → {{ maskAddress(tester.address) }}
           </li>
         </ul>
       </div>

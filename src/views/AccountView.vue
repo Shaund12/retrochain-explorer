@@ -174,6 +174,17 @@ const activityByType = computed(() => {
 
 const knownAccount = computed(() => getAccountLabel(bech32Address.value || addressInput.value));
 
+const USD_PRICE_HINTS: Record<string, number | undefined> = {
+  USDC: 1,
+  OSMO: Number(import.meta.env.VITE_PRICE_OSMO_USD ?? "0") || 0.6,
+  ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? "0") || 10
+};
+
+const formatUsd = (value: number | null | undefined) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return null;
+  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 const submit = async () => {
   if (!addressInput.value) {
     notify("Enter a RetroChain address first.");
@@ -256,6 +267,8 @@ const decoratedBalances = computed<DecoratedBalance[]>(() => {
       const localeAmount = Number.isFinite(numeric)
         ? `${numeric.toLocaleString(undefined, { maximumFractionDigits: Math.min(6, decimals) })} ${meta.symbol}`
         : formatAmount(coin.amount, coin.denom);
+      const priceHint = meta.symbol ? USD_PRICE_HINTS[meta.symbol.toUpperCase()] : undefined;
+      const usdValue = Number.isFinite(numeric) && priceHint && priceHint > 0 ? numeric * priceHint : null;
 
       return {
         denom: coin.denom,
@@ -265,10 +278,19 @@ const decoratedBalances = computed<DecoratedBalance[]>(() => {
         displayAmount: localeAmount,
         rawAmount: Number.isFinite(numeric) ? numeric : 0,
         meta,
-        accent: ACCENT_CLASS_MAP[meta.accent] ?? ACCENT_CLASS_MAP.slate
-      } as DecoratedBalance;
+        accent: ACCENT_CLASS_MAP[meta.accent] ?? ACCENT_CLASS_MAP.slate,
+        usdValue
+      } as DecoratedBalance & { usdValue: number | null };
     })
     .sort((a, b) => b.rawAmount - a.rawAmount);
+});
+
+const totalPortfolioUsd = computed(() => {
+  const values = decoratedBalances.value
+    .map((b: any) => b.usdValue)
+    .filter((v: any): v is number => typeof v === "number" && Number.isFinite(v));
+  if (!values.length) return null;
+  return values.reduce((a, b) => a + b, 0);
 });
 
 // Expose faucet URL for template without inline import.meta in interpolation
@@ -472,6 +494,9 @@ const closeTokenDetails = () => {
           <div class="text-2xl font-bold text-emerald-400 mb-1">
             {{ totalBalance }}
           </div>
+          <div class="text-xs text-emerald-200" v-if="totalPortfolioUsd !== null">
+            ≈ {{ formatUsd(totalPortfolioUsd) }}
+          </div>
           <div class="text-xs text-slate-400 mb-3">
             Address: <code class="text-[10px]">{{ bech32Address.slice(0, 16) }}...</code>
           </div>
@@ -644,6 +669,7 @@ const closeTokenDetails = () => {
               <div class="text-right">
                 <div class="text-lg font-semibold text-white">{{ bal.displayAmount }}</div>
                 <div class="text-xs text-slate-400">{{ bal.formatted }}</div>
+                <div v-if="bal.usdValue !== null" class="text-[11px] text-emerald-300">≈ {{ formatUsd(bal.usdValue) }}</div>
               </div>
             </div>
             <div class="mt-4 flex justify-end">
