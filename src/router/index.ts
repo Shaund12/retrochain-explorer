@@ -40,6 +40,7 @@ import ChangelogView from "@/views/ChangelogView.vue";
 import EcosystemWalletsView from "@/views/EcosystemWalletsView.vue";
 import IbcView from "@/views/IbcView.vue";
 import DocsHubView from "@/views/DocsHubView.vue";
+import SwaggerDocsView from "@/views/SwaggerDocsView.vue";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", name: "home", component: HomeView },
@@ -52,6 +53,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/accounts/ecosystem", name: "ecosystem-accounts", component: EcosystemWalletsView },
   { path: "/ibc", name: "ibc", component: IbcView },
   { path: "/docs", name: "docs", component: DocsHubView },
+  { path: "/api-docs", name: "api-docs", component: SwaggerDocsView },
   { path: "/validators", name: "validators", component: ValidatorsView },
   { path: "/governance", name: "governance", component: GovernanceView },
   { path: "/staking", name: "staking", component: StakingView },

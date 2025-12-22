@@ -1,0 +1,503 @@
+openapi: 3.0.0
+info:
+  title: "Cosmos SDK REST API (LCD)"
+  version: "0.1"
+  description: |
+    Minimal OpenAPI spec intended to provide working API docs inside the RetroChain explorer.
+
+    Note: Cosmos SDK endpoints vary by chain build/modules. This spec focuses on commonly available endpoints
+    (auth, bank, staking, distribution, gov, tx, tendermint).
+servers:
+  - url: "/api"
+    description: "Explorer REST proxy (/api -> configured REST endpoint)"
+tags:
+  - name: tendermint
+  - name: tx
+  - name: bank
+  - name: staking
+  - name: distribution
+  - name: gov
+  - name: auth
+  - name: ibc
+  - name: wasm
+  - name: tokenfactory
+  - name: nft
+paths:
+  /cosmos/base/tendermint/v1beta1/node_info:
+    get:
+      tags: [tendermint]
+      summary: "Node info"
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/base/tendermint/v1beta1/blocks/latest:
+    get:
+      tags: [tendermint]
+      summary: "Latest block"
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/bank/v1beta1/balances/{address}:
+    get:
+      tags: [bank]
+      summary: "Balances"
+      parameters:
+        - in: path
+          name: address
+          required: true
+          schema: { type: string }
+        - in: query
+          name: pagination.limit
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/bank/v1beta1/supply/by_denom:
+    get:
+      tags: [bank]
+      summary: "Supply by denom"
+      parameters:
+        - in: query
+          name: denom
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/bank/v1beta1/denoms_metadata:
+    get:
+      tags: [bank]
+      summary: "Denoms metadata"
+      parameters:
+        - in: query
+          name: pagination.limit
+          required: false
+          schema: { type: string }
+        - in: query
+          name: pagination.key
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/staking/v1beta1/validators:
+    get:
+      tags: [staking]
+      summary: "Validators"
+      parameters:
+        - in: query
+          name: pagination.limit
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/staking/v1beta1/delegations/{delegator_addr}:
+    get:
+      tags: [staking]
+      summary: "Delegations by delegator"
+      parameters:
+        - in: path
+          name: delegator_addr
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/distribution/v1beta1/params:
+    get:
+      tags: [distribution]
+      summary: "Distribution params"
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/distribution/v1beta1/delegators/{delegator_address}/rewards:
+    get:
+      tags: [distribution]
+      summary: "Rewards by delegator"
+      parameters:
+        - in: path
+          name: delegator_address
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/gov/v1beta1/proposals:
+    get:
+      tags: [gov]
+      summary: "Proposals"
+      parameters:
+        - in: query
+          name: pagination.limit
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/txs:
+    get:
+      tags: [tx]
+      summary: "Search txs"
+      parameters:
+        - in: query
+          name: events
+          required: false
+          schema:
+            type: array
+            items: { type: string }
+        - in: query
+          name: pagination.limit
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/txs/{hash}:
+    get:
+      tags: [tx]
+      summary: "Tx by hash"
+      parameters:
+        - in: path
+          name: hash
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/auth/v1beta1/account_info/{address}:
+    get:
+      tags: [auth]
+      summary: "Account info"
+      parameters:
+        - in: path
+          name: address
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /ibc/apps/transfer/v1/denom_traces/{hash}:
+    get:
+      tags: [ibc]
+      summary: "IBC denom trace by hash"
+      parameters:
+        - in: path
+          name: hash
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /ibc/core/channel/v1/channels:
+    get:
+      tags: [ibc]
+      summary: "IBC channels"
+      parameters:
+        - in: query
+          name: pagination.limit
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /ibc/core/connection/v1/connections:
+    get:
+      tags: [ibc]
+      summary: "IBC connections"
+      parameters:
+        - in: query
+          name: pagination.limit
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmwasm/wasm/v1/code:
+    get:
+      tags: [wasm]
+      summary: "List CosmWasm codes"
+      parameters:
+        - in: query
+          name: pagination.limit
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmwasm/wasm/v1/code/{code_id}:
+    get:
+      tags: [wasm]
+      summary: "CosmWasm code info"
+      parameters:
+        - in: path
+          name: code_id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmwasm/wasm/v1/code/{code_id}/contracts:
+    get:
+      tags: [wasm]
+      summary: "Contracts by code ID"
+      parameters:
+        - in: path
+          name: code_id
+          required: true
+          schema: { type: string }
+        - in: query
+          name: pagination.limit
+          required: false
+          schema: { type: string }
+        - in: query
+          name: pagination.key
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmwasm/wasm/v1/contract/{address}:
+    get:
+      tags: [wasm]
+      summary: "Contract info"
+      parameters:
+        - in: path
+          name: address
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmwasm/wasm/v1/contract/{address}/smart/{query_data}:
+    get:
+      tags: [wasm]
+      summary: "Smart query contract (GET)"
+      description: "Smart query where query_data is base64-encoded JSON. Some nodes prefer POST /smart."
+      parameters:
+        - in: path
+          name: address
+          required: true
+          schema: { type: string }
+        - in: path
+          name: query_data
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmwasm/wasm/v1/contract/{address}/smart:
+    post:
+      tags: [wasm]
+      summary: "Smart query contract (POST)"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+              properties:
+                query_msg:
+                  type: string
+                  description: "Base64-encoded JSON"
+      responses:
+        "200": { description: "OK" }
+
+  /cosmwasm/wasm/v1/contract/{address}/code-hash:
+    get:
+      tags: [wasm]
+      summary: "Contract code hash (if supported)"
+      parameters:
+        - in: path
+          name: address
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/txs:
+    post:
+      tags: [tx]
+      summary: "Broadcast tx"
+      description: "Broadcast a signed transaction."
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/txs/encode:
+    post:
+      tags: [tx]
+      summary: "Encode tx"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/txs/decode:
+    post:
+      tags: [tx]
+      summary: "Decode tx"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/simulate:
+    post:
+      tags: [tx]
+      summary: "Simulate tx"
+      requestBody:
+        required: true
+        content:
+          application/json:
+            schema:
+              type: object
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/txs/block/{height}:
+    get:
+      tags: [tx]
+      summary: "Txs by block height"
+      parameters:
+        - in: path
+          name: height
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/txs/{hash}:
+    get:
+      tags: [tx]
+      summary: "Tx by hash"
+      parameters:
+        - in: path
+          name: hash
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tx/v1beta1/txs:
+    get:
+      tags: [tx]
+      summary: "Search txs"
+      parameters:
+        - in: query
+          name: events
+          required: false
+          schema:
+            type: array
+            items: { type: string }
+        - in: query
+          name: pagination.limit
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tokenfactory/v1beta1/denoms_from_creator/{creator}:
+    get:
+      tags: [tokenfactory]
+      summary: "Token factory denoms by creator"
+      parameters:
+        - in: path
+          name: creator
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/tokenfactory/v1beta1/params:
+    get:
+      tags: [tokenfactory]
+      summary: "Token factory params"
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/nft/v1beta1/classes:
+    get:
+      tags: [nft]
+      summary: "NFT classes"
+      parameters:
+        - in: query
+          name: pagination.limit
+          required: false
+          schema: { type: string }
+        - in: query
+          name: pagination.key
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/nft/v1beta1/nfts:
+    get:
+      tags: [nft]
+      summary: "NFTs"
+      parameters:
+        - in: query
+          name: class_id
+          required: false
+          schema: { type: string }
+        - in: query
+          name: owner
+          required: false
+          schema: { type: string }
+        - in: query
+          name: pagination.limit
+          required: false
+          schema: { type: string }
+        - in: query
+          name: pagination.key
+          required: false
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/nft/v1beta1/nfts/{class_id}/{id}:
+    get:
+      tags: [nft]
+      summary: "NFT by class and id"
+      parameters:
+        - in: path
+          name: class_id
+          required: true
+          schema: { type: string }
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }
+
+  /cosmos/nft/v1beta1/nfts/{class_id}/{id}/owner:
+    get:
+      tags: [nft]
+      summary: "NFT owner"
+      parameters:
+        - in: path
+          name: class_id
+          required: true
+          schema: { type: string }
+        - in: path
+          name: id
+          required: true
+          schema: { type: string }
+      responses:
+        "200": { description: "OK" }

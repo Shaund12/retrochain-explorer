@@ -150,6 +150,12 @@ const releases: Release[] = [
         title: "Holiday theme persistence",
         description:
           "Holiday mode now defaults to Off, remembers the user’s selection (including snow level) via localStorage, and Auto mode still picks the correct seasonal theme based on the current date."
+      },
+      {
+        type: "feature",
+        title: "Built-in Swagger API docs",
+        description:
+          "Added an /api-docs page with Swagger UI and a bundled Cosmos SDK OpenAPI spec, so API docs work even when the node doesn't expose swagger."
       }
     ]
   },
