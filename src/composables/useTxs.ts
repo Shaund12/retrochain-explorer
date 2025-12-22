@@ -435,10 +435,11 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
     return res.data;
   };
 
-  const searchByAddress = async (address: string, limit = 20) => {
+  const searchByAddress = async (address: string, limit = 20, page = 0) => {
     loading.value = true;
     error.value = null;
     try {
+      const offset = Math.max(0, page) * limit;
       const filters = [
         `message.sender='${address}'`,
         `transfer.recipient='${address}'`,
@@ -455,7 +456,8 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
             params: {
               events: filter,
               order_by: "ORDER_BY_DESC",
-              "pagination.limit": String(limit)
+              "pagination.limit": String(limit),
+              ...(offset ? { "pagination.offset": String(offset) } : {})
             },
             paramsSerializer: (params) => {
               const search = new URLSearchParams();

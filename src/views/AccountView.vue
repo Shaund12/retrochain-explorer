@@ -23,6 +23,8 @@ const faucetAmount = ref<string>("1000000"); // default 1 RETRO in micro (uretro
 
 const addressInput = ref<string>((route.params.address as string) || "");
 const loadingTxs = ref(false);
+const txPage = ref(1);
+const txPageSize = ref(20);
 
 // Transfer state
 const showTransferModal = ref(false);
@@ -249,18 +251,24 @@ const submit = async () => {
 };
 
 const loadAccount = async () => {
+  txPage.value = 1;
   await load(addressInput.value);
   
   // Load transactions for this address
   if (addressInput.value) {
-    loadingTxs.value = true;
-    try {
-      await searchByAddress(addressInput.value, 20);
-    } catch (e) {
-      console.error("Failed to load transactions:", e);
-    } finally {
-      loadingTxs.value = false;
-    }
+    await loadTransactions();
+  }
+};
+
+const loadTransactions = async () => {
+  if (!addressInput.value) return;
+  loadingTxs.value = true;
+  try {
+    await searchByAddress(addressInput.value, txPageSize.value, txPage.value - 1);
+  } catch (e) {
+    console.error("Failed to load transactions:", e);
+  } finally {
+    loadingTxs.value = false;
   }
 };
 
@@ -375,6 +383,11 @@ watch(keplrAddress, (newAddress) => {
     addressInput.value = newAddress;
     loadAccount();
   }
+});
+
+watch(txPageSize, async () => {
+  txPage.value = 1;
+  await loadTransactions();
 });
 
 watch(error, (val) => {
@@ -777,7 +790,20 @@ const closeTokenDetails = () => {
       <div class="card">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-sm font-semibold text-slate-100">Recent Transactions</h2>
-          <span v-if="loadingTxs" class="text-xs text-slate-400">Loading...</span>
+          <div class="flex items-center gap-3 text-xs text-slate-400">
+            <span v-if="loadingTxs">Loading...</span>
+            <div class="flex items-center gap-1">
+              <span class="text-[11px]">Per page</span>
+              <select
+                v-model.number="txPageSize"
+                class="bg-slate-900/80 border border-slate-700 rounded px-2 py-1 text-[11px] text-slate-200"
+              >
+                <option :value="10">10</option>
+                <option :value="20">20</option>
+                <option :value="50">50</option>
+              </select>
+            </div>
+          </div>
         </div>
         
         <div v-if="txs.length === 0 && !loadingTxs" class="text-sm text-slate-400">
@@ -817,6 +843,21 @@ const closeTokenDetails = () => {
               </tr>
             </tbody>
           </table>
+          <div class="flex items-center justify-between mt-3 text-xs text-slate-400">
+            <div>Page {{ txPage }}</div>
+            <div class="flex items-center gap-2">
+              <button class="btn text-[11px]" :disabled="txPage <= 1 || loadingTxs" @click="txPage = Math.max(1, txPage - 1); loadTransactions();">
+                Prev
+              </button>
+              <button
+                class="btn text-[11px]"
+                :disabled="txs.length < txPageSize || loadingTxs"
+                @click="txPage += 1; loadTransactions();"
+              >
+                Next
+              </button>
+            </div>
+          </div>
         </div>
       </div>
 
