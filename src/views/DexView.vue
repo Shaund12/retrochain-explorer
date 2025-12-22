@@ -59,6 +59,9 @@ const bridging = ref(false);
 const isMainnet = computed(() => network.value === "mainnet");
 const retroToCosmosChannel = import.meta.env.VITE_IBC_CHANNEL_RETRO_COSMOS || "channel-0";
 const cosmosToRetroChannel = import.meta.env.VITE_IBC_CHANNEL_COSMOS_RETRO || "channel-1638";
+const retroToOsmosisChannel = import.meta.env.VITE_IBC_CHANNEL_RETRO_OSMOSIS || "channel-1";
+const osmosisToRetroChannel = import.meta.env.VITE_IBC_CHANNEL_OSMOSIS_RETRO || "channel-108593";
+const nobleToOsmosisChannel = import.meta.env.VITE_IBC_CHANNEL_NOBLE_OSMOSIS || "channel-750";
 const cosmosHubChainId = import.meta.env.VITE_COSMOS_CHAIN_ID || "cosmoshub-4";
 const ibcDirection = ref<"retroToCosmos" | "cosmosToRetro">("retroToCosmos");
 const retroToCosmosAmount = ref("");
@@ -402,8 +405,8 @@ const handleBridge = async () => {
     const chainId = network.value === 'mainnet' ? 'retrochain-mainnet' : 'retrochain-devnet-1';
 
     if (bridgeChain.value === "Noble") {
-      // IBC Transfer from Noble
-      const sourceChannel = "channel-0"; // Noble -> RetroChain channel
+      // IBC Transfer from Noble (uusdc) → Osmosis channel-750, then onwards to Retro via Osmosis → Retro channel-108593
+      const sourceChannel = nobleToOsmosisChannel; // Noble → Osmosis
       const amountBase = Math.floor(parseFloat(bridgeAmount.value) * 1_000_000).toString();
 
       const msg = {
@@ -1341,6 +1344,10 @@ const handleCreatePool = async () => {
                 · Cosmos channel:
                 <span class="font-mono text-slate-300">{{ cosmosToRetroChannel || '—' }}</span>
               </span>
+              <br />
+              Osmosis channels: Retro → Osmosis <span class="font-mono text-slate-300">{{ retroToOsmosisChannel }}</span> · Osmosis → Retro <span class="font-mono text-slate-300">{{ osmosisToRetroChannel }}</span>
+              <br />
+              Noble USDC routes Noble → Osmosis on <span class="font-mono text-slate-300">{{ nobleToOsmosisChannel }}</span> then Osmosis → Retro on <span class="font-mono text-slate-300">{{ osmosisToRetroChannel }}</span>
             </p>
           </div>
           <span class="badge text-[10px]" :class="isMainnet ? 'border-emerald-400/60 text-emerald-200' : 'border-amber-400/60 text-amber-200'">
