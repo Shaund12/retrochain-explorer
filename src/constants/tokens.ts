@@ -85,6 +85,17 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     description: "Osmosis staking/gas token routed into RetroChain over IBC.",
     logo: "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/osmo.png"
   },
+  uosmo: {
+    denom: "uosmo",
+    symbol: "OSMO",
+    name: "Osmosis",
+    chain: "Osmosis (base denom)",
+    icon: "🪐",
+    decimals: 6,
+    accent: "violet",
+    description: "Base denom for Osmosis on its home chain.",
+    logo: "https://raw.githubusercontent.com/cosmos/chain-registry/master/osmosis/images/osmo.png"
+  },
   [DEFAULT_WBTC_IBC_DENOM_ON_RETRO.toLowerCase()]: {
     denom: DEFAULT_WBTC_IBC_DENOM_ON_RETRO,
     symbol: "WBTC",

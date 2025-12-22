@@ -207,14 +207,22 @@ const formatUsd = (value: number | null | undefined) => {
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const USD_PRICE_HINTS: Record<string, number | undefined> = {
+  USDC: 1,
+  OSMO: Number(import.meta.env.VITE_PRICE_OSMO_USD ?? "0") || 0.6,
+  ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? "0") || 10
+};
+
 const getUsdEstimate = (rawAmount: string | undefined | null, denom: string | undefined | null): number | null => {
   if (!rawAmount || !denom) return null;
   const meta = getTokenMeta(denom);
-  if (meta.symbol?.toUpperCase() !== "USDC") return null;
+  const symbol = meta.symbol?.toUpperCase();
+  const hint = symbol ? USD_PRICE_HINTS[symbol] : undefined;
+  if (!hint || hint <= 0) return null;
   const decimals = typeof meta.decimals === "number" ? meta.decimals : 6;
   const num = Number(rawAmount) / Math.pow(10, decimals);
   if (!Number.isFinite(num)) return null;
-  return num;
+  return num * hint;
 };
 
 const decodeBase64Json = (data?: string) => {
@@ -299,7 +307,8 @@ const transferEvents = computed(() => {
   const seen: Record<string, number> = {};
 
   transfers.forEach((tr) => {
-    const key = `${tr.meta?.symbol || tr.denom || "denom"}-${tr.amount || "amt"}-${tr.sender || "from"}-${tr.recipient || "to"}`;
+    const symbol = tr.meta?.symbol || tr.denom || "denom";
+    const key = `${symbol}-${tr.amount || "amt"}-${tr.recipient || "to"}`;
     const existingIdx = seen[key];
     if (existingIdx === undefined) {
       seen[key] = deduped.length;
@@ -307,7 +316,7 @@ const transferEvents = computed(() => {
       return;
     }
     const existing = deduped[existingIdx];
-    const preferNew = (!existing.meta?.logo && tr.meta?.logo) || (!existing.meta?.symbol && tr.meta?.symbol);
+    const preferNew = (!existing.meta?.logo && tr.meta?.logo) || (!existing.meta?.symbol && tr.meta?.symbol) || (!!tr.usd && !existing.usd);
     if (preferNew) {
       deduped[existingIdx] = tr;
     }
