@@ -83,6 +83,14 @@
 
       <!-- Wallet Connection -->
       <div class="flex items-center gap-3">
+        <button
+          class="hidden lg:inline-flex items-center gap-2 px-3 py-2 rounded-2xl text-[11px] border transition-all"
+          :class="festiveMode ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : 'border-indigo-400/60 text-slate-200 hover:text-white hover:border-indigo-300/80'"
+          @click="$emit('toggle-festive')"
+        >
+          <span>🎄</span>
+          <span>{{ festiveMode ? 'Festive On' : 'Festive Off' }}</span>
+        </button>
         <div class="hidden lg:block w-[260px]">
           <RcAddKeplrButton class="w-full" />
         </div>
@@ -191,6 +199,14 @@
           </div>
         </template>
         <div class="mt-3 px-4">
+          <button
+            class="w-full mb-2 inline-flex items-center justify-center gap-2 px-3 py-2 rounded-2xl text-[11px] border transition-all"
+            :class="festiveMode ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : 'border-indigo-400/60 text-slate-200 hover:text-white hover:border-indigo-300/80'"
+            @click="$emit('toggle-festive')"
+          >
+            <span>🎄</span>
+            <span>{{ festiveMode ? 'Festive On' : 'Festive Off' }}</span>
+          </button>
           <RcAddKeplrButton class="w-full inline-flex justify-center" />
         </div>
       </nav>
@@ -199,7 +215,7 @@
 </template>
 
 <script setup lang="ts">
-import { computed, ref, watch, onBeforeUnmount } from "vue";
+import { computed, ref, watch, onBeforeUnmount, defineProps, defineEmits } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useKeplr } from "@/composables/useKeplr";
 import { useAccount } from "@/composables/useAccount";
@@ -207,6 +223,9 @@ import { useNetwork } from "@/composables/useNetwork";
 import { formatAmount } from "@/utils/format";
 import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
 import { getTokenMeta } from "@/constants/tokens";
+
+const props = defineProps<{ festiveMode?: boolean }>();
+defineEmits(["toggle-festive"]);
 
 const route = useRoute();
 const router = useRouter();

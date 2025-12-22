@@ -41,6 +41,8 @@ onMounted(() => {
   </button>
   <RcMaintenanceBanner />
   <RcHeader />
+  <RcMaintenanceBanner />
+  <RcHeader :festive-mode="festiveMode" @toggle-festive="toggleFestive" />
   <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 relative z-10">
     <RouterView />
   </main>
