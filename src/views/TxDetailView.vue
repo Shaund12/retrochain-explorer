@@ -214,6 +214,18 @@ const transferEvents = computed(() => {
     meta?: ReturnType<typeof getTokenMeta>;
   }[] = [];
 
+  const pushTransfer = (amount: string, denom: string, sender?: string | null, recipient?: string | null) => {
+    const meta = getTokenMeta(denom);
+    transfers.push({
+      sender: sender || null,
+      recipient: recipient || null,
+      amount,
+      denom,
+      formatted: formatTokenAmount(amount, denom),
+      meta
+    });
+  };
+
   logs.forEach((log) => {
     const evs = Array.isArray(log?.events) ? log.events : [];
     evs.forEach((ev: any) => {
@@ -225,16 +237,34 @@ const transferEvents = computed(() => {
       }, {} as Record<string, string>);
       const parsed = parseAmountDenom(map.amount);
       if (!parsed) return;
-      const meta = getTokenMeta(parsed.denom);
-      transfers.push({
-        sender: map.sender || null,
-        recipient: map.recipient || map.receiver || null,
-        amount: parsed.amount,
-        denom: parsed.denom,
-        formatted: formatTokenAmount(parsed.amount, parsed.denom),
-        meta
-      });
+      pushTransfer(parsed.amount, parsed.denom, map.sender, map.recipient || map.receiver);
     });
+  });
+
+  const responseEvents = Array.isArray(txResponse.value?.events) ? txResponse.value?.events : [];
+  responseEvents.forEach((ev: any) => {
+    const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
+    const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
+      if (curr?.key) acc[curr.key] = curr.value;
+      return acc;
+    }, {} as Record<string, string>);
+
+    if (ev?.type === "transfer") {
+      const parsed = parseAmountDenom(map.amount);
+      if (parsed) pushTransfer(parsed.amount, parsed.denom, map.sender, map.recipient || map.receiver);
+      return;
+    }
+
+    if (ev?.type === "fungible_token_packet") {
+      const denom = map.denom;
+      const amt = map.amount;
+      if (denom && amt) {
+        pushTransfer(amt, denom, map.sender, map.receiver || map.recipient);
+        return;
+      }
+      const parsed = parseAmountDenom(map.amount);
+      if (parsed) pushTransfer(parsed.amount, parsed.denom, map.sender, map.receiver || map.recipient);
+    }
   });
 
   return transfers;
