@@ -35,6 +35,7 @@ const delegateValidator = ref<string>("");
 const delegateAmount = ref("");
 const undelegateValidator = ref<string>("");
 const undelegateAmount = ref("");
+const chosenUndelegateValidator = computed(() => undelegateValidator.value || myDelegations.value[0]?.validatorAddress || "");
 const txLoading = ref(false);
 const validatorSearch = ref("");
 const showInactive = ref(false);
@@ -283,7 +284,7 @@ const handleClaimRewards = async (validatorAddress?: string) => {
 };
 
 const handleUndelegate = async () => {
-  const chosenValidator = undelegateValidator.value || myDelegations.value[0]?.validatorAddress || "";
+  const chosenValidator = chosenUndelegateValidator.value;
   if (!chosenValidator) {
     toast.showError("Select a delegation first");
     return;
