@@ -13,6 +13,19 @@ import BtcStakeView from "@/views/BtcStakeView.vue";
 import BuyView from "@/views/BuyView.vue";
 import DexView from "@/views/DexView.vue";
 import TokenomicsView from "@/views/TokenomicsView.vue";
+import DocsTokenomicsView from "@/views/DocsTokenomicsView.vue";
+import DocsNetworkOverviewView from "@/views/DocsNetworkOverviewView.vue";
+import DocsStakingGuideView from "@/views/DocsStakingGuideView.vue";
+import DocsIbcGuideView from "@/views/DocsIbcGuideView.vue";
+import DocsAccountsView from "@/views/DocsAccountsView.vue";
+import DocsGovernanceView from "@/views/DocsGovernanceView.vue";
+import DocsModulesView from "@/views/DocsModulesView.vue";
+import DocsFeesAndGasView from "@/views/DocsFeesAndGasView.vue";
+import DocsSmartContractsView from "@/views/DocsSmartContractsView.vue";
+import DocsConsensusOpsView from "@/views/DocsConsensusOpsView.vue";
+import DocsIbcChannelsView from "@/views/DocsIbcChannelsView.vue";
+import DocsIbcPacketsView from "@/views/DocsIbcPacketsView.vue";
+import DocsIbcAssetRegistryView from "@/views/DocsIbcAssetRegistryView.vue";
 import TokensView from "@/views/TokensView.vue";
 import NftDetailView from "@/views/NftDetailView.vue";
 import ContractsView from "@/views/ContractsView.vue";
@@ -23,6 +36,7 @@ import LegalView from "@/views/LegalView.vue";
 import ChangelogView from "@/views/ChangelogView.vue";
 import EcosystemWalletsView from "@/views/EcosystemWalletsView.vue";
 import IbcView from "@/views/IbcView.vue";
+import DocsHubView from "@/views/DocsHubView.vue";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", name: "home", component: HomeView },
@@ -34,6 +48,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/accounts", name: "accounts", component: AccountsView },
   { path: "/accounts/ecosystem", name: "ecosystem-accounts", component: EcosystemWalletsView },
   { path: "/ibc", name: "ibc", component: IbcView },
+  { path: "/docs", name: "docs", component: DocsHubView },
   { path: "/validators", name: "validators", component: ValidatorsView },
   { path: "/governance", name: "governance", component: GovernanceView },
   { path: "/staking", name: "staking", component: StakingView },
@@ -43,6 +58,19 @@ const routes: RouteRecordRaw[] = [
   { path: "/tokens", name: "tokens", component: TokensView },
   { path: "/nft/:id", name: "nft-detail", component: NftDetailView, props: true },
   { path: "/tokenomics", name: "tokenomics", component: TokenomicsView },
+  { path: "/docs/tokenomics", name: "docs-tokenomics", component: DocsTokenomicsView },
+  { path: "/docs/network", name: "docs-network", component: DocsNetworkOverviewView },
+  { path: "/docs/staking", name: "docs-staking", component: DocsStakingGuideView },
+  { path: "/docs/ibc", name: "docs-ibc", component: DocsIbcGuideView },
+  { path: "/docs/accounts", name: "docs-accounts", component: DocsAccountsView },
+  { path: "/docs/governance", name: "docs-governance", component: DocsGovernanceView },
+  { path: "/docs/modules", name: "docs-modules", component: DocsModulesView },
+  { path: "/docs/fees", name: "docs-fees", component: DocsFeesAndGasView },
+  { path: "/docs/contracts", name: "docs-contracts", component: DocsSmartContractsView },
+  { path: "/docs/consensus", name: "docs-consensus", component: DocsConsensusOpsView },
+  { path: "/docs/ibc-channels", name: "docs-ibc-channels", component: DocsIbcChannelsView },
+  { path: "/docs/ibc-packets", name: "docs-ibc-packets", component: DocsIbcPacketsView },
+  { path: "/docs/ibc-assets", name: "docs-ibc-assets", component: DocsIbcAssetRegistryView },
   { path: "/contracts", name: "contracts", component: ContractsView },
   { path: "/contracts/:address", name: "contract-detail", component: ContractDetailView, props: true },
   { path: "/changelog", name: "changelog", component: ChangelogView },

@@ -160,7 +160,9 @@
         if (!address.value) return;
 
         const run = async () => {
-            await Promise.all([fetchAll(address.value), loadAccount(address.value), fetchNetworkStats()]);
+            const addr = address.value;
+            if (!addr) return;
+            await Promise.all([fetchAll(addr), loadAccount(addr), fetchNetworkStats()]);
         };
 
         await run();
