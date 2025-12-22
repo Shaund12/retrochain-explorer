@@ -283,13 +283,8 @@ const handleClaimRewards = async (validatorAddress?: string) => {
 };
 
 const handleUndelegate = async () => {
-  if (!undelegateValidator.value) {
-    const first = myDelegations.value[0];
-    if (first?.validatorAddress) {
-      undelegateValidator.value = first.validatorAddress;
-    }
-  }
-  if (!undelegateValidator.value) {
+  const chosenValidator = undelegateValidator.value || myDelegations.value[0]?.validatorAddress || "";
+  if (!chosenValidator) {
     toast.showError("Select a delegation first");
     return;
   }
@@ -308,7 +303,7 @@ const handleUndelegate = async () => {
       typeUrl: "/cosmos.staking.v1beta1.MsgUndelegate",
       value: {
         delegatorAddress: address.value,
-        validatorAddress: undelegateValidator.value,
+        validatorAddress: chosenValidator,
         amount: {
           denom: tokenDenom.value,
           amount: amountBase
