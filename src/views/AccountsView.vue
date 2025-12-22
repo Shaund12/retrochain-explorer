@@ -7,9 +7,29 @@ import { formatAmount } from '@/utils/format';
 import { useNetwork } from '@/composables/useNetwork';
 import { getAccountLabel, type AccountLabelMeta } from '@/constants/accountLabels';
 
+const USD_PRICE_HINTS: Record<string, number | undefined> = {
+  RETRO: Number(import.meta.env.VITE_PRICE_RETRO_USD ?? '0') || 0,
+  USDC: 1,
+  OSMO: Number(import.meta.env.VITE_PRICE_OSMO_USD ?? '0') || 0.6,
+  ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? '0') || 10,
+  WBTC: Number(import.meta.env.VITE_PRICE_WBTC_USD ?? '0') || 40000
+};
+
+const formatUsd = (value: number | null | undefined) => {
+  if (value === null || value === undefined || Number.isNaN(value)) return null;
+  return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
+};
+
 const { accounts, loading, error, totalAccounts, fetchAccounts } = useAccounts();
 const router = useRouter();
 const { current: network } = useNetwork();
+
+const priceOverrides = ref<Record<string, number>>({});
+const priceLookup = computed(() => ({ ...USD_PRICE_HINTS, ...priceOverrides.value }));
+const retroPrice = computed(() => {
+  const val = priceLookup.value.RETRO;
+  return val && val > 0 ? val : null;
+});
 
 const searchQuery = ref('');
 const sortBy = ref<'balance' | 'address'>('balance');
@@ -25,6 +45,8 @@ const labeledAccounts = computed<LabeledWallet[]>(() =>
     knownLabel: getAccountLabel(acc.address)
   }))
 );
+
+const knownAccounts = computed(() => labeledAccounts.value.filter((acc) => !!acc.knownLabel));
 
 const communityAccounts = computed(() =>
   labeledAccounts.value.filter(acc => !acc.knownLabel)
@@ -51,6 +73,24 @@ const filteredCommunityAccounts = computed(() => {
   return filtered;
 });
 
+const accountUsd = (acc: WalletSummary) => {
+  if (!retroPrice.value) return null;
+  const micro = Number(acc.balance || 0);
+  if (!Number.isFinite(micro)) return null;
+  return (micro / 1_000_000) * retroPrice.value;
+};
+
+const totalBalanceUsd = computed(() => {
+  if (!retroPrice.value) return null;
+  const usd = accounts.value
+    .map((a) => accountUsd(a))
+    .filter((v): v is number => typeof v === 'number' && Number.isFinite(v));
+  if (!usd.length) return null;
+  return usd.reduce((a, b) => a + b, 0);
+});
+
+const topHolders = computed(() => filteredCommunityAccounts.value.slice(0, 5));
+
 const totalBalance = computed(() => {
   return accounts.value.reduce((sum, acc) => sum + parseInt(acc.balance || '0'), 0);
 });
@@ -72,7 +112,32 @@ const copy = async (text: string) => {
 
 onMounted(() => {
   fetchAccounts(100);
+  fetchLivePrices();
 });
+
+const fetchLivePrices = async () => {
+  try {
+    const res = await fetch(
+      'https://api.coingecko.com/api/v3/simple/price?ids=retro,usd-coin,osmosis,cosmos,wrapped-bitcoin&vs_currencies=usd',
+      { cache: 'no-store' }
+    );
+    const data = await res.json();
+    const overrides: Record<string, number> = {};
+    const retro = Number(data?.retro?.usd);
+    if (Number.isFinite(retro) && retro > 0) overrides.RETRO = retro;
+    const usdc = Number(data?.['usd-coin']?.usd);
+    if (Number.isFinite(usdc) && usdc > 0) overrides.USDC = usdc;
+    const osmo = Number(data?.osmosis?.usd);
+    if (Number.isFinite(osmo) && osmo > 0) overrides.OSMO = osmo;
+    const atom = Number(data?.cosmos?.usd);
+    if (Number.isFinite(atom) && atom > 0) overrides.ATOM = atom;
+    const wbtc = Number(data?.['wrapped-bitcoin']?.usd);
+    if (Number.isFinite(wbtc) && wbtc > 0) overrides.WBTC = wbtc;
+    priceOverrides.value = overrides;
+  } catch (err) {
+    console.warn('Failed to fetch live prices', err);
+  }
+};
 </script>
 
 <template>
@@ -130,6 +195,7 @@ onMounted(() => {
         <div class="text-2xl font-bold text-emerald-400">
           {{ formatAmount(totalBalance.toString(), 'uretro', { minDecimals: 2, maxDecimals: 2 }) }}
         </div>
+        <div class="text-xs text-emerald-300" v-if="totalBalanceUsd !== null">≈ {{ formatUsd(totalBalanceUsd) }}</div>
         <div class="text-xs text-slate-500">Across all accounts</div>
       </div>
       
@@ -137,6 +203,62 @@ onMounted(() => {
         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Chain Total</div>
         <div class="text-2xl font-bold text-indigo-400">{{ totalAccounts || accounts.length }}</div>
         <div class="text-xs text-slate-500">Reported by auth module</div>
+      </div>
+    </div>
+
+    <!-- Featured / Top Holders -->
+    <div class="grid grid-cols-1 lg:grid-cols-2 gap-3">
+      <div class="card" v-if="knownAccounts.length">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-semibold text-slate-100">Featured Accounts</h2>
+          <span class="text-[11px] text-slate-500">From curated labels</span>
+        </div>
+        <div class="grid gap-2 sm:grid-cols-2">
+          <div
+            v-for="acc in knownAccounts.slice(0, 4)"
+            :key="acc.address"
+            class="p-3 rounded-xl bg-slate-900/60 border border-amber-400/30"
+          >
+            <div class="flex items-center gap-2 text-xs">
+              <span class="text-xl">{{ acc.knownLabel?.icon }}</span>
+              <div>
+                <div class="font-semibold text-amber-100">{{ acc.knownLabel?.label }}</div>
+                <div class="text-[10px] text-slate-500">{{ acc.address.slice(0, 10) }}...{{ acc.address.slice(-6) }}</div>
+              </div>
+            </div>
+            <div class="mt-2 text-[11px] text-slate-300">{{ acc.knownLabel?.description }}</div>
+            <div class="mt-2 text-sm font-mono text-emerald-200">
+              {{ formatAmount(acc.balance, acc.denom, { minDecimals: 2, maxDecimals: 2 }) }}
+              <span v-if="accountUsd(acc) !== null" class="text-[11px] text-emerald-300 ml-1">(≈ {{ formatUsd(accountUsd(acc)) }})</span>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-semibold text-slate-100">Top Holders</h2>
+          <span class="text-[11px] text-slate-500">Based on loaded set</span>
+        </div>
+        <div v-if="topHolders.length === 0" class="text-xs text-slate-400">No accounts loaded.</div>
+        <div v-else class="space-y-2">
+          <div
+            v-for="(acc, idx) in topHolders"
+            :key="acc.address"
+            class="p-3 rounded-lg bg-slate-900/60 border border-slate-800 flex items-center justify-between"
+          >
+            <div class="flex items-center gap-2">
+              <span class="text-lg">{{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : idx === 2 ? '🥉' : '⭐' }}</span>
+              <div class="text-xs font-mono text-slate-200">{{ acc.address.slice(0, 12) }}...{{ acc.address.slice(-8) }}</div>
+            </div>
+            <div class="text-right text-xs">
+              <div class="font-mono text-emerald-200">
+                {{ formatAmount(acc.balance, acc.denom, { minDecimals: 2, maxDecimals: 2 }) }}
+              </div>
+              <div v-if="accountUsd(acc) !== null" class="text-[11px] text-emerald-300">≈ {{ formatUsd(accountUsd(acc)) }}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -193,6 +315,7 @@ onMounted(() => {
               <th>Rank</th>
               <th>Address</th>
               <th class="text-right">Balance</th>
+              <th class="text-right">USD</th>
               <th>Actions</th>
             </tr>
           </thead>
