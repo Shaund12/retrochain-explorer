@@ -163,7 +163,6 @@ onMounted(async () => {
         </div>
         <div class="flex items-center gap-2">
           <button class="btn text-xs" :disabled="loading" @click="refresh">
-" : "Refresh" }}
             {{ loading ? "Refreshing…" : "Refresh" }}
           </button>
         </div>
@@ -201,8 +200,6 @@ onMounted(async () => {
       <div v-if="error" class="mb-3 text-xs text-rose-300">
         {{ error }}
       </div>
-
-</div>
       <div v-if="loading" class="text-xs text-slate-400">Loading contracts…</div>
       <div v-else-if="filteredContracts.length === 0" class="text-xs text-slate-400">
         No contracts match the current filters.
