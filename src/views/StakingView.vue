@@ -110,11 +110,6 @@ const selectedUndelegateBalance = computed(() => {
   return entry?.amount ?? 0;
 });
 
-const canUndelegate = computed(() => {
-  const amt = Number(undelegateAmount.value || 0);
-  return !!undelegateValidator.value && amt > 0 && !txLoading.value;
-});
-
 const setMaxUndelegateAmount = () => {
   if (!selectedUndelegateBalance.value) return;
   undelegateAmount.value = (selectedUndelegateBalance.value / 1_000_000).toFixed(6);
@@ -280,7 +275,14 @@ const handleClaimRewards = async (validatorAddress?: string) => {
 };
 
 const handleUndelegate = async () => {
-  if (!undelegateValidator.value || !undelegateAmount.value) return;
+  if (!undelegateValidator.value) {
+    toast.showError("Select a delegation first");
+    return;
+  }
+  if (!undelegateAmount.value || Number(undelegateAmount.value) <= 0) {
+    toast.showError("Enter an amount to undelegate");
+    return;
+  }
   if (!address.value) return;
   
   txLoading.value = true;
@@ -708,7 +710,7 @@ const copy = async (text: string) => {
         <button 
           class="btn btn-primary w-full"
           @click="handleUndelegate"
-          :disabled="!canUndelegate"
+          :disabled="txLoading"
         >
           {{ txLoading ? 'Processing...' : 'Undelegate' }}
         </button>
