@@ -1,0 +1,1491 @@
+swagger: '2.0'
+info:
+  title: RetroChain LCD (Cosmos SDK) API
+  version: 0.1.0
+  description: 'Minimal OpenAPI 3.0 spec used by the explorer Swagger UI.
+
+
+    Base URL is routed through the explorer proxy.
+
+    '
+basePath: /api
+schemes:
+- https
+- http
+consumes:
+- application/json
+produces:
+- application/json
+paths:
+  /cosmos/bank/v1beta1/balances/{address}:
+    get:
+      summary: AllBalances queries the balance of all coins for a single account.
+      description: 'When called from another module, this query might consume a high amount of
+
+        gas if the pagination field is incorrectly set.'
+      operationId: AllBalances
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              balances:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    denom:
+                      type: string
+                    amount:
+                      type: string
+                  description: 'Coin defines a token with a denomination and an amount.
+
+
+                    NOTE: The amount field is an Int which implements the custom method
+
+                    signatures required by gogoproto.'
+                description: balances is the balances of all the coins.
+              pagination:
+                description: pagination defines the pagination in the response.
+                type: object
+                properties:
+                  next_key:
+                    type: string
+                    format: byte
+                    description: 'next_key is the key to be passed to PageRequest.key to
+
+                      query the next page most efficiently. It will be empty if
+
+                      there are no more results.'
+                  total:
+                    type: string
+                    format: uint64
+                    title: 'total is total number of results available if PageRequest.count_total
+
+                      was set, its value is undefined otherwise'
+            description: 'QueryAllBalancesResponse is the response type for the Query/AllBalances RPC
+
+              method.'
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+      - name: address
+        description: address is the address to query balances for.
+        in: path
+        required: true
+        type: string
+      - name: pagination.key
+        description: 'key is a value returned in PageResponse.next_key to begin
+
+          querying the next page most efficiently. Only one of offset or key
+
+          should be set.'
+        in: query
+        required: false
+        type: string
+        format: byte
+      - name: pagination.offset
+        description: 'offset is a numeric offset that can be used when key is unavailable.
+
+          It is less efficient than using key. Only one of offset or key should
+
+          be set.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.limit
+        description: 'limit is the total number of results to be returned in the result page.
+
+          If left empty it will default to a value to be set by each app.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.count_total
+        description: 'count_total is set to true  to indicate that the result set should include
+
+          a count of the total number of items available for pagination in UIs.
+
+          count_total is only respected when offset is used. It is ignored when key
+
+          is set.'
+        in: query
+        required: false
+        type: boolean
+      - name: pagination.reverse
+        description: 'reverse is set to true if results are to be returned in the descending order.
+
+
+          Since: cosmos-sdk 0.43'
+        in: query
+        required: false
+        type: boolean
+      - name: resolve_denom
+        description: 'resolve_denom is the flag to resolve the denom into a human-readable form from the metadata.
+
+
+          Since: cosmos-sdk 0.50'
+        in: query
+        required: false
+        type: boolean
+      tags:
+      - Query
+  /cosmos/bank/v1beta1/balances/{address}/by_denom:
+    get:
+      summary: Balance queries the balance of a single coin for a single account.
+      operationId: Balance
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              balance:
+                type: object
+                properties:
+                  denom:
+                    type: string
+                  amount:
+                    type: string
+                description: 'Coin defines a token with a denomination and an amount.
+
+
+                  NOTE: The amount field is an Int which implements the custom method
+
+                  signatures required by gogoproto.'
+            description: QueryBalanceResponse is the response type for the Query/Balance RPC method.
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+      - name: address
+        description: address is the address to query balances for.
+        in: path
+        required: true
+        type: string
+      - name: denom
+        description: denom is the coin denom to query balances for.
+        in: query
+        required: false
+        type: string
+      tags:
+      - Query
+  /cosmos/bank/v1beta1/denom_owners/{denom}:
+    get:
+      summary: 'DenomOwners queries for all account addresses that own a particular token
+
+        denomination.'
+      description: 'When called from another module, this query might consume a high amount of
+
+        gas if the pagination field is incorrectly set.
+
+
+        Since: cosmos-sdk 0.46'
+      operationId: DenomOwners
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              denom_owners:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                      description: address defines the address that owns a particular denomination.
+                    balance:
+                      type: object
+                      properties:
+                        denom:
+                          type: string
+                        amount:
+                          type: string
+                      description: 'Coin defines a token with a denomination and an amount.
+
+
+                        NOTE: The amount field is an Int which implements the custom method
+
+                        signatures required by gogoproto.'
+                  description: 'DenomOwner defines structure representing an account that owns or holds a
+
+                    particular denominated token. It contains the account address and account
+
+                    balance of the denominated token.
+
+
+                    Since: cosmos-sdk 0.46'
+              pagination:
+                description: pagination defines the pagination in the response.
+                type: object
+                properties:
+                  next_key:
+                    type: string
+                    format: byte
+                    description: 'next_key is the key to be passed to PageRequest.key to
+
+                      query the next page most efficiently. It will be empty if
+
+                      there are no more results.'
+                  total:
+                    type: string
+                    format: uint64
+                    title: 'total is total number of results available if PageRequest.count_total
+
+                      was set, its value is undefined otherwise'
+            description: 'QueryDenomOwnersResponse defines the RPC response of a DenomOwners RPC query.
+
+
+              Since: cosmos-sdk 0.46'
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+      - name: denom
+        description: denom defines the coin denomination to query all account holders for.
+        in: path
+        required: true
+        type: string
+      - name: pagination.key
+        description: 'key is a value returned in PageResponse.next_key to begin
+
+          querying the next page most efficiently. Only one of offset or key
+
+          should be set.'
+        in: query
+        required: false
+        type: string
+        format: byte
+      - name: pagination.offset
+        description: 'offset is a numeric offset that can be used when key is unavailable.
+
+          It is less efficient than using key. Only one of offset or key should
+
+          be set.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.limit
+        description: 'limit is the total number of results to be returned in the result page.
+
+          If left empty it will default to a value to be set by each app.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.count_total
+        description: 'count_total is set to true  to indicate that the result set should include
+
+          a count of the total number of items available for pagination in UIs.
+
+          count_total is only respected when offset is used. It is ignored when key
+
+          is set.'
+        in: query
+        required: false
+        type: boolean
+      - name: pagination.reverse
+        description: 'reverse is set to true if results are to be returned in the descending order.
+
+
+          Since: cosmos-sdk 0.43'
+        in: query
+        required: false
+        type: boolean
+      tags:
+      - Query
+  /cosmos/bank/v1beta1/denom_owners_by_query:
+    get:
+      summary: 'DenomOwnersByQuery queries for all account addresses that own a particular token
+
+        denomination.'
+      description: 'Since: cosmos-sdk 0.50.3'
+      operationId: DenomOwnersByQuery
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              denom_owners:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    address:
+                      type: string
+                      description: address defines the address that owns a particular denomination.
+                    balance:
+                      type: object
+                      properties:
+                        denom:
+                          type: string
+                        amount:
+                          type: string
+                      description: 'Coin defines a token with a denomination and an amount.
+
+
+                        NOTE: The amount field is an Int which implements the custom method
+
+                        signatures required by gogoproto.'
+                  description: 'DenomOwner defines structure representing an account that owns or holds a
+
+                    particular denominated token. It contains the account address and account
+
+                    balance of the denominated token.
+
+
+                    Since: cosmos-sdk 0.46'
+              pagination:
+                description: pagination defines the pagination in the response.
+                type: object
+                properties:
+                  next_key:
+                    type: string
+                    format: byte
+                    description: 'next_key is the key to be passed to PageRequest.key to
+
+                      query the next page most efficiently. It will be empty if
+
+                      there are no more results.'
+                  total:
+                    type: string
+                    format: uint64
+                    title: 'total is total number of results available if PageRequest.count_total
+
+                      was set, its value is undefined otherwise'
+            description: 'QueryDenomOwnersByQueryResponse defines the RPC response of a DenomOwnersByQuery RPC query.
+
+
+              Since: cosmos-sdk 0.50.3'
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+      - name: denom
+        description: denom defines the coin denomination to query all account holders for.
+        in: query
+        required: false
+        type: string
+      - name: pagination.key
+        description: 'key is a value returned in PageResponse.next_key to begin
+
+          querying the next page most efficiently. Only one of offset or key
+
+          should be set.'
+        in: query
+        required: false
+        type: string
+        format: byte
+      - name: pagination.offset
+        description: 'offset is a numeric offset that can be used when key is unavailable.
+
+          It is less efficient than using key. Only one of offset or key should
+
+          be set.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.limit
+        description: 'limit is the total number of results to be returned in the result page.
+
+          If left empty it will default to a value to be set by each app.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.count_total
+        description: 'count_total is set to true  to indicate that the result set should include
+
+          a count of the total number of items available for pagination in UIs.
+
+          count_total is only respected when offset is used. It is ignored when key
+
+          is set.'
+        in: query
+        required: false
+        type: boolean
+      - name: pagination.reverse
+        description: 'reverse is set to true if results are to be returned in the descending order.
+
+
+          Since: cosmos-sdk 0.43'
+        in: query
+        required: false
+        type: boolean
+      tags:
+      - Query
+  /cosmos/bank/v1beta1/denoms_metadata:
+    get:
+      summary: 'DenomsMetadata queries the client metadata for all registered coin
+
+        denominations.'
+      operationId: DenomsMetadata
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              metadatas:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    description:
+                      type: string
+                    denom_units:
+                      type: array
+                      items:
+                        type: object
+                        properties:
+                          denom:
+                            type: string
+                            description: denom represents the string name of the given denom unit (e.g uatom).
+                          exponent:
+                            type: integer
+                            format: int64
+                            description: 'exponent represents power of 10 exponent that one must
+
+                              raise the base_denom to in order to equal the given DenomUnit''s denom
+
+                              1 denom = 10^exponent base_denom
+
+                              (e.g. with a base_denom of uatom, one can create a DenomUnit of ''atom'' with
+
+                              exponent = 6, thus: 1 atom = 10^6 uatom).'
+                          aliases:
+                            type: array
+                            items:
+                              type: string
+                            title: aliases is a list of string aliases for the given denom
+                        description: 'DenomUnit represents a struct that describes a given
+
+                          denomination unit of the basic token.'
+                      title: denom_units represents the list of DenomUnit's for a given coin
+                    base:
+                      type: string
+                      description: base represents the base denom (should be the DenomUnit with exponent = 0).
+                    display:
+                      type: string
+                      description: 'display indicates the suggested denom that should be
+
+                        displayed in clients.'
+                    name:
+                      type: string
+                      description: 'Since: cosmos-sdk 0.43'
+                      title: 'name defines the name of the token (eg: Cosmos Atom)'
+                    symbol:
+                      type: string
+                      description: 'symbol is the token symbol usually shown on exchanges (eg: ATOM). This can
+
+                        be the same as the display.
+
+
+                        Since: cosmos-sdk 0.43'
+                    uri:
+                      type: string
+                      description: 'URI to a document (on or off-chain) that contains additional information. Optional.
+
+
+                        Since: cosmos-sdk 0.46'
+                    uri_hash:
+                      type: string
+                      description: 'URIHash is a sha256 hash of a document pointed by URI. It''s used to verify that
+
+                        the document didn''t change. Optional.
+
+
+                        Since: cosmos-sdk 0.46'
+                  description: 'Metadata represents a struct that describes
+
+                    a basic token.'
+                description: metadata provides the client information for all the registered tokens.
+              pagination:
+                description: pagination defines the pagination in the response.
+                type: object
+                properties:
+                  next_key:
+                    type: string
+                    format: byte
+                    description: 'next_key is the key to be passed to PageRequest.key to
+
+                      query the next page most efficiently. It will be empty if
+
+                      there are no more results.'
+                  total:
+                    type: string
+                    format: uint64
+                    title: 'total is total number of results available if PageRequest.count_total
+
+                      was set, its value is undefined otherwise'
+            description: 'QueryDenomsMetadataResponse is the response type for the Query/DenomsMetadata RPC
+
+              method.'
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+      - name: pagination.key
+        description: 'key is a value returned in PageResponse.next_key to begin
+
+          querying the next page most efficiently. Only one of offset or key
+
+          should be set.'
+        in: query
+        required: false
+        type: string
+        format: byte
+      - name: pagination.offset
+        description: 'offset is a numeric offset that can be used when key is unavailable.
+
+          It is less efficient than using key. Only one of offset or key should
+
+          be set.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.limit
+        description: 'limit is the total number of results to be returned in the result page.
+
+          If left empty it will default to a value to be set by each app.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.count_total
+        description: 'count_total is set to true  to indicate that the result set should include
+
+          a count of the total number of items available for pagination in UIs.
+
+          count_total is only respected when offset is used. It is ignored when key
+
+          is set.'
+        in: query
+        required: false
+        type: boolean
+      - name: pagination.reverse
+        description: 'reverse is set to true if results are to be returned in the descending order.
+
+
+          Since: cosmos-sdk 0.43'
+        in: query
+        required: false
+        type: boolean
+      tags:
+      - Query
+  /cosmos/bank/v1beta1/denoms_metadata/{denom}:
+    get:
+      summary: DenomMetadata queries the client metadata of a given coin denomination.
+      operationId: DenomMetadata
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              metadata:
+                type: object
+                properties:
+                  description:
+                    type: string
+                  denom_units:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        denom:
+                          type: string
+                          description: denom represents the string name of the given denom unit (e.g uatom).
+                        exponent:
+                          type: integer
+                          format: int64
+                          description: 'exponent represents power of 10 exponent that one must
+
+                            raise the base_denom to in order to equal the given DenomUnit''s denom
+
+                            1 denom = 10^exponent base_denom
+
+                            (e.g. with a base_denom of uatom, one can create a DenomUnit of ''atom'' with
+
+                            exponent = 6, thus: 1 atom = 10^6 uatom).'
+                        aliases:
+                          type: array
+                          items:
+                            type: string
+                          title: aliases is a list of string aliases for the given denom
+                      description: 'DenomUnit represents a struct that describes a given
+
+                        denomination unit of the basic token.'
+                    title: denom_units represents the list of DenomUnit's for a given coin
+                  base:
+                    type: string
+                    description: base represents the base denom (should be the DenomUnit with exponent = 0).
+                  display:
+                    type: string
+                    description: 'display indicates the suggested denom that should be
+
+                      displayed in clients.'
+                  name:
+                    type: string
+                    description: 'Since: cosmos-sdk 0.43'
+                    title: 'name defines the name of the token (eg: Cosmos Atom)'
+                  symbol:
+                    type: string
+                    description: 'symbol is the token symbol usually shown on exchanges (eg: ATOM). This can
+
+                      be the same as the display.
+
+
+                      Since: cosmos-sdk 0.43'
+                  uri:
+                    type: string
+                    description: 'URI to a document (on or off-chain) that contains additional information. Optional.
+
+
+                      Since: cosmos-sdk 0.46'
+                  uri_hash:
+                    type: string
+                    description: 'URIHash is a sha256 hash of a document pointed by URI. It''s used to verify that
+
+                      the document didn''t change. Optional.
+
+
+                      Since: cosmos-sdk 0.46'
+                description: 'Metadata represents a struct that describes
+
+                  a basic token.'
+            description: 'QueryDenomMetadataResponse is the response type for the Query/DenomMetadata RPC
+
+              method.'
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+      - name: denom
+        description: denom is the coin denom to query the metadata for.
+        in: path
+        required: true
+        type: string
+      tags:
+      - Query
+  /cosmos/bank/v1beta1/denoms_metadata_by_query_string:
+    get:
+      summary: DenomMetadataByQueryString queries the client metadata of a given coin denomination.
+      operationId: DenomMetadataByQueryString
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              metadata:
+                type: object
+                properties:
+                  description:
+                    type: string
+                  denom_units:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        denom:
+                          type: string
+                          description: denom represents the string name of the given denom unit (e.g uatom).
+                        exponent:
+                          type: integer
+                          format: int64
+                          description: 'exponent represents power of 10 exponent that one must
+
+                            raise the base_denom to in order to equal the given DenomUnit''s denom
+
+                            1 denom = 10^exponent base_denom
+
+                            (e.g. with a base_denom of uatom, one can create a DenomUnit of ''atom'' with
+
+                            exponent = 6, thus: 1 atom = 10^6 uatom).'
+                        aliases:
+                          type: array
+                          items:
+                            type: string
+                          title: aliases is a list of string aliases for the given denom
+                      description: 'DenomUnit represents a struct that describes a given
+
+                        denomination unit of the basic token.'
+                    title: denom_units represents the list of DenomUnit's for a given coin
+                  base:
+                    type: string
+                    description: base represents the base denom (should be the DenomUnit with exponent = 0).
+                  display:
+                    type: string
+                    description: 'display indicates the suggested denom that should be
+
+                      displayed in clients.'
+                  name:
+                    type: string
+                    description: 'Since: cosmos-sdk 0.43'
+                    title: 'name defines the name of the token (eg: Cosmos Atom)'
+                  symbol:
+                    type: string
+                    description: 'symbol is the token symbol usually shown on exchanges (eg: ATOM). This can
+
+                      be the same as the display.
+
+
+                      Since: cosmos-sdk 0.43'
+                  uri:
+                    type: string
+                    description: 'URI to a document (on or off-chain) that contains additional information. Optional.
+
+
+                      Since: cosmos-sdk 0.46'
+                  uri_hash:
+                    type: string
+                    description: 'URIHash is a sha256 hash of a document pointed by URI. It''s used to verify that
+
+                      the document didn''t change. Optional.
+
+
+                      Since: cosmos-sdk 0.46'
+                description: 'Metadata represents a struct that describes
+
+                  a basic token.'
+            description: 'QueryDenomMetadataByQueryStringResponse is the response type for the Query/DenomMetadata RPC
+
+              method. Identical with QueryDenomMetadataResponse but receives denom as query string in request.'
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+      - name: denom
+        description: denom is the coin denom to query the metadata for.
+        in: query
+        required: false
+        type: string
+      tags:
+      - Query
+  /cosmos/bank/v1beta1/params:
+    get:
+      summary: Params queries the parameters of x/bank module.
+      operationId: BankParams
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              params:
+                description: params provides the parameters of the bank module.
+                type: object
+                properties:
+                  send_enabled:
+                    type: array
+                    items:
+                      type: object
+                      properties:
+                        denom:
+                          type: string
+                        enabled:
+                          type: boolean
+                      description: 'SendEnabled maps coin denom to a send_enabled status (whether a denom is
+
+                        sendable).'
+                    description: 'Deprecated: Use of SendEnabled in params is deprecated.
+
+                      For genesis, use the newly added send_enabled field in the genesis object.
+
+                      Storage, lookup, and manipulation of this information is now in the keeper.
+
+
+                      As of cosmos-sdk 0.47, this only exists for backwards compatibility of genesis files.'
+                  default_send_enabled:
+                    type: boolean
+            description: QueryParamsResponse defines the response type for querying x/bank parameters.
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      tags:
+      - Query
+  /cosmos/bank/v1beta1/send_enabled:
+    get:
+      summary: SendEnabled queries for SendEnabled entries.
+      description: 'This query only returns denominations that have specific SendEnabled settings.
+
+        Any denomination that does not have a specific setting will use the default
+
+        params.default_send_enabled, and will not be returned by this query.
+
+
+        Since: cosmos-sdk 0.47'
+      operationId: SendEnabled
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              send_enabled:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    denom:
+                      type: string
+                    enabled:
+                      type: boolean
+                  description: 'SendEnabled maps coin denom to a send_enabled status (whether a denom is
+
+                    sendable).'
+              pagination:
+                description: 'pagination defines the pagination in the response. This field is only
+
+                  populated if the denoms field in the request is empty.'
+                type: object
+                properties:
+                  next_key:
+                    type: string
+                    format: byte
+                    description: 'next_key is the key to be passed to PageRequest.key to
+
+                      query the next page most efficiently. It will be empty if
+
+                      there are no more results.'
+                  total:
+                    type: string
+                    format: uint64
+                    title: 'total is total number of results available if PageRequest.count_total
+
+                      was set, its value is undefined otherwise'
+            description: 'QuerySendEnabledResponse defines the RPC response of a SendEnable query.
+
+
+              Since: cosmos-sdk 0.47'
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+      - name: denoms
+        description: denoms is the specific denoms you want look up. Leave empty to get all entries.
+        in: query
+        required: false
+        type: array
+        items:
+          type: string
+        collectionFormat: multi
+      - name: pagination.key
+        description: 'key is a value returned in PageResponse.next_key to begin
+
+          querying the next page most efficiently. Only one of offset or key
+
+          should be set.'
+        in: query
+        required: false
+        type: string
+        format: byte
+      - name: pagination.offset
+        description: 'offset is a numeric offset that can be used when key is unavailable.
+
+          It is less efficient than using key. Only one of offset or key should
+
+          be set.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.limit
+        description: 'limit is the total number of results to be returned in the result page.
+
+          If left empty it will default to a value to be set by each app.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.count_total
+        description: 'count_total is set to true  to indicate that the result set should include
+
+          a count of the total number of items available for pagination in UIs.
+
+          count_total is only respected when offset is used. It is ignored when key
+
+          is set.'
+        in: query
+        required: false
+        type: boolean
+      - name: pagination.reverse
+        description: 'reverse is set to true if results are to be returned in the descending order.
+
+
+          Since: cosmos-sdk 0.43'
+        in: query
+        required: false
+        type: boolean
+      tags:
+      - Query
+  /cosmos/bank/v1beta1/spendable_balances/{address}:
+    get:
+      summary: 'SpendableBalances queries the spendable balance of all coins for a single
+
+        account.'
+      description: 'When called from another module, this query might consume a high amount of
+
+        gas if the pagination field is incorrectly set.
+
+
+        Since: cosmos-sdk 0.46'
+      operationId: SpendableBalances
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              balances:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    denom:
+                      type: string
+                    amount:
+                      type: string
+                  description: 'Coin defines a token with a denomination and an amount.
+
+
+                    NOTE: The amount field is an Int which implements the custom method
+
+                    signatures required by gogoproto.'
+                description: balances is the spendable balances of all the coins.
+              pagination:
+                description: pagination defines the pagination in the response.
+                type: object
+                properties:
+                  next_key:
+                    type: string
+                    format: byte
+                    description: 'next_key is the key to be passed to PageRequest.key to
+
+                      query the next page most efficiently. It will be empty if
+
+                      there are no more results.'
+                  total:
+                    type: string
+                    format: uint64
+                    title: 'total is total number of results available if PageRequest.count_total
+
+                      was set, its value is undefined otherwise'
+            description: 'QuerySpendableBalancesResponse defines the gRPC response structure for querying
+
+              an account''s spendable balances.
+
+
+              Since: cosmos-sdk 0.46'
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+      - name: address
+        description: address is the address to query spendable balances for.
+        in: path
+        required: true
+        type: string
+      - name: pagination.key
+        description: 'key is a value returned in PageResponse.next_key to begin
+
+          querying the next page most efficiently. Only one of offset or key
+
+          should be set.'
+        in: query
+        required: false
+        type: string
+        format: byte
+      - name: pagination.offset
+        description: 'offset is a numeric offset that can be used when key is unavailable.
+
+          It is less efficient than using key. Only one of offset or key should
+
+          be set.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.limit
+        description: 'limit is the total number of results to be returned in the result page.
+
+          If left empty it will default to a value to be set by each app.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.count_total
+        description: 'count_total is set to true  to indicate that the result set should include
+
+          a count of the total number of items available for pagination in UIs.
+
+          count_total is only respected when offset is used. It is ignored when key
+
+          is set.'
+        in: query
+        required: false
+        type: boolean
+      - name: pagination.reverse
+        description: 'reverse is set to true if results are to be returned in the descending order.
+
+
+          Since: cosmos-sdk 0.43'
+        in: query
+        required: false
+        type: boolean
+      tags:
+      - Query
+  /cosmos/bank/v1beta1/spendable_balances/{address}/by_denom:
+    get:
+      summary: 'SpendableBalanceByDenom queries the spendable balance of a single denom for
+
+        a single account.'
+      description: 'When called from another module, this query might consume a high amount of
+
+        gas if the pagination field is incorrectly set.
+
+
+        Since: cosmos-sdk 0.47'
+      operationId: SpendableBalanceByDenom
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              balance:
+                type: object
+                properties:
+                  denom:
+                    type: string
+                  amount:
+                    type: string
+                description: 'Coin defines a token with a denomination and an amount.
+
+
+                  NOTE: The amount field is an Int which implements the custom method
+
+                  signatures required by gogoproto.'
+            description: 'QuerySpendableBalanceByDenomResponse defines the gRPC response structure for
+
+              querying an account''s spendable balance for a specific denom.
+
+
+              Since: cosmos-sdk 0.47'
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+      - name: address
+        description: address is the address to query balances for.
+        in: path
+        required: true
+        type: string
+      - name: denom
+        description: denom is the coin denom to query balances for.
+        in: query
+        required: false
+        type: string
+      tags:
+      - Query
+  /cosmos/bank/v1beta1/supply:
+    get:
+      summary: TotalSupply queries the total supply of all coins.
+      description: 'When called from another module, this query might consume a high amount of
+
+        gas if the pagination field is incorrectly set.'
+      operationId: TotalSupply
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              supply:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    denom:
+                      type: string
+                    amount:
+                      type: string
+                  description: 'Coin defines a token with a denomination and an amount.
+
+
+                    NOTE: The amount field is an Int which implements the custom method
+
+                    signatures required by gogoproto.'
+                title: supply is the supply of the coins
+              pagination:
+                description: 'pagination defines the pagination in the response.
+
+
+                  Since: cosmos-sdk 0.43'
+                type: object
+                properties:
+                  next_key:
+                    type: string
+                    format: byte
+                    description: 'next_key is the key to be passed to PageRequest.key to
+
+                      query the next page most efficiently. It will be empty if
+
+                      there are no more results.'
+                  total:
+                    type: string
+                    format: uint64
+                    title: 'total is total number of results available if PageRequest.count_total
+
+                      was set, its value is undefined otherwise'
+            title: 'QueryTotalSupplyResponse is the response type for the Query/TotalSupply RPC
+
+              method'
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+      - name: pagination.key
+        description: 'key is a value returned in PageResponse.next_key to begin
+
+          querying the next page most efficiently. Only one of offset or key
+
+          should be set.'
+        in: query
+        required: false
+        type: string
+        format: byte
+      - name: pagination.offset
+        description: 'offset is a numeric offset that can be used when key is unavailable.
+
+          It is less efficient than using key. Only one of offset or key should
+
+          be set.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.limit
+        description: 'limit is the total number of results to be returned in the result page.
+
+          If left empty it will default to a value to be set by each app.'
+        in: query
+        required: false
+        type: string
+        format: uint64
+      - name: pagination.count_total
+        description: 'count_total is set to true  to indicate that the result set should include
+
+          a count of the total number of items available for pagination in UIs.
+
+          count_total is only respected when offset is used. It is ignored when key
+
+          is set.'
+        in: query
+        required: false
+        type: boolean
+      - name: pagination.reverse
+        description: 'reverse is set to true if results are to be returned in the descending order.
+
+
+          Since: cosmos-sdk 0.43'
+        in: query
+        required: false
+        type: boolean
+      tags:
+      - Query
+  /cosmos/bank/v1beta1/supply/by_denom:
+    get:
+      summary: SupplyOf queries the supply of a single coin.
+      description: 'When called from another module, this query might consume a high amount of
+
+        gas if the pagination field is incorrectly set.'
+      operationId: SupplyOf
+      responses:
+        '200':
+          description: A successful response.
+          schema:
+            type: object
+            properties:
+              amount:
+                type: object
+                properties:
+                  denom:
+                    type: string
+                  amount:
+                    type: string
+                description: 'Coin defines a token with a denomination and an amount.
+
+
+                  NOTE: The amount field is an Int which implements the custom method
+
+                  signatures required by gogoproto.'
+            description: QuerySupplyOfResponse is the response type for the Query/SupplyOf RPC method.
+        default:
+          description: An unexpected error response.
+          schema:
+            type: object
+            properties:
+              error:
+                type: string
+              code:
+                type: integer
+                format: int32
+              message:
+                type: string
+              details:
+                type: array
+                items:
+                  type: object
+                  properties:
+                    type_url:
+                      type: string
+                    value:
+                      type: string
+                      format: byte
+      parameters:
+      - name: denom
+        description: denom is the coin denom to query balances for.
+        in: query
+        required: false
+        type: string
+      tags:
+      - Query
