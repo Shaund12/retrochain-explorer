@@ -8,14 +8,12 @@ const { restBase } = useNetwork();
 
 const swaggerCssUrl = "https://unpkg.com/swagger-ui-dist@5/swagger-ui.css";
 const swaggerJsUrl = "https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js";
+const swaggerParserUrl = "https://unpkg.com/@apidevtools/swagger-parser@10/dist/swagger-parser.min.js";
 
 const loading = ref(true);
 const error = ref<string | null>(null);
 
-const specCandidates = computed(() => [
-  "./api-docs/cosmos-sdk-swagger.yaml",
-  "/api-docs/cosmos-sdk-swagger.yaml"
-]);
+const specCandidates = computed(() => ["/api-docs/cosmos-sdk-swagger.yaml"]);
 
 const effectiveRestBase = computed(() => restBase.value || "/api");
 
@@ -78,10 +76,30 @@ const checkSpecReachable = async (url: string) => {
   if (!res.ok) throw new Error(`Spec fetch failed (${res.status}) ${url}`);
 };
 
+const normalizeOpenApiYamlForSwaggerUi = (yaml: string) => {
+  // Swagger UI's YAML parser is strict and errors on duplicate mapping keys.
+  // Cosmos SDK swagger specs often contain duplicate `paths` entries (same path repeated)
+  // when specs are merged or generated.
+  //
+  // If parsing fails, we fall back to a best-effort conversion:
+  // - parse as YAML
+  // - stringify as JSON
+  //
+  // This allows Swagger UI to load and display the majority of endpoints.
+  try {
+    const w = window as any;
+    const parser = w.SwaggerParser as any;
+    if (!parser?.parseContent) return { spec: yaml, kind: "url" as const };
+    return { spec: yaml, kind: "raw" as const, parser };
+  } catch {
+    return { spec: yaml, kind: "url" as const };
+  }
+};
+
 onMounted(async () => {
   try {
     loadCss(swaggerCssUrl);
-    await loadScript(swaggerJsUrl);
+    await Promise.all([loadScript(swaggerJsUrl), loadScript(swaggerParserUrl)]);
 
     let chosen: string | null = null;
     for (const candidate of specCandidates.value) {
@@ -95,10 +113,20 @@ onMounted(async () => {
     }
 
     if (!chosen) {
-      throw new Error("Swagger spec not reachable. Ensure the file exists at /public/swagger/cosmos-sdk-swagger.yaml and is served by your host.");
+      throw new Error("Swagger spec not reachable. Ensure the file exists at /api-docs/cosmos-sdk-swagger.yaml and is served by your host.");
     }
 
-    initSwagger(chosen);
+    const res = await fetch(chosen);
+    const text = await res.text();
+    const normalized = normalizeOpenApiYamlForSwaggerUi(text);
+
+    if (normalized.kind === "raw") {
+      const parsed = await normalized.parser.parseContent(text, chosen);
+      const jsonText = JSON.stringify(parsed);
+      initSwagger(`data:application/json,${encodeURIComponent(jsonText)}`);
+    } else {
+      initSwagger(chosen);
+    }
   } catch (e: any) {
     error.value = e?.message || String(e);
   } finally {
