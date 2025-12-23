@@ -1,0 +1,47 @@
+# Swagger UI configuration for RetroChain explorer
+# This file allows Swagger UI (static or embedded) to load all split specs correctly.
+# Served from /api-docs/swagger-config.yaml
+
+urls:
+  - url: /api-docs/retrochain-auth.swagger.yaml
+    name: Auth
+  - url: /api-docs/retrochain-bank.swagger.yaml
+    name: Bank
+  - url: /api-docs/retrochain-circuit.swagger.yaml
+    name: Circuit
+  - url: /api-docs/retrochain-consensus.swagger.yaml
+    name: Consensus
+  - url: /api-docs/retrochain-distribution.swagger.yaml
+    name: Distribution
+  - url: /api-docs/retrochain-evidence.swagger.yaml
+    name: Evidence
+  - url: /api-docs/retrochain-gov.swagger.yaml
+    name: Governance
+  - url: /api-docs/retrochain-group.swagger.yaml
+    name: Group
+  - url: /api-docs/retrochain-mint.swagger.yaml
+    name: Mint
+  - url: /api-docs/retrochain-nft.swagger.yaml
+    name: NFT
+  - url: /api-docs/retrochain-node.swagger.yaml
+    name: Node
+  - url: /api-docs/retrochain-params.swagger.yaml
+    name: Params
+  - url: /api-docs/retrochain-slashing.swagger.yaml
+    name: Slashing
+  - url: /api-docs/retrochain-staking.swagger.yaml
+    name: Staking
+  - url: /api-docs/retrochain-tendermint.swagger.yaml
+    name: Tendermint
+  - url: /api-docs/retrochain-tx.swagger.yaml
+    name: Transactions
+  - url: /api-docs/retrochain-upgrade.swagger.yaml
+    name: Upgrade
+  - url: /api-docs/cosmos-sdk-swagger.yaml
+    name: Cosmos SDK (full)
+
+urlsPrimaryName: Bank
+validatorUrl: null
+dom_id: "#swagger-ui"
+docExpansion: list
+operationsSorter: alpha
