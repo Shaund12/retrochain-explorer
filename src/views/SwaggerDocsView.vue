@@ -12,7 +12,10 @@ const { restBase } = useNetwork();
 const loading = ref(true);
 const error = ref<string | null>(null);
 
-const specCandidates = computed(() => ["/api-docs/cosmos-sdk-swagger.yaml"]);
+const specCandidates = computed(() => {
+  const origin = typeof window !== "undefined" ? window.location.origin : "";
+  return [`${origin}/api-docs/cosmos-sdk-swagger.yaml`];
+});
 
 const effectiveRestBase = computed(() => restBase.value || "/api");
 
@@ -43,7 +46,13 @@ const initSwagger = (spec: string) => {
 };
 
 const checkSpecReachable = async (url: string) => {
-  const res = await fetch(url, { method: "GET" });
+  const res = await fetch(url, {
+    method: "GET",
+    cache: "no-store",
+    headers: {
+      "Cache-Control": "no-cache"
+    }
+  });
   if (!res.ok) throw new Error(`Spec fetch failed (${res.status}) ${url}`);
 };
 
