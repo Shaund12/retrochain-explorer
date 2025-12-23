@@ -102,17 +102,31 @@ const poolCount = computed(() => pools.value.length);
 const ibcCosmosLabel = computed(() => `Retro ${retroToCosmosChannel} / Cosmos ${cosmosToRetroChannel || '—'}`);
 const ibcOsmosisLabel = computed(() => `Retro ${retroToOsmosisChannel} / Osmosis ${osmosisToRetroChannel}`);
 
+const USDC_DENOMS_ON_RETRO = [
+  // Noble USDC -> Osmosis -> Retro (known hash)
+  "ibc/1EC890E294140C5562003AF676C013A2C75136F32A323274D91CEB9245FA593F",
+  // Legacy placeholder / future compatibility
+  "ibc/usdc"
+];
+
+const USDT_DENOMS_ON_RETRO = [
+  // Placeholder until a real hash denom is known/added
+  "ibc/usdt"
+];
+
+const OSMO_DENOMS_ON_RETRO = [
+  // Osmosis -> Retro (known hash)
+  "ibc/FE42E434C713D0A118E3CE46FC6A4B55A5C2B330A2A880C4D7A1B7935DA1E5A0",
+  // Legacy placeholder / future compatibility
+  "ibc/osmo"
+];
+
 const availableTokens = computed<TokenOption[]>(() => [
   { symbol: tokenSymbol.value, denom: tokenDenom.value, icon: "🎮", decimals: 6 },
-  { symbol: "USDC", denom: "ibc/usdc", icon: "💵", decimals: 6 },
-  { symbol: "USDT", denom: "ibc/usdt", icon: "💲", decimals: 6 },
-  {
-    symbol: "ATOM",
-    denom: "ibc/27394FB092D2ECCD56123C74F36E4C1F926001CEADA9CA97EA622B25F41E5EB2",
-    icon: "⚛️",
-    decimals: 6
-  },
-  { symbol: "OSMO", denom: "ibc/osmo", icon: "🌊", decimals: 6 }
+  { symbol: "USDC", denom: USDC_DENOMS_ON_RETRO[0], icon: "💵", decimals: 6 },
+  { symbol: "USDT", denom: USDT_DENOMS_ON_RETRO[0], icon: "💲", decimals: 6 },
+  { symbol: "ATOM", denom: ATOM_IBC_DENOM_ON_RETRO, icon: "⚛️", decimals: 6 },
+  { symbol: "OSMO", denom: OSMO_DENOMS_ON_RETRO[0], icon: "🌊", decimals: 6 }
 ]);
 
 const selectedPool = computed(() => {
@@ -129,11 +143,23 @@ const poolPrice = computed(() => {
 
 const findTokenOption = (symbol: string) => availableTokens.value.find((t) => t.symbol === symbol);
 
-const rawBalanceForSymbol = (symbol: string) => {
+const candidateDenomsForSymbol = (symbol: string): string[] => {
+  if (symbol === tokenSymbol.value) return [tokenDenom.value];
+  if (symbol === "USDC") return USDC_DENOMS_ON_RETRO;
+  if (symbol === "USDT") return USDT_DENOMS_ON_RETRO;
+  if (symbol === "ATOM") return [ATOM_IBC_DENOM_ON_RETRO];
+  if (symbol === "OSMO") return OSMO_DENOMS_ON_RETRO;
   const token = findTokenOption(symbol);
-  if (!token) return "0";
-  const entry = balances.value.find((b) => b.denom === token.denom);
-  return entry?.amount ?? "0";
+  return token ? [token.denom] : [];
+};
+
+const rawBalanceForSymbol = (symbol: string) => {
+  const candidates = candidateDenomsForSymbol(symbol);
+  for (const denom of candidates) {
+    const entry = balances.value.find((b) => b.denom === denom);
+    if (entry) return entry.amount ?? "0";
+  }
+  return "0";
 };
 
 const formatTokenBalance = (symbol: string) => {
@@ -366,13 +392,16 @@ const handlePlaceLimitOrder = async () => {
     const amountBase = Math.floor(parseFloat(limitAmount.value) * 1_000_000).toString();
     const priceBase = Math.floor(parseFloat(limitPrice.value) * 1_000_000).toString();
 
+    const tokenInDenom = availableTokens.value.find((t) => t.symbol === tokenIn.value)?.denom || tokenDenom.value;
+    const tokenOutDenom = availableTokens.value.find((t) => t.symbol === tokenOut.value)?.denom || tokenDenom.value;
+
     const msg = {
       typeUrl: "/retrochain.dex.v1.MsgPlaceLimitOrder",
       value: {
         creator: address.value,
         orderType: limitSide.value.toUpperCase(),
-        tokenIn: tokenIn.value,
-        tokenOut: tokenOut.value,
+        tokenIn: tokenInDenom,
+        tokenOut: tokenOutDenom,
         amount: amountBase,
         price: priceBase
       }
