@@ -1,5 +1,5 @@
 <script setup lang="ts">
-    import { onMounted, ref, computed, watch } from "vue";
+    import { onMounted, onBeforeUnmount, ref, computed, watch } from "vue";
     import { useRouter } from "vue-router";
     import { useKeplr } from "@/composables/useKeplr";
     import { useStaking } from "@/composables/useStaking";
@@ -8,11 +8,13 @@
     import { formatAmount } from "@/utils/format";
     import { useToast } from "@/composables/useToast";
     import { useAccount } from "@/composables/useAccount";
+    import { useApi } from "@/composables/useApi";
     import RcDisclaimer from "@/components/RcDisclaimer.vue";
     import dayjs from "dayjs";
 
     const router = useRouter();
     const { address, signAndBroadcast, signAndBroadcastWithREST } = useKeplr();
+    const api = useApi();
     const {
         delegations,
         rewards,
@@ -44,6 +46,15 @@
 
     const tokenDenom = computed(() => "uretro");
     const tokenSymbol = computed(() => "RETRO");
+
+    // Staking rewards vault (shared pool) live balance
+    const stakingRewardsVaultAddress = "cosmos1jv65s3grqf6v6jl3dp4t6c9t9rk99cd88lyufl";
+    const stakingRewardsVaultBalance = ref("0");
+    const stakingRewardsVaultLoading = ref(false);
+    const stakingRewardsVaultError = ref<string | null>(null);
+    const stakingRewardsVaultDisplay = computed(() =>
+        formatAmount(stakingRewardsVaultBalance.value, tokenDenom.value, { minDecimals: 2, maxDecimals: 2 })
+    );
 
     const stakerBadges = [
         { icon: "🏆", label: "Chain Champion", accent: "text-amber-200" },
@@ -156,6 +167,20 @@
         undelegateAmount.value = (selectedUndelegateBalance.value / 1_000_000).toFixed(6);
     };
 
+    const fetchStakingRewardsVaultBalance = async () => {
+        stakingRewardsVaultLoading.value = true;
+        stakingRewardsVaultError.value = null;
+        try {
+            const res = await api.get(`/cosmos/bank/v1beta1/balances/${stakingRewardsVaultAddress}`);
+            const bal = res.data?.balances?.find((b: any) => b.denom === tokenDenom.value)?.amount ?? "0";
+            stakingRewardsVaultBalance.value = bal;
+        } catch (e: any) {
+            stakingRewardsVaultError.value = e?.message ?? String(e);
+        } finally {
+            stakingRewardsVaultLoading.value = false;
+        }
+    };
+
     const refreshUserState = async () => {
         if (!address.value) return;
 
@@ -205,13 +230,27 @@
         delegateAmount.value = "";
     };
 
+    let vaultTimer: number | null = null;
+
     onMounted(async () => {
         await fetchValidators();
         await fetchNetworkStats();
         fetchDelegatorLeaderboard();
 
+        fetchStakingRewardsVaultBalance();
+        vaultTimer = window.setInterval(() => {
+            fetchStakingRewardsVaultBalance();
+        }, 10000);
+
         if (address.value) {
             await Promise.all([fetchAll(address.value), loadAccount(address.value)]);
+        }
+    });
+
+    onBeforeUnmount(() => {
+        if (vaultTimer) {
+            window.clearInterval(vaultTimer);
+            vaultTimer = null;
         }
     });
 
@@ -407,6 +446,36 @@
                     Staking Dashboard
                 </h1>
                 <p class="text-sm text-slate-300 mb-4">Stake {{ tokenSymbol }} to secure the network and earn rewards</p>
+
+                <!-- Staking Rewards Vault (live) -->
+                <div class="mb-4 p-4 rounded-2xl bg-gradient-to-r from-emerald-500/15 via-cyan-500/10 to-indigo-500/10 border border-emerald-400/30 shadow-lg">
+                    <div class="flex flex-col sm:flex-row sm:items-center sm:justify-between gap-3">
+                        <div class="space-y-1">
+                            <div class="flex items-center gap-2 text-[11px] uppercase tracking-[0.2em] text-emerald-200">
+                                <span class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
+                                Live Staking Rewards Vault
+                            </div>
+                            <div class="flex items-center gap-2 text-lg font-semibold text-white">
+                                <span>🏦</span>
+                                <span>Vault Balance</span>
+                            </div>
+                            <p class="text-[12px] text-slate-300">Network staking rewards accumulation wallet.</p>
+                            <div class="flex items-center gap-2 text-[11px] text-slate-400">
+                                <code class="text-[10px]">{{ shortAddress(stakingRewardsVaultAddress, 12) }}</code>
+                                <button class="btn text-[10px]" @click="copy(stakingRewardsVaultAddress)">Copy</button>
+                            </div>
+                        </div>
+                        <div class="text-right min-w-[200px]">
+                            <div class="text-[11px] text-slate-400">Balance ({{ tokenSymbol }})</div>
+                            <div class="text-3xl font-extrabold text-emerald-200 tracking-tight">
+                                <span v-if="stakingRewardsVaultLoading">Syncing…</span>
+                                <span v-else>{{ stakingRewardsVaultDisplay }}</span>
+                            </div>
+                            <div class="text-[11px] text-slate-500">Auto-refreshing every 10s</div>
+                            <div v-if="stakingRewardsVaultError" class="text-[11px] text-rose-300 mt-1">{{ stakingRewardsVaultError }}</div>
+                        </div>
+                    </div>
+                </div>
 
                 <!-- Network Stats Banner -->
                 <div v-if="networkStats"

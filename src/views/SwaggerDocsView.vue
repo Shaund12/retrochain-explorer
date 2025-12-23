@@ -38,12 +38,12 @@ const effectiveRestBase = computed(() => restBase.value || "/api");
 
 // Use the app's base URL (works when deployed under a subpath) for swagger spec files
 const baseHref = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
-const origin = typeof window !== "undefined" ? window.location.origin : "";
+const docsBase = `${baseHref}/api-docs`;
 
 const swaggerUrls = availableSpecs.map((s) => ({
   name: s.label,
-  // Fully-qualify to avoid SPA history rewrite rules or proxy issues
-  url: `${origin}${baseHref}/api-docs/${s.file}`,
+  // Keep URLs relative so $ref: definitions.yaml resolves correctly beside each spec
+  url: `${docsBase}/${s.file}`,
 }));
 
 const defaultSpec = "Bank";
