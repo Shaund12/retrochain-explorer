@@ -1,3 +1,9 @@
+swagger: '2.0'
+info:
+  title: RetroChain API Definitions
+  version: 1.0.0
+  description: Common data models and definitions for RetroChain APIs.
+paths: {}
 definitions:
   cosmos.auth.v1beta1.AddressBytesToStringResponse:
     type: object

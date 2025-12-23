@@ -28,17 +28,28 @@ const DESCRIPTIONS: Record<string, string> = {
   "docs-ibc-channels": "Active connections/channels, transfer ports, and how explorers identify common routes.",
   "docs-ibc-packets": "Pending packets, acknowledgements, timeouts, and relayer troubleshooting.",
   "docs-ibc-assets": "Curated list of common IBC denoms with live denom-trace resolution.",
-  "docs-ibc-relayers": "Relayer responsibilities, monitoring, and common failure modes."
+  "docs-ibc-relayers": "Relayer responsibilities, monitoring, and common failure modes.",
+  "api-docs": "Interactive Swagger UI for the Cosmos SDK REST API."
 };
 
-const docs = computed<DocLink[]>(() =>
-  DOCS_NAV.map((d) => ({
+const docs = computed<DocLink[]>(() => {
+  const links = DOCS_NAV.map((d) => ({
     title: d.title,
     description: DESCRIPTIONS[d.name] || "",
     to: { name: d.name },
     tag: d.tag
-  }))
-);
+  }));
+  
+  // Add Swagger Docs link manually if not in DOCS_NAV
+  links.push({
+    title: "API Reference (Swagger)",
+    description: DESCRIPTIONS["api-docs"],
+    to: { name: "api-docs" },
+    tag: "Reference"
+  });
+  
+  return links;
+});
 
 const query = ref("");
 const tag = ref<string>("all");
