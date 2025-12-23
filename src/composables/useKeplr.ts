@@ -183,6 +183,350 @@ const retroBtcStakeTypes: ReadonlyArray<[string, GeneratedType]> = [
   ["/retrochain.btcstake.v1.MsgClaimRewards", MsgClaimRewardsType]
 ];
 
+// --- Custom message types (dex) ---
+// NOTE: These minimal encoders are only used by the REST signing fallback.
+// The RPC path uses chain-provided type registry from cosmjs-types where available.
+interface DexCoin {
+  denom: string;
+  amount: string;
+}
+
+interface MsgCreatePool {
+  creator: string;
+  tokenA?: DexCoin;
+  tokenB?: DexCoin;
+  swapFee: string;
+}
+
+interface MsgAddLiquidity {
+  sender: string;
+  tokenA?: DexCoin;
+  tokenB?: DexCoin;
+}
+
+interface MsgSwapExactAmountIn {
+  sender: string;
+  routes: Array<{ poolId: string; tokenOutDenom: string }>;
+  tokenIn?: DexCoin;
+  tokenOutMinAmount: string;
+}
+
+interface MsgPlaceLimitOrder {
+  creator: string;
+  orderType: string;
+  tokenIn: string;
+  tokenOut: string;
+  amount: string;
+  price: string;
+}
+
+const encodeDexCoin = (coin: DexCoin | undefined, fieldNo: number, writer: _m0.Writer) => {
+  if (!coin) return;
+  // Coin { string denom = 1; string amount = 2; }
+  const w = _m0.Writer.create();
+  if (coin.denom) w.uint32(10).string(coin.denom);
+  if (coin.amount) w.uint32(18).string(coin.amount);
+  writer.uint32((fieldNo << 3) | 2).bytes(w.finish());
+};
+
+const MsgCreatePoolType: GeneratedType = {
+  encode(message: MsgCreatePool, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.creator) writer.uint32(10).string(message.creator);
+    encodeDexCoin(message.tokenA, 2, writer);
+    encodeDexCoin(message.tokenB, 3, writer);
+    if (message.swapFee) writer.uint32(34).string(message.swapFee);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgCreatePool {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgCreatePool = { creator: "", swapFee: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.creator = reader.string();
+          break;
+        case 2: {
+          const bytes = reader.bytes();
+          const r = new _m0.Reader(bytes);
+          const coin: DexCoin = { denom: "", amount: "" };
+          while (r.pos < r.len) {
+            const t = r.uint32();
+            switch (t >>> 3) {
+              case 1:
+                coin.denom = r.string();
+                break;
+              case 2:
+                coin.amount = r.string();
+                break;
+              default:
+                r.skipType(t & 7);
+                break;
+            }
+          }
+          message.tokenA = coin;
+          break;
+        }
+        case 3: {
+          const bytes = reader.bytes();
+          const r = new _m0.Reader(bytes);
+          const coin: DexCoin = { denom: "", amount: "" };
+          while (r.pos < r.len) {
+            const t = r.uint32();
+            switch (t >>> 3) {
+              case 1:
+                coin.denom = r.string();
+                break;
+              case 2:
+                coin.amount = r.string();
+                break;
+              default:
+                r.skipType(t & 7);
+                break;
+            }
+          }
+          message.tokenB = coin;
+          break;
+        }
+        case 4:
+          message.swapFee = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgCreatePool>): MsgCreatePool {
+    return {
+      creator: object.creator ?? "",
+      tokenA: object.tokenA,
+      tokenB: object.tokenB,
+      swapFee: object.swapFee ?? ""
+    };
+  }
+};
+
+const MsgAddLiquidityType: GeneratedType = {
+  encode(message: MsgAddLiquidity, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.sender) writer.uint32(10).string(message.sender);
+    encodeDexCoin(message.tokenA, 2, writer);
+    encodeDexCoin(message.tokenB, 3, writer);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgAddLiquidity {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgAddLiquidity = { sender: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.sender = reader.string();
+          break;
+        case 2: {
+          const bytes = reader.bytes();
+          const r = new _m0.Reader(bytes);
+          const coin: DexCoin = { denom: "", amount: "" };
+          while (r.pos < r.len) {
+            const t = r.uint32();
+            switch (t >>> 3) {
+              case 1:
+                coin.denom = r.string();
+                break;
+              case 2:
+                coin.amount = r.string();
+                break;
+              default:
+                r.skipType(t & 7);
+                break;
+            }
+          }
+          message.tokenA = coin;
+          break;
+        }
+        case 3: {
+          const bytes = reader.bytes();
+          const r = new _m0.Reader(bytes);
+          const coin: DexCoin = { denom: "", amount: "" };
+          while (r.pos < r.len) {
+            const t = r.uint32();
+            switch (t >>> 3) {
+              case 1:
+                coin.denom = r.string();
+                break;
+              case 2:
+                coin.amount = r.string();
+                break;
+              default:
+                r.skipType(t & 7);
+                break;
+            }
+          }
+          message.tokenB = coin;
+          break;
+        }
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgAddLiquidity>): MsgAddLiquidity {
+    return { sender: object.sender ?? "", tokenA: object.tokenA, tokenB: object.tokenB };
+  }
+};
+
+const MsgSwapExactAmountInType: GeneratedType = {
+  encode(message: MsgSwapExactAmountIn, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.sender) writer.uint32(10).string(message.sender);
+    // routes: repeated message Route { string poolId = 1; string tokenOutDenom = 2; }
+    for (const route of message.routes || []) {
+      const w = _m0.Writer.create();
+      if (route.poolId) w.uint32(10).string(route.poolId);
+      if (route.tokenOutDenom) w.uint32(18).string(route.tokenOutDenom);
+      writer.uint32(18).bytes(w.finish());
+    }
+    encodeDexCoin(message.tokenIn, 3, writer);
+    if (message.tokenOutMinAmount) writer.uint32(34).string(message.tokenOutMinAmount);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgSwapExactAmountIn {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgSwapExactAmountIn = { sender: "", routes: [], tokenOutMinAmount: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.sender = reader.string();
+          break;
+        case 2: {
+          const bytes = reader.bytes();
+          const r = new _m0.Reader(bytes);
+          const route = { poolId: "", tokenOutDenom: "" };
+          while (r.pos < r.len) {
+            const t = r.uint32();
+            switch (t >>> 3) {
+              case 1:
+                route.poolId = r.string();
+                break;
+              case 2:
+                route.tokenOutDenom = r.string();
+                break;
+              default:
+                r.skipType(t & 7);
+                break;
+            }
+          }
+          message.routes.push(route);
+          break;
+        }
+        case 3: {
+          const bytes = reader.bytes();
+          const r = new _m0.Reader(bytes);
+          const coin: DexCoin = { denom: "", amount: "" };
+          while (r.pos < r.len) {
+            const t = r.uint32();
+            switch (t >>> 3) {
+              case 1:
+                coin.denom = r.string();
+                break;
+              case 2:
+                coin.amount = r.string();
+                break;
+              default:
+                r.skipType(t & 7);
+                break;
+            }
+          }
+          message.tokenIn = coin;
+          break;
+        }
+        case 4:
+          message.tokenOutMinAmount = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgSwapExactAmountIn>): MsgSwapExactAmountIn {
+    return {
+      sender: object.sender ?? "",
+      routes: object.routes ?? [],
+      tokenIn: object.tokenIn,
+      tokenOutMinAmount: object.tokenOutMinAmount ?? ""
+    };
+  }
+};
+
+const MsgPlaceLimitOrderType: GeneratedType = {
+  encode(message: MsgPlaceLimitOrder, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.creator) writer.uint32(10).string(message.creator);
+    if (message.orderType) writer.uint32(18).string(message.orderType);
+    if (message.tokenIn) writer.uint32(26).string(message.tokenIn);
+    if (message.tokenOut) writer.uint32(34).string(message.tokenOut);
+    if (message.amount) writer.uint32(42).string(message.amount);
+    if (message.price) writer.uint32(50).string(message.price);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgPlaceLimitOrder {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgPlaceLimitOrder = { creator: "", orderType: "", tokenIn: "", tokenOut: "", amount: "", price: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.creator = reader.string();
+          break;
+        case 2:
+          message.orderType = reader.string();
+          break;
+        case 3:
+          message.tokenIn = reader.string();
+          break;
+        case 4:
+          message.tokenOut = reader.string();
+          break;
+        case 5:
+          message.amount = reader.string();
+          break;
+        case 6:
+          message.price = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgPlaceLimitOrder>): MsgPlaceLimitOrder {
+    return {
+      creator: object.creator ?? "",
+      orderType: object.orderType ?? "",
+      tokenIn: object.tokenIn ?? "",
+      tokenOut: object.tokenOut ?? "",
+      amount: object.amount ?? "",
+      price: object.price ?? ""
+    };
+  }
+};
+
+const retroDexTypes: ReadonlyArray<[string, GeneratedType]> = [
+  ["/retrochain.dex.v1.MsgCreatePool", MsgCreatePoolType],
+  ["/retrochain.dex.v1.MsgAddLiquidity", MsgAddLiquidityType],
+  ["/retrochain.dex.v1.MsgSwapExactAmountIn", MsgSwapExactAmountInType],
+  ["/retrochain.dex.v1.MsgPlaceLimitOrder", MsgPlaceLimitOrderType]
+];
+
 function buildChainInfo() {
   // Build absolute URLs - Keplr requires full URIs
   const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
@@ -318,7 +662,7 @@ export function useKeplr() {
       const signerAddress = accounts[0].address;
       const signerPubkey = accounts[0].pubkey;
 
-      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes]);
+      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes, ...retroDexTypes]);
       const anyMsgs = msgs.map((msg) => registry.encodeAsAny(msg));
       const txBody = TxBody.fromPartial({ messages: anyMsgs, memo: memo || "" });
       const txBodyBytes = TxBody.encode(txBody).finish();
@@ -464,7 +808,7 @@ export function useKeplr() {
       const offlineSigner = window.keplr.getOfflineSigner(chainId);
       const accounts = await offlineSigner.getAccounts();
 
-      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes]);
+      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes, ...retroDexTypes]);
       const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner, { registry });
       return client.signAndBroadcast(accounts[0].address, msgs, fee, memo);
     };
