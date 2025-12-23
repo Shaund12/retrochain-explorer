@@ -67,7 +67,8 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading relayer context" />
+      <RcLoadingSpinner size="md" text="Loading relayer context
+" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
