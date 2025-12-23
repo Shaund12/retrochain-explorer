@@ -57,12 +57,12 @@ const load = async () => {
 
 const formatState = (state?: string) => {
   const s = (state || "").toString().replace("STATE_", "");
-  return s || "—";
+  return s || "Â—";
 };
 
 const formatOrder = (order?: string) => {
   const s = (order || "").toString().replace("ORDER_", "");
-  return s || "—";
+  return s || "Â—";
 };
 
 onMounted(() => {
@@ -84,7 +84,7 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading IBC channels…" />
+      <RcLoadingSpinner size="md" text="Loading IBC channelsÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
@@ -93,7 +93,7 @@ onMounted(() => {
 
     <RcDisclaimer type="info" title="Quick model">
       <ul class="text-sm text-slate-300 list-disc list-inside space-y-1">
-        <li><strong>Client</strong>: verifies the other chain’s consensus state.</li>
+        <li><strong>Client</strong>: verifies the other chainÂ’s consensus state.</li>
         <li><strong>Connection</strong>: binds 2 clients together (handshake + proof verification).</li>
         <li><strong>Channel</strong>: app-level lane on top of a connection (e.g., ICS-20 transfer).</li>
       </ul>
@@ -127,12 +127,12 @@ onMounted(() => {
               <tr v-for="c in channels" :key="`${c.port_id}-${c.channel_id}`" class="hover:bg-white/5">
                 <td class="font-mono text-xs text-slate-200">{{ c.channel_id }}</td>
                 <td class="font-mono text-xs text-slate-400">{{ c.port_id }}</td>
-                <td class="font-mono text-xs text-slate-400">{{ c.connection_hops?.[0] ?? '—' }}</td>
+                <td class="font-mono text-xs text-slate-400">{{ c.connection_hops?.[0] ?? 'Â—' }}</td>
                 <td class="text-xs text-slate-200">{{ formatState(c.state) }}</td>
                 <td class="text-xs text-slate-200">{{ formatOrder(c.ordering) }}</td>
                 <td class="text-xs text-slate-300">
-                  <div class="font-mono">{{ c.counterparty?.channel_id ?? '—' }}</div>
-                  <div class="font-mono text-[10px] text-slate-500">port {{ c.counterparty?.port_id ?? '—' }}</div>
+                  <div class="font-mono">{{ c.counterparty?.channel_id ?? 'Â—' }}</div>
+                  <div class="font-mono text-[10px] text-slate-500">port {{ c.counterparty?.port_id ?? 'Â—' }}</div>
                 </td>
               </tr>
             </tbody>
@@ -167,11 +167,11 @@ onMounted(() => {
             <tbody>
               <tr v-for="conn in connections" :key="conn.id" class="hover:bg-white/5">
                 <td class="font-mono text-xs text-slate-200">{{ conn.id }}</td>
-                <td class="font-mono text-xs text-slate-400">{{ conn.client_id ?? '—' }}</td>
+                <td class="font-mono text-xs text-slate-400">{{ conn.client_id ?? 'Â—' }}</td>
                 <td class="text-xs text-slate-200">{{ formatState(conn.state) }}</td>
                 <td class="text-xs text-slate-300">
-                  <div class="font-mono">{{ conn.counterparty?.connection_id ?? '—' }}</div>
-                  <div class="font-mono text-[10px] text-slate-500">client {{ conn.counterparty?.client_id ?? '—' }}</div>
+                  <div class="font-mono">{{ conn.counterparty?.connection_id ?? 'Â—' }}</div>
+                  <div class="font-mono text-[10px] text-slate-500">client {{ conn.counterparty?.client_id ?? 'Â—' }}</div>
                 </td>
               </tr>
             </tbody>
@@ -183,7 +183,7 @@ onMounted(() => {
     <div v-if="!loading" class="card">
       <h2 class="text-sm font-semibold text-slate-100 mb-2">Explorer notes</h2>
       <ul class="list-disc list-inside text-sm text-slate-300 space-y-1">
-        <li>“Active IBC” usually means at least one <code>transfer</code> port channel is <code>OPEN</code>.</li>
+        <li>Â“Active IBCÂ” usually means at least one <code>transfer</code> port channel is <code>OPEN</code>.</li>
         <li>For token traces, use <code>/ibc/apps/transfer/v1/denom_traces/&lt;hash&gt;</code> (see IBC & Denom Traces doc).</li>
         <li>For pending packets/acks timeouts, use the packet query endpoints by channel/port where supported.</li>
       </ul>

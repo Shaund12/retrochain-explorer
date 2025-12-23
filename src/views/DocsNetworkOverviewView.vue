@@ -62,7 +62,7 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading network overview…" />
+      <RcLoadingSpinner size="md" text="Loading network overviewÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
@@ -82,7 +82,7 @@ onMounted(() => {
         <div class="mt-2 space-y-1 text-sm">
           <div>
             Chain-id (live):
-            <span class="font-semibold text-slate-100">{{ chainId ?? '—' }}</span>
+            <span class="font-semibold text-slate-100">{{ chainId ?? 'Â—' }}</span>
           </div>
           <div>
             Bech32 prefix:
@@ -117,7 +117,7 @@ onMounted(() => {
               <code class="text-[11px]">GET /cosmos/base/tendermint/v1beta1/node_info</code>
             </div>
           </div>
-          <div class="text-xs text-slate-500">Explorers should show a “Data as of height …” banner.</div>
+          <div class="text-xs text-slate-500">Explorers should show a Â“Data as of height Â…Â” banner.</div>
         </div>
       </div>
 

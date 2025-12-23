@@ -62,7 +62,7 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading IBC docs…" />
+      <RcLoadingSpinner size="md" text="Loading IBC docsÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
@@ -93,8 +93,8 @@ onMounted(() => {
 
         <div class="mt-3 p-3 rounded-lg bg-slate-900/60 border border-slate-800">
           <div v-if="trace" class="space-y-1 text-sm">
-            <div>Base denom: <code class="text-xs">{{ trace.base_denom ?? trace.baseDenom ?? '—' }}</code></div>
-            <div>Path: <span class="font-mono text-xs text-slate-200">{{ trace.path ?? '—' }}</span></div>
+            <div>Base denom: <code class="text-xs">{{ trace.base_denom ?? trace.baseDenom ?? 'Â—' }}</code></div>
+            <div>Path: <span class="font-mono text-xs text-slate-200">{{ trace.path ?? 'Â—' }}</span></div>
           </div>
           <div v-else class="text-sm text-slate-400">No trace found (endpoint unsupported or hash unknown).</div>
         </div>
@@ -106,7 +106,7 @@ onMounted(() => {
       <ul class="list-disc list-inside text-sm text-slate-300 space-y-1">
         <li>Always display both the base denom and the path so users can distinguish wrapped routes.</li>
         <li>Indexers can lag; use on-chain packet receipts/acks for ground truth of transfer completion.</li>
-        <li>Some RPC/LCD providers may disable denom trace endpoints—handle 404/501 gracefully.</li>
+        <li>Some RPC/LCD providers may disable denom trace endpointsÂ—handle 404/501 gracefully.</li>
       </ul>
     </div>
   </div>

@@ -40,10 +40,10 @@ const hasStorage = typeof localStorage !== "undefined";
 const storageKey = (suffix: string) => `rc-contract-${contractAddress.value || "unknown"}-${suffix}`;
 
 const queryTemplates = [
-  { label: "General · Contract info", payload: '{ "contract_info": {} }' },
-  { label: "CW20 · Token info", payload: '{ "token_info": {} }' },
-  { label: "CW20 · Balance", payload: '{ "balance": { "address": "" } }' },
-  { label: "CW20 · Allowance", payload: '{ "allowance": { "owner": "", "spender": "" } }' }
+  { label: "General Â· Contract info", payload: '{ "contract_info": {} }' },
+  { label: "CW20 Â· Token info", payload: '{ "token_info": {} }' },
+  { label: "CW20 Â· Balance", payload: '{ "balance": { "address": "" } }' },
+  { label: "CW20 Â· Allowance", payload: '{ "allowance": { "owner": "", "spender": "" } }' }
 ];
 
 const chainId = computed(() => (network.value === "mainnet" ? "retrochain-mainnet" : "retrochain-devnet-1"));
@@ -64,7 +64,7 @@ const normalizeHex = (value?: string | null) => {
 };
 
 const formatHash = (value?: string | null) => {
-  if (!value) return "—";
+  if (!value) return "Â—";
   const normalized = normalizeHex(value);
   if (normalized) {
     return `0x${normalized}`;
@@ -155,7 +155,7 @@ const topFunctionName = (msg: ContractExecutionRecord["msg"]) => {
 };
 
 const formatExecutionMsg = (msg: ContractExecutionRecord["msg"]) => {
-  if (!msg) return "—";
+  if (!msg) return "Â—";
   try {
     return typeof msg === "string" ? msg : JSON.stringify(msg, null, 2);
   } catch {
@@ -164,16 +164,16 @@ const formatExecutionMsg = (msg: ContractExecutionRecord["msg"]) => {
 };
 
 const formatTimestamp = (value?: string) => {
-  if (!value) return "—";
+  if (!value) return "Â—";
   const date = new Date(value);
   if (Number.isNaN(date.getTime())) return value;
   return date.toLocaleString();
 };
 
 const shortAddr = (value?: string) => {
-  if (!value) return "—";
+  if (!value) return "Â—";
   if (value.length <= 12) return value;
-  return `${value.slice(0, 6)}…${value.slice(-6)}`;
+  return `${value.slice(0, 6)}Â…${value.slice(-6)}`;
 };
 
 const hasAdmin = computed(() => Boolean(contractInfo.value?.admin));
@@ -350,7 +350,7 @@ onMounted(() => {
       </div>
       <div class="flex items-center gap-2">
         <button class="btn text-xs" @click="router.push({ name: 'contracts' })">? Back to registry</button>
-        <button class="btn text-xs" :disabled="loading" @click="loadDetails">{{ loading ? 'Refreshing…' : 'Refresh' }}</button>
+        <button class="btn text-xs" :disabled="loading" @click="loadDetails">{{ loading ? 'RefreshingÂ…' : 'Refresh' }}</button>
       </div>
     </header>
 
@@ -362,7 +362,7 @@ onMounted(() => {
       <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
         <article class="card-soft border border-emerald-500/30 bg-emerald-500/5">
           <div class="text-[11px] uppercase tracking-wider text-emerald-200">Code ID</div>
-          <div class="text-3xl font-semibold text-white">{{ contractInfo?.code_id || '—' }}</div>
+          <div class="text-3xl font-semibold text-white">{{ contractInfo?.code_id || 'Â—' }}</div>
           <p v-if="codeDownloadUrl" class="text-[11px] text-emerald-300 underline cursor-pointer" @click="window.open(codeDownloadUrl, '_blank')">
             Download artifact
           </p>
@@ -374,19 +374,19 @@ onMounted(() => {
         </article>
         <article class="card-soft border border-cyan-500/30 bg-cyan-500/5">
           <div class="text-[11px] uppercase tracking-wider text-cyan-200">Creator</div>
-          <div class="text-sm font-semibold text-white break-all">{{ contractInfo?.creator || '—' }}</div>
+          <div class="text-sm font-semibold text-white break-all">{{ contractInfo?.creator || 'Â—' }}</div>
         </article>
         <article class="card-soft border border-amber-500/30 bg-amber-500/5">
           <div class="text-[11px] uppercase tracking-wider text-amber-200">Created</div>
           <div class="text-sm text-white">
             <span v-if="createdHeight">Block #{{ createdHeight }}</span>
-            <span v-else>—</span>
+            <span v-else>Â—</span>
           </div>
           <p v-if="createdTxIndex" class="text-[11px] text-amber-200">tx #{{ createdTxIndex }}</p>
         </article>
       </div>
 
-      <div v-if="loading" class="card text-sm text-slate-400">Loading contract details…</div>
+      <div v-if="loading" class="card text-sm text-slate-400">Loading contract detailsÂ…</div>
 
       <div v-else class="space-y-4">
         <div class="grid gap-4 lg:grid-cols-2">
@@ -395,11 +395,11 @@ onMounted(() => {
             <div class="text-xs text-slate-300 space-y-2">
               <div class="flex items-start justify-between gap-3">
                 <span class="text-slate-500 uppercase tracking-wider">IBC Port</span>
-                <span class="font-mono text-right break-all">{{ contractInfo?.ibc_port_id || '—' }}</span>
+                <span class="font-mono text-right break-all">{{ contractInfo?.ibc_port_id || 'Â—' }}</span>
               </div>
               <div class="flex items-start justify-between gap-3">
                 <span class="text-slate-500 uppercase tracking-wider">Label</span>
-                <span class="font-mono text-right break-all">{{ contractInfo?.label || '—' }}</span>
+                <span class="font-mono text-right break-all">{{ contractInfo?.label || 'Â—' }}</span>
               </div>
               <div class="flex items-start justify-between gap-3">
                 <span class="text-slate-500 uppercase tracking-wider">Address</span>
@@ -428,7 +428,7 @@ onMounted(() => {
               <div>
                 <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Instantiate permission</div>
                 <pre v-if="codeInfo?.instantiatePermission" class="bg-slate-900/80 rounded p-2 overflow-x-auto">{{ JSON.stringify(codeInfo.instantiatePermission, null, 2) }}</pre>
-                <span v-else class="text-slate-500">—</span>
+                <span v-else class="text-slate-500">Â—</span>
               </div>
             </div>
           </section>
@@ -511,7 +511,7 @@ onMounted(() => {
               class="w-full min-h-[160px] rounded-lg bg-slate-900/70 border border-slate-800 text-xs font-mono p-3"
             ></textarea>
             <button class="btn btn-primary w-full" :disabled="smartQueryBusy" @click="runSmartQuery">
-              {{ smartQueryBusy ? 'Querying…' : 'Run query' }}
+              {{ smartQueryBusy ? 'QueryingÂ…' : 'Run query' }}
             </button>
             <p v-if="smartQueryError" class="text-xs text-rose-300">{{ smartQueryError }}</p>
             <div v-if="smartQueryResult" class="text-xs">
@@ -535,7 +535,7 @@ onMounted(() => {
                   v-model="selectedExecTemplate"
                   class="w-full rounded bg-slate-900/70 border border-slate-800 text-xs px-3 py-2"
                 >
-                  <option value="">Select a function…</option>
+                  <option value="">Select a functionÂ…</option>
                   <option v-for="tpl in executionTemplates" :key="tpl.fn" :value="tpl.fn">
                     {{ tpl.fn }}
                   </option>
@@ -569,7 +569,7 @@ onMounted(() => {
               </div>
             </div>
             <button class="btn btn-primary w-full" :disabled="executeBusy" @click="executeMessage">
-              {{ executeBusy ? 'Broadcasting…' : 'Execute' }}
+              {{ executeBusy ? 'BroadcastingÂ…' : 'Execute' }}
             </button>
             <p v-if="executeError" class="text-xs text-rose-300">{{ executeError }}</p>
             <div v-if="lastTxHash" class="text-xs text-emerald-300 flex items-center gap-2">

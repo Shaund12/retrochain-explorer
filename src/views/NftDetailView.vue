@@ -171,7 +171,7 @@ const goBack = () => router.push({ name: "tokens" });
 
     <div v-if="error" class="card border border-rose-500/30 bg-rose-500/5 text-rose-200 text-sm">{{ error }}</div>
     <div v-else-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading collection…" />
+      <RcLoadingSpinner size="md" text="Loading collectionÂ…" />
     </div>
 
     <template v-else>
@@ -201,7 +201,7 @@ const goBack = () => router.push({ name: "tokens" });
             <div class="space-y-1">
               <p class="text-sm font-semibold text-white">{{ token.name || token.id }}</p>
               <p class="text-[11px] text-slate-400 break-all">{{ token.id }}</p>
-              <p class="text-xs text-slate-300 min-h-[36px]">{{ token.description || '—' }}</p>
+              <p class="text-xs text-slate-300 min-h-[36px]">{{ token.description || 'Â—' }}</p>
               <p v-if="token.uri" class="text-[11px] text-indigo-300 truncate">{{ token.uri }}</p>
             </div>
           </article>

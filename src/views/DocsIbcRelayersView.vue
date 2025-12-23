@@ -45,7 +45,7 @@ const openTransferChannels = () => channels.value.filter((c) => isTransfer(c?.po
 
 const formatState = (state?: string) => {
   const s = (state || "").toString().replace("STATE_", "");
-  return s || "—";
+  return s || "Â—";
 };
 
 onMounted(() => {
@@ -67,7 +67,7 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading relayer context…" />
+      <RcLoadingSpinner size="md" text="Loading relayer contextÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
@@ -112,11 +112,11 @@ onMounted(() => {
             <tbody>
               <tr v-for="c in openTransferChannels().slice(0, 12)" :key="`${c.port_id}-${c.channel_id}`" class="hover:bg-white/5">
                 <td class="font-mono text-xs text-slate-200">{{ c.channel_id }}</td>
-                <td class="font-mono text-xs text-slate-400">{{ c.connection_hops?.[0] ?? '—' }}</td>
+                <td class="font-mono text-xs text-slate-400">{{ c.connection_hops?.[0] ?? 'Â—' }}</td>
                 <td class="text-xs text-slate-200">{{ formatState(c.state) }}</td>
                 <td class="text-xs text-slate-300">
-                  <div class="font-mono">{{ c.counterparty?.channel_id ?? '—' }}</div>
-                  <div class="font-mono text-[10px] text-slate-500">port {{ c.counterparty?.port_id ?? '—' }}</div>
+                  <div class="font-mono">{{ c.counterparty?.channel_id ?? 'Â—' }}</div>
+                  <div class="font-mono text-[10px] text-slate-500">port {{ c.counterparty?.port_id ?? 'Â—' }}</div>
                 </td>
               </tr>
             </tbody>

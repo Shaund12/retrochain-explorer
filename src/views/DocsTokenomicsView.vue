@@ -32,23 +32,23 @@ const retroFromUretro = (amount?: string | number | null) => {
 
 const burnFeeRateDisplay = computed(() => {
   const raw = burnParams.value?.fee_burn_rate;
-  return raw === null || raw === undefined ? "—" : fmtPercent(raw);
+  return raw === null || raw === undefined ? "Â—" : fmtPercent(raw);
 });
 
 const burnProvisionRateDisplay = computed(() => {
   const raw = burnParams.value?.provision_burn_rate;
-  return raw === null || raw === undefined ? "—" : fmtPercent(raw);
+  return raw === null || raw === undefined ? "Â—" : fmtPercent(raw);
 });
 
 const fmt = (value: number | null | undefined, digits = 2) => {
-  if (value === null || value === undefined || Number.isNaN(value)) return "—";
+  if (value === null || value === undefined || Number.isNaN(value)) return "Â—";
   return value.toLocaleString(undefined, { maximumFractionDigits: digits });
 };
 
 const fmtPercent = (value?: string | number | null, digits = 2) => {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return "Â—";
   const n = typeof value === "string" ? Number(value) : value;
-  if (!Number.isFinite(n)) return "—";
+  if (!Number.isFinite(n)) return "Â—";
   return `${(n * 100).toFixed(digits)}%`;
 };
 
@@ -60,7 +60,7 @@ const netMintedRetro = computed(() => {
 
 const unbondingTimeDisplay = computed(() => {
   const raw = stakingParams.value?.unbonding_time ?? stakingParams.value?.unbondingTime;
-  if (typeof raw !== "string") return "—";
+  if (typeof raw !== "string") return "Â—";
   if (!raw.endsWith("s")) return raw;
   const seconds = Number(raw.slice(0, -1));
   if (!Number.isFinite(seconds)) return raw;
@@ -183,14 +183,14 @@ onMounted(() => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
         <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
           <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">Staking params</div>
-          <div>Bond denom: <code class="text-xs">{{ stakingParams?.bond_denom ?? '—' }}</code></div>
+          <div>Bond denom: <code class="text-xs">{{ stakingParams?.bond_denom ?? 'Â—' }}</code></div>
           <div>Unbonding time: <span class="font-semibold text-slate-100">{{ unbondingTimeDisplay }}</span></div>
           <div class="text-[11px] text-slate-500 mt-2">REST: <code>/cosmos/staking/v1beta1/params</code></div>
         </div>
         <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
           <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">Distribution params</div>
-          <div>Community tax: <span class="font-semibold text-slate-100">{{ distributionParams?.community_tax ?? '—' }}</span></div>
-          <div>Withdraw addr enabled: <span class="font-mono text-slate-200">{{ distributionParams?.withdraw_addr_enabled ?? '—' }}</span></div>
+          <div>Community tax: <span class="font-semibold text-slate-100">{{ distributionParams?.community_tax ?? 'Â—' }}</span></div>
+          <div>Withdraw addr enabled: <span class="font-mono text-slate-200">{{ distributionParams?.withdraw_addr_enabled ?? 'Â—' }}</span></div>
           <div class="text-[11px] text-slate-500 mt-2">REST: <code>/cosmos/distribution/v1beta1/params</code></div>
         </div>
       </div>
@@ -198,9 +198,9 @@ onMounted(() => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mt-3">
         <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
           <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">Slashing params</div>
-          <div>Signed blocks window: <span class="font-mono text-slate-200">{{ slashingParams?.signed_blocks_window ?? '—' }}</span></div>
-          <div>Min signed per window: <span class="font-mono text-slate-200">{{ slashingParams?.min_signed_per_window ?? '—' }}</span></div>
-          <div>Downtime jail: <span class="font-mono text-slate-200">{{ slashingParams?.downtime_jail_duration ?? '—' }}</span></div>
+          <div>Signed blocks window: <span class="font-mono text-slate-200">{{ slashingParams?.signed_blocks_window ?? 'Â—' }}</span></div>
+          <div>Min signed per window: <span class="font-mono text-slate-200">{{ slashingParams?.min_signed_per_window ?? 'Â—' }}</span></div>
+          <div>Downtime jail: <span class="font-mono text-slate-200">{{ slashingParams?.downtime_jail_duration ?? 'Â—' }}</span></div>
           <div class="text-[11px] text-slate-500 mt-2">REST: <code>/cosmos/slashing/v1beta1/params</code></div>
         </div>
         <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">

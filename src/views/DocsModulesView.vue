@@ -56,7 +56,7 @@ const modules: ModuleDoc[] = [
 
     <RcDisclaimer type="info" title="Compatibility note">
       <p class="text-sm text-slate-300">
-        Some nodes may not run every optional module. Treat 404/501 results as “module not available”.
+        Some nodes may not run every optional module. Treat 404/501 results as Â“module not availableÂ”.
       </p>
     </RcDisclaimer>
 

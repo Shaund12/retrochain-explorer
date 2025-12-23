@@ -94,8 +94,8 @@ onMounted(() => {
               <td class="text-[11px] text-slate-400">
                 {{ c.connectionHops.join(', ') || '-' }}
               </td>
-              <td class="text-right font-mono">{{ c.nextSequenceSend ?? '—' }}</td>
-              <td class="text-right font-mono">{{ c.nextSequenceRecv ?? '—' }}</td>
+              <td class="text-right font-mono">{{ c.nextSequenceSend ?? 'Â—' }}</td>
+              <td class="text-right font-mono">{{ c.nextSequenceRecv ?? 'Â—' }}</td>
             </tr>
           </tbody>
         </table>

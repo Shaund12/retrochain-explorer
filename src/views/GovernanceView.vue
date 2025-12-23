@@ -297,7 +297,7 @@ const stats = computed(() => {
               class="btn text-[10px]"
               @click="openProposalModal(p)"
             >
-              #{{ p.proposalId }} · {{ getStatusBadge(p.status).text }}
+              #{{ p.proposalId }} Â· {{ getStatusBadge(p.status).text }}
             </button>
           </div>
         </div>
@@ -338,7 +338,7 @@ const stats = computed(() => {
                 {{ getProposalKind(proposal) }}
               </span>
               <span v-if="proposal.votingEndTime" class="text-[11px] text-slate-500">
-                • Ends {{ formatTime(proposal.votingEndTime) }}
+                Â• Ends {{ formatTime(proposal.votingEndTime) }}
               </span>
             </div>
             

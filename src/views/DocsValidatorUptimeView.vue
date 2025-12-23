@@ -51,9 +51,9 @@ const fetchSigningInfo = async () => {
   }
 };
 
-const signedBlocksWindow = computed(() => slashingParams.value?.signed_blocks_window ?? "—");
-const minSignedPerWindow = computed(() => slashingParams.value?.min_signed_per_window ?? "—");
-const downtimeJailDuration = computed(() => slashingParams.value?.downtime_jail_duration ?? "—");
+const signedBlocksWindow = computed(() => slashingParams.value?.signed_blocks_window ?? "Â—");
+const minSignedPerWindow = computed(() => slashingParams.value?.min_signed_per_window ?? "Â—");
+const downtimeJailDuration = computed(() => slashingParams.value?.downtime_jail_duration ?? "Â—");
 
 onMounted(() => {
   load();
@@ -75,16 +75,16 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading validator uptime docs…" />
+      <RcLoadingSpinner size="md" text="Loading validator uptime docsÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
       <div class="text-sm text-rose-200">Failed to load slashing params: {{ error }}</div>
     </div>
 
-    <RcDisclaimer type="info" title="What “uptime” means on Cosmos">
+    <RcDisclaimer type="info" title="What Â“uptimeÂ” means on Cosmos">
       <ul class="text-sm text-slate-300 list-disc list-inside space-y-1">
-        <li>“Uptime” is often derived from <strong>missed blocks</strong> within a <code>signed_blocks_window</code>.</li>
+        <li>Â“UptimeÂ” is often derived from <strong>missed blocks</strong> within a <code>signed_blocks_window</code>.</li>
         <li>Slashing/jailing is enforced by the slashing module based on the same window and thresholds.</li>
         <li>Explorers should label this as an <em>estimate</em> and explain the window.</li>
       </ul>
@@ -117,9 +117,9 @@ onMounted(() => {
 
         <div class="mt-3 p-3 rounded-lg bg-slate-900/60 border border-slate-800">
           <div v-if="signingInfo" class="text-sm text-slate-200 space-y-1">
-            <div>Missed blocks counter: <span class="font-mono">{{ signingInfo.missed_blocks_counter ?? '—' }}</span></div>
-            <div>Index offset: <span class="font-mono">{{ signingInfo.index_offset ?? '—' }}</span></div>
-            <div>Jailed until: <span class="font-mono">{{ signingInfo.jailed_until ?? '—' }}</span></div>
+            <div>Missed blocks counter: <span class="font-mono">{{ signingInfo.missed_blocks_counter ?? 'Â—' }}</span></div>
+            <div>Index offset: <span class="font-mono">{{ signingInfo.index_offset ?? 'Â—' }}</span></div>
+            <div>Jailed until: <span class="font-mono">{{ signingInfo.jailed_until ?? 'Â—' }}</span></div>
             <div class="text-[11px] text-slate-500 mt-2">
               REST: <code>/cosmos/slashing/v1beta1/signing_infos/&lt;valcons&gt;</code>
             </div>

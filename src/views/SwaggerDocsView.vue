@@ -4,11 +4,10 @@ import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import RcBackLink from "@/components/RcBackLink.vue";
 import { useNetwork } from "@/composables/useNetwork";
 
-const { restBase } = useNetwork();
+import SwaggerUI from "swagger-ui-dist/swagger-ui-bundle";
+import "swagger-ui-dist/swagger-ui.css";
 
-const swaggerCssUrl = "https://unpkg.com/swagger-ui-dist@5/swagger-ui.css";
-const swaggerJsUrl = "https://unpkg.com/swagger-ui-dist@5/swagger-ui-bundle.js";
-const swaggerParserUrl = "https://unpkg.com/@apidevtools/swagger-parser@10/dist/swagger-parser.min.js";
+const { restBase } = useNetwork();
 
 const loading = ref(true);
 const error = ref<string | null>(null);
@@ -17,38 +16,10 @@ const specCandidates = computed(() => ["/api-docs/cosmos-sdk-swagger.yaml"]);
 
 const effectiveRestBase = computed(() => restBase.value || "/api");
 
-const loadScript = (src: string) =>
-  new Promise<void>((resolve, reject) => {
-    const existing = document.querySelector(`script[data-swagger='${src}']`) as HTMLScriptElement | null;
-    if (existing) {
-      resolve();
-      return;
-    }
-    const s = document.createElement("script");
-    s.src = src;
-    s.async = true;
-    s.dataset.swagger = src;
-    s.onload = () => resolve();
-    s.onerror = () => reject(new Error(`Failed to load ${src}`));
-    document.head.appendChild(s);
-  });
-
-const loadCss = (href: string) => {
-  const existing = document.querySelector(`link[data-swagger='${href}']`) as HTMLLinkElement | null;
-  if (existing) return;
-  const l = document.createElement("link");
-  l.rel = "stylesheet";
-  l.href = href;
-  l.dataset.swagger = href;
-  document.head.appendChild(l);
-};
-
 const initSwagger = (spec: string) => {
-  const w = window as any;
-  const SwaggerUIBundle = w.SwaggerUIBundle;
-  if (!SwaggerUIBundle) throw new Error("Swagger UI not available");
+  if (!SwaggerUI) throw new Error("Swagger UI not available");
 
-  SwaggerUIBundle({
+  SwaggerUI({
     dom_id: "#swagger-ui",
     url: spec,
     deepLinking: true,
@@ -76,31 +47,8 @@ const checkSpecReachable = async (url: string) => {
   if (!res.ok) throw new Error(`Spec fetch failed (${res.status}) ${url}`);
 };
 
-const normalizeOpenApiYamlForSwaggerUi = (yaml: string) => {
-  // Swagger UI's YAML parser is strict and errors on duplicate mapping keys.
-  // Cosmos SDK swagger specs often contain duplicate `paths` entries (same path repeated)
-  // when specs are merged or generated.
-  //
-  // If parsing fails, we fall back to a best-effort conversion:
-  // - parse as YAML
-  // - stringify as JSON
-  //
-  // This allows Swagger UI to load and display the majority of endpoints.
-  try {
-    const w = window as any;
-    const parser = w.SwaggerParser as any;
-    if (!parser?.parseContent) return { spec: yaml, kind: "url" as const };
-    return { spec: yaml, kind: "raw" as const, parser };
-  } catch {
-    return { spec: yaml, kind: "url" as const };
-  }
-};
-
 onMounted(async () => {
   try {
-    loadCss(swaggerCssUrl);
-    await Promise.all([loadScript(swaggerJsUrl), loadScript(swaggerParserUrl)]);
-
     let chosen: string | null = null;
     for (const candidate of specCandidates.value) {
       try {
@@ -116,17 +64,7 @@ onMounted(async () => {
       throw new Error("Swagger spec not reachable. Ensure the file exists at /api-docs/cosmos-sdk-swagger.yaml and is served by your host.");
     }
 
-    const res = await fetch(chosen);
-    const text = await res.text();
-    const normalized = normalizeOpenApiYamlForSwaggerUi(text);
-
-    if (normalized.kind === "raw") {
-      const parsed = await normalized.parser.parseContent(text, chosen);
-      const jsonText = JSON.stringify(parsed);
-      initSwagger(`data:application/json,${encodeURIComponent(jsonText)}`);
-    } else {
-      initSwagger(chosen);
-    }
+    initSwagger(chosen);
   } catch (e: any) {
     error.value = e?.message || String(e);
   } finally {
@@ -157,7 +95,7 @@ onMounted(async () => {
     </RcDisclaimer>
 
     <div v-if="loading" class="card">
-      <div class="text-sm text-slate-300">Loading Swagger UI…</div>
+      <div class="text-sm text-slate-300">Loading Swagger UIÂ…</div>
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">

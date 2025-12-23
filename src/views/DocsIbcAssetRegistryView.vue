@@ -212,9 +212,9 @@ const discoveredCount = computed(() => rows.value.filter((r) => r.source === "li
 const headerStats = computed(() => {
   if (!hasRows.value) return "No entries";
   if (discoveredCount.value > 0) {
-    return `${rows.value.length} total · ${discoveredCount.value} discovered · ${curatedCount.value} curated`;
+    return `${rows.value.length} total Â· ${discoveredCount.value} discovered Â· ${curatedCount.value} curated`;
   }
-  return `${rows.value.length} total · ${curatedCount.value} curated`;
+  return `${rows.value.length} total Â· ${curatedCount.value} curated`;
 });
 
 const sourceBadgeClass = (source?: "live" | "curated") => {
@@ -242,7 +242,7 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading IBC asset registry…" />
+      <RcLoadingSpinner size="md" text="Loading IBC asset registryÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
@@ -252,9 +252,9 @@ onMounted(() => {
     <RcDisclaimer type="info" title="How to use this">
       <ul class="text-sm text-slate-300 list-disc list-inside space-y-1">
         <li><strong>Automatic discovery</strong> attempts to list all <code>ibc/</code> denoms from <code>/cosmos/bank/v1beta1/denoms_metadata</code>.</li>
-        <li><strong>Curated</strong> entries are kept as “known good” fallbacks and to provide icons/decimals.</li>
+        <li><strong>Curated</strong> entries are kept as Â“known goodÂ” fallbacks and to provide icons/decimals.</li>
         <li><strong>Live resolver</strong> queries <code>/ibc/apps/transfer/v1/denom_traces/&lt;hash&gt;</code> for any hash.</li>
-        <li>Symbols/decimals/icons are pulled from the explorer’s token metadata mapping when available.</li>
+        <li>Symbols/decimals/icons are pulled from the explorerÂ’s token metadata mapping when available.</li>
       </ul>
     </RcDisclaimer>
 
@@ -285,18 +285,18 @@ onMounted(() => {
           </div>
           <div>
             <div class="text-xs text-slate-500 uppercase tracking-wider">Base denom</div>
-            <div class="font-mono text-xs text-slate-200">{{ resolverResult.baseDenom ?? '—' }}</div>
+            <div class="font-mono text-xs text-slate-200">{{ resolverResult.baseDenom ?? 'Â—' }}</div>
           </div>
           <div>
             <div class="text-xs text-slate-500 uppercase tracking-wider">Path</div>
-            <div class="font-mono text-xs text-slate-200">{{ resolverResult.path ?? '—' }}</div>
+            <div class="font-mono text-xs text-slate-200">{{ resolverResult.path ?? 'Â—' }}</div>
           </div>
           <div>
             <div class="text-xs text-slate-500 uppercase tracking-wider">Metadata</div>
             <div class="text-xs text-slate-200">
               <span v-if="resolverResult.icon" class="mr-1">{{ resolverResult.icon }}</span>
               <span>{{ resolverResult.symbol ?? 'Unknown' }}</span>
-              <span v-if="resolverResult.decimals !== null" class="text-slate-400"> · {{ resolverResult.decimals }} decimals</span>
+              <span v-if="resolverResult.decimals !== null" class="text-slate-400"> Â· {{ resolverResult.decimals }} decimals</span>
             </div>
           </div>
         </div>
@@ -337,8 +337,8 @@ onMounted(() => {
                 <span v-if="row.decimals !== null" class="text-xs text-slate-500"> ({{ row.decimals }}d)</span>
               </td>
               <td class="font-mono text-xs text-slate-300">{{ row.denom }}</td>
-              <td class="font-mono text-xs text-slate-300">{{ row.baseDenom ?? '—' }}</td>
-              <td class="font-mono text-[11px] text-slate-500">{{ row.path ?? '—' }}</td>
+              <td class="font-mono text-xs text-slate-300">{{ row.baseDenom ?? 'Â—' }}</td>
+              <td class="font-mono text-[11px] text-slate-500">{{ row.path ?? 'Â—' }}</td>
               <td>
                 <span
                   class="px-2 py-0.5 rounded-full text-[11px] border whitespace-nowrap"

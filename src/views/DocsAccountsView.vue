@@ -54,7 +54,7 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading accounts docs…" />
+      <RcLoadingSpinner size="md" text="Loading accounts docsÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
@@ -74,12 +74,12 @@ onMounted(() => {
         <div class="mt-2 space-y-2 text-sm text-slate-300">
           <div>
             <div class="text-slate-100 font-semibold">User account</div>
-            <div class="text-[11px] text-slate-500">Example: <code>cosmos1…</code></div>
+            <div class="text-[11px] text-slate-500">Example: <code>cosmos1Â…</code></div>
             <div class="text-[11px] text-slate-500 mt-1">REST: <code>/cosmos/auth/v1beta1/accounts/&lt;address&gt;</code></div>
           </div>
           <div>
             <div class="text-slate-100 font-semibold">Validator operator</div>
-            <div class="text-[11px] text-slate-500">Example: <code>cosmosvaloper1…</code></div>
+            <div class="text-[11px] text-slate-500">Example: <code>cosmosvaloper1Â…</code></div>
             <div class="text-[11px] text-slate-500 mt-1">REST: <code>/cosmos/staking/v1beta1/validators/&lt;valoper&gt;</code></div>
           </div>
           <div>
@@ -94,7 +94,7 @@ onMounted(() => {
         <div class="mt-2 space-y-2 text-sm text-slate-300">
           <p>
             Wallets sign transactions using <strong>account number</strong> and <strong>sequence</strong>. If sequence mismatches,
-            transactions fail with an “account sequence mismatch” error.
+            transactions fail with an Â“account sequence mismatchÂ” error.
           </p>
           <div class="text-[11px] text-slate-500">
             REST: <code>/cosmos/auth/v1beta1/accounts/&lt;address&gt;</code>
@@ -103,7 +103,7 @@ onMounted(() => {
             Auth params: <code>/cosmos/auth/v1beta1/params</code>
           </div>
           <div class="text-xs text-slate-400 mt-2">
-            Max memo characters (live params): <span class="font-mono text-slate-200">{{ authParams?.max_memo_characters ?? '—' }}</span>
+            Max memo characters (live params): <span class="font-mono text-slate-200">{{ authParams?.max_memo_characters ?? 'Â—' }}</span>
           </div>
         </div>
       </div>
@@ -119,10 +119,10 @@ onMounted(() => {
             <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
               <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Staking pool</div>
               <div class="text-sm text-slate-200">
-                Bonded: <span class="font-mono">{{ stakingPool?.bonded_tokens ?? '—' }}</span>
+                Bonded: <span class="font-mono">{{ stakingPool?.bonded_tokens ?? 'Â—' }}</span>
               </div>
               <div class="text-sm text-slate-200">
-                Not bonded: <span class="font-mono">{{ stakingPool?.not_bonded_tokens ?? '—' }}</span>
+                Not bonded: <span class="font-mono">{{ stakingPool?.not_bonded_tokens ?? 'Â—' }}</span>
               </div>
               <div class="text-[11px] text-slate-500 mt-2">REST: <code>/cosmos/staking/v1beta1/pool</code></div>
             </div>

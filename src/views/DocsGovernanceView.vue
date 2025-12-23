@@ -25,9 +25,9 @@ const fmtAmount = (amount: string) => {
 const minDepositRetro = computed(() => {
   const deposits: Array<{ denom: string; amount: string }> | undefined =
     depositParams.value?.min_deposit ?? depositParams.value?.minDeposit;
-  if (!deposits || !deposits.length) return "—";
+  if (!deposits || !deposits.length) return "Â—";
   const entry = deposits.find((d) => d.denom === "uretro") || deposits[0];
-  if (!entry?.amount) return "—";
+  if (!entry?.amount) return "Â—";
   return `${fmtAmount(entry.amount)} RETRO`;
 });
 
@@ -73,7 +73,7 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading governance docs…" />
+      <RcLoadingSpinner size="md" text="Loading governance docsÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
@@ -101,7 +101,7 @@ onMounted(() => {
         <div class="text-xs uppercase tracking-wider text-slate-400">Deposit params</div>
         <div class="mt-2 space-y-1 text-sm">
           <div>Min deposit: <span class="font-semibold text-slate-100">{{ minDepositRetro }}</span></div>
-          <div>Max deposit period: <span class="font-mono text-slate-200">{{ depositParams?.max_deposit_period ?? '—' }}</span></div>
+          <div>Max deposit period: <span class="font-mono text-slate-200">{{ depositParams?.max_deposit_period ?? 'Â—' }}</span></div>
           <div class="text-[11px] text-slate-500 mt-2">REST: <code>/cosmos/gov/v1/params/deposit</code></div>
         </div>
       </div>
@@ -109,7 +109,7 @@ onMounted(() => {
       <div class="card">
         <div class="text-xs uppercase tracking-wider text-slate-400">Voting params</div>
         <div class="mt-2 space-y-1 text-sm">
-          <div>Voting period: <span class="font-mono text-slate-200">{{ votingParams?.voting_period ?? '—' }}</span></div>
+          <div>Voting period: <span class="font-mono text-slate-200">{{ votingParams?.voting_period ?? 'Â—' }}</span></div>
           <div class="text-[11px] text-slate-500 mt-2">REST: <code>/cosmos/gov/v1/params/voting</code></div>
         </div>
       </div>
@@ -117,9 +117,9 @@ onMounted(() => {
       <div class="card">
         <div class="text-xs uppercase tracking-wider text-slate-400">Tally params</div>
         <div class="mt-2 space-y-1 text-sm">
-          <div>Quorum: <span class="font-mono text-slate-200">{{ tallyParams?.quorum ?? '—' }}</span></div>
-          <div>Threshold: <span class="font-mono text-slate-200">{{ tallyParams?.threshold ?? '—' }}</span></div>
-          <div>Veto threshold: <span class="font-mono text-slate-200">{{ tallyParams?.veto_threshold ?? '—' }}</span></div>
+          <div>Quorum: <span class="font-mono text-slate-200">{{ tallyParams?.quorum ?? 'Â—' }}</span></div>
+          <div>Threshold: <span class="font-mono text-slate-200">{{ tallyParams?.threshold ?? 'Â—' }}</span></div>
+          <div>Veto threshold: <span class="font-mono text-slate-200">{{ tallyParams?.veto_threshold ?? 'Â—' }}</span></div>
           <div class="text-[11px] text-slate-500 mt-2">REST: <code>/cosmos/gov/v1/params/tallying</code></div>
         </div>
       </div>

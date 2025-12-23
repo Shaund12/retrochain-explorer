@@ -17,7 +17,7 @@ const distributionParams = ref<Record<string, any> | null>(null);
 const slashingParams = ref<Record<string, any> | null>(null);
 
 const formatDuration = (duration?: string | null) => {
-  if (!duration) return "—";
+  if (!duration) return "Â—";
   if (!duration.endsWith("s")) return duration;
   const seconds = Number(duration.slice(0, -1));
   if (!Number.isFinite(seconds)) return duration;
@@ -70,7 +70,7 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading staking docs…" />
+      <RcLoadingSpinner size="md" text="Loading staking docsÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
@@ -117,14 +117,14 @@ onMounted(() => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm">
         <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
           <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">Staking params</div>
-          <div>Bond denom: <code class="text-xs">{{ stakingParams?.bond_denom ?? '—' }}</code></div>
+          <div>Bond denom: <code class="text-xs">{{ stakingParams?.bond_denom ?? 'Â—' }}</code></div>
           <div>Unbonding time: <span class="font-semibold text-slate-100">{{ formatDuration(stakingParams?.unbonding_time ?? null) }}</span></div>
           <div class="text-[11px] text-slate-500 mt-2">REST: <code>/cosmos/staking/v1beta1/params</code></div>
         </div>
         <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
           <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">Distribution params</div>
-          <div>Community tax: <span class="font-mono text-slate-200">{{ distributionParams?.community_tax ?? '—' }}</span></div>
-          <div>Withdraw enabled: <span class="font-mono text-slate-200">{{ distributionParams?.withdraw_addr_enabled ?? '—' }}</span></div>
+          <div>Community tax: <span class="font-mono text-slate-200">{{ distributionParams?.community_tax ?? 'Â—' }}</span></div>
+          <div>Withdraw enabled: <span class="font-mono text-slate-200">{{ distributionParams?.withdraw_addr_enabled ?? 'Â—' }}</span></div>
           <div class="text-[11px] text-slate-500 mt-2">REST: <code>/cosmos/distribution/v1beta1/params</code></div>
         </div>
       </div>
@@ -132,15 +132,15 @@ onMounted(() => {
       <div class="grid grid-cols-1 md:grid-cols-2 gap-3 text-sm mt-3">
         <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
           <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">Slashing params</div>
-          <div>Signed blocks window: <span class="font-mono text-slate-200">{{ slashingParams?.signed_blocks_window ?? '—' }}</span></div>
-          <div>Min signed per window: <span class="font-mono text-slate-200">{{ slashingParams?.min_signed_per_window ?? '—' }}</span></div>
-          <div>Downtime jail: <span class="font-mono text-slate-200">{{ slashingParams?.downtime_jail_duration ?? '—' }}</span></div>
+          <div>Signed blocks window: <span class="font-mono text-slate-200">{{ slashingParams?.signed_blocks_window ?? 'Â—' }}</span></div>
+          <div>Min signed per window: <span class="font-mono text-slate-200">{{ slashingParams?.min_signed_per_window ?? 'Â—' }}</span></div>
+          <div>Downtime jail: <span class="font-mono text-slate-200">{{ slashingParams?.downtime_jail_duration ?? 'Â—' }}</span></div>
           <div class="text-[11px] text-slate-500 mt-2">REST: <code>/cosmos/slashing/v1beta1/params</code></div>
         </div>
         <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-800">
           <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">Explorer notes</div>
           <ul class="list-disc list-inside text-sm text-slate-300 space-y-1">
-            <li>APR is derived; there is no single canonical “APR endpoint”.</li>
+            <li>APR is derived; there is no single canonical Â“APR endpointÂ”.</li>
             <li>Commission reduces delegator rewards (per validator).</li>
             <li>Burn/community tax reduce effective yield chain-wide.</li>
           </ul>

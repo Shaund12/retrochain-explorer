@@ -59,7 +59,7 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading fee collector docs…" />
+      <RcLoadingSpinner size="md" text="Loading fee collector docsÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
@@ -84,7 +84,7 @@ onMounted(() => {
           </p>
           <div>
             Community tax (live):
-            <span class="font-mono text-slate-200">{{ distributionParams?.community_tax ?? '—' }}</span>
+            <span class="font-mono text-slate-200">{{ distributionParams?.community_tax ?? 'Â—' }}</span>
           </div>
           <div class="text-[11px] text-slate-500">REST: <code>/cosmos/distribution/v1beta1/params</code></div>
         </div>
@@ -98,11 +98,11 @@ onMounted(() => {
           </p>
           <div>
             Fee burn rate (live):
-            <span class="font-mono text-slate-200">{{ burnParams?.fee_burn_rate ?? '—' }}</span>
+            <span class="font-mono text-slate-200">{{ burnParams?.fee_burn_rate ?? 'Â—' }}</span>
           </div>
           <div>
             Provision burn rate (live):
-            <span class="font-mono text-slate-200">{{ burnParams?.provision_burn_rate ?? '—' }}</span>
+            <span class="font-mono text-slate-200">{{ burnParams?.provision_burn_rate ?? 'Â—' }}</span>
           </div>
           <div class="text-[11px] text-slate-500">REST: <code>/cosmos/burn/v1beta1/params</code></div>
         </div>
@@ -117,7 +117,7 @@ onMounted(() => {
           </p>
           <div>
             Mint denom (live):
-            <code class="text-xs">{{ mintParams?.mint_denom ?? mintParams?.mintDenom ?? '—' }}</code>
+            <code class="text-xs">{{ mintParams?.mint_denom ?? mintParams?.mintDenom ?? 'Â—' }}</code>
           </div>
           <div class="text-[11px] text-slate-500">REST: <code>/cosmos/mint/v1beta1/params</code></div>
         </div>
@@ -128,7 +128,7 @@ onMounted(() => {
         <ul class="list-disc list-inside text-sm text-slate-300 space-y-1 mt-2">
           <li>Display fees by denom and show whether burn modules are enabled for the chain.</li>
           <li>Track module account balances (fee collector, community pool, burn sink) where addresses are known.</li>
-          <li>Derive “net fee to validators” = fees ? burned ? community pool allocation (chain-dependent).</li>
+          <li>Derive Â“net fee to validatorsÂ” = fees ? burned ? community pool allocation (chain-dependent).</li>
           <li>When possible, link fee collector transfers to block end events or module msgs.</li>
         </ul>
       </div>
@@ -139,7 +139,7 @@ onMounted(() => {
       <pre class="text-[11px] bg-slate-950/60 border border-slate-800 rounded-lg p-3 overflow-x-auto text-slate-200"><code>retrochaind query distribution params
 retrochaind query mint params
 retrochaind query burn params
-# inspect a tx’s fee & events
+# inspect a txÂ’s fee & events
 retrochaind query tx &lt;txhash&gt;</code></pre>
     </div>
 

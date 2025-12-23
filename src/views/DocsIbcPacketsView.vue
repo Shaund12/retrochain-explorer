@@ -69,7 +69,7 @@ const loadAll = async () => {
 
 const fmtSeq = (seq: any) => {
   const n = Number(seq);
-  return Number.isFinite(n) ? n.toLocaleString() : String(seq ?? "—");
+  return Number.isFinite(n) ? n.toLocaleString() : String(seq ?? "Â—");
 };
 
 onMounted(() => {
@@ -83,7 +83,7 @@ onMounted(() => {
     <div class="card">
       <h1 class="text-xl font-bold text-slate-50">IBC Packets & Timeouts</h1>
       <p class="text-sm text-slate-400 mt-1">
-        How to identify pending IBC transfers, acknowledgements, and timeouts. Useful for explorer “pending” states and relayer troubleshooting.
+        How to identify pending IBC transfers, acknowledgements, and timeouts. Useful for explorer Â“pendingÂ” states and relayer troubleshooting.
       </p>
       <div v-if="height" class="mt-3 text-[11px] text-slate-500">
         Data as of height <span class="font-mono text-slate-300">{{ height }}</span>
@@ -91,7 +91,7 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading IBC packet state…" />
+      <RcLoadingSpinner size="md" text="Loading IBC packet stateÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
@@ -127,8 +127,8 @@ onMounted(() => {
         </div>
       </div>
       <div class="mt-2 text-[11px] text-slate-500">
-        Commitments: <code>/ibc/core/channel/v1/channels/&lt;channel&gt;/ports/&lt;port&gt;/packet_commitments</code> ·
-        Acks: <code>/packet_acknowledgements</code> ·
+        Commitments: <code>/ibc/core/channel/v1/channels/&lt;channel&gt;/ports/&lt;port&gt;/packet_commitments</code> Â·
+        Acks: <code>/packet_acknowledgements</code> Â·
         Receipts: <code>/packet_receipts</code>
       </div>
     </div>
@@ -177,7 +177,7 @@ onMounted(() => {
         <li>Confirm the channel is <code>OPEN</code> (see IBC Channels & Routing doc).</li>
         <li>If commitment exists but no ack: relayer may be down or blocked, or dest chain rejected packet.</li>
         <li>If timeout height/time passed: source can submit a timeout to recover funds (depends on app semantics).</li>
-        <li>Indexers can show “pending” even when funds arrived; confirm on-chain receipts/events.</li>
+        <li>Indexers can show Â“pendingÂ” even when funds arrived; confirm on-chain receipts/events.</li>
       </ul>
     </div>
 

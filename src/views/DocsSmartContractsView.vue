@@ -61,7 +61,7 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading smart contracts docs…" />
+      <RcLoadingSpinner size="md" text="Loading smart contracts docsÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
@@ -99,8 +99,8 @@ onMounted(() => {
 
           <div class="mt-2 p-3 rounded-lg bg-slate-900/60 border border-slate-800">
             <div v-if="codeInfo" class="text-sm text-slate-200 space-y-1">
-              <div>Creator: <span class="font-mono text-xs">{{ codeInfo.creator ?? '—' }}</span></div>
-              <div>Checksum: <span class="font-mono text-xs">{{ codeInfo.data_hash ?? codeInfo.dataHash ?? '—' }}</span></div>
+              <div>Creator: <span class="font-mono text-xs">{{ codeInfo.creator ?? 'Â—' }}</span></div>
+              <div>Checksum: <span class="font-mono text-xs">{{ codeInfo.data_hash ?? codeInfo.dataHash ?? 'Â—' }}</span></div>
             </div>
             <div v-else class="text-sm text-slate-400">No code info found (or CosmWasm not enabled).</div>
           </div>

@@ -57,7 +57,7 @@ onMounted(() => {
     </div>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading consensus docs…" />
+      <RcLoadingSpinner size="md" text="Loading consensus docsÂ…" />
     </div>
 
     <div v-if="error" class="card border-rose-500/50 bg-rose-500/5">
@@ -75,8 +75,8 @@ onMounted(() => {
       <div class="card">
         <div class="text-xs uppercase tracking-wider text-slate-400">Node info</div>
         <div class="mt-2 space-y-1 text-sm text-slate-300">
-          <div>Moniker: <span class="font-semibold text-slate-100">{{ nodeInfo?.moniker ?? '—' }}</span></div>
-          <div>Network (chain-id): <span class="font-mono text-slate-200">{{ nodeInfo?.network ?? '—' }}</span></div>
+          <div>Moniker: <span class="font-semibold text-slate-100">{{ nodeInfo?.moniker ?? 'Â—' }}</span></div>
+          <div>Network (chain-id): <span class="font-mono text-slate-200">{{ nodeInfo?.network ?? 'Â—' }}</span></div>
           <div class="text-[11px] text-slate-500 mt-2">REST: <code>/cosmos/base/tendermint/v1beta1/node_info</code></div>
         </div>
       </div>
