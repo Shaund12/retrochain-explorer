@@ -14,7 +14,7 @@ const error = ref<string | null>(null);
 
 const specCandidates = computed(() => {
   const origin = typeof window !== "undefined" ? window.location.origin : "";
-  return [`${origin}/api-docs/cosmos-sdk-swagger.yaml`];
+    return [`${origin}/api-docs/definitions.yaml`];
 });
 
 const effectiveRestBase = computed(() => restBase.value || "/api");
