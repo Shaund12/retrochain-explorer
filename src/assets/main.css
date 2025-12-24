@@ -17,7 +17,37 @@ body {
   }
 
   .docs-prose {
-    @apply prose prose-invert prose-headings:font-semibold prose-headings:text-slate-50 prose-p:text-slate-200 prose-a:text-indigo-300 prose-strong:text-white max-w-none;
+    max-width: none;
+    color: #e2e8f0;
+    line-height: 1.7;
+  }
+
+  .docs-prose h1,
+  .docs-prose h2,
+  .docs-prose h3,
+  .docs-prose h4,
+  .docs-prose h5,
+  .docs-prose h6 {
+    font-weight: 600;
+    color: #f8fafc;
+    line-height: 1.3;
+    margin-top: 1.4em;
+    margin-bottom: 0.6em;
+  }
+
+  .docs-prose p,
+  .docs-prose ul,
+  .docs-prose ol {
+    color: #cbd5e1;
+    margin: 0.5em 0;
+  }
+
+  .docs-prose a {
+    color: #a5b4fc;
+  }
+
+  .docs-prose strong {
+    color: #ffffff;
   }
 
   .form-minimal {
