@@ -41,6 +41,7 @@ import EcosystemWalletsView from "@/views/EcosystemWalletsView.vue";
 import IbcView from "@/views/IbcView.vue";
 import DocsHubView from "@/views/DocsHubView.vue";
 import SwaggerDocsView from "@/views/SwaggerDocsView.vue";
+import NomicAppView from "@/views/NomicAppView.vue";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", name: "home", component: HomeView },
@@ -60,6 +61,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/staking/wbtc", name: "btc-stake", component: BtcStakeView },
   { path: "/buy", name: "buy", component: BuyView },
   { path: "/dex", name: "dex", component: DexView },
+  { path: "/nomic", name: "nomic", component: NomicAppView },
   { path: "/tokens", name: "tokens", component: TokensView },
   { path: "/nft/:id", name: "nft-detail", component: NftDetailView, props: true },
   { path: "/tokenomics", name: "tokenomics", component: TokenomicsView },
