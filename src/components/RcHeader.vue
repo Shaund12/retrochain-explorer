@@ -25,14 +25,23 @@
       <nav class="hidden lg:flex items-center gap-1">
         <template v-for="item in navItems" :key="item.label">
           <a
-            v-if="!isGroup(item)"
+            v-if="!isGroup(item) && isExternalLink(item)"
+            :href="item.href"
+            target="_blank"
+            rel="noopener"
+            class="px-4 h-16 flex items-center text-sm font-medium transition-colors cursor-pointer relative text-slate-400 hover:text-white"
+          >
+            {{ item.label }}
+          </a>
+          <a
+            v-else-if="!isGroup(item)"
             @click.prevent="router.push(item.to)"
             class="px-4 h-16 flex items-center text-sm font-medium transition-colors cursor-pointer relative"
-            :class="isLinkActive(item.to) ? 'text-white' : 'text-slate-400 hover:text-white'"
+            :class="isLinkActive(item) ? 'text-white' : 'text-slate-400 hover:text-white'"
           >
             {{ item.label }}
             <div
-              v-if="isLinkActive(item.to)"
+              v-if="isLinkActive(item)"
               class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
             ></div>
           </a>
@@ -65,16 +74,26 @@
               @mouseenter="clearDropdownTimer()"
               @mouseleave="scheduleDropdownClose"
             >
-              <button
+              <a
                 v-for="link in item.items"
                 :key="link.label"
+                v-if="isExternalLink(link)"
+                :href="link.href"
+                target="_blank"
+                rel="noopener"
+                class="w-full px-4 py-2 text-left text-sm flex items-center justify-between transition-colors text-slate-400 hover:text-white hover:bg-white/5"
+              >
+                <span>{{ link.label }}</span>
+              </a>
+              <button
+                v-else
                 type="button"
                 @click.prevent="router.push(link.to); openDropdown = null;"
                 class="w-full px-4 py-2 text-left text-sm flex items-center justify-between transition-colors"
-                :class="isLinkActive(link.to) ? 'text-white bg-white/5' : 'text-slate-400 hover:text-white hover:bg-white/5'"
+                :class="isLinkActive(link) ? 'text-white bg-white/5' : 'text-slate-400 hover:text-white hover:bg-white/5'"
               >
                 <span>{{ link.label }}</span>
-                <span v-if="isLinkActive(link.to)" class="text-[10px] text-emerald-300">Active</span>
+                <span v-if="isLinkActive(link)" class="text-[10px] text-emerald-300">Active</span>
               </button>
             </div>
           </div>
@@ -185,12 +204,21 @@
     >
       <nav class="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
         <template v-for="item in navItems" :key="item.label">
+          <a
+            v-if="!isGroup(item) && isExternalLink(item)"
+            :href="item.href"
+            target="_blank"
+            rel="noopener"
+            class="px-4 py-3 text-sm font-medium transition-all text-left rounded-lg text-slate-400 hover:text-white hover:bg-white/5"
+          >
+            {{ item.label }}
+          </a>
           <button
-            v-if="!isGroup(item)"
+            v-else-if="!isGroup(item)"
             type="button"
             @click.prevent="router.push(item.to); closeMobileMenu();"
             class="px-4 py-3 text-sm font-medium transition-all text-left rounded-lg"
-            :class="isLinkActive(item.to) ? 'text-white bg-white/5' : 'text-slate-400 hover:text-white hover:bg-white/5'"
+            :class="isLinkActive(item) ? 'text-white bg-white/5' : 'text-slate-400 hover:text-white hover:bg-white/5'"
           >
             {{ item.label }}
           </button>
@@ -213,13 +241,23 @@
               </svg>
             </button>
             <div v-show="expandedMobileGroups[item.label]" class="bg-white/5 border-t border-white/5 flex flex-col">
-              <button
+              <a
                 v-for="link in item.items"
                 :key="link.label"
+                v-if="isExternalLink(link)"
+                :href="link.href"
+                target="_blank"
+                rel="noopener"
+                class="px-6 py-2 text-sm text-left transition-colors text-slate-400 hover:text-white hover:bg-white/10"
+              >
+                {{ link.label }}
+              </a>
+              <button
+                v-else
                 type="button"
                 @click.prevent="router.push(link.to); closeMobileMenu();"
                 class="px-6 py-2 text-sm text-left transition-colors"
-                :class="isLinkActive(link.to) ? 'text-white bg-white/10' : 'text-slate-400 hover:text-white hover:bg-white/10'"
+                :class="isLinkActive(link) ? 'text-white bg-white/10' : 'text-slate-400 hover:text-white hover:bg-white/10'"
               >
                 {{ link.label }}
               </button>
@@ -399,10 +437,17 @@ const wbtcMeta = computed(() => {
   return getTokenMeta(wbtcBalanceEntry.value.denom);
 });
 
-interface NavLink {
+interface NavLinkRoute {
   label: string;
   to: { name: string; params?: Record<string, any> };
 }
+
+interface NavLinkExternal {
+  label: string;
+  href: string;
+}
+
+type NavLink = NavLinkRoute | NavLinkExternal;
 
 interface NavGroup {
   label: string;
@@ -413,7 +458,13 @@ type NavItem = NavLink | NavGroup;
 
 const navItems: NavItem[] = [
   { label: "Overview", to: { name: "home" } },
-  { label: "Arcade", to: { name: "arcade" } },
+  {
+    label: "Arcade",
+    items: [
+      { label: "Arcade Dashboard", to: { name: "arcade" } },
+      { label: "Space Invaders", href: "https://retrochain.ddns.net/arcade/arcade/" }
+    ]
+  },
   {
     label: "Network",
     items: [
@@ -449,11 +500,16 @@ const navItems: NavItem[] = [
 
 const currentRouteName = computed(() => route.name as string | undefined);
 
-const isLinkActive = (to: NavLink["to"]) => currentRouteName.value === to.name;
+const isExternalLink = (item: NavLink): item is NavLinkExternal => (item as NavLinkExternal).href !== undefined;
+
+const isLinkActive = (item: NavLink) => {
+  if (isExternalLink(item)) return false;
+  return currentRouteName.value === item.to.name;
+};
 
 const isGroup = (item: NavItem): item is NavGroup => (item as NavGroup).items !== undefined;
 
-const groupActive = (group: NavGroup) => group.items.some((link) => isLinkActive(link.to));
+const groupActive = (group: NavGroup) => group.items.some((link) => isLinkActive(link));
 
 const openDropdown = ref<string | null>(null);
 const dropdownCloseTimer = ref<number | null>(null);
