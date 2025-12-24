@@ -324,7 +324,6 @@ onBeforeUnmount(() => {
                 RetroChain Explorer never stores your private keys. Connections happen locally inside Keplr or other supported wallets.
               </p>
             </div>
-            </div>
           </div>
         </div>
       </div>
