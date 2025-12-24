@@ -23,7 +23,6 @@ const priceOverrides = ref<Record<string, number>>({});
 const priceLookup = computed(() => {
   const hints: Record<string, number | undefined> = {
     USDC: 1,
-    OSMO: Number(import.meta.env.VITE_PRICE_OSMO_USD ?? "0") || 0.6,
     ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? "0") || 10,
     WBTC: Number(import.meta.env.VITE_PRICE_WBTC_USD ?? "0") || 40000
   };
@@ -249,7 +248,6 @@ const formatUsd = (value: number | null | undefined) => {
 
 const USD_PRICE_HINTS: Record<string, number | undefined> = {
   USDC: 1,
-  OSMO: Number(import.meta.env.VITE_PRICE_OSMO_USD ?? "0") || 0.6,
   ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? "0") || 10,
   WBTC: Number(import.meta.env.VITE_PRICE_WBTC_USD ?? "0") || 40000
 };
