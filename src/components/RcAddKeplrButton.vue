@@ -1,6 +1,5 @@
 <script setup lang="ts">
 import { computed, onBeforeUnmount, onMounted, ref, watch, useAttrs } from "vue";
-import { LockClosedIcon, XMarkIcon, ShieldCheckIcon, BoltIcon, RocketLaunchIcon } from "@heroicons/vue/24/solid";
 import { useToast } from "@/composables/useToast";
 import { useKeplr } from "@/composables/useKeplr";
 import { useNetwork } from "@/composables/useNetwork";
@@ -52,42 +51,26 @@ const buttonAttrs = computed(() => {
 
 const externalClass = computed(() => attrs.class);
 
-const buttonMotion = {
-  initial: { scale: 1, y: 0 },
-  enter: { scale: 1, y: 0 },
-  hover: { scale: 1.01, y: -2 },
-  tap: { scale: 0.98, y: 0 }
-};
-
-const modalMotion = {
-  initial: { opacity: 0, scale: 0.97, y: 8 },
-  enter: { opacity: 1, scale: 1, y: 0, transition: { duration: 0.18, ease: "easeOut" } }
-};
-
 const keplrDetected = computed(() => typeof window !== "undefined" && !!window.keplr);
 const leapDetected = computed(() => typeof window !== "undefined" && !!window.leap);
 const cosmoDetected = computed(() => typeof window !== "undefined" && !!window.cosmostation?.providers?.keplr);
 
 const walletStatuses = computed(() => [
-  { name: "Keplr", icon: ShieldCheckIcon, detected: keplrDetected.value, primary: true },
-  { name: "Leap", icon: BoltIcon, detected: leapDetected.value },
-  { name: "Cosmostation", icon: RocketLaunchIcon, detected: cosmoDetected.value }
+  { name: "Keplr", icon: "🪐", detected: keplrDetected.value, primary: true },
+  { name: "Leap", icon: "🦘", detected: leapDetected.value },
+  { name: "Cosmostation", icon: "🚀", detected: cosmoDetected.value }
 ]);
 
-const activeAddress = computed(() => address.value);
-const isConnecting = computed(() => connecting.value);
-
 const buttonLabel = computed(() => {
-  if (isConnecting.value) return "Connecting…";
-  if (activeAddress.value) return "Wallet Connected";
+  if (connecting.value) return "Connecting…";
+  if (address.value) return "Wallet Connected";
   if (!isAvailable.value) return "Install Keplr";
   return "Connect Wallet";
 });
 
 const buttonSubtext = computed(() => {
-  if (activeAddress.value) {
-    const a = activeAddress.value;
-    return `Wallet: ${a.slice(0, 10)}…${a.slice(-6)}`;
+  if (address.value) {
+    return `${address.value.slice(0, 10)}…${address.value.slice(-6)}`;
   }
   return "Keplr • Leap • Cosmostation";
 });
@@ -107,7 +90,7 @@ const wbtcBalanceDisplay = computed(() => {
 const wbtcMeta = computed(() => (wbtcEntry.value ? getTokenMeta(wbtcEntry.value.denom) : null));
 
 watch(
-  activeAddress,
+  address,
   async (addr) => {
     if (addr) {
       await load(addr);
@@ -137,7 +120,7 @@ watch(showModal, (open) => {
   }
 });
 
-watch(activeAddress, (val) => {
+watch(address, (val) => {
   if (val) {
     showModal.value = false;
   }
@@ -152,7 +135,7 @@ const openModal = () => {
 };
 
 const handleConnect = async () => {
-  if (!isAvailable.value && !activeAddress.value) {
+  if (!isAvailable.value) {
     window.open(installUrl, "_blank");
     return;
   }
@@ -161,7 +144,7 @@ const handleConnect = async () => {
     toast.showSuccess("Wallet connected");
     showModal.value = false;
   } catch (err: any) {
-    toast.showTxError(err?.message || "Unable to connect wallet");
+    toast.showTxError(err?.message || "Unable to connect Keplr");
   }
 };
 
@@ -183,13 +166,10 @@ onBeforeUnmount(() => {
 <template>
   <div class="inline-block">
     <button
-      v-motion="buttonMotion"
-      v-motion-hover="buttonMotion.hover"
-      v-motion-tap="buttonMotion.tap"
       v-bind="buttonAttrs"
       type="button"
       @click="openModal"
-      :disabled="isConnecting"
+      :disabled="connecting"
       :class="[
         'w-full rounded-2xl border border-white/10 bg-gradient-to-r from-indigo-600/80 to-purple-600/80 px-4 py-2 text-left text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-500 hover:to-purple-500 disabled:cursor-wait',
         externalClass
@@ -200,31 +180,27 @@ onBeforeUnmount(() => {
           <p class="text-xs font-semibold uppercase tracking-wider text-white/80">{{ buttonLabel }}</p>
           <p class="text-[11px] text-white/60">{{ buttonSubtext }}</p>
         </div>
-         <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-lg">
-          <LockClosedIcon class="h-5 w-5" />
-         </span>
+         <span class="inline-flex h-8 w-8 items-center justify-center rounded-xl bg-white/10 text-lg">🔐</span>
       </div>
     </button>
 
     <teleport to="body">
-      <div
-        v-if="showModal"
-        class="fixed inset-0 z-[1000] overflow-y-auto bg-black/70 animate-in fade-in-0"
-      >
-        <div class="flex min-h-full items-start justify-center px-4 py-6 sm:items-center sm:px-6 sm:py-10">
-          <div
-            v-motion="modalMotion"
-            class="glass-card max-w-3xl w-full max-h-[90vh] overflow-y-auto border border-white/10 shadow-2xl shadow-black/60"
-          >
+      <transition name="fade">
+        <div
+          v-if="showModal"
+          class="fixed inset-0 z-[1000] overflow-y-auto bg-black/70"
+        >
+          <div class="flex min-h-full items-start justify-center px-4 py-6 sm:items-center sm:px-6 sm:py-10">
+            <div class="max-w-3xl w-full rounded-3xl border border-white/10 bg-[rgba(7,10,24,0.98)] shadow-2xl shadow-black/60 max-h-[90vh] overflow-y-auto">
             <div class="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5">
               <div>
                 <p class="text-[11px] uppercase tracking-[0.35em] text-indigo-300">Wallet Center</p>
                 <h2 class="mt-1 text-2xl font-semibold text-white">Connect to RetroChain</h2>
                 <p class="text-sm text-slate-400">Securely connect Keplr (or any compatible wallet) to manage assets, stake, and bridge.</p>
               </div>
-              <button type="button" class="text-slate-400 hover:text-white rounded-lg p-1 transition hover:bg-white/5" @click="closeModal">
+              <button type="button" class="text-slate-400 hover:text-white" @click="closeModal">
                 <span class="sr-only">Close</span>
-                <XMarkIcon class="h-5 w-5" />
+                ×
               </button>
             </div>
 
@@ -239,7 +215,7 @@ onBeforeUnmount(() => {
                     :class="entry.detected ? 'bg-emerald-500/10 text-emerald-200 border-emerald-400/20' : 'bg-white/5 text-slate-400'"
                   >
                     <div class="flex items-center gap-2 text-sm font-medium">
-                      <component :is="entry.icon" class="h-4 w-4" />
+                      <span>{{ entry.icon }}</span>
                       <span>{{ entry.name }}</span>
                       <span v-if="entry.primary" class="text-[10px] uppercase tracking-wider" :class="entry.detected ? 'text-emerald-200' : 'text-slate-400'">Preferred</span>
                     </div>
@@ -269,10 +245,10 @@ onBeforeUnmount(() => {
                     <dd class="font-mono text-xs text-indigo-200">{{ rpcDisplay }}</dd>
                   </div>
                 </dl>
-                <div v-if="activeAddress" class="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-3 space-y-2">
+                <div v-if="address" class="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-3 space-y-2">
                   <div>
                     <p class="text-[11px] uppercase tracking-widest text-emerald-200">Connected Address</p>
-                    <p class="font-mono text-xs text-white break-all">{{ activeAddress }}</p>
+                    <p class="font-mono text-xs text-white break-all">{{ address }}</p>
                   </div>
                   <div class="grid gap-2 text-xs text-slate-200">
                     <div class="flex items-center justify-between">
@@ -303,10 +279,10 @@ onBeforeUnmount(() => {
                 <button
                   type="button"
                   class="flex-1 min-w-[200px] rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:from-indigo-400 hover:to-purple-400 disabled:cursor-not-allowed disabled:opacity-60"
-                  :disabled="isConnecting"
+                  :disabled="connecting"
                   @click="handleConnect"
                 >
-                  {{ activeAddress ? 'Reconnect Wallet' : 'Connect Wallet' }}
+                  {{ address ? 'Reconnect Wallet' : 'Connect with Keplr' }}
                 </button>
                 <a
                   :href="installUrl"
@@ -324,9 +300,10 @@ onBeforeUnmount(() => {
                 RetroChain Explorer never stores your private keys. Connections happen locally inside Keplr or other supported wallets.
               </p>
             </div>
+            </div>
           </div>
         </div>
-      </div>
+      </transition>
     </teleport>
   </div>
 </template>

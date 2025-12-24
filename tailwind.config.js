@@ -1,9 +1,3 @@
-import forms from "@tailwindcss/forms";
-import typography from "@tailwindcss/typography";
-import lineClamp from "@tailwindcss/line-clamp";
-import aspectRatio from "@tailwindcss/aspect-ratio";
-import tailwindAnimate from "tailwindcss-animate";
-
 /** @type {import('tailwindcss').Config} */
 export default {
   content: [
@@ -45,5 +39,5 @@ export default {
       },
     },
   },
-  plugins: [forms, typography, lineClamp, aspectRatio, tailwindAnimate],
+  plugins: [],
 }
