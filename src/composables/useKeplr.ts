@@ -24,6 +24,12 @@ declare global {
     };
     getOfflineSigner?: (chainId: string) => any;
     getOfflineSignerAuto?: (chainId: string) => Promise<any>;
+    leap?: any;
+    cosmostation?: {
+      providers?: {
+        keplr?: any;
+      };
+    };
   }
 }
 
@@ -31,6 +37,7 @@ const isAvailable = ref(false);
 const address = ref<string | null>(null);
 const connecting = ref(false);
 const error = ref<string | null>(null);
+let keystoreListenerAttached = false;
 
 const KEPLR_DEFAULT_OPTS = {
   sign: {
@@ -39,20 +46,27 @@ const KEPLR_DEFAULT_OPTS = {
   }
 };
 
+const KEYSTORE_EVENTS = ["keplr_keystorechange", "leap_keystorechange", "cosmostation_keystorechange"];
+
+const getWalletProvider = () => {
+  if (typeof window === "undefined") return null;
+  return window.keplr || window.leap || window.cosmostation?.providers?.keplr || null;
+};
+
 function configureKeplrDefaults() {
-  if (typeof window === "undefined") return;
-  if (!window.keplr) return;
-  const current = (window.keplr as any).defaultOptions || {};
+  const provider = getWalletProvider();
+  if (!provider || !(provider as any).defaultOptions) return;
+  const current = (provider as any).defaultOptions || {};
   if (
     current?.sign?.preferNoSetFee === KEPLR_DEFAULT_OPTS.sign.preferNoSetFee &&
     current?.sign?.preferNoSetMemo === KEPLR_DEFAULT_OPTS.sign.preferNoSetMemo
   ) {
     return;
   }
-  (window.keplr as any).defaultOptions = KEPLR_DEFAULT_OPTS;
+  (provider as any).defaultOptions = KEPLR_DEFAULT_OPTS;
 }
 
-if (typeof window !== "undefined" && window.keplr) {
+if (typeof window !== "undefined" && getWalletProvider()) {
   configureKeplrDefaults();
 }
 
@@ -565,6 +579,24 @@ function buildChainInfo() {
 export function useKeplr() {
   const api = useApi();
 
+  const refreshAddressFromWallet = async () => {
+    const provider = getWalletProvider();
+    if (!provider) return;
+    try {
+      await provider.enable(CHAIN_ID);
+      const offlineSigner =
+        (await provider.getOfflineSignerAuto?.(CHAIN_ID)) ||
+        (await window.getOfflineSignerAuto?.(CHAIN_ID)) ||
+        provider.getOfflineSigner?.(CHAIN_ID) ||
+        window.getOfflineSigner?.(CHAIN_ID);
+      const accounts = await offlineSigner?.getAccounts?.();
+      address.value = accounts?.[0]?.address ?? null;
+    } catch (err) {
+      console.warn("Unable to refresh address from keystore change", err);
+      address.value = null;
+    }
+  };
+
   const isUndefinedValueError = (err: unknown) =>
     typeof err === "object" && err !== null && "message" in err &&
     typeof (err as any).message === "string" && (err as any).message.includes("Value must not be undefined");
@@ -573,20 +605,27 @@ export function useKeplr() {
       isAvailable.value = false;
       return;
     }
-    isAvailable.value = !!window.keplr && typeof window.keplr.enable === "function";
+    const provider = getWalletProvider();
+    isAvailable.value = !!provider && typeof provider.enable === "function";
     if (isAvailable.value) configureKeplrDefaults();
+    if (isAvailable.value && !keystoreListenerAttached) {
+      KEYSTORE_EVENTS.forEach((evt) => window.addEventListener(evt, refreshAddressFromWallet));
+      keystoreListenerAttached = true;
+    }
   };
 
   const suggestChain = async () => {
-    if (!window.keplr) {
-      throw new Error("Keplr extension not found.");
+    const provider = getWalletProvider();
+
+    if (!provider) {
+      throw new Error("Keplr-compatible wallet not found.");
     }
 
-    if (!window.keplr.experimentalSuggestChain) {
-      throw new Error("Keplr does not support experimentalSuggestChain.");
+    if (!provider.experimentalSuggestChain) {
+      throw new Error("Wallet does not support experimentalSuggestChain.");
     }
 
-    await window.keplr.experimentalSuggestChain(buildChainInfo());
+    await provider.experimentalSuggestChain(buildChainInfo());
   };
 
   const connect = async () => {
@@ -596,15 +635,18 @@ export function useKeplr() {
       checkAvailability();
 
       if (!isAvailable.value) {
-        throw new Error("Keplr extension not detected. Install it and reload.");
+        throw new Error("Keplr-compatible wallet not detected. Install one and reload.");
       }
 
       configureKeplrDefaults();
       await suggestChain();
-      await window.keplr.enable(CHAIN_ID);
+      const provider = getWalletProvider();
+      await provider!.enable(CHAIN_ID);
 
       const offlineSigner =
+        (await provider?.getOfflineSignerAuto?.(CHAIN_ID)) ||
         (await window.getOfflineSignerAuto?.(CHAIN_ID)) ||
+        provider?.getOfflineSigner?.(CHAIN_ID) ||
         window.getOfflineSigner?.(CHAIN_ID);
 
       if (!offlineSigner) {
@@ -633,7 +675,8 @@ export function useKeplr() {
 
   // REST-based signing alternative (workaround for RPC protobuf issues)
   const signAndBroadcastWithREST = async (chainId: string, msgs: any[], fee?: any, memo = "") => {
-    if (!window.keplr) throw new Error("Keplr not available");
+    const provider = getWalletProvider();
+    if (!provider) throw new Error("Keplr-compatible wallet not available");
     if (!address.value) throw new Error("Not connected to Keplr");
 
     try {
@@ -657,7 +700,7 @@ export function useKeplr() {
         throw new Error("Unknown account type");
       }
 
-      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      const offlineSigner = provider.getOfflineSigner(chainId);
       const accounts = await offlineSigner.getAccounts();
       const signerAddress = accounts[0].address;
       const signerPubkey = accounts[0].pubkey;
@@ -781,7 +824,8 @@ export function useKeplr() {
   };
 
   const signAndBroadcast = async (chainId: string, msgs: any[], fee: any, memo = "") => {
-    if (!window.keplr) throw new Error("Keplr not available");
+    const provider = getWalletProvider();
+    if (!provider) throw new Error("Keplr-compatible wallet not available");
     if (!address.value) throw new Error("Not connected to Keplr");
 
     const resolveRpcEndpoint = (targetChainId: string) => {
@@ -805,7 +849,7 @@ export function useKeplr() {
         throw new Error(`No RPC endpoint configured for ${chainId}. Set VITE_COSMOS_RPC_URL (or chain-specific RPC) to continue.`);
       }
 
-      const offlineSigner = window.keplr.getOfflineSigner(chainId);
+      const offlineSigner = provider.getOfflineSigner(chainId);
       const accounts = await offlineSigner.getAccounts();
 
       const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes, ...retroDexTypes]);
