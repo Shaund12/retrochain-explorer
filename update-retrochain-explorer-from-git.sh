@@ -165,11 +165,16 @@ esac
 
 echo
 echo "===> Building Nomic app for RetroChain (embedded under /nomic)"
-case "${PKG}" in
-  pnpm) pnpm run nomic:prepare ;;
-  yarn) yarn run nomic:prepare || npm run nomic:prepare ;;
-  npm|*) npm run nomic:prepare ;;
-esac
+NOMIC_WASM_DIR="$APP_DIR/thirdparty/nomic-app/nomic-wasm"
+if [[ -d "$NOMIC_WASM_DIR" || -d "$APP_DIR/thirdparty/nomic-app/node_modules/nomic-wasm-dev" ]]; then
+  case "${PKG}" in
+    pnpm) pnpm run nomic:prepare ;;
+    yarn) yarn run nomic:prepare || npm run nomic:prepare ;;
+    npm|*) npm run nomic:prepare ;;
+  esac
+else
+  echo "!!! Skipping Nomic build: missing nomic-wasm (nomic-wasm-dev). Place it at $NOMIC_WASM_DIR to enable build."
+fi
 
 echo
 echo "===> Running build script"
