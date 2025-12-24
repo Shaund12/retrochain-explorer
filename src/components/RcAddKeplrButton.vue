@@ -3,7 +3,6 @@ import { computed, onBeforeUnmount, onMounted, ref, watch, useAttrs } from "vue"
 import { LockClosedIcon, XMarkIcon, ShieldCheckIcon, BoltIcon, RocketLaunchIcon } from "@heroicons/vue/24/solid";
 import { useToast } from "@/composables/useToast";
 import { useKeplr } from "@/composables/useKeplr";
-import { useWalletKit } from "@/composables/useWalletKit";
 import { useNetwork } from "@/composables/useNetwork";
 import { useAccount } from "@/composables/useAccount";
 import { formatAmount } from "@/utils/format";
@@ -25,7 +24,6 @@ declare global {
 
 const toast = useToast();
 const { isAvailable, connect, connecting, address } = useKeplr();
-const walletKit = useWalletKit();
 const { restBase, rpcBase } = useNetwork();
 const { balances, loading: accountLoading, load } = useAccount();
 const attrs = useAttrs();
@@ -76,16 +74,12 @@ const walletStatuses = computed(() => [
   { name: "Cosmostation", icon: RocketLaunchIcon, detected: cosmoDetected.value }
 ]);
 
-const activeAddress = computed(() => walletKit.address.value || address.value);
-const kitConnecting = computed(() => {
-  const status = walletKit.status.value;
-  return status === "Connecting" || status === "Pending";
-});
-const isConnecting = computed(() => connecting.value || kitConnecting.value);
+const activeAddress = computed(() => address.value);
+const isConnecting = computed(() => connecting.value);
 
 const buttonLabel = computed(() => {
   if (isConnecting.value) return "Connecting…";
-  if (activeAddress.value) return walletKit.walletName.value ? `${walletKit.walletName.value} Connected` : "Wallet Connected";
+  if (activeAddress.value) return "Wallet Connected";
   if (!isAvailable.value) return "Install Keplr";
   return "Connect Wallet";
 });
@@ -93,9 +87,7 @@ const buttonLabel = computed(() => {
 const buttonSubtext = computed(() => {
   if (activeAddress.value) {
     const a = activeAddress.value;
-    const name = walletKit.walletName.value;
-    const label = name ? `${name}` : "Wallet";
-    return `${label}: ${a.slice(0, 10)}…${a.slice(-6)}`;
+    return `Wallet: ${a.slice(0, 10)}…${a.slice(-6)}`;
   }
   return "Keplr • Leap • Cosmostation";
 });
@@ -163,14 +155,6 @@ const handleConnect = async () => {
   if (!isAvailable.value && !activeAddress.value) {
     window.open(installUrl, "_blank");
     return;
-  }
-  try {
-    await walletKit.connect();
-    toast.showSuccess("Wallet connected");
-    showModal.value = false;
-    return;
-  } catch (err: any) {
-    console.warn("Cosmos Kit connect failed, falling back", err);
   }
   try {
     await connect();

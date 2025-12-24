@@ -6,10 +6,6 @@ import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import Toast from "vue-toastification";
 import "vue-toastification/dist/index.css";
-import { ChainProvider } from "@cosmos-kit/vue";
-import { wallets as keplrWallets } from "@cosmos-kit/keplr";
-import { wallets as leapWallets } from "@cosmos-kit/leap";
-import { wallets as cosmostationWallets } from "@cosmos-kit/cosmostation";
 import { MotionPlugin } from "@vueuse/motion";
 
 // Enable dayjs relative time plugin globally
@@ -114,17 +110,5 @@ app.use(Toast, {
 });
 
 app.use(MotionPlugin);
-
-app.use(ChainProvider as any, {
-  chains: [retroChain],
-  assetLists: [retroAssets],
-  wallets: [...keplrWallets, ...leapWallets, ...cosmostationWallets],
-  signerOptions: {
-    stargate: {
-      preferNoSetFee: true,
-      preferNoSetMemo: true
-    }
-  }
-});
 
 app.mount("#app");
