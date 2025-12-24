@@ -21,17 +21,6 @@ const { blocks, loading: loadingBlocks, fetchLatest } = useBlocks();
 const { txs, loading: loadingTxs, searchRecent } = useTxs();
 const { snapshot: mempool, loading: loadingMempool, error: mempoolError, refresh: refreshMempool } = useMempool();
 const { validators, fetchValidators } = useValidators();
-const {
-  games,
-  leaderboard,
-  sessions,
-  achievements,
-  loading: loadingArcade,
-  fetchGames,
-  fetchLeaderboard,
-  fetchRecentSessions,
-  fetchLatestAchievements,
-} = useArcade();
 
 const blockPage = ref(0);
 const blockPageSize = 10;
@@ -44,11 +33,7 @@ const dashboardCards = [
   { id: "health", title: "Chain Health & Fees", show: () => true },
   { id: "block-stats", title: "Block & Gas Stats", show: () => true },
   { id: "blocks", title: "Latest Blocks", show: () => true },
-  { id: "sessions", title: "Recent Game Sessions", show: () => true },
-  { id: "achievements", title: "Latest Achievements", show: () => true },
-  { id: "features", title: "RetroChain Feature Pack", show: () => true },
-  { id: "arcade", title: "Arcade Games", show: () => true },
-  { id: "leaderboard", title: "Global Leaderboard", show: () => true },
+      { id: "features", title: "RetroChain Feature Pack", show: () => true },
   { id: "howto", title: "How to use this explorer", show: () => network.value !== "mainnet" }
 ];
 
@@ -141,11 +126,7 @@ const refreshAll = async () => {
     fetchLatest(blockPageSize, blockStartHeight(blockPage.value)),
     searchRecent(txPageSize, txPage.value),
     refreshMempool(),
-    fetchValidators(),
-    fetchGames(),
-    fetchLeaderboard(5),
-    fetchRecentSessions(5),
-    fetchLatestAchievements(5),
+    fetchValidators()
   ]);
 };
 
@@ -478,12 +459,6 @@ function sparkPath(data: number[], width = 160, height = 40) {
               @click="router.push({ name: 'validators' })"
             >
               Validators
-            </button>
-            <button 
-              class="btn text-xs"
-              @click="router.push({ name: 'arcade' })"
-            >
-              Arcade Dashboard
             </button>
             <button 
               class="btn text-xs"
@@ -853,90 +828,6 @@ function sparkPath(data: number[], width = 160, height = 40) {
               </div>
             </template>
 
-            <template v-else-if="card.id === 'sessions'">
-              <div class="flex items-center justify-between mb-2">
-                <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-                  <span class="text-xl">🎯</span>
-                  Recent Game Sessions
-                </h2>
-              </div>
-              <div v-if="loadingArcade" class="text-xs text-slate-400">
-                Loading sessions...
-              </div>
-              <div v-else-if="sessions.length === 0" class="text-xs text-slate-400 py-4 text-center">
-                <div class="mb-2 text-2xl">🎯</div>
-                <div>No game sessions yet</div>
-                <div class="text-[11px] mt-1">
-                  Start a game using MsgInsertCoin and MsgStartSession
-                </div>
-              </div>
-              <div v-else class="space-y-2">
-                <div
-                  v-for="session in sessions"
-                  :key="session.session_id"
-                  class="p-3 rounded-lg bg-gradient-to-br from-purple-500/10 to-pink-500/10 border border-purple-500/20 hover:border-purple-400/40 transition-colors"
-                >
-                  <div class="flex items-start justify-between mb-2">
-                    <div>
-                      <div class="text-xs font-bold text-slate-100">{{ session.game_id }}</div>
-                      <div class="text-[11px] text-slate-400 font-mono">{{ shortString(session.player, 20) }}</div>
-                    </div>
-                    <span
-                      class="badge text-[10px]"
-                      :class="
-                        session.status === 'active'
-                          ? 'text-emerald-200 border-emerald-500/40'
-                          : 'text-slate-300 border-slate-500/40'
-                      "
-                    >
-                      {{ session.status }}
-                    </span>
-                  </div>
-                  <div class="flex items-center justify-between text-[11px]">
-                    <span class="text-slate-300">Score: <span class="text-indigo-300 font-bold">{{ session.score }}</span></span>
-                    <span class="text-slate-400">Level {{ session.level_reached }}</span>
-                  </div>
-                </div>
-              </div>
-            </template>
-
-            <template v-else-if="card.id === 'achievements'">
-              <div class="flex items-center justify-between mb-2">
-                <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-                  <span class="text-xl">🏅</span>
-                  Latest Achievements
-                </h2>
-              </div>
-              <div v-if="loadingArcade" class="text-xs text-slate-400">
-                Loading achievements...
-              </div>
-              <div v-else-if="achievements.length === 0" class="text-xs text-slate-400 py-4 text-center">
-                <div class="mb-2 text-2xl">🏅</div>
-                <div>No achievements unlocked yet</div>
-                <div class="text-[11px] mt-1">
-                  Unlock achievements by playing games!
-                </div>
-              </div>
-              <div v-else class="space-y-2">
-                <div
-                  v-for="achievement in achievements"
-                  :key="achievement.achievement_id"
-                  class="p-3 rounded-lg bg-gradient-to-br from-yellow-500/10 to-orange-500/10 border border-yellow-500/20 hover:border-yellow-400/40 transition-colors"
-                >
-                  <div class="flex items-start gap-3">
-                    <div class="text-2xl">🏅</div>
-                    <div class="flex-1">
-                      <div class="text-xs font-bold text-slate-100">{{ achievement.name }}</div>
-                      <div class="text-[11px] text-slate-300 mb-1">{{ achievement.description }}</div>
-                      <div class="flex items-center justify-between">
-                        <div class="text-[11px] text-slate-400 font-mono">{{ shortString(achievement.player, 16) }}</div>
-                        <div class="text-[10px] text-slate-500">{{ formatTime(achievement.unlocked_at) }}</div>
-                      </div>
-                    </div>
-                  </div>
-                </div>
-              </div>
-            </template>
 
             <template v-else-if="card.id === 'features'">
               <div class="flex items-center justify-between mb-4">
@@ -959,88 +850,6 @@ function sparkPath(data: number[], width = 160, height = 40) {
                   </div>
                 </article>
               </div>
-            </template>
-
-            <template v-else-if="card.id === 'arcade'">
-              <div class="flex items-center justify-between mb-3">
-                <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-                  <span class="text-xl">🎮</span>
-                  Arcade Games
-                </h2>
-              </div>
-              <div v-if="loadingArcade" class="text-xs text-slate-400">
-                Loading arcade games...
-              </div>
-              <div v-else-if="games.length === 0" class="text-xs text-slate-400 py-4 text-center">
-                <div class="mb-2 text-2xl">🎮</div>
-                <div>No arcade games registered yet</div>
-                <div class="text-[11px] mt-1">
-                  Register games using the arcade module CLI
-                </div>
-              </div>
-              <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-3">
-                <RcArcadeGameCard
-                  v-for="game in games.slice(0, 4)"
-                  :key="game.game_id"
-                  :game="game"
-                  @click="() => {}"
-                />
-              </div>
-            </template>
-
-            <template v-else-if="card.id === 'leaderboard'">
-              <div class="flex items-center justify-between mb-2">
-                <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">
-                  <span class="text-xl">🏆</span>
-                  Global Leaderboard
-                </h2>
-              </div>
-              <div v-if="loadingArcade" class="text-xs text-slate-400">
-                Loading leaderboard...
-              </div>
-              <div v-else-if="leaderboard.length === 0" class="text-xs text-slate-400 py-4 text-center">
-                <div class="mb-2 text-2xl">🏆</div>
-                <div>No leaderboard entries yet</div>
-                <div class="text-[11px] mt-1">
-                  Start playing games to appear on the leaderboard!
-                </div>
-              </div>
-              <table v-else class="table">
-                <thead>
-                  <tr class="text-slate-300 text-xs">
-                    <th>Rank</th>
-                    <th>Player</th>
-                    <th>Score</th>
-                    <th>Games</th>
-                  </tr>
-                </thead>
-                <tbody>
-                  <tr
-                    v-for="entry in leaderboard"
-                    :key="entry.rank"
-                    class="cursor-pointer"
-                    @click="router.push({ name: 'account', params: { address: entry.player } })"
-                  >
-                    <td class="font-mono text-[11px]">
-                      <span v-if="entry.rank === 1" class="text-yellow-300">🥇</span>
-                      <span v-else-if="entry.rank === 2" class="text-slate-300">🥈</span>
-                      <span v-else-if="entry.rank === 3" class="text-orange-300">🥉</span>
-                      <span v-else>{{ entry.rank }}</span>
-                    </td>
-                    <td class="font-mono text-[11px]">
-                      {{ shortString(entry.player, 12) }}
-                    </td>
-                    <td class="text-xs">
-                      <span class="badge border-indigo-400/60">
-                        {{ entry.total_score.toLocaleString() }}
-                      </span>
-                    </td>
-                    <td class="text-[11px] text-slate-300">
-                      {{ entry.games_played }}
-                    </td>
-                  </tr>
-                </tbody>
-              </table>
             </template>
 
             <template v-else-if="card.id === 'howto'">

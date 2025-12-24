@@ -413,6 +413,7 @@ type NavItem = NavLink | NavGroup;
 
 const navItems: NavItem[] = [
   { label: "Overview", to: { name: "home" } },
+  { label: "Arcade", to: { name: "arcade" } },
   {
     label: "Network",
     items: [
