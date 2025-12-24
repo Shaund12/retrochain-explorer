@@ -12,6 +12,7 @@ import StakingView from "@/views/StakingView.vue";
 import BtcStakeView from "@/views/BtcStakeView.vue";
 import BuyView from "@/views/BuyView.vue";
 import DexView from "@/views/DexView.vue";
+import ArcadeView from "@/views/ArcadeView.vue";
 import TokenomicsView from "@/views/TokenomicsView.vue";
 import DocsTokenomicsView from "@/views/DocsTokenomicsView.vue";
 import DocsNetworkOverviewView from "@/views/DocsNetworkOverviewView.vue";
@@ -60,6 +61,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/staking/wbtc", name: "btc-stake", component: BtcStakeView },
   { path: "/buy", name: "buy", component: BuyView },
   { path: "/dex", name: "dex", component: DexView },
+  { path: "/arcade", name: "arcade", component: ArcadeView },
   { path: "/tokens", name: "tokens", component: TokensView },
   { path: "/nft/:id", name: "nft-detail", component: NftDetailView, props: true },
   { path: "/tokenomics", name: "tokenomics", component: TokenomicsView },

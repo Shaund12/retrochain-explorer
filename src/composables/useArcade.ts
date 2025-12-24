@@ -25,7 +25,9 @@ export interface LeaderboardEntry {
   player: string;
   total_score: number;
   games_played: number;
-  high_scores_count: number;
+  high_scores_count?: number;
+  arcade_tokens?: number;
+  title?: string;
 }
 
 export interface GameSession {

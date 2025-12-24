@@ -481,6 +481,12 @@ function sparkPath(data: number[], width = 160, height = 40) {
             </button>
             <button 
               class="btn text-xs"
+              @click="router.push({ name: 'arcade' })"
+            >
+              Arcade Dashboard
+            </button>
+            <button 
+              class="btn text-xs"
               @click="router.push({ name: 'account' })"
             >
               Account Lookup
