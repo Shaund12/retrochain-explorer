@@ -98,6 +98,21 @@ const totalRetroUsd = computed(() => {
   return (totalUretroAll.value / 1_000_000) * retroPrice.value;
 });
 
+const totalNonRetroUsd = computed(() => {
+  return decoratedBalances.value
+    .filter((b: any) => (b.meta?.symbol || "").toUpperCase() !== "RETRO")
+    .map((b: any) => b.usdValue)
+    .filter((v: any): v is number => typeof v === "number" && Number.isFinite(v))
+    .reduce((a: number, b: number) => a + b, 0);
+});
+
+const totalUsdAll = computed(() => {
+  const retro = totalRetroUsd.value ?? 0;
+  const others = totalNonRetroUsd.value ?? 0;
+  const total = retro + others;
+  return total > 0 ? total : null;
+});
+
 const quickRetroStats = computed(() => {
   const items = [
     { label: "Liquid", amount: liquidUretro.value },
@@ -213,6 +228,7 @@ const knownAccount = computed(() => getAccountLabel(bech32Address.value || addre
 
 const USD_PRICE_HINTS: Record<string, number | undefined> = {
   USDC: 1,
+  RETRO: Number(import.meta.env.VITE_PRICE_RETRO_USD ?? "0") || undefined,
   OSMO: Number(import.meta.env.VITE_PRICE_OSMO_USD ?? "0") || 0.6,
   ATOM: Number(import.meta.env.VITE_PRICE_ATOM_USD ?? "0") || 10,
   WBTC: Number(import.meta.env.VITE_PRICE_WBTC_USD ?? "0") || 40000
@@ -587,8 +603,8 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
           <div class="text-xs text-emerald-200" v-if="totalRetroUsd !== null">
             ≈ {{ formatUsd(totalRetroUsd) }} (RETRO)
           </div>
-          <div class="text-[11px] text-slate-400" v-if="totalPortfolioUsd !== null">
-            Incl. IBC/USD assets: {{ formatUsd(totalPortfolioUsd) }}
+          <div class="text-[11px] text-slate-400" v-if="totalUsdAll !== null">
+            All assets (incl. IBC/WBTC): {{ formatUsd(totalUsdAll) }}
           </div>
           <div class="text-xs text-slate-400 mb-3">
             Address: <code class="text-[10px]">{{ bech32Address.slice(0, 16) }}...</code>

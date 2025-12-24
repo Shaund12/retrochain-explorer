@@ -116,7 +116,9 @@ export function useArcade() {
       const response = await api.get(
         `/arcade/v1/leaderboard?limit=${limit}`
       );
-      leaderboard.value = response.data?.leaderboard || [];
+      const data = response.data || {};
+      // Some deployments return `{ entries: [...] }` instead of `{ leaderboard: [...] }`
+      leaderboard.value = data.leaderboard || data.entries || [];
     } catch (err: any) {
       error.value = err.message || "Failed to fetch leaderboard";
       console.warn("Leaderboard endpoint not available:", err.message);
