@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, computed } from "vue";
-import { useRoute } from "vue-router";
+import { useRoute, RouterLink } from "vue-router";
 import { useTxs } from "@/composables/useTxs";
 import { getTokenMeta } from "@/constants/tokens";
 import dayjs from "dayjs";
@@ -161,6 +161,13 @@ const shortAddress = (addr?: string, size = 10) => {
   if (!addr) return "—";
   return `${addr.slice(0, size)}…${addr.slice(-6)}`;
 };
+
+const isAccountAddress = (val?: string | null) => {
+  if (!val) return false;
+  return /^(cosmos1|retro1)[0-9a-z]{20,}$/i.test(val);
+};
+
+const accountLink = (addr?: string | null) => (addr ? { name: "account", params: { address: addr } } : null);
 
 const formatLabel = (label: string) =>
   label
@@ -520,11 +527,31 @@ onMounted(async () => {
                 </div>
                 <div v-if="pkt.sender">
                   <span class="text-slate-500">Sender</span>
-                  <div class="font-mono break-all text-slate-200">{{ pkt.sender }}</div>
+                  <div class="font-mono break-all text-slate-200">
+                    <RouterLink
+                      v-if="isAccountAddress(pkt.sender)"
+                      :to="accountLink(pkt.sender)"
+                      class="inline-flex items-center gap-1 text-emerald-300 hover:text-emerald-200"
+                    >
+                      <span>{{ shortAddress(pkt.sender, 12) }}</span>
+                      <span class="text-[10px] px-1 rounded border border-emerald-400/40 bg-emerald-500/10">View</span>
+                    </RouterLink>
+                    <span v-else>{{ pkt.sender }}</span>
+                  </div>
                 </div>
                 <div v-if="pkt.receiver">
                   <span class="text-slate-500">Receiver</span>
-                  <div class="font-mono break-all text-slate-200">{{ pkt.receiver }}</div>
+                  <div class="font-mono break-all text-slate-200">
+                    <RouterLink
+                      v-if="isAccountAddress(pkt.receiver)"
+                      :to="accountLink(pkt.receiver)"
+                      class="inline-flex items-center gap-1 text-emerald-300 hover:text-emerald-200"
+                    >
+                      <span>{{ shortAddress(pkt.receiver, 12) }}</span>
+                      <span class="text-[10px] px-1 rounded border border-emerald-400/40 bg-emerald-500/10">View</span>
+                    </RouterLink>
+                    <span v-else>{{ pkt.receiver }}</span>
+                  </div>
                 </div>
                 <div v-if="pkt.source || pkt.dest">
                   <span class="text-slate-500">Path</span>
@@ -635,7 +662,17 @@ onMounted(async () => {
                 <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-300">
                   <div v-for="detail in getMessageDetails(msg)" :key="detail.label + detail.value" class="flex flex-col">
                     <span class="text-slate-500 uppercase tracking-wider">{{ detail.label }}</span>
-                    <span class="font-mono break-all text-slate-200">{{ detail.value }}</span>
+                    <span class="font-mono break-all text-slate-200">
+                      <RouterLink
+                        v-if="isAccountAddress(detail.value)"
+                        :to="accountLink(detail.value)"
+                        class="inline-flex items-center gap-1 text-emerald-300 hover:text-emerald-200"
+                      >
+                        <span>{{ shortAddress(detail.value, 12) }}</span>
+                        <span class="text-[10px] px-1 rounded border border-emerald-400/40 bg-emerald-500/10">View</span>
+                      </RouterLink>
+                      <span v-else>{{ detail.value }}</span>
+                    </span>
                   </div>
                 </div>
               </div>
@@ -706,11 +743,31 @@ onMounted(async () => {
               <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-400">
                 <div v-if="tr.sender">
                   <span class="text-slate-500">From</span>
-                  <div class="font-mono break-all text-slate-200">{{ tr.sender }}</div>
+                  <div class="font-mono break-all text-slate-200">
+                    <RouterLink
+                      v-if="isAccountAddress(tr.sender)"
+                      :to="accountLink(tr.sender)"
+                      class="inline-flex items-center gap-1 text-emerald-300 hover:text-emerald-200"
+                    >
+                      <span>{{ shortAddress(tr.sender, 12) }}</span>
+                      <span class="text-[10px] px-1 rounded border border-emerald-400/40 bg-emerald-500/10">View</span>
+                    </RouterLink>
+                    <span v-else>{{ tr.sender }}</span>
+                  </div>
                 </div>
                 <div v-if="tr.recipient">
                   <span class="text-slate-500">To</span>
-                  <div class="font-mono break-all text-slate-200">{{ tr.recipient }}</div>
+                  <div class="font-mono break-all text-slate-200">
+                    <RouterLink
+                      v-if="isAccountAddress(tr.recipient)"
+                      :to="accountLink(tr.recipient)"
+                      class="inline-flex items-center gap-1 text-emerald-300 hover:text-emerald-200"
+                    >
+                      <span>{{ shortAddress(tr.recipient, 12) }}</span>
+                      <span class="text-[10px] px-1 rounded border border-emerald-400/40 bg-emerald-500/10">View</span>
+                    </RouterLink>
+                    <span v-else>{{ tr.recipient }}</span>
+                  </div>
                 </div>
                 <div>
                   <span class="text-slate-500">Denom</span>
@@ -744,11 +801,31 @@ onMounted(async () => {
             </div>
             <div v-if="feePayer" class="flex flex-col">
               <span class="text-slate-400">Fee Payer</span>
-              <code class="text-[11px] break-all text-slate-200">{{ feePayer }}</code>
+              <code class="text-[11px] break-all text-slate-200">
+                <RouterLink
+                  v-if="isAccountAddress(feePayer)"
+                  :to="accountLink(feePayer)"
+                  class="inline-flex items-center gap-1 text-emerald-300 hover:text-emerald-200"
+                >
+                  <span>{{ shortAddress(feePayer, 12) }}</span>
+                  <span class="text-[10px] px-1 rounded border border-emerald-400/40 bg-emerald-500/10">View</span>
+                </RouterLink>
+                <span v-else>{{ feePayer }}</span>
+              </code>
             </div>
             <div v-if="feeGranter" class="flex flex-col">
               <span class="text-slate-400">Fee Granter</span>
-              <code class="text-[11px] break-all text-slate-200">{{ feeGranter }}</code>
+              <code class="text-[11px] break-all text-slate-200">
+                <RouterLink
+                  v-if="isAccountAddress(feeGranter)"
+                  :to="accountLink(feeGranter)"
+                  class="inline-flex items-center gap-1 text-emerald-300 hover:text-emerald-200"
+                >
+                  <span>{{ shortAddress(feeGranter, 12) }}</span>
+                  <span class="text-[10px] px-1 rounded border border-emerald-400/40 bg-emerald-500/10">View</span>
+                </RouterLink>
+                <span v-else>{{ feeGranter }}</span>
+              </code>
             </div>
             <div v-if="txResponse?.codespace" class="flex items-center justify-between">
               <span>Codespace</span>
