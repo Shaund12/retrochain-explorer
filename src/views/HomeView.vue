@@ -664,7 +664,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                   </div>
                   <div class="text-3xl font-bold text-emerald-100 mt-2">{{ arcadeBurnDisplay }}</div>
                   <p class="text-[11px] text-emerald-200/80 mt-1">
-                    RETRO burned from recent Insert Coin purchases (tokens_burned in arcade.credits_inserted events).
+                    RETRO burned from Insert Coin purchases (tokens_burned in arcade.credits_inserted events). Default split is 80% burn / 20% to the game developer; if the game is unregistered or lacks a developer wallet, 100% is burned.
                   </p>
                   <div class="text-xs text-emerald-200 flex items-center gap-2 mt-3 flex-wrap">
                     <RouterLink class="underline underline-offset-2" to="/tokenomics">View burn telemetry</RouterLink>
