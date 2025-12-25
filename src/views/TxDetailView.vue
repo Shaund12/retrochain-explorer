@@ -369,6 +369,58 @@ const transferEvents = computed(() => {
   return deduped;
 });
 
+const burnEvents = computed(() => {
+  const responseEvents = Array.isArray(txResponse.value?.events) ? txResponse.value?.events : [];
+  const burns: {
+    amount: string;
+    denom: string;
+    burner?: string | null;
+    formatted?: string;
+    usd?: number | null;
+    source?: string | null;
+    msgIndex?: string | null;
+  }[] = [];
+
+  const pushBurn = (amount: string, denom: string, burner?: string | null, source?: string | null, msgIndex?: string | null) => {
+    const formatted = formatTokenAmount(amount, denom);
+    const usd = getUsdEstimate(amount, denom);
+    burns.push({ amount, denom, burner: burner || null, formatted, usd, source: source || null, msgIndex: msgIndex || null });
+  };
+
+  responseEvents.forEach((ev: any) => {
+    const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
+    const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
+      if (curr?.key) acc[curr.key] = curr.value;
+      return acc;
+    }, {} as Record<string, string>);
+
+    if (ev?.type === "burn") {
+      const parsed = parseAmountDenom(map.amount);
+      if (parsed) {
+        pushBurn(parsed.amount, parsed.denom, map.burner || map.sender, ev?.type, map.msg_index);
+      }
+      return;
+    }
+
+    if (map.tokens_burned) {
+      pushBurn(map.tokens_burned, "uretro", map.burner || map.player || map.sender, ev?.type, map.msg_index);
+      return;
+    }
+  });
+
+  const deduped: typeof burns = [];
+  const seen: Record<string, boolean> = {};
+
+  burns.forEach((b) => {
+    const key = `${b.amount}-${b.denom}-${b.burner || ""}-${b.source || ""}-${b.msgIndex || ""}`;
+    if (seen[key]) return;
+    seen[key] = true;
+    deduped.push(b);
+  });
+
+  return deduped;
+});
+
 const ibcPackets = computed(() => {
   const responseEvents = Array.isArray(txResponse.value?.events) ? txResponse.value?.events : [];
   const packets: {
@@ -718,6 +770,54 @@ onMounted(async () => {
       </div>
 
       <div class="flex flex-col gap-3">
+        <div v-if="burnEvents.length" class="card">
+          <h2 class="text-sm font-semibold mb-2 text-slate-100 flex items-center gap-2">
+            <span>🔥</span>
+            <span>RETRO Burned</span>
+          </h2>
+          <div class="space-y-2 text-xs text-slate-300">
+            <div
+              v-for="(burn, i) in burnEvents"
+              :key="`${burn.denom}-${burn.amount}-${i}`"
+              class="p-3 rounded-lg bg-slate-900/60 border border-rose-500/30"
+            >
+              <div class="flex items-center justify-between mb-1 gap-2">
+                <div class="flex items-center gap-2 min-w-0">
+                  <span class="text-lg">🔥</span>
+                  <div class="text-slate-100 font-semibold truncate">{{ burn.formatted || `${burn.amount} ${burn.denom}` }}</div>
+                </div>
+                <div class="flex items-center gap-2">
+                  <span v-if="burn.usd !== null && burn.usd !== undefined" class="text-[11px] text-emerald-300 font-semibold">≈ {{ formatUsd(burn.usd) }}</span>
+                  <span class="badge text-[10px] border-rose-400/60 text-rose-200">{{ burn.denom?.toUpperCase() }}</span>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1 text-[11px] text-slate-400">
+                <div v-if="burn.burner">
+                  <span class="text-slate-500">Burner</span>
+                  <div class="font-mono break-all text-slate-200">
+                    <RouterLink
+                      v-if="isAccountAddress(burn.burner)"
+                      :to="accountLink(burn.burner)"
+                      class="inline-flex items-center gap-1 text-emerald-300 hover:text-emerald-200"
+                    >
+                      <span>{{ shortAddress(burn.burner, 12) }}</span>
+                      <span class="text-[10px] px-1 rounded border border-emerald-400/40 bg-emerald-500/10">View</span>
+                    </RouterLink>
+                    <span v-else>{{ burn.burner }}</span>
+                  </div>
+                </div>
+                <div v-if="burn.source || burn.msgIndex">
+                  <span class="text-slate-500">Source</span>
+                  <div class="font-mono break-all text-slate-200">
+                    {{ burn.source || 'event' }}
+                    <span v-if="burn.msgIndex" class="text-slate-500"> · msg {{ burn.msgIndex }}</span>
+                  </div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
         <div v-if="transferEvents.length" class="card">
           <h2 class="text-sm font-semibold mb-2 text-slate-100">Transfers</h2>
           <div class="space-y-2 text-xs text-slate-300">
