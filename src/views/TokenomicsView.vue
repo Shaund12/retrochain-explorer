@@ -778,7 +778,7 @@ const loadArcadeBurns = async () => {
           </div>
           <div class="text-xs text-emerald-100/80 leading-relaxed">
             Buying arcade credits via <strong>Insert Coin</strong> consumes <code>uretro</code> and routes it straight into the burn module—no treasury capture.
-            Player activity adds a deflationary sink on top of fee and provision burns. Data above is derived directly from
+            Player activity adds a deflationary sink on top of fee and provision burns. By default 80% of each Insert Coin spend is burned and 20% is paid to the game developer; if the game is unregistered or has no developer wallet, 100% is burned. Data above is derived directly from
             <code>arcade.credits_inserted</code> events (tokens_burned).
           </div>
         </div>
