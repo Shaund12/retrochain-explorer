@@ -28,12 +28,26 @@ const visibleGames = computed(() =>
   games.value.filter((g) => (g.game_id || "").toLowerCase() !== "test")
 );
 
+const blockedGameIds = ["test", "test-game", "testgame"];
+const blockedPlayersFromTestGames = computed(() => {
+  const set = new Set<string>();
+  sessions.value.forEach((s: any) => {
+    const gid = (s?.game_id || "").toString().toLowerCase();
+    if (blockedGameIds.includes(gid)) {
+      const player = (s?.player || "").toString().toLowerCase();
+      if (player) set.add(player);
+    }
+  });
+  return set;
+});
+
 // Filter leaderboard to drop test game noise
 const visibleLeaderboard = computed(() =>
   leaderboard.value.filter((entry: any) => {
     const player = (entry?.player || "").toString().toLowerCase();
     const title = (entry?.title || "").toString().toLowerCase();
     const gameId = (entry?.game_id || "").toString().toLowerCase();
+    if (blockedPlayersFromTestGames.value.has(player)) return false;
     return player !== "test" && !title.includes("test") && gameId !== "test";
   })
 );
