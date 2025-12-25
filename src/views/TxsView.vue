@@ -138,6 +138,23 @@ const burnValueDisplay = (burns?: { amount: string; denom: string }[]) => {
   return formatCoins(burns, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
 };
 
+const burnedTotalsDisplay = computed(() => {
+  const totals = new Map<string, bigint>();
+  txs.value.forEach((t) => {
+    const burns = Array.isArray(t.burns) ? t.burns : [];
+    burns.forEach((b) => {
+      if (!b?.amount || !b?.denom) return;
+      try {
+        const amt = BigInt(b.amount);
+        totals.set(b.denom, (totals.get(b.denom) ?? 0n) + amt);
+      } catch {}
+    });
+  });
+  if (!totals.size) return "—";
+  const list = Array.from(totals.entries()).map(([denom, amount]) => ({ denom, amount: amount.toString() }));
+  return formatCoins(list, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
+});
+
 const gasPriceDisplay = (fees?: { amount: string; denom: string }[], gasUsed?: string | number | null) => {
   const primary = Array.isArray(fees) && fees.length ? fees[0] : null;
   const used = Number(gasUsed);
@@ -185,6 +202,11 @@ onMounted(async () => {
         <div class="text-lg font-semibold text-indigo-100">{{ avgGasUsed ? avgGasUsed.toLocaleString(undefined, { maximumFractionDigits: 0 }) : '—' }}</div>
         <div class="text-[10px] text-slate-400">Avg fee: {{ avgFeeDisplay }}</div>
         <div class="text-[10px] text-emerald-300" v-if="avgFeeUsd !== null">≈ {{ formatUsd(avgFeeUsd) }}</div>
+      </div>
+      <div class="p-3 rounded-lg border border-rose-500/30 bg-rose-500/5">
+        <div class="text-[11px] uppercase tracking-[0.2em] text-rose-200">Burned</div>
+        <div class="text-lg font-semibold text-rose-100">{{ burnedTotalsDisplay }}</div>
+        <div class="text-[10px] text-rose-200/80">Across listed transactions</div>
       </div>
     </div>
 
