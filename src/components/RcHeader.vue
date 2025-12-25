@@ -23,7 +23,7 @@
 
       <!-- Navigation -->
       <nav class="hidden lg:flex items-center gap-1">
-        <template v-for="(item, idx) in navItems" :key="item?.label ?? idx">
+        <template v-for="(item, idx) in normalizedNavItems" :key="idx">
           <a
             v-if="!isGroup(item) && isExternalLink(item)"
             :href="item.href"
@@ -75,8 +75,8 @@
               @mouseleave="scheduleDropdownClose"
             >
               <a
-                v-for="(link, linkIdx) in item.items"
-                :key="link?.label ?? linkIdx"
+                v-for="(link, linkIdx) in groupItems(item)"
+                :key="linkIdx"
                 v-if="isExternalLink(link)"
                 :href="link.href"
                 :target="externalTarget(link.href)"
@@ -203,7 +203,7 @@
       class="lg:hidden border-t border-white/5 bg-[rgba(10,14,39,0.98)]"
     >
       <nav class="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
-        <template v-for="(item, idx) in navItems" :key="item?.label ?? idx">
+        <template v-for="(item, idx) in normalizedNavItems" :key="idx">
           <a
             v-if="!isGroup(item) && isExternalLink(item)"
             :href="item.href"
@@ -242,8 +242,8 @@
             </button>
             <div v-show="expandedMobileGroups[item.label]" class="bg-white/5 border-t border-white/5 flex flex-col">
               <a
-                v-for="(link, linkIdx) in item.items"
-                :key="link?.label ?? linkIdx"
+                v-for="(link, linkIdx) in groupItems(item)"
+                :key="linkIdx"
                 v-if="isExternalLink(link)"
                 :href="link.href"
                 :target="externalTarget(link.href)"
@@ -493,6 +493,10 @@ const navItems: NavItem[] = [
 ];
 
 const currentRouteName = computed(() => route.name as string | undefined);
+
+const normalizedNavItems = computed(() => navItems.filter((i): i is NavItem => Boolean(i && (i as any).label)));
+const groupItems = (group: NavGroup) =>
+  Array.isArray(group.items) ? group.items.filter((l): l is NavLink => Boolean(l && (l as any).label)) : [];
 
 const isExternalLink = (item?: NavLink | null) => Boolean(item && item.href && !item.to);
 const isAbsoluteHref = (href?: string) => Boolean(href && /^https?:\/\//i.test(href));
