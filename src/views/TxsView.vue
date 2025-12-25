@@ -203,10 +203,16 @@ onMounted(async () => {
         <div class="text-[10px] text-slate-400">Avg fee: {{ avgFeeDisplay }}</div>
         <div class="text-[10px] text-emerald-300" v-if="avgFeeUsd !== null">≈ {{ formatUsd(avgFeeUsd) }}</div>
       </div>
-      <div class="p-3 rounded-lg border border-rose-500/30 bg-rose-500/5">
-        <div class="text-[11px] uppercase tracking-[0.2em] text-rose-200">Burned</div>
-        <div class="text-lg font-semibold text-rose-100">{{ burnedTotalsDisplay }}</div>
-        <div class="text-[10px] text-rose-200/80">Across listed transactions</div>
+      <div class="p-3 rounded-lg border border-rose-500/40 bg-gradient-to-br from-rose-500/10 via-orange-500/10 to-amber-400/10 shadow-inner shadow-rose-500/20">
+        <div class="flex items-center justify-between">
+          <div class="text-[11px] uppercase tracking-[0.2em] text-rose-200">Burned</div>
+          <div class="text-lg">🔥✨🔥</div>
+        </div>
+        <div class="text-xl font-extrabold text-rose-100 flex items-center gap-2 mt-1">
+          <span class="animate-pulse">🔥</span>
+          <span>{{ burnedTotalsDisplay }}</span>
+        </div>
+        <div class="text-[10px] text-rose-200/80">Celebrating every RETRO burned across listed transactions</div>
       </div>
     </div>
 
