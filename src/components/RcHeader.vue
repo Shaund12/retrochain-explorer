@@ -23,7 +23,7 @@
 
       <!-- Navigation -->
       <nav class="hidden lg:flex items-center gap-1">
-        <template v-for="item in navItems" :key="item.label">
+        <template v-for="(item, idx) in navItems" :key="item?.label ?? idx">
           <a
             v-if="!isGroup(item) && isExternalLink(item)"
             :href="item.href"
@@ -75,8 +75,8 @@
               @mouseleave="scheduleDropdownClose"
             >
               <a
-                v-for="link in item.items"
-                :key="link.label"
+                v-for="(link, linkIdx) in item.items"
+                :key="link?.label ?? linkIdx"
                 v-if="isExternalLink(link)"
                 :href="link.href"
                 :target="externalTarget(link.href)"
@@ -203,7 +203,7 @@
       class="lg:hidden border-t border-white/5 bg-[rgba(10,14,39,0.98)]"
     >
       <nav class="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
-        <template v-for="item in navItems" :key="item.label">
+        <template v-for="(item, idx) in navItems" :key="item?.label ?? idx">
           <a
             v-if="!isGroup(item) && isExternalLink(item)"
             :href="item.href"
@@ -242,8 +242,8 @@
             </button>
             <div v-show="expandedMobileGroups[item.label]" class="bg-white/5 border-t border-white/5 flex flex-col">
               <a
-                v-for="link in item.items"
-                :key="link.label"
+                v-for="(link, linkIdx) in item.items"
+                :key="link?.label ?? linkIdx"
                 v-if="isExternalLink(link)"
                 :href="link.href"
                 :target="externalTarget(link.href)"
@@ -505,7 +505,7 @@ const isLinkActive = (item?: NavLink | null) => {
   return currentRouteName.value === item.to.name;
 };
 
-const isGroup = (item: NavItem): item is NavGroup => (item as NavGroup).items !== undefined;
+const isGroup = (item: NavItem): item is NavGroup => Array.isArray((item as NavGroup).items);
 
 const groupActive = (group: NavGroup) => group.items.some((link) => isLinkActive(link));
 
