@@ -23,22 +23,37 @@ const refreshing = ref(false);
 const showSpaceInvadersNotice = ref(true);
 const spaceInvadersNoticeKey = "space-invaders-beta-dismissed";
 
-const topPlayer = computed(() => leaderboard.value[0] || null);
-const totalPlayers = computed(() => leaderboard.value.length);
-const totalGames = computed(() => games.value.length);
-const topScore = computed(() => Math.max(0, ...leaderboard.value.map((e: any) => Number(e.total_score || 0))));
-const totalArcadeTokens = computed(() => leaderboard.value.reduce((sum, e: any) => sum + Number(e.arcade_tokens || 0), 0));
-const podium = computed(() => leaderboard.value.slice(0, 3));
+// Hide placeholder/test entries
+const visibleGames = computed(() =>
+  games.value.filter((g) => (g.game_id || "").toLowerCase() !== "test")
+);
+
+// Filter leaderboard to drop test game noise
+const visibleLeaderboard = computed(() =>
+  leaderboard.value.filter((entry: any) => {
+    const player = (entry?.player || "").toString().toLowerCase();
+    const title = (entry?.title || "").toString().toLowerCase();
+    const gameId = (entry?.game_id || "").toString().toLowerCase();
+    return player !== "test" && !title.includes("test") && gameId !== "test";
+  })
+);
+
+const topPlayer = computed(() => visibleLeaderboard.value[0] || null);
+const totalPlayers = computed(() => visibleLeaderboard.value.length);
+const totalGames = computed(() => visibleGames.value.length);
+const topScore = computed(() => Math.max(0, ...visibleLeaderboard.value.map((e: any) => Number(e.total_score || 0))));
+const totalArcadeTokens = computed(() => visibleLeaderboard.value.reduce((sum, e: any) => sum + Number(e.arcade_tokens || 0), 0));
+const podium = computed(() => visibleLeaderboard.value.slice(0, 3));
 const avgScore = computed(() => {
-  if (!leaderboard.value.length) return 0;
-  const total = leaderboard.value.reduce((sum: number, e: any) => sum + Number(e.total_score || 0), 0);
-  return Math.round(total / leaderboard.value.length);
+  if (!visibleLeaderboard.value.length) return 0;
+  const total = visibleLeaderboard.value.reduce((sum: number, e: any) => sum + Number(e.total_score || 0), 0);
+  return Math.round(total / visibleLeaderboard.value.length);
 });
 const totalSessions = computed(() => sessions.value.length);
 const activeSessions = computed(() => sessions.value.filter((s: any) => (s.status || "").toLowerCase() === "active").length);
 const totalAchievements = computed(() => achievements.value.length);
 const topTokenEarners = computed(() =>
-  [...leaderboard.value]
+  [...visibleLeaderboard.value]
     .filter((e: any) => Number.isFinite(Number(e.arcade_tokens)))
     .sort((a, b) => Number(b.arcade_tokens || 0) - Number(a.arcade_tokens || 0))
     .slice(0, 5)
@@ -311,12 +326,12 @@ const shortAddr = (addr?: string, size = 12) => {
     <div class="card">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-semibold text-slate-100">Arcade Games</h2>
-        <span class="text-[11px] text-slate-400">{{ games.length }} listed</span>
+        <span class="text-[11px] text-slate-400">{{ visibleGames.length }} listed</span>
       </div>
-      <div v-if="games.length === 0" class="text-xs text-slate-400">No games registered yet.</div>
+      <div v-if="visibleGames.length === 0" class="text-xs text-slate-400">No games registered yet.</div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
         <RcArcadeGameCard
-          v-for="game in games"
+          v-for="game in visibleGames"
           :key="game.game_id"
           :game="game"
         />
