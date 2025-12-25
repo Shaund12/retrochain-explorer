@@ -216,7 +216,7 @@
           <button
             v-else-if="!isGroup(item)"
             type="button"
-            @click.prevent="router.push(item.to); closeMobileMenu();"
+            @click.prevent="item?.to && router.push(item.to); closeMobileMenu();"
             class="px-4 py-3 text-sm font-medium transition-all text-left rounded-lg"
             :class="isLinkActive(item) ? 'text-white bg-white/5' : 'text-slate-400 hover:text-white hover:bg-white/5'"
           >
@@ -500,8 +500,8 @@ const isAbsoluteHref = (href?: string) => Boolean(href && /^https?:\/\//i.test(h
 const externalTarget = (href?: string) => (isAbsoluteHref(href) ? "_blank" : undefined);
 const externalRel = (href?: string) => (isAbsoluteHref(href) ? "noopener" : undefined);
 
-const isLinkActive = (item: NavLink) => {
-  if (!item.to) return false;
+const isLinkActive = (item?: NavLink | null) => {
+  if (!item || !item.to) return false;
   return currentRouteName.value === item.to.name;
 };
 
