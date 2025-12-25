@@ -8,8 +8,24 @@ import { useRouter } from 'vue-router';
 const router = useRouter();
 const { accounts, loading, error, fetchAccounts } = useAccounts();
 
+const TARGETS_URETRO: Record<string, string> = {
+  foundation_validator: "10000000000000", // 10,000,000
+  ecosystem_rewards: "35000000000000", // 35,000,000
+  liquidity_fund: "10000000000000", // 10,000,000
+  community_fund: "8721193994610", // 8,721,193.994610
+  dev_fund: "8000000000000", // 8,000,000
+  dev_profit: "6000000000000", // 6,000,000
+  kitty_charity: "1007310758033", // 1,007,310.758033
+  community_pool: "20000000000000", // 20,000,000
+  ibc_relayer: "4998572638", // 4,998.572638
+  staking_rewards_vault: "162508513858" // 162,508.513858
+};
+
 type LabeledWallet = WalletSummary & {
   knownLabel: AccountLabelMeta | null;
+  targetUretro?: bigint;
+  targetDisplay?: string;
+  coveragePct?: number;
 };
 
 const labeledAccounts = computed<LabeledWallet[]>(() =>
@@ -20,12 +36,37 @@ const labeledAccounts = computed<LabeledWallet[]>(() =>
 );
 
 const ecosystemAccounts = computed(() =>
-  labeledAccounts.value.filter(acc => !!acc.knownLabel)
+  labeledAccounts.value
+    .filter(acc => !!acc.knownLabel)
+    .map(acc => {
+      const target = acc.knownLabel ? TARGETS_URETRO[acc.knownLabel.id] : undefined;
+      const targetBig = target ? BigInt(target) : undefined;
+      const balanceBig = BigInt(acc.balance || "0");
+      const coverage = targetBig && targetBig > 0n
+        ? Number(Math.min(200, Number((balanceBig * 10000n) / targetBig)) / 100)
+        : undefined;
+      return {
+        ...acc,
+        targetUretro: targetBig,
+        targetDisplay: targetBig ? formatAmount(targetBig.toString(), acc.denom, { minDecimals: 2, maxDecimals: 2 }) : undefined,
+        coveragePct: coverage
+      } as LabeledWallet;
+    })
 );
 
 const totalBalance = computed(() =>
   ecosystemAccounts.value.reduce((sum, acc) => sum + parseInt(acc.balance || '0'), 0)
 );
+
+const totalTarget = computed(() => {
+  return ecosystemAccounts.value.reduce((sum, acc) => sum + (acc.targetUretro ?? 0n), 0n);
+});
+
+const totalCoverage = computed(() => {
+  if (!totalTarget.value) return null;
+  const coverage = (BigInt(totalBalance.value) * 10000n) / totalTarget.value;
+  return Number(coverage) / 100;
+});
 
 onMounted(() => {
   fetchAccounts(300);
@@ -75,6 +116,13 @@ onMounted(() => {
         </div>
         <div class="text-xs text-amber-200/70">Across labeled wallets</div>
       </div>
+      <div class="card border-emerald-400/40 bg-emerald-500/5">
+        <div class="text-xs uppercase tracking-wider text-emerald-200 mb-1">Target Coverage</div>
+        <div class="text-2xl font-bold text-emerald-100">
+          {{ totalCoverage !== null ? `${totalCoverage.toFixed(2)}%` : '—' }}
+        </div>
+        <div class="text-xs text-emerald-200/70">Total target: {{ formatAmount(totalTarget.toString(), 'uretro', { minDecimals: 2, maxDecimals: 2 }) }}</div>
+      </div>
       <div class="card border-amber-400/40 bg-amber-500/5">
         <div class="text-xs uppercase tracking-wider text-amber-200 mb-1">Status</div>
         <div class="text-2xl font-bold" :class="loading ? 'text-amber-200' : 'text-emerald-200'">
@@ -108,7 +156,12 @@ onMounted(() => {
         <h2 class="text-sm font-semibold text-amber-100">
           Ecosystem Wallets ({{ ecosystemAccounts.length }})
         </h2>
-        <p class="text-xs text-amber-200/80">Labeled treasury & infra addresses</p>
+        <p class="text-xs text-amber-200/80 flex items-center gap-2">
+          <span>Progress vs targets</span>
+          <span class="px-2 py-1 rounded-full border border-amber-400/40 text-[10px] text-amber-100 bg-amber-500/10">
+            Total: {{ totalCoverage !== null ? `${totalCoverage.toFixed(2)}%` : '—' }}
+          </span>
+        </p>
       </div>
 
       <div class="overflow-x-auto">
@@ -119,6 +172,8 @@ onMounted(() => {
               <th>Address</th>
               <th>Description</th>
               <th class="text-right">Balance</th>
+              <th class="text-right">Target</th>
+              <th class="text-right">Coverage</th>
               <th>Actions</th>
             </tr>
           </thead>
@@ -158,6 +213,22 @@ onMounted(() => {
                   {{ formatAmount(account.balance, account.denom, { minDecimals: 2, maxDecimals: 6 }) }}
                 </span>
               </td>
+              <td class="text-right text-xs text-amber-200">
+                <span v-if="account.targetDisplay" class="font-mono">{{ account.targetDisplay }}</span>
+                <span v-else class="text-amber-300/70">—</span>
+              </td>
+              <td class="text-right text-xs">
+                <div v-if="account.coveragePct !== undefined" class="flex flex-col items-end gap-1">
+                  <span class="font-semibold text-amber-100">{{ account.coveragePct.toFixed(2) }}%</span>
+                  <div class="w-32 h-2 rounded-full bg-amber-500/20 overflow-hidden">
+                    <div
+                      class="h-full bg-gradient-to-r from-amber-400 via-orange-400 to-emerald-400"
+                      :style="{ width: `${Math.min(200, account.coveragePct)}%` }"
+                    ></div>
+                  </div>
+                </div>
+                <span v-else class="text-amber-300/70">—</span>
+              </td>
               <td>
                 <button 
                   class="btn text-xs"
@@ -178,7 +249,15 @@ onMounted(() => {
         <li>Labels are managed in <code>src/constants/accountLabels.ts</code>. Update there to add or adjust wallets.</li>
         <li>Balances are live from the bank module; refresh anytime.</li>
         <li>Click any wallet row to jump to its full account view.</li>
+        <li>Coverage compares current balance vs the communicated target allocation for transparency.</li>
       </ul>
+    </div>
+
+    <div class="card border-rose-400/40 bg-rose-500/5">
+      <h3 class="text-sm font-semibold mb-2 text-rose-100">?? Disclaimer</h3>
+      <p class="text-xs text-rose-100/90 leading-relaxed">
+        Targets and labels are informational only and do not represent guarantees, vesting schedules, or spend approvals. Balances can move at any time based on governance decisions, operational needs, or protocol mechanics. Always verify on-chain data and governance proposals before relying on these figures.
+      </p>
     </div>
   </div>
 </template>
