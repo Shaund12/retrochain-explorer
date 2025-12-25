@@ -133,7 +133,7 @@ const refreshAll = async () => {
     searchRecent(txPageSize, txPage.value),
     refreshMempool(),
     fetchValidators(),
-    loadArcadeBurnBalance()
+    loadArcadeBurnTotals()
   ]);
 };
 
@@ -142,30 +142,69 @@ const { enabled: autoRefreshEnabled, countdown, toggle: toggleAutoRefresh } = us
   10000
 );
 
-const BURN_SINK_ADDRESS = "cosmos1jv65s3grqf6v6jl3dp4t6c9t9rk99cd88lyufl";
-const arcadeBurnBalance = ref<number | null>(null);
 const arcadeBurnLoading = ref(false);
+const arcadeBurnTotal = ref<number | null>(null);
+const arcadeBurnLatest = ref<{ amount: number; gameId?: string; player?: string } | null>(null);
 
-const loadArcadeBurnBalance = async () => {
+const parseArcadeBurn = (tx: any) => {
+  const events = Array.isArray(tx?.events) ? tx.events : [];
+  let tokensBurned: number | null = null;
+  let gameId: string | null = null;
+  let player: string | null = null;
+
+  events.forEach((ev: any) => {
+    const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
+    const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
+      if (curr?.key) acc[curr.key] = curr.value;
+      return acc;
+    }, {} as Record<string, string>);
+
+    if (ev?.type === "arcade.credits_inserted" && map.tokens_burned) {
+      const amt = Number(map.tokens_burned);
+      if (Number.isFinite(amt)) tokensBurned = amt;
+      if (map.game_id) gameId = map.game_id;
+      if (map.player) player = map.player;
+    }
+  });
+
+  if (tokensBurned === null) return null;
+  return { amount: tokensBurned, gameId: gameId || undefined, player: player || undefined } as const;
+};
+
+const loadArcadeBurnTotals = async () => {
   arcadeBurnLoading.value = true;
+  arcadeBurnTotal.value = null;
+  arcadeBurnLatest.value = null;
   try {
-    const { data } = await api.get(`/cosmos/bank/v1beta1/balances/${BURN_SINK_ADDRESS}`, {
-      params: { "pagination.limit": "1000" }
+    const { data } = await api.get("/cosmos/tx/v1beta1/txs", {
+      params: {
+        events: "message.action='/retrochain.arcade.v1.MsgInsertCoin'",
+        order_by: "ORDER_BY_DESC",
+        "pagination.limit": "50"
+      }
     });
-    const retroBalance = data?.balances?.find((coin: { denom: string; amount: string }) => coin.denom === "uretro");
-    arcadeBurnBalance.value = Number(retroBalance?.amount ?? 0);
+    const txs = Array.isArray(data?.tx_responses) ? data.tx_responses : [];
+    const burns = txs
+      .map(parseArcadeBurn)
+      .filter((b) => b && Number.isFinite(b.amount)) as { amount: number; gameId?: string; player?: string }[];
+
+    if (burns.length) {
+      arcadeBurnTotal.value = burns.reduce((sum, b) => sum + b.amount, 0);
+      arcadeBurnLatest.value = burns[0];
+    } else {
+      arcadeBurnTotal.value = 0;
+    }
   } catch (err) {
-    console.warn("Failed to load arcade burn balance", err);
-    arcadeBurnBalance.value = null;
+    console.warn("Failed to load arcade burn totals", err);
   } finally {
     arcadeBurnLoading.value = false;
   }
 };
 
 const arcadeBurnDisplay = computed(() => {
-  if (arcadeBurnBalance.value === null) return "—";
-  const retro = arcadeBurnBalance.value / 1_000_000;
-  return `${retro.toLocaleString(undefined, { maximumFractionDigits: 2 })} RETRO`;
+  if (arcadeBurnTotal.value === null) return "—";
+  const retro = arcadeBurnTotal.value / 1_000_000;
+  return `${retro.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
 });
 
 onMounted(async () => {

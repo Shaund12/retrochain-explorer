@@ -30,6 +30,9 @@ const tallyParams = ref<Record<string, any> | null>(null);
 const arcadeParams = ref<Record<string, any> | null>(null);
 const burnSnapshots = ref<{ height: number; balance: number; burned: number | null }[]>([]);
 const burnLoading = ref(false);
+const arcadeBurnLoading = ref(false);
+const arcadeBurnTotal = ref<number | null>(null);
+const arcadeBurnLatest = ref<{ amount: number; txhash?: string; gameId?: string; player?: string; timestamp?: string } | null>(null);
 
 const copy = async (text: string) => {
   try {
@@ -327,6 +330,10 @@ const loadTokenomics = async () => {
     })
   ]);
 
+  await runTask("arcade burn telemetry", async () => {
+    await loadArcadeBurns();
+  });
+
   const latestHeightNumber = latestBlock.value?.height ? Number(latestBlock.value.height) : null;
   if (latestHeightNumber && Number.isFinite(latestHeightNumber)) {
     await runTask("burn sink telemetry", async () => {
@@ -444,6 +451,78 @@ const minDepositRetro = computed(() => {
   const entry = deposits.find((d) => d.denom === "uretro") || deposits[0];
   return `${formatRetro(entry.amount)} RETRO`;
 });
+
+const arcadeBurnTotalDisplay = computed(() => {
+  if (arcadeBurnTotal.value === null) return "—";
+  return `${formatRetro(arcadeBurnTotal.value, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
+});
+
+const arcadeBurnLatestDisplay = computed(() => {
+  if (!arcadeBurnLatest.value) return "—";
+  return `${formatRetro(arcadeBurnLatest.value.amount, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
+});
+
+const parseArcadeBurn = (tx: any) => {
+  const events = Array.isArray(tx?.events) ? tx.events : [];
+  let tokensBurned: number | null = null;
+  let gameId: string | null = null;
+  let player: string | null = null;
+
+  events.forEach((ev: any) => {
+    const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
+    const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
+      if (curr?.key) acc[curr.key] = curr.value;
+      return acc;
+    }, {} as Record<string, string>);
+
+    if (ev?.type === "arcade.credits_inserted" && map.tokens_burned) {
+      const amt = Number(map.tokens_burned);
+      if (Number.isFinite(amt)) tokensBurned = amt;
+      if (map.game_id) gameId = map.game_id;
+      if (map.player) player = map.player;
+    }
+  });
+
+  if (tokensBurned === null) return null;
+  return {
+    amount: tokensBurned,
+    gameId: gameId || undefined,
+    player: player || undefined,
+    txhash: tx?.txhash,
+    timestamp: tx?.timestamp
+  } as const;
+};
+
+const loadArcadeBurns = async () => {
+  arcadeBurnLoading.value = true;
+  arcadeBurnTotal.value = null;
+  arcadeBurnLatest.value = null;
+  try {
+    const { data } = await api.get("/cosmos/tx/v1beta1/txs", {
+      params: {
+        events: "message.action='/retrochain.arcade.v1.MsgInsertCoin'",
+        order_by: "ORDER_BY_DESC",
+        "pagination.limit": "50"
+      }
+    });
+
+    const txs = Array.isArray(data?.tx_responses) ? data.tx_responses : [];
+    const burns = txs
+      .map(parseArcadeBurn)
+      .filter((b) => b && Number.isFinite(b.amount)) as { amount: number; txhash?: string; gameId?: string; player?: string; timestamp?: string }[];
+
+    if (burns.length) {
+      arcadeBurnTotal.value = burns.reduce((sum, b) => sum + b.amount, 0);
+      arcadeBurnLatest.value = burns[0];
+    } else {
+      arcadeBurnTotal.value = 0;
+    }
+  } catch (err) {
+    console.warn("Failed to load arcade burn data", err);
+  } finally {
+    arcadeBurnLoading.value = false;
+  }
+};
 </script>
 
 <template>
@@ -660,10 +739,26 @@ const minDepositRetro = computed(() => {
           </h3>
           <RouterLink to="/arcade" class="btn text-[11px]">Play &amp; burn</RouterLink>
         </div>
-        <p class="text-xs text-emerald-100/80 leading-relaxed">
-          Buying arcade credits via <strong>Insert Coin</strong> consumes <code>uretro</code> and routes it straight into the burn sink—no treasury capture.
-          Player activity therefore adds a deflationary sink on top of fee and provision burns. The burn sink balance above already reflects these arcade-driven burns.
-        </p>
+        <div class="grid gap-3 md:grid-cols-3 items-start">
+          <div class="rounded-xl border border-emerald-400/40 bg-emerald-500/10 p-3">
+            <p class="text-[11px] uppercase tracking-wider text-emerald-200">Total burned (sample)</p>
+            <p class="text-2xl font-bold text-emerald-100 mt-1">{{ arcadeBurnTotalDisplay }}</p>
+            <p class="text-[11px] text-emerald-200/70">Sum of recent MsgInsertCoin txs</p>
+            <p class="text-[11px] text-emerald-200/60 mt-1" v-if="arcadeBurnLoading">Syncing arcade burns…</p>
+          </div>
+          <div class="rounded-xl border border-amber-400/40 bg-amber-500/10 p-3">
+            <p class="text-[11px] uppercase tracking-wider text-amber-200">Latest burn</p>
+            <p class="text-xl font-semibold text-amber-100">{{ arcadeBurnLatestDisplay }}</p>
+            <p class="text-[11px] text-amber-200/70" v-if="arcadeBurnLatest?.gameId">Game: {{ arcadeBurnLatest?.gameId }}</p>
+            <p class="text-[11px] text-amber-200/70" v-if="arcadeBurnLatest?.player">Player: {{ arcadeBurnLatest?.player }}</p>
+            <p class="text-[11px] text-amber-200/70" v-if="arcadeBurnLatest?.timestamp">{{ arcadeBurnLatest?.timestamp }}</p>
+          </div>
+          <div class="text-xs text-emerald-100/80 leading-relaxed">
+            Buying arcade credits via <strong>Insert Coin</strong> consumes <code>uretro</code> and routes it straight into the burn module—no treasury capture.
+            Player activity adds a deflationary sink on top of fee and provision burns. Data above is derived directly from
+            <code>arcade.credits_inserted</code> events (tokens_burned).
+          </div>
+        </div>
       </div>
 
       <!-- Mint & Inflation -->
