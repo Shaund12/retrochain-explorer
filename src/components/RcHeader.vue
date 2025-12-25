@@ -27,8 +27,8 @@
           <a
             v-if="!isGroup(item) && isExternalLink(item)"
             :href="item.href"
-            target="_blank"
-            rel="noopener"
+            :target="externalTarget(item.href)"
+            :rel="externalRel(item.href)"
             class="px-4 h-16 flex items-center text-sm font-medium transition-colors cursor-pointer relative text-slate-400 hover:text-white"
           >
             {{ item.label }}
@@ -79,8 +79,8 @@
                 :key="link.label"
                 v-if="isExternalLink(link)"
                 :href="link.href"
-                target="_blank"
-                rel="noopener"
+                :target="externalTarget(link.href)"
+                :rel="externalRel(link.href)"
                 class="w-full px-4 py-2 text-left text-sm flex items-center justify-between transition-colors text-slate-400 hover:text-white hover:bg-white/5"
               >
                 <span>{{ link.label }}</span>
@@ -207,8 +207,8 @@
           <a
             v-if="!isGroup(item) && isExternalLink(item)"
             :href="item.href"
-            target="_blank"
-            rel="noopener"
+            :target="externalTarget(item.href)"
+            :rel="externalRel(item.href)"
             class="px-4 py-3 text-sm font-medium transition-all text-left rounded-lg text-slate-400 hover:text-white hover:bg-white/5"
           >
             {{ item.label }}
@@ -246,8 +246,8 @@
                 :key="link.label"
                 v-if="isExternalLink(link)"
                 :href="link.href"
-                target="_blank"
-                rel="noopener"
+                :target="externalTarget(link.href)"
+                :rel="externalRel(link.href)"
                 class="px-6 py-2 text-sm text-left transition-colors text-slate-400 hover:text-white hover:bg-white/10"
               >
                 {{ link.label }}
@@ -495,6 +495,10 @@ const navItems: NavItem[] = [
 const currentRouteName = computed(() => route.name as string | undefined);
 
 const isExternalLink = (item: NavLink) => Boolean(item.href && !item.to);
+const isAbsoluteHref = (href?: string) => Boolean(href && /^https?:\/\//i.test(href));
+
+const externalTarget = (href?: string) => (isAbsoluteHref(href) ? "_blank" : undefined);
+const externalRel = (href?: string) => (isAbsoluteHref(href) ? "noopener" : undefined);
 
 const isLinkActive = (item: NavLink) => {
   if (!item.to) return false;
