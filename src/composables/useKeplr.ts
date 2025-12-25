@@ -774,6 +774,32 @@ export function useKeplr() {
       const baseGasLimit = Math.max(MIN_GAS_LIMIT, msgs.length * DEFAULT_GAS_PER_MSG);
       let feeToUse = fee ?? null;
 
+      // Arcade submit-score sometimes needs a bit more gas (ante ReadPerByte).
+      // If caller passed a tight gas value, bump it and scale fee amount to keep the same gas price.
+      const ARCADE_SUBMIT_SCORE_GAS = 300000;
+      const hasArcadeSubmitScore = msgs.some((m) => m?.typeUrl === "/retrochain.arcade.v1.MsgSubmitScore");
+
+      if (feeToUse && hasArcadeSubmitScore) {
+        const origGas = Number(feeToUse.gas || 0);
+        if (Number.isFinite(origGas) && origGas > 0 && origGas < ARCADE_SUBMIT_SCORE_GAS) {
+          const coin0 = feeToUse.amount?.[0];
+
+          // If fee is a single uretro coin, scale it to keep the same gas price.
+          if (coin0?.denom === DEFAULT_FEE_DENOM && coin0?.amount && /^\d+$/.test(String(coin0.amount))) {
+            const origAmt = Number(coin0.amount);
+            const scaledAmt = Math.ceil((origAmt * ARCADE_SUBMIT_SCORE_GAS) / origGas);
+            feeToUse = {
+              ...feeToUse,
+              gas: String(ARCADE_SUBMIT_SCORE_GAS),
+              amount: [{ ...coin0, amount: String(Math.max(origAmt, scaledAmt)) }]
+            };
+          } else {
+            // If fee shape is unknown, at least bump gas.
+            feeToUse = { ...feeToUse, gas: String(ARCADE_SUBMIT_SCORE_GAS) };
+          }
+        }
+      }
+
       if (!feeToUse) {
         const simulateFee = {
           amount: [{ denom: DEFAULT_FEE_DENOM, amount: "1" }],
@@ -843,6 +869,34 @@ export function useKeplr() {
       return null;
     };
 
+    const normalizeArcadeSubmitScoreFee = (originalFee: any) => {
+      const ARCADE_SUBMIT_SCORE_GAS = 300000;
+      const hasArcadeSubmitScore = msgs.some((m) => m?.typeUrl === "/retrochain.arcade.v1.MsgSubmitScore");
+      let feeNormalized = originalFee;
+
+      if (originalFee && hasArcadeSubmitScore) {
+        const origGas = Number(originalFee.gas || 0);
+        if (Number.isFinite(origGas) && origGas > 0 && origGas < ARCADE_SUBMIT_SCORE_GAS) {
+          const coin0 = originalFee.amount?.[0];
+          if (coin0?.denom === DEFAULT_FEE_DENOM && coin0?.amount && /^\d+$/.test(String(coin0.amount))) {
+            const origAmt = Number(coin0.amount);
+            const scaledAmt = Math.ceil((origAmt * ARCADE_SUBMIT_SCORE_GAS) / origGas);
+            feeNormalized = {
+              ...originalFee,
+              gas: String(ARCADE_SUBMIT_SCORE_GAS),
+              amount: [{ ...coin0, amount: String(Math.max(origAmt, scaledAmt)) }]
+            };
+          } else {
+            feeNormalized = { ...originalFee, gas: String(ARCADE_SUBMIT_SCORE_GAS) };
+          }
+        }
+      }
+
+      return feeNormalized;
+    };
+
+    const feeNormalized = normalizeArcadeSubmitScoreFee(fee);
+
     const rpcEndpoint = resolveRpcEndpoint(chainId);
     const attemptRpc = async () => {
       if (!rpcEndpoint) {
@@ -854,7 +908,7 @@ export function useKeplr() {
 
       const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes, ...retroDexTypes]);
       const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner, { registry });
-      return client.signAndBroadcast(accounts[0].address, msgs, fee, memo);
+      return client.signAndBroadcast(accounts[0].address, msgs, feeNormalized, memo);
     };
 
     try {
@@ -862,7 +916,7 @@ export function useKeplr() {
     } catch (e) {
       console.warn("RPC sign/broadcast failed, evaluating fallback…", e);
       if (chainId === CHAIN_ID && isUndefinedValueError(e)) {
-        return signAndBroadcastWithREST(chainId, msgs, fee, memo);
+        return signAndBroadcastWithREST(chainId, msgs, feeNormalized, memo);
       }
       throw e;
     }
