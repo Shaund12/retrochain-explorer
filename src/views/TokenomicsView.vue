@@ -652,6 +652,20 @@ const minDepositRetro = computed(() => {
         </div>
       </div>
 
+      <div class="rounded-xl border border-emerald-400/30 bg-emerald-500/5 p-4 text-sm text-slate-200">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-emerald-100 flex items-center gap-2">
+            <span>🎮</span>
+            <span>Arcade Insert Coin Burn</span>
+          </h3>
+          <RouterLink to="/arcade" class="btn text-[11px]">Play &amp; burn</RouterLink>
+        </div>
+        <p class="text-xs text-emerald-100/80 leading-relaxed">
+          Buying arcade credits via <strong>Insert Coin</strong> consumes <code>uretro</code> and routes it straight into the burn sink—no treasury capture.
+          Player activity therefore adds a deflationary sink on top of fee and provision burns. The burn sink balance above already reflects these arcade-driven burns.
+        </p>
+      </div>
+
       <!-- Mint & Inflation -->
       <div class="card space-y-4">
         <div class="flex items-center justify-between">

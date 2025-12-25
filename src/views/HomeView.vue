@@ -7,6 +7,7 @@ import { useMempool } from "@/composables/useMempool";
 import { useValidators } from "@/composables/useValidators";
 import { useArcade } from "@/composables/useArcade";
 import { useAutoRefresh } from "@/composables/useAutoRefresh";
+import { useApi } from "@/composables/useApi";
 import RcStatCard from "@/components/RcStatCard.vue";
 import RcSearchBar from "@/components/RcSearchBar.vue";
 import RcArcadeGameCard from "@/components/RcArcadeGameCard.vue";
@@ -21,6 +22,7 @@ const { blocks, loading: loadingBlocks, fetchLatest } = useBlocks();
 const { txs, loading: loadingTxs, searchRecent } = useTxs();
 const { snapshot: mempool, loading: loadingMempool, error: mempoolError, refresh: refreshMempool } = useMempool();
 const { validators, fetchValidators } = useValidators();
+const api = useApi();
 
 const showSpaceInvadersNotice = ref(true);
 const spaceInvadersNoticeKey = "home-space-invaders-beta-dismissed";
@@ -35,6 +37,7 @@ const dashboardCards = [
   { id: "network", title: "Network Pulse", show: () => true },
   { id: "health", title: "Chain Health & Fees", show: () => true },
   { id: "block-stats", title: "Block & Gas Stats", show: () => true },
+  { id: "arcade-burn", title: "Arcade Insert Coin Burn", show: () => true },
   { id: "blocks", title: "Latest Blocks", show: () => true },
       { id: "features", title: "RetroChain Feature Pack", show: () => true },
   { id: "howto", title: "How to use this explorer", show: () => network.value !== "mainnet" }
@@ -129,7 +132,8 @@ const refreshAll = async () => {
     fetchLatest(blockPageSize, blockStartHeight(blockPage.value)),
     searchRecent(txPageSize, txPage.value),
     refreshMempool(),
-    fetchValidators()
+    fetchValidators(),
+    loadArcadeBurnBalance()
   ]);
 };
 
@@ -137,6 +141,32 @@ const { enabled: autoRefreshEnabled, countdown, toggle: toggleAutoRefresh } = us
   refreshAll,
   10000
 );
+
+const BURN_SINK_ADDRESS = "cosmos1jv65s3grqf6v6jl3dp4t6c9t9rk99cd88lyufl";
+const arcadeBurnBalance = ref<number | null>(null);
+const arcadeBurnLoading = ref(false);
+
+const loadArcadeBurnBalance = async () => {
+  arcadeBurnLoading.value = true;
+  try {
+    const { data } = await api.get(`/cosmos/bank/v1beta1/balances/${BURN_SINK_ADDRESS}`, {
+      params: { "pagination.limit": "1000" }
+    });
+    const retroBalance = data?.balances?.find((coin: { denom: string; amount: string }) => coin.denom === "uretro");
+    arcadeBurnBalance.value = Number(retroBalance?.amount ?? 0);
+  } catch (err) {
+    console.warn("Failed to load arcade burn balance", err);
+    arcadeBurnBalance.value = null;
+  } finally {
+    arcadeBurnLoading.value = false;
+  }
+};
+
+const arcadeBurnDisplay = computed(() => {
+  if (arcadeBurnBalance.value === null) return "—";
+  const retro = arcadeBurnBalance.value / 1_000_000;
+  return `${retro.toLocaleString(undefined, { maximumFractionDigits: 2 })} RETRO`;
+});
 
 onMounted(async () => {
   try {
@@ -582,6 +612,43 @@ function sparkPath(data: number[], width = 160, height = 40) {
                   <div class="text-xs uppercase tracking-wider text-slate-400">Total Txs</div>
                   <div class="text-2xl font-semibold text-white">{{ totalTxsDisplay }}</div>
                   <div class="text-[11px] text-slate-500">Rolling counter</div>
+                </article>
+              </div>
+            </template>
+
+            <template v-else-if="card.id === 'arcade-burn'">
+              <div class="grid gap-3 md:grid-cols-3">
+                <article class="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4">
+                  <div class="text-xs uppercase tracking-wider text-emerald-200 flex items-center justify-between">
+                    <span>Insert Coin Burn Sink</span>
+                    <span class="text-[10px] text-emerald-200/80">Auto-refresh</span>
+                  </div>
+                  <div class="text-3xl font-bold text-emerald-100 mt-2">{{ arcadeBurnDisplay }}</div>
+                  <p class="text-[11px] text-emerald-200/80 mt-1">
+                    RETRO destroyed when players buy arcade credits (Insert Coin).
+                  </p>
+                  <p class="text-[11px] text-emerald-200/70 mt-2 font-mono break-all">
+                    {{ BURN_SINK_ADDRESS }}
+                  </p>
+                  <div class="text-xs text-emerald-200 flex items-center gap-2 mt-3 flex-wrap">
+                    <RouterLink class="underline underline-offset-2" to="/tokenomics">View burn telemetry</RouterLink>
+                    <span class="text-emerald-300/60">·</span>
+                    <RouterLink class="underline underline-offset-2" to="/arcade">Play &amp; burn</RouterLink>
+                    <span class="text-emerald-300/60">·</span>
+                    <span>{{ arcadeBurnLoading ? 'Syncing…' : 'Live sample' }}</span>
+                  </div>
+                </article>
+
+                <article class="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 md:col-span-2">
+                  <div class="text-xs uppercase tracking-wider text-amber-200">Why it matters</div>
+                  <p class="text-sm text-slate-100 font-semibold mt-1">Insert Coin is a native burn sink.</p>
+                  <p class="text-xs text-amber-100/80 mt-2 leading-relaxed">
+                    Every Insert Coin purchase consumes uretro on-chain instead of recycling it. Arcade credits are minted, but the
+                    RETRO you spend is permanently removed at the burn sink above—no treasury accrual, just deflationary pressure tied to player activity.
+                  </p>
+                  <p class="text-[11px] text-amber-100/70 mt-2">
+                    Watch the running balance in real time and compare with the Tokenomics burn telemetry to see arcade-driven burns.
+                  </p>
                 </article>
               </div>
             </template>

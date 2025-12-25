@@ -29,7 +29,7 @@ const DESCRIPTIONS: Record<string, string> = {
   "docs-ibc-packets": "Pending packets, acknowledgements, timeouts, and relayer troubleshooting.",
   "docs-ibc-assets": "Curated list of common IBC denoms with live denom-trace resolution.",
   "docs-ibc-relayers": "Relayer responsibilities, monitoring, and common failure modes.",
-  "api-docs": "Interactive Swagger UI for the Cosmos SDK REST API."
+  "api": "Interactive Swagger UI for the Cosmos SDK REST API."
 };
 
 const docs = computed<DocLink[]>(() => {
@@ -43,8 +43,8 @@ const docs = computed<DocLink[]>(() => {
   // Add Swagger Docs link manually if not in DOCS_NAV
   links.push({
     title: "API Reference (Swagger)",
-    description: DESCRIPTIONS["api-docs"],
-    to: { name: "api-docs" },
+    description: DESCRIPTIONS["api"],
+    to: { name: "api" },
     tag: "Reference"
   });
   
