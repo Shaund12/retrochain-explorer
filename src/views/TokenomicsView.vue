@@ -32,6 +32,7 @@ const burnSnapshots = ref<{ height: number; balance: number; burned: number | nu
 const burnLoading = ref(false);
 const arcadeBurnLoading = ref(false);
 const arcadeBurnTotal = ref<number | null>(null);
+const arcadeBurnCount = ref<number | null>(null);
 const arcadeBurnLatest = ref<{ amount: number; txhash?: string; gameId?: string; player?: string; timestamp?: string } | null>(null);
 
 const copy = async (text: string) => {
@@ -457,6 +458,11 @@ const arcadeBurnTotalDisplay = computed(() => {
   return `${formatRetro(arcadeBurnTotal.value, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
 });
 
+const arcadeBurnCountDisplay = computed(() => {
+  if (arcadeBurnCount.value === null) return "—";
+  return arcadeBurnCount.value.toLocaleString();
+});
+
 const arcadeBurnLatestDisplay = computed(() => {
   if (!arcadeBurnLatest.value) return "—";
   return `${formatRetro(arcadeBurnLatest.value.amount, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
@@ -496,27 +502,43 @@ const parseArcadeBurn = (tx: any) => {
 const loadArcadeBurns = async () => {
   arcadeBurnLoading.value = true;
   arcadeBurnTotal.value = null;
+  arcadeBurnCount.value = null;
   arcadeBurnLatest.value = null;
   try {
-    const { data } = await api.get("/cosmos/tx/v1beta1/txs", {
-      params: {
-        events: "message.action='/retrochain.arcade.v1.MsgInsertCoin'",
-        order_by: "ORDER_BY_DESC",
-        "pagination.limit": "50"
+    const burnsCollected: { amount: number; txhash?: string; gameId?: string; player?: string; timestamp?: string }[] = [];
+    const pageLimit = 100;
+    const maxPages = 50; // safety cap to avoid runaway pagination
+    let nextKey: string | undefined = undefined;
+    let page = 0;
+
+    while (page < maxPages) {
+      const { data } = await api.get("/cosmos/tx/v1beta1/txs", {
+        params: {
+          events: "message.action='/retrochain.arcade.v1.MsgInsertCoin'",
+          order_by: "ORDER_BY_DESC",
+          "pagination.limit": String(pageLimit),
+          "pagination.key": nextKey
+        }
+      });
+
+      const txs = Array.isArray(data?.tx_responses) ? data.tx_responses : [];
+      if (!burnsCollected.length && txs.length) {
+        const first = parseArcadeBurn(txs[0]);
+        if (first) arcadeBurnLatest.value = first;
       }
-    });
 
-    const txs = Array.isArray(data?.tx_responses) ? data.tx_responses : [];
-    const burns = txs
-      .map(parseArcadeBurn)
-      .filter((b) => b && Number.isFinite(b.amount)) as { amount: number; txhash?: string; gameId?: string; player?: string; timestamp?: string }[];
+      const burns = txs
+        .map(parseArcadeBurn)
+        .filter((b) => b && Number.isFinite(b.amount)) as { amount: number; txhash?: string; gameId?: string; player?: string; timestamp?: string }[];
+      burnsCollected.push(...burns);
 
-    if (burns.length) {
-      arcadeBurnTotal.value = burns.reduce((sum, b) => sum + b.amount, 0);
-      arcadeBurnLatest.value = burns[0];
-    } else {
-      arcadeBurnTotal.value = 0;
+      nextKey = data?.pagination?.next_key || undefined;
+      if (!nextKey || !txs.length) break;
+      page += 1;
     }
+
+    arcadeBurnCount.value = burnsCollected.length;
+    arcadeBurnTotal.value = burnsCollected.reduce((sum, b) => sum + b.amount, 0);
   } catch (err) {
     console.warn("Failed to load arcade burn data", err);
   } finally {
@@ -741,9 +763,10 @@ const loadArcadeBurns = async () => {
         </div>
         <div class="grid gap-3 md:grid-cols-3 items-start">
           <div class="rounded-xl border border-emerald-400/40 bg-emerald-500/10 p-3">
-            <p class="text-[11px] uppercase tracking-wider text-emerald-200">Total burned (sample)</p>
+            <p class="text-[11px] uppercase tracking-wider text-emerald-200">Total burned (Insert Coin)</p>
             <p class="text-2xl font-bold text-emerald-100 mt-1">{{ arcadeBurnTotalDisplay }}</p>
-            <p class="text-[11px] text-emerald-200/70">Sum of recent MsgInsertCoin txs</p>
+            <p class="text-[11px] text-emerald-200/70">Sum of all MsgInsertCoin txs (tokens_burned)</p>
+            <p class="text-[11px] text-emerald-200/60" v-if="arcadeBurnCount !== null">Txs counted: {{ arcadeBurnCountDisplay }}</p>
             <p class="text-[11px] text-emerald-200/60 mt-1" v-if="arcadeBurnLoading">Syncing arcade burns…</p>
           </div>
           <div class="rounded-xl border border-amber-400/40 bg-amber-500/10 p-3">

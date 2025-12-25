@@ -659,15 +659,12 @@ function sparkPath(data: number[], width = 160, height = 40) {
               <div class="grid gap-3 md:grid-cols-3">
                 <article class="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4">
                   <div class="text-xs uppercase tracking-wider text-emerald-200 flex items-center justify-between">
-                    <span>Insert Coin Burn Sink</span>
+                    <span>Insert Coin Burn (events)</span>
                     <span class="text-[10px] text-emerald-200/80">Auto-refresh</span>
                   </div>
                   <div class="text-3xl font-bold text-emerald-100 mt-2">{{ arcadeBurnDisplay }}</div>
                   <p class="text-[11px] text-emerald-200/80 mt-1">
-                    RETRO destroyed when players buy arcade credits (Insert Coin).
-                  </p>
-                  <p class="text-[11px] text-emerald-200/70 mt-2 font-mono break-all">
-                    {{ BURN_SINK_ADDRESS }}
+                    RETRO burned from recent Insert Coin purchases (tokens_burned in arcade.credits_inserted events).
                   </p>
                   <div class="text-xs text-emerald-200 flex items-center gap-2 mt-3 flex-wrap">
                     <RouterLink class="underline underline-offset-2" to="/tokenomics">View burn telemetry</RouterLink>
