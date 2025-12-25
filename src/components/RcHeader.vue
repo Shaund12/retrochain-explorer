@@ -494,7 +494,7 @@ const navItems: NavItem[] = [
 
 const currentRouteName = computed(() => route.name as string | undefined);
 
-const isExternalLink = (item: NavLink) => Boolean(item.href && !item.to);
+const isExternalLink = (item?: NavLink | null) => Boolean(item && item.href && !item.to);
 const isAbsoluteHref = (href?: string) => Boolean(href && /^https?:\/\//i.test(href));
 
 const externalTarget = (href?: string) => (isAbsoluteHref(href) ? "_blank" : undefined);
