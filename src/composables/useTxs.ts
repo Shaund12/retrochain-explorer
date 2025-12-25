@@ -66,6 +66,7 @@ const aggregateBurnTotals = (resp: any): TxSummary["burns"] => {
   const events: any[] = Array.isArray(resp?.events) ? resp.events : [];
   if (!events.length) return [];
   const totals = new Map<string, bigint>();
+  const burnMsgIndices = new Set<string>();
 
   const add = (amount: string, denom: string) => {
     if (!amount || !denom) return;
@@ -92,10 +93,12 @@ const aggregateBurnTotals = (resp: any): TxSummary["burns"] => {
     if (ev?.type === "burn") {
       const parsed = parseAmountDenom(map.amount);
       if (parsed) add(parsed.amount, parsed.denom);
+      if (map.msg_index) burnMsgIndices.add(map.msg_index);
       return;
     }
 
     if (map.tokens_burned) {
+      if (map.msg_index && burnMsgIndices.has(map.msg_index)) return;
       const denom = map.denom || "uretro";
       add(map.tokens_burned, denom);
     }

@@ -380,6 +380,7 @@ const burnEvents = computed(() => {
     source?: string | null;
     msgIndex?: string | null;
   }[] = [];
+  const burnMsgIndices = new Set<string>();
 
   const pushBurn = (amount: string, denom: string, burner?: string | null, source?: string | null, msgIndex?: string | null) => {
     const formatted = formatTokenAmount(amount, denom);
@@ -398,12 +399,14 @@ const burnEvents = computed(() => {
       const parsed = parseAmountDenom(map.amount);
       if (parsed) {
         pushBurn(parsed.amount, parsed.denom, map.burner || map.sender, ev?.type, map.msg_index);
+        if (map.msg_index) burnMsgIndices.add(map.msg_index);
       }
       return;
     }
 
     if (map.tokens_burned) {
-      pushBurn(map.tokens_burned, "uretro", map.burner || map.player || map.sender, ev?.type, map.msg_index);
+      if (map.msg_index && burnMsgIndices.has(map.msg_index)) return;
+      pushBurn(map.tokens_burned, map.denom || "uretro", map.burner || map.player || map.sender, ev?.type, map.msg_index);
       return;
     }
   });
@@ -412,7 +415,7 @@ const burnEvents = computed(() => {
   const seen: Record<string, boolean> = {};
 
   burns.forEach((b) => {
-    const key = `${b.amount}-${b.denom}-${b.burner || ""}-${b.source || ""}-${b.msgIndex || ""}`;
+    const key = `${b.amount}-${b.denom}-${b.burner || ""}-${b.msgIndex || ""}`;
     if (seen[key]) return;
     seen[key] = true;
     deduped.push(b);
