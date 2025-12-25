@@ -10,62 +10,62 @@ export interface AccountLabelMeta {
 const RAW_LABELS: Record<string, AccountLabelMeta> = {
   "cosmos1fscvf7rphx477z6vd4sxsusm2u8a70kewvc8wy": {
     id: "foundation_validator",
-    label: "Foundation Validator",
-    description: "RetroChain Foundation's guardian validator that keeps mainnet blocks flowing 24/7.",
+    label: "Foundation Security Bond",
+    description: "Target: 10,000,000.000000 RETRO (~10.11%). Bonded stake for chain stability—not a spendable treasury.",
     icon: "🛡️"
   },
   "cosmos1exqr633rjzls2h4txrpu0cxhnxx0dquylf074x": {
     id: "ecosystem_rewards",
-    label: "Ecosystem Rewards",
-    description: "Grant pool that jump-starts builders, hackathons, and long-term contributors.",
+    label: "Community Distribution Reserve",
+    description: "Target: 35,000,000.000000 RETRO (~35.39%). Airdrops, incentive campaigns, retroactive rewards, quests, builder rewards.",
     icon: "🎁"
   },
   "cosmos1w506apt4kyq72xgaakwxrvak8w5d94upn3gdf3": {
     id: "liquidity_fund",
-    label: "Liquidity Fund",
-    description: "Provisioning desk for RetroChain DEX pairs, market makers, and cross-chain bridges.",
+    label: "Liquidity & Market Ops",
+    description: "Target: 10,000,000.000000 RETRO (~10.11%). DEX liquidity seeding, market-making support, bridge/LP programs.",
     icon: "💧"
   },
   "cosmos1tksjh4tkdjfnwkkwty0wyuy4pv93q5q4lepgrn": {
     id: "community_fund",
-    label: "Community Fund",
-    description: "DAO-controlled treasury for governance proposals, retroactive rewards, and partnerships.",
+    label: "Partnerships & Ecosystem Growth",
+    description: "Target: 8,721,193.994610 RETRO (~8.82%). Integrations, partner zones, relayer/infra incentives, bizdev programs.",
     icon: "🌐"
   },
   "cosmos1epy8qnuu00w76xvvlt2mc7q8qslhw206vzu5vs": {
     id: "dev_fund",
-    label: "Core Dev Fund",
-    description: "Fuel for protocol upgrades, audits, and the RetroChain core engineering team.",
+    label: "Protocol R&D + Audits",
+    description: "Target: 8,000,000.000000 RETRO (~8.09%). Audits, protocol upgrades, security work, core engineering.",
     icon: "🧰"
   },
   "cosmos1us0jjdd5dj0v499g959jatpnh6xuamwhwdrrgq": {
     id: "dev_profit",
-    label: "Dev Profit",
-    description: "Core team profit wallet covering infra, validator ops, and high-impact ecosystem pushes.",
-    icon: "🚀"
+    label: "Ops & Team Vesting",
+    description: "Target: 6,000,000.000000 RETRO (~6.07%). Team/ops allocation framed as vesting + runway.",
+    icon: "🛰️"
   },
   "cosmos1ydn44ufvhddqhxu88m709k46hdm0dfjwm8v0tt": {
     id: "kitty_charity",
-    label: "Kitty Charity",
-    description: "Community kitty fund sponsoring shelters, meme contests, and feel-good grants.",
+    label: "Public Goods & Charity",
+    description: "Target: 1,007,310.758033 RETRO (~1.02%). Community kitty for shelters, public goods, and feel-good grants.",
     icon: "🐾"
   },
   "cosmos1fl48vsnmsdzcv85q5d2q4z5ajdha8yu34mf0eh": {
     id: "community_pool",
-    label: "Community Pool",
-    description: "Chain-wide treasury that accumulates inflation and community-tax funds for governance controlled spending.",
+    label: "DAO Treasury",
+    description: "Target: 20,000,000.000000 RETRO (~20.22%). Governance-controlled treasury—serious funds with on-chain approvals.",
     icon: "🏛️"
   },
   "cosmos1f05vqgh9ufgfykn3g8zx45j273x0kxaj23akuz": {
     id: "ibc_relayer",
-    label: "IBC Relayer",
-    description: "Primary IBC relayer hot wallet moving packets between RetroChain and partner zones.",
+    label: "IBC Relayer Hot Wallet",
+    description: "Target: 4,998.572638 RETRO (~0.01%). Hot wallet for packet fees and relays between partner zones.",
     icon: "🔁"
   },
   "cosmos1jv65s3grqf6v6jl3dp4t6c9t9rk99cd88lyufl": {
     id: "staking_rewards_vault",
-    label: "Staking Rewards Vault",
-    description: "Primary accumulation vault where network staking rewards are swept before distribution.",
+    label: "Commission Sweep (Auto)",
+    description: "Target: 162,508.513858 RETRO (~0.16%). Automated commission sweep/routing wallet—not user staking rewards.",
     icon: "🏦"
   }
 };
