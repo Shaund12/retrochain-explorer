@@ -23,18 +23,9 @@
 
       <!-- Navigation -->
       <nav class="hidden lg:flex items-center gap-1">
-        <template v-for="(item, idx) in normalizedNavItems" :key="idx">
+        <template v-for="item in navItems" :key="item.label">
           <a
-            v-if="!isGroup(item) && isExternalLink(item)"
-            :href="item.href"
-            :target="externalTarget(item.href)"
-            :rel="externalRel(item.href)"
-            class="px-4 h-16 flex items-center text-sm font-medium transition-colors cursor-pointer relative text-slate-400 hover:text-white"
-          >
-            {{ item.label }}
-          </a>
-          <a
-            v-else-if="!isGroup(item)"
+            v-if="!isGroup(item)"
             @click.prevent="item.to && router.push(item.to)"
             class="px-4 h-16 flex items-center text-sm font-medium transition-colors cursor-pointer relative"
             :class="isLinkActive(item) ? 'text-white' : 'text-slate-400 hover:text-white'"
@@ -74,19 +65,9 @@
               @mouseenter="clearDropdownTimer()"
               @mouseleave="scheduleDropdownClose"
             >
-              <a
-                v-for="(link, linkIdx) in groupItems(item)"
-                :key="linkIdx"
-                v-if="isExternalLink(link)"
-                :href="link.href"
-                :target="externalTarget(link.href)"
-                :rel="externalRel(link.href)"
-                class="w-full px-4 py-2 text-left text-sm flex items-center justify-between transition-colors text-slate-400 hover:text-white hover:bg-white/5"
-              >
-                <span>{{ link.label }}</span>
-              </a>
               <button
-                v-else
+                v-for="link in item.items"
+                :key="link.label"
                 type="button"
                 @click.prevent="link.to && router.push(link.to); openDropdown = null;"
                 class="w-full px-4 py-2 text-left text-sm flex items-center justify-between transition-colors"
@@ -203,20 +184,11 @@
       class="lg:hidden border-t border-white/5 bg-[rgba(10,14,39,0.98)]"
     >
       <nav class="max-w-7xl mx-auto px-4 py-3 flex flex-col gap-1">
-        <template v-for="(item, idx) in normalizedNavItems" :key="idx">
-          <a
-            v-if="!isGroup(item) && isExternalLink(item)"
-            :href="item.href"
-            :target="externalTarget(item.href)"
-            :rel="externalRel(item.href)"
-            class="px-4 py-3 text-sm font-medium transition-all text-left rounded-lg text-slate-400 hover:text-white hover:bg-white/5"
-          >
-            {{ item.label }}
-          </a>
+        <template v-for="item in navItems" :key="item.label">
           <button
-            v-else-if="!isGroup(item)"
+            v-if="!isGroup(item)"
             type="button"
-            @click.prevent="item?.to && router.push(item.to); closeMobileMenu();"
+            @click.prevent="item.to && router.push(item.to); closeMobileMenu();"
             class="px-4 py-3 text-sm font-medium transition-all text-left rounded-lg"
             :class="isLinkActive(item) ? 'text-white bg-white/5' : 'text-slate-400 hover:text-white hover:bg-white/5'"
           >
@@ -241,19 +213,9 @@
               </svg>
             </button>
             <div v-show="expandedMobileGroups[item.label]" class="bg-white/5 border-t border-white/5 flex flex-col">
-              <a
-                v-for="(link, linkIdx) in groupItems(item)"
-                :key="linkIdx"
-                v-if="isExternalLink(link)"
-                :href="link.href"
-                :target="externalTarget(link.href)"
-                :rel="externalRel(link.href)"
-                class="px-6 py-2 text-sm text-left transition-colors text-slate-400 hover:text-white hover:bg-white/10"
-              >
-                {{ link.label }}
-              </a>
               <button
-                v-else
+                v-for="link in item.items"
+                :key="link.label"
                 type="button"
                 @click.prevent="link.to && router.push(link.to); closeMobileMenu();"
                 class="px-6 py-2 text-sm text-left transition-colors"
@@ -439,8 +401,7 @@ const wbtcMeta = computed(() => {
 
 interface NavLink {
   label: string;
-  to?: { name: string; params?: Record<string, any> };
-  href?: string;
+  to: { name: string; params?: Record<string, any> };
 }
 
 interface NavGroup {
@@ -455,8 +416,7 @@ const navItems: NavItem[] = [
   {
     label: "Arcade",
     items: [
-      { label: "Arcade Dashboard", to: { name: "arcade" } },
-      { label: "Space Invaders", href: "/arcade/arcade/" }
+      { label: "Arcade Dashboard", to: { name: "arcade" } }
     ]
   },
   {
@@ -494,22 +454,12 @@ const navItems: NavItem[] = [
 
 const currentRouteName = computed(() => route.name as string | undefined);
 
-const normalizedNavItems = computed(() => navItems.filter((i): i is NavItem => Boolean(i && (i as any).label)));
-const groupItems = (group: NavGroup) =>
-  Array.isArray(group.items) ? group.items.filter((l): l is NavLink => Boolean(l && (l as any).label)) : [];
-
-const isExternalLink = (item?: NavLink | null) => Boolean(item && item.href && !item.to);
-const isAbsoluteHref = (href?: string) => Boolean(href && /^https?:\/\//i.test(href));
-
-const externalTarget = (href?: string) => (isAbsoluteHref(href) ? "_blank" : undefined);
-const externalRel = (href?: string) => (isAbsoluteHref(href) ? "noopener" : undefined);
-
 const isLinkActive = (item?: NavLink | null) => {
   if (!item || !item.to) return false;
   return currentRouteName.value === item.to.name;
 };
 
-const isGroup = (item: NavItem): item is NavGroup => Array.isArray((item as NavGroup).items);
+const isGroup = (item: NavItem): item is NavGroup => (item as NavGroup).items !== undefined;
 
 const groupActive = (group: NavGroup) => group.items.some((link) => isLinkActive(link));
 

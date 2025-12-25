@@ -77,8 +77,9 @@ const shortAddr = (addr?: string, size = 12) => {
         <h1 class="text-2xl font-bold text-white mt-1">Play, Compete, Win</h1>
         <p class="text-sm text-slate-300 mt-1">Live leaderboard, sessions, and achievements from the arcade module.</p>
       </div>
-      <div class="flex gap-2">
+      <div class="flex gap-2 flex-wrap justify-end">
         <button class="btn text-xs" @click="router.push({ name: 'home' })">? Back to Home</button>
+        <a class="btn text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">🎮 Play Space Invaders</a>
         <button class="btn btn-primary text-xs" :disabled="refreshing || loading" @click="refreshAll">
           {{ refreshing ? 'Refreshing...' : 'Refresh Data' }}
         </button>
