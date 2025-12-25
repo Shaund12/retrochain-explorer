@@ -436,7 +436,7 @@ const navItems: NavItem[] = [
       { label: "Tokens", to: { name: "tokens" } },
       { label: "Tokenomics", to: { name: "tokenomics" } },
       { label: "Docs", to: { name: "docs" } },
-      { label: "API Docs", to: { name: "api-docs" } },
+      { label: "API Docs", to: { name: "api" } },
       { label: "DEX", to: { name: "dex" } },
       { label: "Buy", to: { name: "buy" } }
     ]
