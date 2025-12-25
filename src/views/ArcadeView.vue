@@ -117,7 +117,7 @@ const shortAddr = (addr?: string, size = 12) => {
         <p class="text-sm text-slate-300 mt-1">Live leaderboard, sessions, and achievements from the arcade module.</p>
       </div>
       <div class="flex gap-2 flex-wrap justify-end">
-        <button class="btn text-xs" @click="router.push({ name: 'home' })">? Back to Home</button>
+        <button class="btn text-xs" @click="router.push({ name: 'home' })">← Back to Home</button>
         <a class="btn text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">🎮 Play Space Invaders</a>
         <button class="btn btn-primary text-xs" :disabled="refreshing || loading" @click="refreshAll">
           {{ refreshing ? 'Refreshing...' : 'Refresh Data' }}
@@ -174,9 +174,9 @@ const shortAddr = (addr?: string, size = 12) => {
             <tbody>
               <tr v-for="entry in leaderboard" :key="entry.player" class="text-[11px]">
                 <td class="font-mono">
-                  <span v-if="entry.rank === 1">??</span>
-                  <span v-else-if="entry.rank === 2">??</span>
-                  <span v-else-if="entry.rank === 3">??</span>
+                  <span v-if="entry.rank === 1">🥇</span>
+                  <span v-else-if="entry.rank === 2">🥈</span>
+                  <span v-else-if="entry.rank === 3">🥉</span>
                   <span v-else>{{ entry.rank }}</span>
                 </td>
                 <td class="font-mono">{{ shortAddr(entry.player, 14) }}</td>
@@ -203,7 +203,7 @@ const shortAddr = (addr?: string, size = 12) => {
             class="p-3 rounded-lg border border-white/10 bg-white/5 flex items-center justify-between"
           >
             <div class="flex items-center gap-3">
-              <span class="text-xl">{{ idx === 0 ? '??' : idx === 1 ? '??' : '??' }}</span>
+              <span class="text-xl">{{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉' }}</span>
               <div>
                 <div class="text-sm font-semibold text-white">{{ shortAddr(p.player, 14) }}</div>
                 <div class="text-[11px] text-slate-400">{{ Number(p.total_score || 0).toLocaleString() }} pts</div>
@@ -244,7 +244,7 @@ const shortAddr = (addr?: string, size = 12) => {
             class="p-3 rounded-lg bg-slate-900/60 border border-emerald-400/30 flex items-center justify-between"
           >
             <div class="flex items-center gap-2">
-              <div class="text-lg">??</div>
+              <div class="text-lg">🪙</div>
               <div>
                 <div class="text-sm font-semibold text-white">{{ shortAddr(entry.player, 14) }}</div>
                 <div class="text-[11px] text-slate-400">{{ Number(entry.total_score || 0).toLocaleString() }} pts</div>
