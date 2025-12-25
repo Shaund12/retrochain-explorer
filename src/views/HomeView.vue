@@ -22,6 +22,9 @@ const { txs, loading: loadingTxs, searchRecent } = useTxs();
 const { snapshot: mempool, loading: loadingMempool, error: mempoolError, refresh: refreshMempool } = useMempool();
 const { validators, fetchValidators } = useValidators();
 
+const showSpaceInvadersNotice = ref(true);
+const spaceInvadersNoticeKey = "home-space-invaders-beta-dismissed";
+
 const blockPage = ref(0);
 const blockPageSize = 10;
 const txPage = ref(0);
@@ -136,6 +139,10 @@ const { enabled: autoRefreshEnabled, countdown, toggle: toggleAutoRefresh } = us
 );
 
 onMounted(async () => {
+  try {
+    const stored = localStorage.getItem(spaceInvadersNoticeKey);
+    showSpaceInvadersNotice.value = stored !== "true";
+  } catch {}
   loadCardState();
   await refreshAll();
 });
@@ -161,6 +168,13 @@ const shortString = (value?: string | null, length = 10) => {
 const goToTx = (hash?: string | null) => {
   if (!hash) return;
   router.push({ name: "tx-detail", params: { hash } });
+};
+
+const dismissSpaceInvadersNotice = () => {
+  showSpaceInvadersNotice.value = false;
+  try {
+    localStorage.setItem(spaceInvadersNoticeKey, "true");
+  } catch {}
 };
 
 // Production stats and sparklines (no extra libs)
@@ -395,6 +409,34 @@ function sparkPath(data: number[], width = 160, height = 40) {
 
 <template>
   <div class="flex flex-col gap-4">
+    <div
+      v-if="showSpaceInvadersNotice"
+      class="card border border-emerald-400/50 bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-indigo-500/10 shadow-lg shadow-emerald-500/20"
+    >
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-start gap-3">
+          <div class="text-2xl sm:text-3xl">👾🛸</div>
+          <div>
+            <div class="text-sm font-semibold text-emerald-200">Space Invaders Beta is LIVE!</div>
+            <p class="text-xs sm:text-sm text-slate-200 mt-1">
+              Drop coins, blast aliens, and climb the leaderboard. Jump in now and help us battle the invasion!
+            </p>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <a
+            class="btn btn-primary text-xs"
+            href="/arcade/arcade/"
+            target="_blank"
+            rel="noopener"
+          >
+            Play Space Invaders
+          </a>
+          <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
+        </div>
+      </div>
+    </div>
+
     <RcDisclaimer type="warning" title="⚠️ Experimental Mainnet Notice">
       <p>
         <strong>RetroChain is a live Cosmos SDK mainnet, but the network, modules, and contracts remain experimental.</strong>
