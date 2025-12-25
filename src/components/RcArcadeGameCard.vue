@@ -27,19 +27,19 @@ const getDifficultyColor = (difficulty?: string) => {
 const getGameIcon = (genre?: string) => {
   switch (genre?.toLowerCase()) {
     case "shooter":
-      return "??";
+      return "🎯";
     case "puzzle":
-      return "??";
+      return "🧩";
     case "racing":
-      return "???";
+      return "🏎️";
     case "platformer":
-      return "??";
+      return "🦘";
     case "fighting":
-      return "??";
+      return "🥊";
     case "rpg":
-      return "??";
+      return "🧙‍♂️";
     default:
-      return "??";
+      return "🎮";
   }
 };
 </script>
