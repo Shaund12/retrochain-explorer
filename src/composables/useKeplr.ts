@@ -774,13 +774,16 @@ export function useKeplr() {
       const baseGasLimit = Math.max(MIN_GAS_LIMIT, msgs.length * DEFAULT_GAS_PER_MSG);
       let feeToUse = fee ?? null;
 
+      const readGasValue = (f: any) => Number(f?.gas ?? f?.gas_limit ?? f?.gasLimit ?? 0);
+      const setGasValue = (f: any, gas: number | string) => ({ ...f, gas: String(gas), gas_limit: String(gas), gasLimit: String(gas) });
+
       // Arcade submit-score sometimes needs a bit more gas (ante ReadPerByte).
       // If caller passed a tight gas value, bump it and scale fee amount to keep the same gas price.
       const ARCADE_SUBMIT_SCORE_GAS = 300000;
       const hasArcadeSubmitScore = msgs.some((m) => m?.typeUrl === "/retrochain.arcade.v1.MsgSubmitScore");
 
       if (feeToUse && hasArcadeSubmitScore) {
-        const origGas = Number(feeToUse.gas || 0);
+        const origGas = readGasValue(feeToUse);
         if (Number.isFinite(origGas) && origGas > 0 && origGas < ARCADE_SUBMIT_SCORE_GAS) {
           const coin0 = feeToUse.amount?.[0];
 
@@ -788,14 +791,16 @@ export function useKeplr() {
           if (coin0?.denom === DEFAULT_FEE_DENOM && coin0?.amount && /^\d+$/.test(String(coin0.amount))) {
             const origAmt = Number(coin0.amount);
             const scaledAmt = Math.ceil((origAmt * ARCADE_SUBMIT_SCORE_GAS) / origGas);
-            feeToUse = {
-              ...feeToUse,
-              gas: String(ARCADE_SUBMIT_SCORE_GAS),
-              amount: [{ ...coin0, amount: String(Math.max(origAmt, scaledAmt)) }]
-            };
+            feeToUse = setGasValue(
+              {
+                ...feeToUse,
+                amount: [{ ...coin0, amount: String(Math.max(origAmt, scaledAmt)) }]
+              },
+              ARCADE_SUBMIT_SCORE_GAS
+            );
           } else {
             // If fee shape is unknown, at least bump gas.
-            feeToUse = { ...feeToUse, gas: String(ARCADE_SUBMIT_SCORE_GAS) };
+            feeToUse = setGasValue(feeToUse, ARCADE_SUBMIT_SCORE_GAS);
           }
         }
       }
@@ -874,20 +879,25 @@ export function useKeplr() {
       const hasArcadeSubmitScore = msgs.some((m) => m?.typeUrl === "/retrochain.arcade.v1.MsgSubmitScore");
       let feeNormalized = originalFee;
 
+      const readGasValue = (f: any) => Number(f?.gas ?? f?.gas_limit ?? f?.gasLimit ?? 0);
+      const setGasValue = (f: any, gas: number | string) => ({ ...f, gas: String(gas), gas_limit: String(gas), gasLimit: String(gas) });
+
       if (originalFee && hasArcadeSubmitScore) {
-        const origGas = Number(originalFee.gas || 0);
+        const origGas = readGasValue(originalFee);
         if (Number.isFinite(origGas) && origGas > 0 && origGas < ARCADE_SUBMIT_SCORE_GAS) {
           const coin0 = originalFee.amount?.[0];
           if (coin0?.denom === DEFAULT_FEE_DENOM && coin0?.amount && /^\d+$/.test(String(coin0.amount))) {
             const origAmt = Number(coin0.amount);
             const scaledAmt = Math.ceil((origAmt * ARCADE_SUBMIT_SCORE_GAS) / origGas);
-            feeNormalized = {
-              ...originalFee,
-              gas: String(ARCADE_SUBMIT_SCORE_GAS),
-              amount: [{ ...coin0, amount: String(Math.max(origAmt, scaledAmt)) }]
-            };
+            feeNormalized = setGasValue(
+              {
+                ...originalFee,
+                amount: [{ ...coin0, amount: String(Math.max(origAmt, scaledAmt)) }]
+              },
+              ARCADE_SUBMIT_SCORE_GAS
+            );
           } else {
-            feeNormalized = { ...originalFee, gas: String(ARCADE_SUBMIT_SCORE_GAS) };
+            feeNormalized = setGasValue(originalFee, ARCADE_SUBMIT_SCORE_GAS);
           }
         }
       }
