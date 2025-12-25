@@ -9,6 +9,8 @@ import "swagger-ui-dist/swagger-ui.css";
 
 const { restBase } = useNetwork();
 
+const DOCS_REST_BASE = import.meta.env.VITE_DOCS_REST_BASE || "https://retrochain.ddns.net/api/";
+
 const loading = ref(true);
 const error = ref<string | null>(null);
 const selectedSpec = ref("");
@@ -34,7 +36,7 @@ const availableSpecs = [
   { label: "Upgrade", file: "retrochain-upgrade.swagger.yaml" },
 ];
 
-const effectiveRestBase = computed(() => restBase.value || "/api");
+const effectiveRestBase = computed(() => DOCS_REST_BASE || restBase.value || "/api");
 
 // Use the app's base URL (works when deployed under a subpath) for swagger spec files
 const baseHref = (import.meta.env.BASE_URL || "/").replace(/\/$/, "");
@@ -117,7 +119,7 @@ onMounted(() => {
       <ul class="text-sm text-slate-300 list-disc list-inside space-y-1">
         <li>The swagger specs are served from <code class="text-xs">/api-docs/*.swagger.yaml</code>.</li>
         <li>
-          "Try it out" requests are routed through <code class="text-xs">{{ effectiveRestBase }}</code> so dev/prod stay same-origin.
+          "Try it out" requests are routed through <code class="text-xs">{{ effectiveRestBase }}</code> (default <code class="text-xs">https://retrochain.ddns.net/api/</code>).
         </li>
         <li>If your node doesn't expose swagger, this page still works because the specs are bundled with the explorer.</li>
       </ul>
