@@ -133,6 +133,11 @@ const transferUsdValue = (valueTransfers?: { amount: string; denom: string }[]) 
   return totals.reduce((a, b) => a + b, 0);
 };
 
+const burnValueDisplay = (burns?: { amount: string; denom: string }[]) => {
+  if (!Array.isArray(burns) || !burns.length) return null;
+  return formatCoins(burns, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
+};
+
 const gasPriceDisplay = (fees?: { amount: string; denom: string }[], gasUsed?: string | number | null) => {
   const primary = Array.isArray(fees) && fees.length ? fees[0] : null;
   const used = Number(gasUsed);
@@ -302,6 +307,7 @@ onMounted(async () => {
             <div v-if="gasPriceDisplay(t.fees as any, t.gasUsed)" class="text-[10px] text-cyan-300">Gas price: {{ gasPriceDisplay(t.fees as any, t.gasUsed) }}</div>
             <div v-if="transferValueDisplay(t.valueTransfers as any)" class="text-[10px] text-slate-400 mt-1">Moved: {{ transferValueDisplay(t.valueTransfers as any) }}</div>
             <div v-if="transferUsdValue(t.valueTransfers as any) !== null" class="text-[10px] text-emerald-300">≈ {{ formatUsd(transferUsdValue(t.valueTransfers as any)) }}</div>
+            <div v-if="burnValueDisplay(t.burns as any)" class="text-[10px] text-rose-300 mt-1">Burned: {{ burnValueDisplay(t.burns as any) }}</div>
           </td>
           <td class="text-[11px] text-slate-300">
             <span v-if="t.timestamp" class="flex flex-col">

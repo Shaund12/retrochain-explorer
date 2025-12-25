@@ -19,6 +19,7 @@ export interface TxSummary {
   }>;
   valueTransfers?: Array<{ amount: string; denom: string }>;
   fees?: Array<{ amount: string; denom: string }>;
+  burns?: Array<{ amount: string; denom: string }>;
 }
 
 const extractMessageTypes = (txResponse: any): string[] => {
@@ -56,6 +57,48 @@ const aggregateTransferTotals = (logs: any[] | undefined | null): TxSummary["val
           });
       });
     });
+  });
+
+  return Array.from(totals.entries()).map(([denom, amount]) => ({ denom, amount: amount.toString() }));
+};
+
+const aggregateBurnTotals = (resp: any): TxSummary["burns"] => {
+  const events: any[] = Array.isArray(resp?.events) ? resp.events : [];
+  if (!events.length) return [];
+  const totals = new Map<string, bigint>();
+
+  const add = (amount: string, denom: string) => {
+    if (!amount || !denom) return;
+    try {
+      const big = BigInt(amount);
+      totals.set(denom, (totals.get(denom) ?? 0n) + big);
+    } catch {}
+  };
+
+  const parseAmountDenom = (raw?: string) => {
+    if (!raw || typeof raw !== "string") return null;
+    const match = raw.match(/^(-?\d+)([a-zA-Z\/:]+)$/);
+    if (!match) return null;
+    return { amount: match[1], denom: match[2] };
+  };
+
+  events.forEach((ev) => {
+    const attrs: any[] = Array.isArray(ev?.attributes) ? ev.attributes : [];
+    const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
+      if (curr?.key) acc[curr.key] = curr.value;
+      return acc;
+    }, {} as Record<string, string>);
+
+    if (ev?.type === "burn") {
+      const parsed = parseAmountDenom(map.amount);
+      if (parsed) add(parsed.amount, parsed.denom);
+      return;
+    }
+
+    if (map.tokens_burned) {
+      const denom = map.denom || "uretro";
+      add(map.tokens_burned, denom);
+    }
   });
 
   return Array.from(totals.entries()).map(([denom, amount]) => ({ denom, amount: amount.toString() }));
@@ -157,7 +200,8 @@ const buildSummaryFromResponse = (resp: any, fallback: { hash: string; height: n
   messageTypes: extractMessageTypes(resp),
   transfers: [],
   valueTransfers: aggregateTransferTotals(resp?.logs),
-  fees: resp?.tx?.auth_info?.fee?.amount || []
+  fees: resp?.tx?.auth_info?.fee?.amount || [],
+  burns: aggregateBurnTotals(resp)
 });
 
 const txContainsAddress = (txResponse: any, address: string) => {
@@ -363,7 +407,8 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
               timestamp: resp.timestamp,
               messageTypes: extractMessageTypes(resp),
               valueTransfers: aggregateTransferTotals(resp?.logs),
-              fees: resp?.tx?.auth_info?.fee?.amount || []
+              fees: resp?.tx?.auth_info?.fee?.amount || [],
+              burns: aggregateBurnTotals(resp)
             });
 
             if (collected.length >= limit) {
@@ -420,7 +465,8 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
                     timestamp: r.timestamp || time,
                     messageTypes: extractMessageTypes(r),
                     valueTransfers: aggregateTransferTotals(r?.logs),
-                    fees: r?.tx?.auth_info?.fee?.amount || []
+                    fees: r?.tx?.auth_info?.fee?.amount || [],
+                    burns: aggregateBurnTotals(r)
                   };
                 }
               } catch {}
@@ -505,7 +551,8 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
               messageTypes: extractMessageTypes(resp),
               transfers: parseTransfers(resp?.logs, address),
               valueTransfers: aggregateTransferTotals(resp?.logs),
-              fees: resp?.tx?.auth_info?.fee?.amount || []
+              fees: resp?.tx?.auth_info?.fee?.amount || [],
+              burns: aggregateBurnTotals(resp)
             };
             collected.push(summary);
           }
