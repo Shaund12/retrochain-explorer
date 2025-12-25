@@ -149,7 +149,7 @@ All sections have beautiful empty states with:
 ignite chain serve
 ```
 
-### 2. Register a Game
+### 2. Register a Game (with your payout wallet!)
 ```bash
 retrochaind tx arcade register-game \
   --game-id="space-raiders" \
@@ -162,6 +162,8 @@ retrochaind tx arcade register-game \
   --chain-id=retrochain-arcade-1 \
   --yes
 ```
+
+> ⚠️ Important: include your developer/payout wallet when registering (e.g., the `--from` wallet or the module’s developer address field). If a game is unregistered or has no developer wallet, **100% of Insert Coin spend is burned** instead of 80/20 burn/dev.
 
 ### 3. Insert Coins and Start Playing
 ```bash
