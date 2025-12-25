@@ -64,8 +64,8 @@ onMounted(async () => {
 });
 
 const shortAddr = (addr?: string, size = 12) => {
-  if (!addr) return "—";
-  return `${addr.slice(0, size)}…${addr.slice(-6)}`;
+  if (!addr) return "Â—";
+  return `${addr.slice(0, size)}Â…${addr.slice(-6)}`;
 };
 </script>
 
@@ -142,8 +142,8 @@ const shortAddr = (addr?: string, size = 12) => {
                 <td class="font-mono">{{ shortAddr(entry.player, 14) }}</td>
                 <td class="font-semibold text-slate-100">{{ Number(entry.total_score || 0).toLocaleString() }}</td>
                 <td class="text-slate-200">{{ entry.games_played }}</td>
-                <td class="text-emerald-300">{{ entry.arcade_tokens ?? '—' }}</td>
-                <td class="text-slate-300">{{ entry.title || '—' }}</td>
+                <td class="text-emerald-300">{{ entry.arcade_tokens ?? 'Â—' }}</td>
+                <td class="text-slate-300">{{ entry.title || 'Â—' }}</td>
               </tr>
             </tbody>
           </table>
@@ -169,7 +169,7 @@ const shortAddr = (addr?: string, size = 12) => {
                 <div class="text-[11px] text-slate-400">{{ Number(p.total_score || 0).toLocaleString() }} pts</div>
               </div>
             </div>
-            <div class="text-right text-[11px] text-emerald-300">Tokens: {{ p.arcade_tokens ?? '—' }}</div>
+            <div class="text-right text-[11px] text-emerald-300">Tokens: {{ p.arcade_tokens ?? 'Â—' }}</div>
           </div>
         </div>
       </div>
@@ -185,8 +185,8 @@ const shortAddr = (addr?: string, size = 12) => {
         <div v-else class="space-y-1 text-sm text-slate-200">
           <div class="font-mono text-[11px] text-emerald-200">{{ topPlayer.player }}</div>
           <div class="text-lg font-semibold text-white">{{ Number(topPlayer.total_score || 0).toLocaleString() }} pts</div>
-          <div class="text-xs text-slate-400">Games played: {{ topPlayer.games_played ?? '—' }}</div>
-          <div class="text-xs text-slate-400">Arcade tokens: {{ topPlayer.arcade_tokens ?? '—' }}</div>
+          <div class="text-xs text-slate-400">Games played: {{ topPlayer.games_played ?? 'Â—' }}</div>
+          <div class="text-xs text-slate-400">Arcade tokens: {{ topPlayer.arcade_tokens ?? 'Â—' }}</div>
           <div class="text-xs text-amber-300" v-if="topPlayer.title">{{ topPlayer.title }}</div>
         </div>
       </div>
@@ -240,7 +240,7 @@ const shortAddr = (addr?: string, size = 12) => {
               <span class="font-mono">{{ shortAddr(s.player, 14) }}</span>
               <span class="text-emerald-300">Score: {{ s.score }}</span>
             </div>
-            <div class="text-[11px] text-slate-500">Level {{ s.level_reached }} · Status {{ s.status }}</div>
+            <div class="text-[11px] text-slate-500">Level {{ s.level_reached }} Â· Status {{ s.status }}</div>
           </div>
         </div>
       </div>

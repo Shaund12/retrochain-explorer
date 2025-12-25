@@ -35,7 +35,7 @@
           </a>
           <a
             v-else-if="!isGroup(item)"
-            @click.prevent="router.push(item.to)"
+            @click.prevent="item.to && router.push(item.to)"
             class="px-4 h-16 flex items-center text-sm font-medium transition-colors cursor-pointer relative"
             :class="isLinkActive(item) ? 'text-white' : 'text-slate-400 hover:text-white'"
           >
@@ -88,7 +88,7 @@
               <button
                 v-else
                 type="button"
-                @click.prevent="router.push(link.to); openDropdown = null;"
+                @click.prevent="link.to && router.push(link.to); openDropdown = null;"
                 class="w-full px-4 py-2 text-left text-sm flex items-center justify-between transition-colors"
                 :class="isLinkActive(link) ? 'text-white bg-white/5' : 'text-slate-400 hover:text-white hover:bg-white/5'"
               >
@@ -255,7 +255,7 @@
               <button
                 v-else
                 type="button"
-                @click.prevent="router.push(link.to); closeMobileMenu();"
+                @click.prevent="link.to && router.push(link.to); closeMobileMenu();"
                 class="px-6 py-2 text-sm text-left transition-colors"
                 :class="isLinkActive(link) ? 'text-white bg-white/10' : 'text-slate-400 hover:text-white hover:bg-white/10'"
               >
@@ -437,17 +437,11 @@ const wbtcMeta = computed(() => {
   return getTokenMeta(wbtcBalanceEntry.value.denom);
 });
 
-interface NavLinkRoute {
+interface NavLink {
   label: string;
-  to: { name: string; params?: Record<string, any> };
+  to?: { name: string; params?: Record<string, any> };
+  href?: string;
 }
-
-interface NavLinkExternal {
-  label: string;
-  href: string;
-}
-
-type NavLink = NavLinkRoute | NavLinkExternal;
 
 interface NavGroup {
   label: string;
@@ -462,7 +456,7 @@ const navItems: NavItem[] = [
     label: "Arcade",
     items: [
       { label: "Arcade Dashboard", to: { name: "arcade" } },
-      { label: "Space Invaders", href: "https://retrochain.ddns.net/arcade/arcade/" }
+      { label: "Space Invaders", href: "/arcade/arcade/" }
     ]
   },
   {
@@ -500,10 +494,10 @@ const navItems: NavItem[] = [
 
 const currentRouteName = computed(() => route.name as string | undefined);
 
-const isExternalLink = (item: NavLink): item is NavLinkExternal => (item as NavLinkExternal).href !== undefined;
+const isExternalLink = (item: NavLink) => Boolean(item.href && !item.to);
 
 const isLinkActive = (item: NavLink) => {
-  if (isExternalLink(item)) return false;
+  if (!item.to) return false;
   return currentRouteName.value === item.to.name;
 };
 
