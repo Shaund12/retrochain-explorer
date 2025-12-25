@@ -932,7 +932,8 @@ export function useKeplr() {
     }
   };
 
-  if (typeof window !== "undefined" && window.keplr && !window.keplr.signAndBroadcast) {
+  if (typeof window !== "undefined" && window.keplr) {
+    // Always route signAndBroadcast through our normalized path (handles arcade submit-score gas bump)
     window.keplr.signAndBroadcast = async (chainId: string, signer: string, msgs: any[], fee: any, memo = "") => {
       return signAndBroadcast(chainId, msgs, fee, memo);
     };
