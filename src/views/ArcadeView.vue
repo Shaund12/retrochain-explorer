@@ -1,9 +1,12 @@
 <script setup lang="ts">
 import { onMounted, computed, ref } from "vue";
 import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
 import { useArcade } from "@/composables/useArcade";
 import RcArcadeGameCard from "@/components/RcArcadeGameCard.vue";
 import { useRouter } from "vue-router";
+
+dayjs.extend(relativeTime);
 
 const router = useRouter();
 const {
@@ -62,9 +65,28 @@ const avgScore = computed(() => {
   return Math.round(total / visibleLeaderboard.value.length);
 });
 const normalizeStatus = (status: any) => (typeof status === "string" ? status.toLowerCase() : String(status || "").toLowerCase());
+const formatStatus = (status: any) => {
+  const val = normalizeStatus(status);
+  if (val === "active") return "🟢 Active";
+  if (val === "completed") return "✅ Completed";
+  if (val === "failed") return "❌ Failed";
+  return val ? `ℹ️ ${val}` : "—";
+};
 const totalSessions = computed(() => sessions.value.length);
 const activeSessions = computed(() => sessions.value.filter((s: any) => normalizeStatus(s.status) === "active").length);
 const totalAchievements = computed(() => achievements.value.length);
+const totalUniquePlayers = computed(() => {
+  const set = new Set<string>();
+  sessions.value.forEach((s: any) => {
+    const p = (s?.player || "").toString().toLowerCase();
+    if (p) set.add(p);
+  });
+  achievements.value.forEach((a: any) => {
+    const p = (a?.player || "").toString().toLowerCase();
+    if (p) set.add(p);
+  });
+  return set.size;
+});
 const topTokenEarners = computed(() =>
   [...visibleLeaderboard.value]
     .filter((e: any) => Number.isFinite(Number(e.arcade_tokens)))
@@ -74,6 +96,18 @@ const topTokenEarners = computed(() =>
 
 const recentSessions = computed(() => sessions.value.slice(0, 6));
 const recentAchievements = computed(() => achievements.value.slice(0, 6));
+const topAchievers = computed(() => {
+  const counts: Record<string, number> = {};
+  achievements.value.forEach((a: any) => {
+    const p = (a?.player || "").toString();
+    if (!p) return;
+    counts[p] = (counts[p] || 0) + 1;
+  });
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([player, count]) => ({ player, count }));
+});
 
 const sessionsToday = computed(() => sessions.value.filter((s: any) => dayjs(s.started_at).isAfter(dayjs().startOf("day"))).length);
 const achievementsToday = computed(() => achievements.value.filter((a: any) => dayjs(a.unlocked_at).isAfter(dayjs().startOf("day"))).length);
@@ -121,6 +155,17 @@ const shortAddr = (addr?: string, size = 12) => {
   if (!addr) return "—";
   return `${addr.slice(0, size)}…${addr.slice(-6)}`;
 };
+
+const achievementIcon = (a: any) => {
+  const text = `${a?.name || ""} ${a?.description || ""}`.toLowerCase();
+  if (text.includes("speed") || text.includes("fast") || text.includes("time")) return "⚡";
+  if (text.includes("boss") || text.includes("elite") || text.includes("master")) return "🐲";
+  if (text.includes("coin") || text.includes("token") || text.includes("treasure")) return "🪙";
+  if (text.includes("combo") || text.includes("streak") || text.includes("chain")) return "🎯";
+  if (text.includes("first") || text.includes("new") || text.includes("beginner")) return "🌱";
+  if (text.includes("win") || text.includes("victory") || text.includes("champ")) return "🏆";
+  return "🎖️";
+};
 </script>
 
 <template>
@@ -161,7 +206,7 @@ const shortAddr = (addr?: string, size = 12) => {
 
     <div
       v-if="topPlayer"
-      class="card border border-amber-400/50 bg-gradient-to-r from-amber-500/15 via-pink-500/10 to-indigo-500/10 shadow-lg shadow-amber-500/30"
+      class="card border-amber-400/50 bg-gradient-to-r from-amber-500/15 via-pink-500/10 to-indigo-500/10 shadow-lg shadow-amber-500/30"
     >
       <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div class="flex items-center gap-3">
@@ -289,6 +334,7 @@ const shortAddr = (addr?: string, size = 12) => {
 
     <div class="grid gap-3 lg:grid-cols-3">
       <div class="card">
+        <!-- Top Player Spotlight -->
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-sm font-semibold text-slate-100">Top Player Spotlight</h2>
           <span class="text-[11px] text-slate-400">From leaderboard[0]</span>
@@ -333,6 +379,7 @@ const shortAddr = (addr?: string, size = 12) => {
 
     <div class="grid gap-3 lg:grid-cols-2">
       <div class="card">
+        <!-- Recent Sessions -->
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-sm font-semibold text-slate-100">Recent Sessions</h2>
           <span class="text-[11px] text-slate-400">{{ recentSessions.length }} shown</span>
@@ -348,12 +395,16 @@ const shortAddr = (addr?: string, size = 12) => {
               <span class="font-mono">{{ shortAddr(s.player, 14) }}</span>
               <span class="text-emerald-300">Score: {{ s.score }}</span>
             </div>
-            <div class="text-[11px] text-slate-500">Level {{ s.level_reached }} · Status {{ s.status }}</div>
+            <div class="text-[11px] text-slate-400 flex items-center gap-2">
+              <span>{{ formatStatus(s.status) }}</span>
+              <span class="text-slate-500">Level {{ s.level_reached }}</span>
+            </div>
           </div>
         </div>
       </div>
 
       <div class="card">
+        <!-- Latest Achievements -->
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-sm font-semibold text-slate-100">Latest Achievements</h2>
           <span class="text-[11px] text-slate-400">{{ recentAchievements.length }} shown</span>
@@ -366,11 +417,41 @@ const shortAddr = (addr?: string, size = 12) => {
             class="p-3 rounded-lg bg-slate-900/60 border border-amber-500/30"
           >
             <div class="flex items-center justify-between text-[11px] text-amber-200 mb-1">
-              <span class="font-semibold text-slate-100">🏆 {{ a.name }}</span>
-              <span>{{ dayjs(a.unlocked_at).format('YYYY-MM-DD HH:mm') }}</span>
+              <span class="font-semibold text-slate-100">{{ achievementIcon(a) }} {{ a.name }}</span>
+              <span>{{ dayjs(a.unlocked_at).fromNow() }}</span>
             </div>
             <div class="text-xs text-slate-300 mb-1">{{ a.description }}</div>
             <div class="text-[11px] text-slate-400 font-mono">{{ shortAddr(a.player, 14) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <!-- Achievement Leaders -->
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-semibold text-slate-100">Achievement Leaders</h2>
+          <span class="text-[11px] text-slate-400">Top unlockers</span>
+        </div>
+        <div class="flex flex-wrap gap-2 text-[11px] mb-2">
+          <span class="px-2 py-1 rounded bg-emerald-500/10 text-emerald-200 border border-emerald-400/30">Total {{ totalAchievements }}</span>
+          <span class="px-2 py-1 rounded bg-amber-500/10 text-amber-200 border border-amber-400/30">Today {{ achievementsToday }}</span>
+          <span class="px-2 py-1 rounded bg-cyan-500/10 text-cyan-200 border border-cyan-400/30">Players {{ totalUniquePlayers }}</span>
+        </div>
+        <div v-if="topAchievers.length === 0" class="text-xs text-slate-400">No achievements yet.</div>
+        <div v-else class="space-y-2">
+          <div
+            v-for="(p, idx) in topAchievers"
+            :key="p.player"
+            class="p-3 rounded-lg bg-slate-900/60 border border-emerald-400/30 flex items-center justify-between"
+          >
+            <div class="flex items-center gap-2">
+              <div class="text-lg">{{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉' }}</div>
+              <div>
+                <div class="text-sm font-semibold text-white">{{ shortAddr(p.player, 12) }}</div>
+                <div class="text-[11px] text-slate-400">{{ p.count }} unlocks</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-emerald-300">{{ ((p.count / Math.max(1, totalAchievements)) * 100).toFixed(0) }}%</div>
           </div>
         </div>
       </div>
@@ -378,6 +459,7 @@ const shortAddr = (addr?: string, size = 12) => {
 
     <div class="grid gap-3 lg:grid-cols-2">
       <div class="card">
+        <!-- Trophies & Badges -->
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-sm font-semibold text-slate-100">Trophies & Badges</h2>
           <span class="text-[11px] text-slate-400">Celebrating recent unlocks</span>
@@ -400,6 +482,7 @@ const shortAddr = (addr?: string, size = 12) => {
       </div>
 
       <div class="card">
+        <!-- Momentum -->
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-sm font-semibold text-slate-100">Momentum</h2>
           <span class="text-[11px] text-slate-400">Keep the hype going</span>
