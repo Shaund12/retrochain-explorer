@@ -1744,58 +1744,6 @@ const handleCreatePool = async () => {
         </div>
       </div>
 
-      <div class="card">
-        <h2 class="text-sm font-semibold text-slate-100 mb-4">Bridge Assets to RetroChain</h2>
-        
-        <div class="space-y-3">
-          <div>
-            <label class="text-xs text-slate-400 mb-2 block">Asset</label>
-            <select v-model="bridgeAsset" class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
-              <option v-for="asset in bridgeAssets" :key="asset.symbol" :value="asset.symbol">
-                {{ asset.icon }} {{ asset.name }} ({{ asset.symbol }})
-              </option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-xs text-slate-400 mb-2 block">From Chain</label>
-            <select v-model="bridgeChain" class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm">
-              <option value="Noble">Noble (Native USDC)</option>
-              <option value="Ethereum">Ethereum</option>
-              <option value="Polygon">Polygon</option>
-              <option value="Arbitrum">Arbitrum</option>
-              <option value="BSC">BSC</option>
-            </select>
-          </div>
-
-          <div>
-            <label class="text-xs text-slate-400 mb-2 block">Amount</label>
-            <input 
-              v-model="bridgeAmount"
-              type="number"
-              step="0.000001"
-              placeholder="0.0"
-              class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
-            />
-          </div>
-
-          <div class="p-3 rounded-lg bg-indigo-500/10 border border-indigo-500/20">
-            <div class="text-xs text-indigo-300 space-y-1">
-              <div>⏱️ Estimated Time: {{ getEstimatedTime(bridgeChain, 'retrochain-mainnet') }}</div>
-              <div>💰 Bridge Fee: {{ getBridgeFee(bridgeChain, bridgeAsset, bridgeAmount) }}</div>
-              <div>📍 Destination: {{ address || 'Connect wallet first' }}</div>
-            </div>
-          </div>
-
-          <button 
-            class="btn btn-primary w-full"
-            @click="handleBridge"
-            :disabled="!address || !bridgeAmount || bridging"
-          >
-            {{ bridging ? 'Bridging...' : 'Bridge to RetroChain' }}
-          </button>
-        </div>
-      </div>
     </div>
   </div>
 </template>
