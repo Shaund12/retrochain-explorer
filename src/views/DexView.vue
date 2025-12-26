@@ -121,13 +121,44 @@ const OSMO_DENOMS_ON_RETRO = [
   "ibc/osmo"
 ];
 
+const customTokens = ref<TokenOption[]>([]);
+
 const availableTokens = computed<TokenOption[]>(() => [
   { symbol: tokenSymbol.value, denom: tokenDenom.value, icon: "🎮", decimals: 6 },
   { symbol: "USDC", denom: USDC_DENOMS_ON_RETRO[0], icon: "💵", decimals: 6 },
   { symbol: "USDT", denom: USDT_DENOMS_ON_RETRO[0], icon: "💲", decimals: 6 },
   { symbol: "ATOM", denom: ATOM_IBC_DENOM_ON_RETRO, icon: "⚛️", decimals: 6 },
-  { symbol: "OSMO", denom: OSMO_DENOMS_ON_RETRO[0], icon: "🌊", decimals: 6 }
+  { symbol: "OSMO", denom: OSMO_DENOMS_ON_RETRO[0], icon: "🌊", decimals: 6 },
+  ...customTokens.value
 ]);
+
+const customSymbol = ref("");
+const customDenom = ref("");
+const customDecimals = ref("6");
+
+const addCustomToken = () => {
+  const symbol = customSymbol.value.trim().toUpperCase();
+  const denom = customDenom.value.trim();
+  const decimalsNum = Number(customDecimals.value || "6");
+  if (!symbol || !denom) {
+    toast.showWarning("Enter symbol and denom for custom token.");
+    return;
+  }
+  if (!Number.isFinite(decimalsNum) || decimalsNum < 0 || decimalsNum > 18) {
+    toast.showWarning("Decimals must be between 0 and 18.");
+    return;
+  }
+  const exists = availableTokens.value.some((t) => t.symbol === symbol || t.denom === denom);
+  if (exists) {
+    toast.showInfo("Token already listed.");
+    return;
+  }
+  customTokens.value.push({ symbol, denom, icon: "🔗", decimals: decimalsNum });
+  customSymbol.value = "";
+  customDenom.value = "";
+  customDecimals.value = "6";
+  toast.showSuccess(`Added custom token ${symbol}`);
+};
 
 const selectedPool = computed(() => {
   return pools.value.find(p => 
@@ -142,6 +173,13 @@ const poolPrice = computed(() => {
 });
 
 const findTokenOption = (symbol: string) => availableTokens.value.find((t) => t.symbol === symbol);
+
+const decimalsForSymbol = (symbol: string) => findTokenOption(symbol)?.decimals ?? 6;
+const toBaseUnits = (amount: string, symbol: string) => {
+  const dec = decimalsForSymbol(symbol);
+  const amt = parseFloat(amount || "0");
+  return Math.floor(amt * Math.pow(10, dec)).toString();
+};
 
 const candidateDenomsForSymbol = (symbol: string): string[] => {
   if (symbol === tokenSymbol.value) return [tokenDenom.value];
@@ -266,8 +304,8 @@ const handleSwap = async () => {
     const tokenOutDenom = availableTokens.value.find(t => t.symbol === tokenOut.value)?.denom || tokenDenom.value;
     
     // Convert to base units (micro tokens)
-    const amountInBase = Math.floor(parseFloat(amountIn.value) * 1_000_000).toString();
-    const minAmountOut = Math.floor(parseFloat(amountOut.value) * (1 - parseFloat(slippage.value) / 100) * 1_000_000).toString();
+    const amountInBase = toBaseUnits(amountIn.value, tokenIn.value);
+    const minAmountOut = toBaseUnits((parseFloat(amountOut.value) * (1 - parseFloat(slippage.value) / 100)).toString(), tokenOut.value);
 
     const msg = {
       typeUrl: "/retrochain.dex.v1.MsgSwapExactAmountIn",
@@ -331,8 +369,8 @@ const handleAddLiquidity = async () => {
     const tokenADenom = availableTokens.value.find(t => t.symbol === poolTokenA.value)?.denom || tokenDenom.value;
     const tokenBDenom = availableTokens.value.find(t => t.symbol === poolTokenB.value)?.denom || tokenDenom.value;
     
-    const amountABase = Math.floor(parseFloat(poolAmountA.value) * 1_000_000).toString();
-    const amountBBase = Math.floor(parseFloat(poolAmountB.value) * 1_000_000).toString();
+    const amountABase = toBaseUnits(poolAmountA.value, poolTokenA.value);
+    const amountBBase = toBaseUnits(poolAmountB.value, poolTokenB.value);
 
     const msg = {
       typeUrl: "/retrochain.dex.v1.MsgAddLiquidity",
@@ -389,7 +427,7 @@ const handlePlaceLimitOrder = async () => {
   try {
     const chainId = network.value === 'mainnet' ? 'retrochain-mainnet' : 'retrochain-devnet-1';
     
-    const amountBase = Math.floor(parseFloat(limitAmount.value) * 1_000_000).toString();
+    const amountBase = toBaseUnits(limitAmount.value, tokenIn.value);
     const priceBase = Math.floor(parseFloat(limitPrice.value) * 1_000_000).toString();
 
     const tokenInDenom = availableTokens.value.find((t) => t.symbol === tokenIn.value)?.denom || tokenDenom.value;
@@ -767,8 +805,8 @@ const handleCreatePool = async () => {
     const tokenADenom = availableTokens.value.find(t => t.symbol === createTokenA.value)?.denom || tokenDenom.value;
     const tokenBDenom = availableTokens.value.find(t => t.symbol === createTokenB.value)?.denom || tokenDenom.value;
     
-    const amountABase = Math.floor(parseFloat(createAmountA.value) * 1_000_000).toString();
-    const amountBBase = Math.floor(parseFloat(createAmountB.value) * 1_000_000).toString();
+    const amountABase = toBaseUnits(createAmountA.value, createTokenA.value);
+    const amountBBase = toBaseUnits(createAmountB.value, createTokenB.value);
 
     const msg = {
       typeUrl: "/retrochain.dex.v1.MsgCreatePool",
@@ -940,6 +978,20 @@ const handleCreatePool = async () => {
     </div>
 
     <template v-if="dexFeaturesEnabled">
+      <!-- Custom Token (factory / IBC) -->
+      <div class="card p-4 border border-white/10 bg-slate-900/60">
+        <div class="flex items-center justify-between mb-2">
+          <h3 class="text-sm font-semibold text-slate-100">Custom Tokens (Factory / IBC)</h3>
+          <span class="text-[11px] text-slate-500">Add any denom to use in swaps/pools</span>
+        </div>
+        <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
+          <input v-model="customSymbol" placeholder="Symbol (e.g. FACTORY)" class="p-2 rounded bg-slate-800 border border-slate-700 text-sm" />
+          <input v-model="customDenom" placeholder="Denom (factory/..., ibc/...)" class="p-2 rounded bg-slate-800 border border-slate-700 text-sm" />
+          <input v-model="customDecimals" type="number" min="0" max="18" placeholder="Decimals" class="p-2 rounded bg-slate-800 border border-slate-700 text-sm" />
+          <button class="btn w-full text-xs" @click="addCustomToken">Add Token</button>
+        </div>
+      </div>
+
       <!-- Navigation Tabs -->
       <div class="flex items-center gap-2 overflow-x-auto">
         <button 
