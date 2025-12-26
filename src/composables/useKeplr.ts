@@ -772,11 +772,13 @@ export function useKeplr() {
       };
 
       const baseGasLimit = Math.max(MIN_GAS_LIMIT, msgs.length * DEFAULT_GAS_PER_MSG);
+      const readGasValue = (f: any) => Number(f?.gas ?? f?.gas_limit ?? f?.gasLimit ?? 0);
+      const setGasValue = (f: any, gas: number | string) => ({ ...f, gas: String(gas), gas_limit: String(gas), gasLimit: String(gas) });
+      const ARCADE_TX_GAS = 300000;
+      const isArcadeTx = msgs.some((m) => typeof m?.typeUrl === "string" && m.typeUrl.startsWith("/retrochain.arcade.v1."));
+
       // Normalize caller fee for arcade or create one if missing
       const normalizeArcadeFee = (inputFee: any) => {
-        const readGasValue = (f: any) => Number(f?.gas ?? f?.gas_limit ?? f?.gasLimit ?? 0);
-        const setGasValue = (f: any, gas: number | string) => ({ ...f, gas: String(gas), gas_limit: String(gas), gasLimit: String(gas) });
-
         if (isArcadeTx && !inputFee) {
           const amt = Math.max(Math.ceil(ARCADE_TX_GAS * DEFAULT_GAS_PRICE), MIN_TOTAL_FEE);
           return setGasValue({ amount: [{ denom: DEFAULT_FEE_DENOM, amount: String(amt) }] }, ARCADE_TX_GAS);
@@ -810,14 +812,6 @@ export function useKeplr() {
       };
 
       let feeToUse = normalizeArcadeFee(fee);
-
-      const readGasValue = (f: any) => Number(f?.gas ?? f?.gas_limit ?? f?.gasLimit ?? 0);
-      const setGasValue = (f: any, gas: number | string) => ({ ...f, gas: String(gas), gas_limit: String(gas), gasLimit: String(gas) });
-
-      // Arcade txs can need more headroom (ante ReadPerByte).
-      // If caller passed a tight gas value, bump it and scale fee amount to keep the same gas price.
-      const ARCADE_TX_GAS = 300000;
-      const isArcadeTx = msgs.some((m) => typeof m?.typeUrl === "string" && m.typeUrl.startsWith("/retrochain.arcade.v1."));
 
       if (feeToUse && isArcadeTx) {
         const origGas = readGasValue(feeToUse);
