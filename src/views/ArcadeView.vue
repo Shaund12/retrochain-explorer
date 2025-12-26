@@ -61,8 +61,9 @@ const avgScore = computed(() => {
   const total = visibleLeaderboard.value.reduce((sum: number, e: any) => sum + Number(e.total_score || 0), 0);
   return Math.round(total / visibleLeaderboard.value.length);
 });
+const normalizeStatus = (status: any) => (typeof status === "string" ? status.toLowerCase() : String(status || "").toLowerCase());
 const totalSessions = computed(() => sessions.value.length);
-const activeSessions = computed(() => sessions.value.filter((s: any) => (s.status || "").toLowerCase() === "active").length);
+const activeSessions = computed(() => sessions.value.filter((s: any) => normalizeStatus(s.status) === "active").length);
 const totalAchievements = computed(() => achievements.value.length);
 const topTokenEarners = computed(() =>
   [...visibleLeaderboard.value]
@@ -78,7 +79,7 @@ const sessionsToday = computed(() => sessions.value.filter((s: any) => dayjs(s.s
 const achievementsToday = computed(() => achievements.value.filter((a: any) => dayjs(a.unlocked_at).isAfter(dayjs().startOf("day"))).length);
 const completionRate = computed(() => {
   if (!sessions.value.length) return 0;
-  const completed = sessions.value.filter((s: any) => (s.status || "").toLowerCase() === "completed").length;
+  const completed = sessions.value.filter((s: any) => normalizeStatus(s.status) === "completed").length;
   return Math.round((completed / sessions.value.length) * 100);
 });
 const mostPlayedGame = computed(() => {
