@@ -24,9 +24,7 @@ const showSpaceInvadersNotice = ref(true);
 const spaceInvadersNoticeKey = "space-invaders-beta-dismissed";
 
 // Hide placeholder/test entries
-const visibleGames = computed(() =>
-  games.value.filter((g) => (g.game_id || "").toLowerCase() !== "test")
-);
+const visibleGames = computed(() => games.value.filter((g) => (g.game_id || "").toLowerCase() !== "test"));
 
 const blockedGameIds = ["test", "test-game", "testgame"];
 const blockedPlayersFromTestGames = computed(() => {
@@ -76,15 +74,28 @@ const topTokenEarners = computed(() =>
 const recentSessions = computed(() => sessions.value.slice(0, 6));
 const recentAchievements = computed(() => achievements.value.slice(0, 6));
 
+const sessionsToday = computed(() => sessions.value.filter((s: any) => dayjs(s.started_at).isAfter(dayjs().startOf("day"))).length);
+const achievementsToday = computed(() => achievements.value.filter((a: any) => dayjs(a.unlocked_at).isAfter(dayjs().startOf("day"))).length);
+const completionRate = computed(() => {
+  if (!sessions.value.length) return 0;
+  const completed = sessions.value.filter((s: any) => (s.status || "").toLowerCase() === "completed").length;
+  return Math.round((completed / sessions.value.length) * 100);
+});
+const mostPlayedGame = computed(() => {
+  if (!sessions.value.length) return null;
+  const counts = sessions.value.reduce((acc: Record<string, number>, s: any) => {
+    const key = s.game_id || "unknown";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const [id, count] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  return { gameId: id, count } as { gameId: string; count: number };
+});
+
 const refreshAll = async () => {
   refreshing.value = true;
   try {
-    await Promise.all([
-      fetchGames(),
-      fetchLeaderboard(20),
-      fetchRecentSessions(10),
-      fetchLatestAchievements(10)
-    ]);
+    await Promise.all([fetchGames(), fetchLeaderboard(20), fetchRecentSessions(10), fetchLatestAchievements(10)]);
   } finally {
     refreshing.value = false;
   }
@@ -106,8 +117,8 @@ const dismissSpaceInvadersNotice = () => {
 };
 
 const shortAddr = (addr?: string, size = 12) => {
-  if (!addr) return "";
-  return `${addr.slice(0, size)}${addr.slice(-6)}`;
+  if (!addr) return "—";
+  return `${addr.slice(0, size)}…${addr.slice(-6)}`;
 };
 </script>
 
@@ -126,14 +137,7 @@ const shortAddr = (addr?: string, size = 12) => {
           </div>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
-          <a
-            class="btn btn-primary text-xs"
-            href="/arcade/arcade/"
-            target="_blank"
-            rel="noopener"
-          >
-            Play Space Invaders
-          </a>
+          <a class="btn btn-primary text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">Play Space Invaders</a>
           <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
         </div>
       </div>
@@ -143,7 +147,7 @@ const shortAddr = (addr?: string, size = 12) => {
       <div>
         <div class="text-sm uppercase tracking-[0.2em] text-indigo-200">Arcade Dashboard</div>
         <h1 class="text-2xl font-bold text-white mt-1">Play, Compete, Win</h1>
-        <p class="text-sm text-slate-300 mt-1">Live leaderboard, sessions, and achievements from the arcade module.</p>
+        <p class="text-sm text-slate-300 mt-1">Live leaderboard, sessions, achievements, and trophies.</p>
       </div>
       <div class="flex gap-2 flex-wrap justify-end">
         <button class="btn text-xs" @click="router.push({ name: 'home' })">← Back to Home</button>
@@ -154,30 +158,72 @@ const shortAddr = (addr?: string, size = 12) => {
       </div>
     </div>
 
-    <div v-if="error" class="card border-rose-500/50 bg-rose-500/10 text-rose-100 text-sm">
-      {{ error }}
+    <div
+      v-if="topPlayer"
+      class="card border border-amber-400/50 bg-gradient-to-r from-amber-500/15 via-pink-500/10 to-indigo-500/10 shadow-lg shadow-amber-500/30"
+    >
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="flex items-center gap-3">
+          <div class="text-3xl">🏆</div>
+          <div>
+            <div class="text-xs uppercase tracking-[0.2em] text-amber-200">Hall of Fame</div>
+            <div class="text-lg font-semibold text-white">Top Player: {{ shortAddr(topPlayer.player, 14) }}</div>
+            <div class="text-sm text-slate-200">
+              {{ Number(topPlayer.total_score || 0).toLocaleString() }} pts · {{ topPlayer.games_played ?? '—' }} games · Tokens {{ topPlayer.arcade_tokens ?? '—' }}
+            </div>
+            <div v-if="topPlayer.title" class="text-xs text-amber-200/90 mt-1">Title: {{ topPlayer.title }}</div>
+          </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <div class="px-3 py-2 rounded-lg bg-emerald-500/20 text-emerald-100 text-xs border border-emerald-400/40">🎉 Celebration bonus: Keep the streak alive!</div>
+          <div class="px-3 py-2 rounded-lg bg-indigo-500/20 text-indigo-100 text-xs border border-indigo-400/40">📣 Share your score and claim bragging rights.</div>
+        </div>
+      </div>
     </div>
 
     <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       <div class="card border-indigo-500/40 bg-indigo-500/10">
         <div class="text-[11px] uppercase tracking-wider text-slate-300">Top Score</div>
-        <div class="text-3xl font-extrabold text-white">{{ topScore.toLocaleString() }}</div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">🥇 <span>{{ topScore.toLocaleString() }}</span></div>
         <div class="text-xs text-slate-400">Highest total score across leaderboard</div>
       </div>
       <div class="card border-emerald-500/40 bg-emerald-500/10">
         <div class="text-[11px] uppercase tracking-wider text-slate-300">Players Ranked</div>
-        <div class="text-3xl font-extrabold text-white">{{ totalPlayers }}</div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">🧑‍🚀 <span>{{ totalPlayers }}</span></div>
         <div class="text-xs text-slate-400">Players with arcade activity</div>
       </div>
       <div class="card border-cyan-500/40 bg-cyan-500/10">
         <div class="text-[11px] uppercase tracking-wider text-slate-300">Average Score</div>
-        <div class="text-3xl font-extrabold text-white">{{ avgScore.toLocaleString() }}</div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">📈 <span>{{ avgScore.toLocaleString() }}</span></div>
         <div class="text-xs text-slate-400">Across all ranked players</div>
       </div>
       <div class="card border-amber-500/40 bg-amber-500/10">
         <div class="text-[11px] uppercase tracking-wider text-slate-300">Arcade Tokens</div>
-        <div class="text-3xl font-extrabold text-white">{{ totalArcadeTokens.toLocaleString() }}</div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">🪙 <span>{{ totalArcadeTokens.toLocaleString() }}</span></div>
         <div class="text-xs text-slate-400">Sum across leaderboard</div>
+      </div>
+    </div>
+
+    <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
+      <div class="card border-fuchsia-500/40 bg-fuchsia-500/10">
+        <div class="text-[11px] uppercase tracking-wider text-slate-300">Sessions Today</div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">🔥 <span>{{ sessionsToday }}</span></div>
+        <div class="text-xs text-slate-400">New runs started in the last 24h</div>
+      </div>
+      <div class="card border-sky-500/40 bg-sky-500/10">
+        <div class="text-[11px] uppercase tracking-wider text-slate-300">Achievements Today</div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">🏅 <span>{{ achievementsToday }}</span></div>
+        <div class="text-xs text-slate-400">Fresh unlocks in the last 24h</div>
+      </div>
+      <div class="card border-lime-500/40 bg-lime-500/10">
+        <div class="text-[11px] uppercase tracking-wider text-slate-300">Completion Rate</div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">✅ <span>{{ completionRate }}%</span></div>
+        <div class="text-xs text-slate-400">Completed vs all recorded sessions</div>
+      </div>
+      <div class="card border-purple-500/40 bg-purple-500/10">
+        <div class="text-[11px] uppercase tracking-wider text-slate-300">Most Played</div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">🎲 <span>{{ mostPlayedGame?.gameId ?? '—' }}</span></div>
+        <div class="text-xs text-slate-400">Plays: {{ mostPlayedGame?.count ?? '—' }}</div>
       </div>
     </div>
 
@@ -211,8 +257,8 @@ const shortAddr = (addr?: string, size = 12) => {
                 <td class="font-mono">{{ shortAddr(entry.player, 14) }}</td>
                 <td class="font-semibold text-slate-100">{{ Number(entry.total_score || 0).toLocaleString() }}</td>
                 <td class="text-slate-200">{{ entry.games_played }}</td>
-                <td class="text-emerald-300">{{ entry.arcade_tokens ?? '' }}</td>
-                <td class="text-slate-300">{{ entry.title || '' }}</td>
+                <td class="text-emerald-300">{{ entry.arcade_tokens ?? '—' }}</td>
+                <td class="text-slate-300">{{ entry.title || '—' }}</td>
               </tr>
             </tbody>
           </table>
@@ -226,11 +272,7 @@ const shortAddr = (addr?: string, size = 12) => {
         </div>
         <div v-if="!podium.length" class="text-xs text-slate-400">No podium yet.</div>
         <div v-else class="space-y-2">
-          <div
-            v-for="(p, idx) in podium"
-            :key="p.player"
-            class="p-3 rounded-lg border border-white/10 bg-white/5 flex items-center justify-between"
-          >
+          <div v-for="(p, idx) in podium" :key="p.player" class="p-3 rounded-lg border border-white/10 bg-white/5 flex items-center justify-between">
             <div class="flex items-center gap-3">
               <span class="text-xl">{{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉' }}</span>
               <div>
@@ -238,7 +280,7 @@ const shortAddr = (addr?: string, size = 12) => {
                 <div class="text-[11px] text-slate-400">{{ Number(p.total_score || 0).toLocaleString() }} pts</div>
               </div>
             </div>
-            <div class="text-right text-[11px] text-emerald-300">Tokens: {{ p.arcade_tokens ?? '' }}</div>
+            <div class="text-right text-[11px] text-emerald-300">Tokens: {{ p.arcade_tokens ?? '—' }}</div>
           </div>
         </div>
       </div>
@@ -254,8 +296,8 @@ const shortAddr = (addr?: string, size = 12) => {
         <div v-else class="space-y-1 text-sm text-slate-200">
           <div class="font-mono text-[11px] text-emerald-200">{{ topPlayer.player }}</div>
           <div class="text-lg font-semibold text-white">{{ Number(topPlayer.total_score || 0).toLocaleString() }} pts</div>
-          <div class="text-xs text-slate-400">Games played: {{ topPlayer.games_played ?? '' }}</div>
-          <div class="text-xs text-slate-400">Arcade tokens: {{ topPlayer.arcade_tokens ?? '' }}</div>
+          <div class="text-xs text-slate-400">Games played: {{ topPlayer.games_played ?? '—' }}</div>
+          <div class="text-xs text-slate-400">Arcade tokens: {{ topPlayer.arcade_tokens ?? '—' }}</div>
           <div class="text-xs text-amber-300" v-if="topPlayer.title">{{ topPlayer.title }}</div>
         </div>
       </div>
@@ -296,11 +338,7 @@ const shortAddr = (addr?: string, size = 12) => {
         </div>
         <div v-if="recentSessions.length === 0" class="text-xs text-slate-400">No sessions recorded yet.</div>
         <div v-else class="space-y-2">
-          <div
-            v-for="s in recentSessions"
-            :key="s.session_id"
-            class="p-3 rounded-lg bg-slate-900/60 border border-indigo-500/30"
-          >
+          <div v-for="s in recentSessions" :key="s.session_id" class="p-3 rounded-lg bg-slate-900/60 border border-indigo-500/30">
             <div class="flex items-center justify-between text-[11px] text-slate-400 mb-1">
               <span class="font-semibold text-slate-200">{{ s.game_id }}</span>
               <span>{{ dayjs(s.started_at).format('YYYY-MM-DD HH:mm') }}</span>
@@ -327,11 +365,60 @@ const shortAddr = (addr?: string, size = 12) => {
             class="p-3 rounded-lg bg-slate-900/60 border border-amber-500/30"
           >
             <div class="flex items-center justify-between text-[11px] text-amber-200 mb-1">
-              <span class="font-semibold text-slate-100">{{ a.name }}</span>
+              <span class="font-semibold text-slate-100">🏆 {{ a.name }}</span>
               <span>{{ dayjs(a.unlocked_at).format('YYYY-MM-DD HH:mm') }}</span>
             </div>
             <div class="text-xs text-slate-300 mb-1">{{ a.description }}</div>
             <div class="text-[11px] text-slate-400 font-mono">{{ shortAddr(a.player, 14) }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid gap-3 lg:grid-cols-2">
+      <div class="card">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-semibold text-slate-100">Trophies & Badges</h2>
+          <span class="text-[11px] text-slate-400">Celebrating recent unlocks</span>
+        </div>
+        <div v-if="recentAchievements.length === 0" class="text-xs text-slate-400">No trophies yet. Keep playing!</div>
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+          <div
+            v-for="a in recentAchievements.slice(0, 4)"
+            :key="a.achievement_id"
+            class="p-3 rounded-lg border border-fuchsia-400/30 bg-gradient-to-br from-fuchsia-500/10 via-indigo-500/10 to-slate-900/60"
+          >
+            <div class="flex items-center gap-2 text-sm text-white">
+              <span>🎖️</span>
+              <div class="font-semibold">{{ a.name }}</div>
+            </div>
+            <div class="text-[11px] text-slate-300 mt-1 line-clamp-2">{{ a.description }}</div>
+            <div class="text-[11px] text-amber-200 mt-1">Unlocked by {{ shortAddr(a.player, 12) }}</div>
+          </div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-semibold text-slate-100">Momentum</h2>
+          <span class="text-[11px] text-slate-400">Keep the hype going</span>
+        </div>
+        <div class="space-y-2 text-xs text-slate-200">
+          <div class="flex items-center justify-between p-2 rounded-lg bg-emerald-500/10 border border-emerald-400/30">
+            <span>🚀 Active sessions</span>
+            <span class="font-semibold text-emerald-200">{{ activeSessions }} / {{ totalSessions }}</span>
+          </div>
+          <div class="flex items-center justify-between p-2 rounded-lg bg-amber-500/10 border border-amber-400/30">
+            <span>🧠 Games registered</span>
+            <span class="font-semibold text-amber-200">{{ totalGames }}</span>
+          </div>
+          <div class="flex items-center justify-between p-2 rounded-lg bg-cyan-500/10 border border-cyan-400/30">
+            <span>🌟 Achievements total</span>
+            <span class="font-semibold text-cyan-200">{{ totalAchievements }}</span>
+          </div>
+          <div class="flex items-center justify-between p-2 rounded-lg bg-pink-500/10 border border-pink-400/30">
+            <span>🎯 Leaderboard entries</span>
+            <span class="font-semibold text-pink-200">{{ totalPlayers }}</span>
           </div>
         </div>
       </div>
@@ -344,11 +431,7 @@ const shortAddr = (addr?: string, size = 12) => {
       </div>
       <div v-if="visibleGames.length === 0" class="text-xs text-slate-400">No games registered yet.</div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <RcArcadeGameCard
-          v-for="game in visibleGames"
-          :key="game.game_id"
-          :game="game"
-        />
+        <RcArcadeGameCard v-for="game in visibleGames" :key="game.game_id" :game="game" />
       </div>
     </div>
   </div>
