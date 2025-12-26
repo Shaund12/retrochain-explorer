@@ -82,6 +82,9 @@ const MIN_GAS_LIMIT = 200000;
 const MIN_TOTAL_FEE = 5000; // minimum fee in uretro to satisfy chain requirements
 const COSMOS_CHAIN_ID = import.meta.env.VITE_COSMOS_CHAIN_ID || "cosmoshub-4";
 const COSMOS_RPC_URL = (import.meta.env.VITE_COSMOS_RPC_URL || "").trim();
+const ARCADE_TX_GAS = 350000; // generous headroom for arcade ante costs
+
+const isArcadeMsg = (m: any) => typeof m?.typeUrl === "string" && m.typeUrl.startsWith("/retrochain.arcade.v1.");
 
 // --- Custom message types (btcstake) ---
 interface MsgStake {
@@ -774,8 +777,7 @@ export function useKeplr() {
       const baseGasLimit = Math.max(MIN_GAS_LIMIT, msgs.length * DEFAULT_GAS_PER_MSG);
       const readGasValue = (f: any) => Number(f?.gas ?? f?.gas_limit ?? f?.gasLimit ?? 0);
       const setGasValue = (f: any, gas: number | string) => ({ ...f, gas: String(gas), gas_limit: String(gas), gasLimit: String(gas) });
-      const ARCADE_TX_GAS = 300000;
-      const isArcadeTx = msgs.some((m) => typeof m?.typeUrl === "string" && m.typeUrl.startsWith("/retrochain.arcade.v1."));
+      const isArcadeTx = msgs.some(isArcadeMsg);
 
       // Normalize caller fee for arcade or create one if missing
       const normalizeArcadeFee = (inputFee: any) => {
@@ -934,8 +936,7 @@ export function useKeplr() {
     };
 
     const normalizeArcadeSubmitScoreFee = (originalFee: any) => {
-      const ARCADE_TX_GAS = 300000;
-      const isArcadeTx = msgs.some((m) => typeof m?.typeUrl === "string" && m.typeUrl.startsWith("/retrochain.arcade.v1."));
+      const isArcadeTx = msgs.some(isArcadeMsg);
       const readGasValue = (f: any) => Number(f?.gas ?? f?.gas_limit ?? f?.gasLimit ?? 0);
       const setGasValue = (f: any, gas: number | string) => ({ ...f, gas: String(gas), gas_limit: String(gas), gasLimit: String(gas) });
 
