@@ -181,6 +181,14 @@ const toBaseUnits = (amount: string, symbol: string) => {
   return Math.floor(amt * Math.pow(10, dec)).toString();
 };
 
+const tokenBalances = computed(() =>
+  availableTokens.value.map((t) => ({
+    symbol: t.symbol,
+    denom: t.denom,
+    formatted: formatAmount(rawBalanceForDenom(t.denom), t.denom, { minDecimals: 2, maxDecimals: t.decimals })
+  }))
+);
+
 const candidateDenomsForSymbol = (symbol: string): string[] => {
   if (symbol === tokenSymbol.value) return [tokenDenom.value];
   if (symbol === "USDC") return USDC_DENOMS_ON_RETRO;
@@ -1029,6 +1037,43 @@ const handleCreatePool = async () => {
         >
           🌉 Bridge
         </button>
+      </div>
+
+      <!-- Quick balances + fees info -->
+      <div class="grid gap-3 lg:grid-cols-3 mt-3">
+        <div class="card p-3 border border-white/10 bg-slate-900/60">
+          <div class="flex items-center justify-between mb-2">
+            <h4 class="text-xs uppercase tracking-[0.2em] text-slate-400">Balances</h4>
+            <span class="text-[10px] text-slate-500">live</span>
+          </div>
+          <div class="space-y-1 text-xs max-h-36 overflow-y-auto pr-1">
+            <div v-for="b in tokenBalances" :key="b.denom" class="flex items-center justify-between">
+              <span class="text-slate-300 font-mono">{{ b.symbol }}</span>
+              <span class="text-slate-200 font-mono">{{ b.formatted }}</span>
+            </div>
+            <div v-if="!address" class="text-[11px] text-slate-500">Connect wallet to see balances.</div>
+          </div>
+        </div>
+        <div class="card p-3 border border-white/10 bg-slate-900/60">
+          <div class="text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">Fees</div>
+          <ul class="text-xs text-slate-300 space-y-1">
+            <li>• Swap gas: ~200k (wallet will estimate)</li>
+            <li>• Pool add gas: ~250k</li>
+            <li>• Create pool gas: ~300k</li>
+            <li>• Swap fee set per pool (e.g. 0.2%-0.3%)</li>
+            <li>• IBC fee: chain-specific (see Keplr prompt)</li>
+          </ul>
+        </div>
+        <div class="card p-3 border border-white/10 bg-slate-900/60">
+          <div class="text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">Safety</div>
+          <ul class="text-xs text-slate-300 space-y-1">
+            <li>• Verify token denoms (factory/IBC)</li>
+            <li>• Custom tokens appear exactly as entered</li>
+            <li>• Check slippage before confirming</li>
+            <li>• Keep a small RETRO for gas</li>
+            <li>• IBC transfers are final once relayed</li>
+          </ul>
+        </div>
       </div>
 
       <!-- Swap Tab -->
