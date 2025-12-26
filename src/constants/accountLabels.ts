@@ -67,6 +67,12 @@ const RAW_LABELS: Record<string, AccountLabelMeta> = {
     label: "Commission Sweep (Auto)",
     description: "Target: 162,508.513858 RETRO (~0.16%). Automated commission sweep/routing wallet—not user staking rewards.",
     icon: "🏦"
+  },
+  "cosmos1wa0cujn3n478pnh6x37xhv99h7t3mnfyjs8pp8": {
+    id: "claimdrop_reserve",
+    label: "Claimdrop Reserve",
+    description: "Claimable RETRO distribution pool for claimdrop recipients.",
+    icon: "🎉"
   }
 };
 
