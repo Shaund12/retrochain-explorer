@@ -108,15 +108,19 @@ const steps = [
 ];
 
 const previousOverflow = ref<string | null>(null);
+const restoreBodyOverflow = () => {
+  if (typeof document === "undefined") return;
+  document.body.style.overflow = previousOverflow.value ?? "";
+  previousOverflow.value = null;
+};
 
 watch(showModal, (open) => {
   if (typeof document === "undefined") return;
   if (open) {
     previousOverflow.value = document.body.style.overflow;
     document.body.style.overflow = "hidden";
-  } else if (previousOverflow.value !== null) {
-    document.body.style.overflow = previousOverflow.value;
-    previousOverflow.value = null;
+  } else {
+    restoreBodyOverflow();
   }
 });
 
@@ -145,6 +149,8 @@ const handleConnect = async () => {
     showModal.value = false;
   } catch (err: any) {
     toast.showTxError(err?.message || "Unable to connect Keplr");
+  } finally {
+    restoreBodyOverflow();
   }
 };
 
@@ -160,6 +166,7 @@ onMounted(() => {
 
 onBeforeUnmount(() => {
   window.removeEventListener("keydown", onKeydown);
+  restoreBodyOverflow();
 });
 </script>
 
