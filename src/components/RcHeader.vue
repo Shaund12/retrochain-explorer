@@ -119,6 +119,10 @@
             </div>
           </div>
         </div>
+        <div v-if="!address" class="hidden lg:block w-[260px]">
+          <RcAddKeplrButton class="w-full" />
+        </div>
+
         <button
           v-if="address"
           class="flex items-center gap-3 px-3 sm:px-4 py-2 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-white/10 hover:border-emerald-300/40 hover:from-emerald-500/20 hover:to-cyan-500/20 text-white transition-all shadow-lg shadow-emerald-500/10"
