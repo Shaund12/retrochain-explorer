@@ -772,7 +772,44 @@ export function useKeplr() {
       };
 
       const baseGasLimit = Math.max(MIN_GAS_LIMIT, msgs.length * DEFAULT_GAS_PER_MSG);
-      let feeToUse = fee ?? null;
+      // Normalize caller fee for arcade or create one if missing
+      const normalizeArcadeFee = (inputFee: any) => {
+        const readGasValue = (f: any) => Number(f?.gas ?? f?.gas_limit ?? f?.gasLimit ?? 0);
+        const setGasValue = (f: any, gas: number | string) => ({ ...f, gas: String(gas), gas_limit: String(gas), gasLimit: String(gas) });
+
+        if (isArcadeTx && !inputFee) {
+          const amt = Math.max(Math.ceil(ARCADE_TX_GAS * DEFAULT_GAS_PRICE), MIN_TOTAL_FEE);
+          return setGasValue({ amount: [{ denom: DEFAULT_FEE_DENOM, amount: String(amt) }] }, ARCADE_TX_GAS);
+        }
+
+        let feeValue = inputFee;
+
+        if (feeValue && isArcadeTx) {
+          const origGas = readGasValue(feeValue);
+          if (!Number.isFinite(origGas) || origGas <= 0 || origGas < ARCADE_TX_GAS) {
+            const coin0 = feeValue.amount?.[0];
+            if (coin0?.denom === DEFAULT_FEE_DENOM && coin0?.amount && /^\d+$/.test(String(coin0.amount))) {
+              const origAmt = Number(coin0.amount);
+              const baseGas = Number.isFinite(origGas) && origGas > 0 ? origGas : MIN_GAS_LIMIT;
+              const scaledAmt = Math.ceil((origAmt * ARCADE_TX_GAS) / baseGas);
+              feeValue = setGasValue({
+                ...feeValue,
+                amount: [{ ...coin0, amount: String(Math.max(origAmt, scaledAmt)) }]
+              }, ARCADE_TX_GAS);
+            } else {
+              const price = coin0?.denom === DEFAULT_FEE_DENOM && coin0?.amount && Number(coin0.amount) > 0 && origGas > 0
+                ? Number(coin0.amount) / origGas
+                : DEFAULT_GAS_PRICE;
+              const amt = Math.max(Math.ceil(ARCADE_TX_GAS * price), MIN_TOTAL_FEE);
+              feeValue = setGasValue({ amount: [{ denom: DEFAULT_FEE_DENOM, amount: String(amt) }] }, ARCADE_TX_GAS);
+            }
+          }
+        }
+
+        return feeValue;
+      };
+
+      let feeToUse = normalizeArcadeFee(fee);
 
       const readGasValue = (f: any) => Number(f?.gas ?? f?.gas_limit ?? f?.gasLimit ?? 0);
       const setGasValue = (f: any, gas: number | string) => ({ ...f, gas: String(gas), gas_limit: String(gas), gasLimit: String(gas) });
@@ -836,6 +873,34 @@ export function useKeplr() {
         }
       }
 
+      // Final guard: ensure arcade txs get bumped gas/fee even after simulation or provided fee.
+      if (isArcadeTx) {
+        const gasVal = readGasValue(feeToUse);
+        if (!Number.isFinite(gasVal) || gasVal < ARCADE_TX_GAS) {
+          const coin0 = feeToUse?.amount?.[0];
+          if (coin0?.denom === DEFAULT_FEE_DENOM && coin0?.amount && /^\d+$/.test(String(coin0.amount))) {
+            const origAmt = Number(coin0.amount);
+            const origGas = gasVal > 0 ? gasVal : MIN_GAS_LIMIT;
+            const scaledAmt = Math.ceil((origAmt * ARCADE_TX_GAS) / origGas);
+            feeToUse = setGasValue(
+              {
+                ...feeToUse,
+                amount: [{ ...coin0, amount: String(Math.max(origAmt, scaledAmt)) }]
+              },
+              ARCADE_TX_GAS
+            );
+          } else {
+            const price = feeToUse?.amount?.[0]?.amount && feeToUse?.amount?.[0]?.denom === DEFAULT_FEE_DENOM && Number(feeToUse.amount[0].amount) > 0 && gasVal > 0
+              ? Number(feeToUse.amount[0].amount) / gasVal
+              : DEFAULT_GAS_PRICE;
+            const amt = Math.max(Math.ceil(ARCADE_TX_GAS * price), MIN_TOTAL_FEE);
+            feeToUse = setGasValue({
+              amount: [{ denom: DEFAULT_FEE_DENOM, amount: String(amt) }]
+            }, ARCADE_TX_GAS);
+          }
+        }
+      }
+
       const { txBytesBase64 } = await signTx(feeToUse, "broadcast");
       const broadcastRes = await api.post("/cosmos/tx/v1beta1/txs", {
         tx_bytes: txBytesBase64,
@@ -877,27 +942,46 @@ export function useKeplr() {
     const normalizeArcadeSubmitScoreFee = (originalFee: any) => {
       const ARCADE_TX_GAS = 300000;
       const isArcadeTx = msgs.some((m) => typeof m?.typeUrl === "string" && m.typeUrl.startsWith("/retrochain.arcade.v1."));
-      let feeNormalized = originalFee;
-
       const readGasValue = (f: any) => Number(f?.gas ?? f?.gas_limit ?? f?.gasLimit ?? 0);
       const setGasValue = (f: any, gas: number | string) => ({ ...f, gas: String(gas), gas_limit: String(gas), gasLimit: String(gas) });
 
+      // If no fee provided but arcade tx, create a baseline at ARCADE_TX_GAS with default price.
+      if (!originalFee && isArcadeTx) {
+        const amt = Math.max(Math.ceil(ARCADE_TX_GAS * DEFAULT_GAS_PRICE), MIN_TOTAL_FEE);
+        return {
+          amount: [{ denom: DEFAULT_FEE_DENOM, amount: String(amt) }],
+          gas: String(ARCADE_TX_GAS),
+          gas_limit: String(ARCADE_TX_GAS),
+          gasLimit: String(ARCADE_TX_GAS)
+        };
+      }
+
+      let feeNormalized = originalFee;
+
       if (originalFee && isArcadeTx) {
         const origGas = readGasValue(originalFee);
-        if (Number.isFinite(origGas) && origGas > 0 && origGas < ARCADE_TX_GAS) {
+        if (!Number.isFinite(origGas) || origGas <= 0 || origGas < ARCADE_TX_GAS) {
+          const targetGas = ARCADE_TX_GAS;
           const coin0 = originalFee.amount?.[0];
           if (coin0?.denom === DEFAULT_FEE_DENOM && coin0?.amount && /^\d+$/.test(String(coin0.amount))) {
             const origAmt = Number(coin0.amount);
-            const scaledAmt = Math.ceil((origAmt * ARCADE_TX_GAS) / origGas);
+            const baseGas = Number.isFinite(origGas) && origGas > 0 ? origGas : MIN_GAS_LIMIT;
+            const scaledAmt = Math.ceil((origAmt * targetGas) / baseGas);
             feeNormalized = setGasValue(
               {
                 ...originalFee,
                 amount: [{ ...coin0, amount: String(Math.max(origAmt, scaledAmt)) }]
               },
-              ARCADE_TX_GAS
+              targetGas
             );
           } else {
-            feeNormalized = setGasValue(originalFee, ARCADE_TX_GAS);
+            const price = coin0?.denom === DEFAULT_FEE_DENOM && coin0?.amount && Number(coin0.amount) > 0 && origGas > 0
+              ? Number(coin0.amount) / origGas
+              : DEFAULT_GAS_PRICE;
+            const amt = Math.max(Math.ceil(targetGas * price), MIN_TOTAL_FEE);
+            feeNormalized = setGasValue({
+              amount: [{ denom: DEFAULT_FEE_DENOM, amount: String(amt) }]
+            }, targetGas);
           }
         }
       }
