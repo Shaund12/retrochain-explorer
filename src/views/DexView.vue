@@ -1702,4 +1702,5 @@ const handleCreatePool = async () => {
     </div>
   </div>
 </div>
+</template>
 
