@@ -2063,64 +2063,7 @@ const handleCreatePool = async () => {
           {{ ibcTransferring ? 'Submitting...' : 'Send USDC to RetroChain' }}
         </button>
       </div>
-        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
-          <div class="flex items-center justify-between text-xs mb-1">
-            <span class="text-slate-400">Cosmos Hub Wallet</span>
-            <button
-              class="btn text-[10px]"
-              @click="ensureCosmosAccount"
-              :disabled="fetchingCosmosAddress"
-            >
-              {{ fetchingCosmosAddress ? 'Connecting...' : cosmosWalletAddress ? 'Refresh' : 'Connect' }}
-            </button>
-          </div>
-          <div v-if="cosmosWalletAddress" class="font-mono text-slate-200 text-xs break-all">
-            {{ cosmosWalletAddress }}
-          </div>
-          <div v-else class="text-[11px] text-slate-500">
-            Connect Keplr on Cosmos Hub to bridge ATOM/WBTC in.
-          </div>
-        </div>
-        <div>
-          <label class="text-xs text-slate-400 mb-2 block">Amount ({{ cosmosToRetroAssetLabel }})</label>
-          <input
-            v-model="cosmosToRetroAmount"
-            type="number"
-            :step="cosmosToRetroAsset === 'WBTC' ? '0.00000001' : '0.000001'"
-            placeholder="0.0"
-            class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
-          />
-        </div>
-        <div>
-          <label class="text-xs text-slate-400 mb-2 block">Memo (optional)</label>
-          <input
-            v-model="cosmosToRetroMemo"
-            type="text"
-            placeholder="IBC transfer memo"
-            class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
-          />
-        </div>
-        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-xs text-slate-300 space-y-1">
-          <div class="flex items-center justify-between">
-            <span>Destination</span>
-            <span class="font-mono text-slate-100">{{ address || 'Connect wallet' }}</span>
-          </div>
-          <div class="flex items-center justify-between">
-            <span>Channel</span>
-            <span class="font-mono text-slate-100">{{ cosmosToRetroChannel || 'Set env var' }}</span>
-          </div>
-        </div>
-        <button
-          class="btn btn-primary w-full"
-          @click="handleCosmosToRetroTransfer"
-          :disabled="!isMainnet || !address || !cosmosInboundConfigured || !cosmosWalletAddress || !cosmosToRetroAmount || ibcTransferring"
-        >
-          {{ ibcTransferring ? 'Submitting...' : `Send ${cosmosToRetroAssetLabel} to RetroChain` }}
-        </button>
-        <p v-if="!cosmosInboundConfigured" class="text-[11px] text-amber-300 text-center">
-          Configure <code class="font-mono">VITE_IBC_CHANNEL_COSMOS_RETRO</code> to enable Cosmos → Retro transfers.
-        </p>
-      </div>
+
     </div>
   </div>
 </div>

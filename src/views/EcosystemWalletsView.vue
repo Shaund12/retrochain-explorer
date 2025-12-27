@@ -119,7 +119,7 @@ onMounted(() => {
       <div class="card border-emerald-400/40 bg-emerald-500/5">
         <div class="text-xs uppercase tracking-wider text-emerald-200 mb-1">Target Coverage</div>
         <div class="text-2xl font-bold text-emerald-100">
-          {{ totalCoverage !== null ? `${totalCoverage.toFixed(2)}%` : '—' }}
+          {{ totalCoverage !== null ? `${totalCoverage.toFixed(2)}%` : 'Â—' }}
         </div>
         <div class="text-xs text-emerald-200/70">Total target: {{ formatAmount(totalTarget.toString(), 'uretro', { minDecimals: 2, maxDecimals: 2 }) }}</div>
       </div>
@@ -159,7 +159,7 @@ onMounted(() => {
         <p class="text-xs text-amber-200/80 flex items-center gap-2">
           <span>Progress vs targets</span>
           <span class="px-2 py-1 rounded-full border border-amber-400/40 text-[10px] text-amber-100 bg-amber-500/10">
-            Total: {{ totalCoverage !== null ? `${totalCoverage.toFixed(2)}%` : '—' }}
+            Total: {{ totalCoverage !== null ? `${totalCoverage.toFixed(2)}%` : 'Â—' }}
           </span>
         </p>
       </div>
@@ -215,7 +215,7 @@ onMounted(() => {
               </td>
               <td class="text-right text-xs text-amber-200">
                 <span v-if="account.targetDisplay" class="font-mono">{{ account.targetDisplay }}</span>
-                <span v-else class="text-amber-300/70">—</span>
+                <span v-else class="text-amber-300/70">Â—</span>
               </td>
               <td class="text-right text-xs">
                 <div v-if="account.coveragePct !== undefined" class="flex flex-col items-end gap-1">
@@ -227,7 +227,7 @@ onMounted(() => {
                     ></div>
                   </div>
                 </div>
-                <span v-else class="text-amber-300/70">—</span>
+                <span v-else class="text-amber-300/70">Â—</span>
               </td>
               <td>
                 <button 
