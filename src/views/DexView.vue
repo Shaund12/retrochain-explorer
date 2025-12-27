@@ -17,7 +17,7 @@ interface TokenOption {
   decimals: number;
 }
 
-type BridgeAssetKind = "RETRO" | "ATOM" | "WBTC";
+type BridgeAssetKind = "RETRO" | "ATOM" | "WBTC" | "OSMO";
 type DexTab = "swap" | "pools" | "limit" | "bridge" | "create";
 
 const { address, connect, isAvailable } = useKeplr();
@@ -83,6 +83,20 @@ const WBTC_DENOM_ON_COSMOS =
   DEFAULT_WBTC_DENOM_ON_COSMOS;
 const retroToCosmosAsset = ref<BridgeAssetKind>("RETRO");
 const cosmosToRetroAsset = ref<BridgeAssetKind>("RETRO");
+
+const retroAssetOptions: { value: BridgeAssetKind; label: string }[] = [
+  { value: "RETRO", label: tokenSymbol.value },
+  { value: "ATOM", label: "ATOM" },
+  { value: "OSMO", label: "OSMO" },
+  { value: "WBTC", label: "WBTC" }
+];
+
+// Cosmos Hub only has RETRO (via IBC) or ATOM inbound; WBTC optional when configured
+const cosmosAssetOptions: { value: BridgeAssetKind; label: string }[] = [
+  { value: "RETRO", label: tokenSymbol.value },
+  { value: "ATOM", label: "ATOM" },
+  { value: "WBTC", label: "WBTC" }
+];
 
 // Create pool state
 const createTokenA = ref("RETRO");
@@ -610,6 +624,8 @@ const handleRetroToCosmosTransfer = async () => {
     tokenDenomToSend = tokenDenom.value;
   } else if (selectedAsset === "ATOM") {
     tokenDenomToSend = ATOM_IBC_DENOM_ON_RETRO;
+  } else if (selectedAsset === "OSMO") {
+    tokenDenomToSend = OSMO_DENOMS_ON_RETRO[0];
   } else {
     tokenDenomToSend = WBTC_IBC_DENOM_ON_RETRO || null;
   }
@@ -1525,29 +1541,14 @@ const handleCreatePool = async () => {
         </p>
         <div>
           <label class="text-xs text-slate-400 mb-2 block">Asset</label>
-          <div class="flex items-center gap-2">
-            <button
-              class="btn text-xs flex-1"
-              :class="retroToCosmosAsset === 'RETRO' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-              @click="retroToCosmosAsset = 'RETRO'"
-            >
-              {{ tokenSymbol }}
-            </button>
-            <button
-              class="btn text-xs flex-1"
-              :class="retroToCosmosAsset === 'ATOM' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-              @click="retroToCosmosAsset = 'ATOM'"
-            >
-              ATOM
-            </button>
-            <button
-              class="btn text-xs flex-1"
-              :class="retroToCosmosAsset === 'WBTC' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-              @click="retroToCosmosAsset = 'WBTC'"
-            >
-              WBTC
-            </button>
-          </div>
+          <select
+            v-model="retroToCosmosAsset"
+            class="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          >
+            <option v-for="opt in retroAssetOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
         </div>
         <div>
           <label class="text-xs text-slate-400 mb-2 block">Recipient (Cosmos Hub)</label>
@@ -1616,29 +1617,14 @@ const handleCreatePool = async () => {
         </p>
         <div>
           <label class="text-xs text-slate-400 mb-2 block">Asset</label>
-          <div class="flex items-center gap-2">
-            <button
-              class="btn text-xs flex-1"
-              :class="cosmosToRetroAsset === 'RETRO' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-              @click="cosmosToRetroAsset = 'RETRO'"
-            >
-              {{ tokenSymbol }}
-            </button>
-            <button
-              class="btn text-xs flex-1"
-              :class="cosmosToRetroAsset === 'ATOM' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-              @click="cosmosToRetroAsset = 'ATOM'"
-            >
-              ATOM
-            </button>
-            <button
-              class="btn text-xs flex-1"
-              :class="cosmosToRetroAsset === 'WBTC' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-              @click="cosmosToRetroAsset = 'WBTC'"
-            >
-              WBTC
-            </button>
-          </div>
+          <select
+            v-model="cosmosToRetroAsset"
+            class="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          >
+            <option v-for="opt in cosmosAssetOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
         </div>
         <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
           <div class="flex items-center justify-between text-xs mb-1">
