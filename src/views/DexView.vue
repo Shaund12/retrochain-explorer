@@ -969,7 +969,9 @@ const handleCreatePool = async () => {
     <div class="card p-4 border border-white/10 bg-slate-900/60">
       <div class="flex items-center justify-between mb-2">
         <h3 class="text-sm font-semibold text-slate-100">Custom Tokens (Factory / IBC)</h3>
-        <span class="text-[11px] text-slate-500">Add any denom to use in swaps/pools</span>
+        <span class="text-[11px] text-slate-500 mt-1">
+          Add any denom to use in swaps/pools
+        </span>
       </div>
       <div class="grid grid-cols-1 md:grid-cols-4 gap-2">
         <input v-model="customSymbol" placeholder="Symbol (e.g. FACTORY)" class="p-2 rounded bg-slate-800 border border-slate-700 text-sm" />
@@ -1043,7 +1045,7 @@ const handleCreatePool = async () => {
           <li>• IBC fee: chain-specific (see Keplr prompt)</li>
         </ul>
       </div>
-      <div class="card p-3 border border-white/10 bg-slate-900/60">
+      <div class="card p-3 border border-white/10 bg-sLate-900/60">
         <div class="text-xs uppercase tracking-[0.2em] text-slate-400 mb-2">Safety</div>
         <ul class="text-xs text-slate-300 space-y-1">
           <li>• Verify token denoms (factory/IBC)</li>
@@ -1316,8 +1318,8 @@ const handleCreatePool = async () => {
       />
     </div>
 
-    <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
-      <div class="flex items-center justify-between text-xs mb-1">
+    <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-xs text-slate-300 space-y-1">
+      <div class="flex items-center justify-between">
         <span class="text-slate-400">Total</span>
         <span class="text-slate-200">
           {{ limitPrice && limitAmount ? (parseFloat(limitPrice) * parseFloat(limitAmount)).toFixed(6) : '0.0' }} USDC
@@ -1475,6 +1477,7 @@ const handleCreatePool = async () => {
       </div>
     </div>
   </div>
+
   <!-- Bridge experience (always available; gated by tab only when DEX is enabled) -->
   <div v-if="dexFeaturesEnabled ? activeTab === 'bridge' : true" class="space-y-4 max-w-2xl mx-auto">
     <div class="card">
@@ -1696,8 +1699,6 @@ const handleCreatePool = async () => {
         </p>
       </div>
     </div>
-
   </div>
 </div>
-</template>
 
