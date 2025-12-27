@@ -480,35 +480,23 @@ function sparkPath(data: number[], width = 160, height = 40) {
   <div class="flex flex-col gap-4">
     <div
       v-if="showSpaceInvadersNotice"
-      class="card border border-emerald-400/50 bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-indigo-500/10 shadow-lg shadow-emerald-500/20"
+      class="card border border-emerald-400/70 bg-gradient-to-r from-emerald-500/15 via-cyan-500/15 to-indigo-600/15 shadow-lg shadow-emerald-500/20"
     >
-      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex items-start gap-3">
-          <div class="text-2xl sm:text-3xl">👾🛸</div>
+          <div class="text-3xl sm:text-4xl">🚨👾🧱</div>
           <div>
-            <div class="text-sm font-semibold text-emerald-200">Space Invaders Beta is LIVE!</div>
+            <div class="text-xs uppercase tracking-[0.2em] text-emerald-200">Arcade Alert</div>
+            <div class="text-sm font-semibold text-emerald-100">Space Invaders & RetroNoid are LIVE</div>
             <p class="text-xs sm:text-sm text-slate-200 mt-1">
-              Drop coins, blast aliens, and climb the leaderboard. Jump in now and help us battle the invasion!
+              Jump in, drop coins, blast aliens, and smash bricks. Leaderboards are on—stack combos and climb fast.
             </p>
+            <p class="text-[11px] text-emerald-200/80 mt-1">Beta mode · Rewards flowing · Report bugs in Discord</p>
           </div>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
-          <a
-            class="btn btn-primary text-xs"
-            href="/arcade/arcade/"
-            target="_blank"
-            rel="noopener"
-          >
-            Play Space Invaders
-          </a>
-          <a
-            class="btn text-xs"
-            href="/retronoid/retronoid/"
-            target="_blank"
-            rel="noopener"
-          >
-            🧱 Play RetroNoid (Beta)
-          </a>
+          <a class="btn btn-primary text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">Play Space Invaders</a>
+          <a class="btn text-xs" href="/retronoid/retronoid/" target="_blank" rel="noopener">🧱 Play RetroNoid</a>
           <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
         </div>
       </div>

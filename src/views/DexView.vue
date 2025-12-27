@@ -873,29 +873,31 @@ const handleCreatePool = async () => {
   <RcDisclaimer
     v-if="dexLive"
     type="info"
-    title="✅ Native DEX - Mainnet Ready"
+    title="🚨 DEX ALERT · Mainnet Live"
   >
     <p>
-      <strong>The Native DEX is LIVE on RetroChain mainnet!</strong>
+      <strong>RetroChain DEX is armed and active!</strong>
     </p>
     <p class="mt-2">
-      All transactions (swap, add liquidity, limit orders, create pools) are fully operational and will execute on-chain. 
-      Connect your Keplr wallet to start trading, providing liquidity, and earning fees.
+      Swaps, pools, limit orders, and pool creation will hit mainnet the moment you confirm. Double-check tokens and slippage, then send it.
     </p>
-    <p class="mt-2">
-      Once liquidity pools are created and funded, you can swap tokens, add liquidity, place limit orders, and participate in the RetroChain DeFi ecosystem.
+    <p class="mt-2 text-emerald-200/80 text-[13px]">
+      Pro tip: keep a little {{ tokenSymbol }} for gas and watch the toast alerts for Tx status.
     </p>
   </RcDisclaimer>
   <RcDisclaimer
     v-else
     type="warning"
-    title="⚠️ DEX Trading Temporarily Disabled"
+    title="⚠️ DEX PAUSED · Alert"
   >
     <p>
-      Swaps, pools, limit orders, and pool creation are turned off while we finalize the on-chain DEX rollout.
+      Trading actions are temporarily on hold while we finish the on-chain rollout.
     </p>
     <p class="mt-2">
-      Use the IBC bridge below to move assets between RetroChain and Cosmos Hub (or Noble/other chains) until trading is re-enabled.
+      Use the IBC bridge below to move assets between RetroChain and Cosmos Hub (or Noble/other chains) until trading flips back on.
+    </p>
+    <p class="mt-2 text-amber-200/80 text-[13px]">
+      Watch this banner for the go-live alert; your funds stay safe while the DEX rests.
     </p>
   </RcDisclaimer>
 

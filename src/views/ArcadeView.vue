@@ -170,22 +170,42 @@ const achievementIcon = (a: any) => {
 
 <template>
   <div class="space-y-4">
-    <div
-      v-if="showSpaceInvadersNotice"
-      class="card border border-emerald-400/50 bg-gradient-to-r from-emerald-500/10 via-cyan-500/10 to-indigo-500/10 shadow-lg shadow-emerald-500/20"
-    >
-      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex items-start gap-3">
-          <div class="text-2xl sm:text-3xl">👾🛸</div>
-          <div>
-            <div class="text-sm font-semibold text-emerald-200">Space Invaders Beta is LIVE!</div>
-            <p class="text-xs sm:text-sm text-slate-200 mt-1">Drop coins, blast aliens, and climb the leaderboard. Jump in now and help us battle the invasion!</p>
+    <div v-if="showSpaceInvadersNotice" class="space-y-3">
+      <div class="card border border-emerald-400/70 bg-gradient-to-r from-emerald-500/15 via-cyan-500/15 to-indigo-600/15 shadow-lg shadow-emerald-500/20">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex items-start gap-3">
+            <div class="text-3xl sm:text-4xl">🚨👾🛸</div>
+            <div>
+              <div class="text-sm font-semibold text-emerald-200 uppercase tracking-[0.18em]">Space Invaders Alert</div>
+              <p class="text-xs sm:text-sm text-slate-200 mt-1">
+                Aliens on the radar! Drop coins, blast waves, and race up the leaderboard. Suit up and defend RetroChain HQ.
+              </p>
+              <p class="text-[11px] text-emerald-200/80 mt-1">Live event · Beta mode · Rewards flowing</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <a class="btn btn-primary text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">Play Space Invaders</a>
+            <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
           </div>
         </div>
-        <div class="flex items-center gap-2 flex-wrap">
-          <a class="btn btn-primary text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">Play Space Invaders</a>
-          <a class="btn text-xs" href="/retronoid/retronoid/" target="_blank" rel="noopener">🧱 Play RetroNoid (Beta)</a>
-          <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
+      </div>
+
+      <div class="card border border-amber-400/70 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-rose-500/15 shadow-lg shadow-amber-400/20">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex items-start gap-3">
+            <div class="text-3xl sm:text-4xl">🧱✨🎯</div>
+            <div>
+              <div class="text-sm font-semibold text-amber-200 uppercase tracking-[0.18em]">RetroNoid Rally</div>
+              <p class="text-xs sm:text-sm text-slate-200 mt-1">
+                Brick-busting chaos is live! Curve the paddle, stack combos, and chase perfect clears in the RetroNoid beta.
+              </p>
+              <p class="text-[11px] text-amber-200/80 mt-1">Precision mode · Combo fever · Beta rewards</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <a class="btn text-xs" href="/retronoid/retronoid/" target="_blank" rel="noopener">Play RetroNoid</a>
+            <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
+          </div>
         </div>
       </div>
     </div>
