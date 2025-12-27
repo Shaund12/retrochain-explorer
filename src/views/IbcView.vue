@@ -1,9 +1,34 @@
 <script setup lang="ts">
-import { onMounted, ref } from 'vue';
+import { computed, onMounted, ref } from 'vue';
 import { useIbc } from '@/composables/useIbc';
 
 const { channels, loading, error, fetchChannels, resolvedTrace, resolveDenomTrace, resolveError, resolving } = useIbc();
 const denomInput = ref('');
+
+const selectedRoute = ref<'cosmos' | 'osmosis' | 'noble'>('cosmos');
+const selectedDirection = ref<'outbound' | 'inbound'>('outbound');
+
+type BridgeAsset = 'RETRO' | 'ATOM' | 'OSMO' | 'WBTC' | 'USDC';
+const selectedAsset = ref<BridgeAsset>('RETRO');
+
+const routeOptions = [
+  { value: 'cosmos', label: 'Cosmos Hub ↔ Retro' },
+  { value: 'osmosis', label: 'Osmosis ↔ Retro' },
+  { value: 'noble', label: 'Noble (USDC) → Osmosis → Retro' }
+] as const;
+
+const directionOptions = [
+  { value: 'outbound', label: 'Outbound (from Retro)', hint: 'Retro → external chain' },
+  { value: 'inbound', label: 'Inbound (to Retro)', hint: 'External chain → Retro' }
+] as const;
+
+const assetOptions = [
+  { value: 'RETRO', label: 'RETRO' },
+  { value: 'ATOM', label: 'ATOM' },
+  { value: 'OSMO', label: 'OSMO' },
+  { value: 'WBTC', label: 'WBTC' },
+  { value: 'USDC', label: 'USDC (Noble)' }
+] as const;
 
 // Known routes (configurable via env)
 const retroToCosmosChannel = import.meta.env.VITE_IBC_CHANNEL_RETRO_COSMOS || 'channel-0';
@@ -35,6 +60,36 @@ const routes = [
     note: 'Two-hop route Noble→Osmosis then Osmosis→Retro'
   }
 ];
+
+const selectedRouteInfo = () => {
+  if (selectedRoute.value === 'cosmos') return routes[0];
+  if (selectedRoute.value === 'osmosis') return routes[1];
+  return routes[2];
+};
+
+const allowedAssetsForRoute = computed<BridgeAsset[]>(() => {
+  switch (selectedRoute.value) {
+    case 'cosmos':
+      return ['RETRO', 'ATOM', 'WBTC'];
+    case 'osmosis':
+      return ['RETRO', 'ATOM', 'OSMO', 'WBTC', 'USDC'];
+    case 'noble':
+      return ['USDC'];
+    default:
+      return ['RETRO'];
+  }
+});
+
+// Ensure selected asset is valid when route changes
+const ensuredSelectedAsset = computed({
+  get() {
+    if (allowedAssetsForRoute.value.includes(selectedAsset.value)) return selectedAsset.value;
+    return allowedAssetsForRoute.value[0];
+  },
+  set(v: BridgeAsset) {
+    selectedAsset.value = v;
+  }
+});
 
 const copy = async (text?: string | null) => {
   const value = (text || '').trim();
@@ -70,38 +125,117 @@ onMounted(() => {
       </div>
     </div>
 
+      <div class="mb-4">
+        <label class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Asset</label>
+        <select
+          v-model="ensuredSelectedAsset"
+          class="w-full mt-1 px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+        >
+          <option
+            v-for="opt in assetOptions.filter((a) => allowedAssetsForRoute.includes(a.value))"
+            :key="opt.value"
+            :value="opt.value"
+          >
+            {{ opt.label }}
+          </option>
+        </select>
+        <div class="text-[11px] text-slate-500 mt-1">
+          Available on this route: {{ allowedAssetsForRoute.join(', ') }}
+        </div>
+      </div>
+
     <div class="card">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-sm font-semibold text-slate-100">Route Directory</h2>
         <span class="text-[11px] text-slate-500">Common IBC paths</span>
       </div>
-      <div class="grid gap-3 md:grid-cols-3">
-        <article
-          v-for="route in routes"
-          :key="route.name"
-          class="rounded-2xl border border-white/10 bg-slate-900/60 p-4 space-y-2"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <div class="text-xs uppercase tracking-[0.2em] text-slate-400">{{ route.summary }}</div>
-              <div class="text-sm font-semibold text-white">{{ route.name }}</div>
-            </div>
+
+      <div class="grid gap-2 md:grid-cols-2 mb-4">
+        <div>
+          <label class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Route</label>
+          <select
+            v-model="selectedRoute"
+            class="w-full mt-1 px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          >
+            <option v-for="opt in routeOptions" :key="opt.value" :value="opt.value">{{ opt.label }}</option>
+          </select>
+        </div>
+        <div>
+          <label class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Direction</label>
+          <select
+            v-model="selectedDirection"
+            class="w-full mt-1 px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          >
+            <option v-for="opt in directionOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+          <div class="text-[11px] text-slate-500 mt-1">
+            {{ directionOptions.find((o) => o.value === selectedDirection)?.hint }}
           </div>
-          <div class="text-[11px] text-slate-400">{{ route.note }}</div>
-          <div class="text-xs text-slate-200 space-y-1">
-            <div class="flex items-center justify-between">
-              <span class="text-slate-400">Outbound</span>
-              <code class="font-mono">{{ route.outbound || '—' }}</code>
-              <button class="btn text-[10px]" :disabled="!route.outbound" @click="copy(route.outbound)">Copy</button>
-            </div>
-            <div class="flex items-center justify-between">
-              <span class="text-slate-400">Inbound</span>
-              <code class="font-mono">{{ route.inbound || '—' }}</code>
-              <button class="btn text-[10px]" :disabled="!route.inbound" @click="copy(route.inbound)">Copy</button>
-            </div>
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs text-slate-400">Asset</span>
+            <code class="text-xs font-mono text-slate-200">{{ ensuredSelectedAsset }}</code>
+            <span class="text-[11px] text-slate-500">Shown for routing clarity</span>
           </div>
-        </article>
+        </div>
       </div>
+
+      <div class="rounded-2xl border border-white/10 bg-slate-900/60 p-4">
+        <div class="flex items-start justify-between gap-3">
+          <div>
+            <div class="text-xs uppercase tracking-[0.2em] text-slate-400">{{ selectedRouteInfo().summary }}</div>
+            <div class="text-sm font-semibold text-white">{{ selectedRouteInfo().name }}</div>
+            <div class="text-[11px] text-slate-400 mt-1">{{ selectedRouteInfo().note }}</div>
+          </div>
+        </div>
+        <div class="mt-3 grid gap-2">
+          <div class="flex items-center justify-between gap-2">
+            <span class="text-xs text-slate-400">Channel</span>
+            <code class="text-xs font-mono text-slate-200">
+              {{ selectedDirection === 'outbound' ? (selectedRouteInfo().outbound || '—') : (selectedRouteInfo().inbound || '—') }}
+            </code>
+            <button
+              class="btn text-[10px]"
+              :disabled="!(selectedDirection === 'outbound' ? selectedRouteInfo().outbound : selectedRouteInfo().inbound)"
+              @click="copy(selectedDirection === 'outbound' ? selectedRouteInfo().outbound : selectedRouteInfo().inbound)"
+            >
+              Copy
+            </button>
+          </div>
+        </div>
+      </div>
+
+      <details class="mt-3">
+        <summary class="text-xs text-slate-400 cursor-pointer select-none">Show all routes</summary>
+        <div class="grid gap-3 md:grid-cols-3 mt-3">
+          <article
+            v-for="route in routes"
+            :key="route.name"
+            class="rounded-2xl border border-white/10 bg-slate-900/60 p-4 space-y-2"
+          >
+            <div class="flex items-center justify-between">
+              <div>
+                <div class="text-xs uppercase tracking-[0.2em] text-slate-400">{{ route.summary }}</div>
+                <div class="text-sm font-semibold text-white">{{ route.name }}</div>
+              </div>
+            </div>
+            <div class="text-[11px] text-slate-400">{{ route.note }}</div>
+            <div class="text-xs text-slate-200 space-y-1">
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Outbound</span>
+                <code class="font-mono">{{ route.outbound || '—' }}</code>
+                <button class="btn text-[10px]" :disabled="!route.outbound" @click="copy(route.outbound)">Copy</button>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="text-slate-400">Inbound</span>
+                <code class="font-mono">{{ route.inbound || '—' }}</code>
+                <button class="btn text-[10px]" :disabled="!route.inbound" @click="copy(route.inbound)">Copy</button>
+              </div>
+            </div>
+          </article>
+        </div>
+      </details>
     </div>
 
     <div class="grid grid-cols-1 sm:grid-cols-3 gap-3">
