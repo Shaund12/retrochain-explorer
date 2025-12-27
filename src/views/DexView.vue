@@ -1477,6 +1477,7 @@ const handleCreatePool = async () => {
       </div>
     </div>
   </div>
+</div>
 
   <!-- Bridge experience (always available; gated by tab only when DEX is enabled) -->
   <div v-if="dexFeaturesEnabled ? activeTab === 'bridge' : true" class="space-y-4 max-w-2xl mx-auto">
