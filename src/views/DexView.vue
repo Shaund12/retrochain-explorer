@@ -109,7 +109,7 @@ const USDC_DENOMS_ON_RETRO = [
   "ibc/usdc"
 ];
 
-const retroAssetOptions = computed<{ value: BridgeAssetKind; label: string }[]>(() => [
+const retroToCosmosAssetOptions = computed<{ value: BridgeAssetKind; label: string }[]>(() => [
   { value: "RETRO", label: tokenSymbol.value },
   { value: "ATOM", label: "ATOM" },
   { value: "OSMO", label: "OSMO" },
@@ -117,7 +117,7 @@ const retroAssetOptions = computed<{ value: BridgeAssetKind; label: string }[]>(
 ]);
 
 // Cosmos Hub only has RETRO (via IBC) or ATOM inbound; WBTC optional when configured
-const cosmosAssetOptions = computed<{ value: BridgeAssetKind; label: string }[]>(() => [
+const cosmosToRetroAssetOptions = computed<{ value: BridgeAssetKind; label: string }[]>(() => [
   { value: "RETRO", label: tokenSymbol.value },
   { value: "ATOM", label: "ATOM" },
   { value: "WBTC", label: "WBTC" }
