@@ -77,8 +77,17 @@ export function useArcade() {
     loading.value = true;
     error.value = null;
     try {
-      const response = await api.get("/arcade/v1/games");
-      games.value = response.data?.games || [];
+      const response = await api.get("/retrochain/arcade/v1/games");
+      const dataGames = Array.isArray(response.data?.games) ? response.data.games : [];
+
+      // Normalize/alias known titles without mutating server data
+      games.value = dataGames.map((g: any) => {
+        const mapped = { ...g } as Game;
+        if ((g?.game_id || "").toLowerCase() === "space-invaders") {
+          mapped.name = "RetroVaders";
+        }
+        return mapped;
+      });
     } catch (err: any) {
       error.value = err.message || "Failed to fetch games";
       console.warn("Arcade games endpoint not available:", err.message);
@@ -96,7 +105,7 @@ export function useArcade() {
     error.value = null;
     try {
       const response = await api.get(
-        `/arcade/v1/highscores/${gameId}?limit=${limit}`
+        `/retrochain/arcade/v1/highscores/${gameId}?limit=${limit}`
       );
       highScores.value = response.data?.scores || [];
     } catch (err: any) {
@@ -116,7 +125,7 @@ export function useArcade() {
     error.value = null;
     try {
       const response = await api.get(
-        `/arcade/v1/leaderboard?limit=${limit}`
+        `/retrochain/arcade/v1/leaderboard?limit=${limit}`
       );
       const data = response.data || {};
       // Some deployments return `{ entries: [...] }` instead of `{ leaderboard: [...] }`
@@ -138,7 +147,7 @@ export function useArcade() {
     error.value = null;
     try {
       const response = await api.get(
-        `/arcade/v1/sessions?limit=${limit}`
+        `/retrochain/arcade/v1/sessions?limit=${limit}`
       );
       sessions.value = response.data?.sessions || [];
     } catch (err: any) {
@@ -158,7 +167,7 @@ export function useArcade() {
     error.value = null;
     try {
       const response = await api.get(
-        `/arcade/v1/achievements?limit=${limit}`
+        `/retrochain/arcade/v1/achievements?limit=${limit}`
       );
       achievements.value = response.data?.achievements || [];
     } catch (err: any) {
@@ -177,7 +186,7 @@ export function useArcade() {
     loading.value = true;
     error.value = null;
     try {
-      const response = await api.get(`/arcade/v1/stats/${address}`);
+      const response = await api.get(`/retrochain/arcade/v1/stats/${address}`);
       playerStats.value = response.data || null;
     } catch (err: any) {
       error.value = err.message || "Failed to fetch player stats";
@@ -196,7 +205,7 @@ export function useArcade() {
     error.value = null;
     try {
       const response = await api.get(
-        `/arcade/v1/sessions/player/${address}?limit=${limit}`
+        `/retrochain/arcade/v1/sessions/player/${address}?limit=${limit}`
       );
       sessions.value = response.data?.sessions || [];
     } catch (err: any) {
@@ -216,7 +225,7 @@ export function useArcade() {
     error.value = null;
     try {
       const response = await api.get(
-        `/arcade/v1/achievements/${address}`
+        `/retrochain/arcade/v1/achievements/${address}`
       );
       achievements.value = response.data?.achievements || [];
     } catch (err: any) {
