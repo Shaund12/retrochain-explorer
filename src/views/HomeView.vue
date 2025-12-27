@@ -501,6 +501,14 @@ function sparkPath(data: number[], width = 160, height = 40) {
           >
             Play Space Invaders
           </a>
+          <a
+            class="btn text-xs"
+            href="/retronoid/retronoid/"
+            target="_blank"
+            rel="noopener"
+          >
+            🧱 Play RetroNoid (Beta)
+          </a>
           <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
         </div>
       </div>

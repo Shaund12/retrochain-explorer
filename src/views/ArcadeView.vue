@@ -184,6 +184,7 @@ const achievementIcon = (a: any) => {
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <a class="btn btn-primary text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">Play Space Invaders</a>
+          <a class="btn text-xs" href="/retronoid/retronoid/" target="_blank" rel="noopener">🧱 Play RetroNoid (Beta)</a>
           <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
         </div>
       </div>
