@@ -5,6 +5,45 @@ import { useIbc } from '@/composables/useIbc';
 const { channels, loading, error, fetchChannels, resolvedTrace, resolveDenomTrace, resolveError, resolving } = useIbc();
 const denomInput = ref('');
 
+// Known routes (configurable via env)
+const retroToCosmosChannel = import.meta.env.VITE_IBC_CHANNEL_RETRO_COSMOS || 'channel-0';
+const cosmosToRetroChannel = import.meta.env.VITE_IBC_CHANNEL_COSMOS_RETRO || 'channel-1638';
+const retroToOsmosisChannel = import.meta.env.VITE_IBC_CHANNEL_RETRO_OSMOSIS || 'channel-1';
+const osmosisToRetroChannel = import.meta.env.VITE_IBC_CHANNEL_OSMOSIS_RETRO || 'channel-108593';
+const nobleToOsmosisChannel = import.meta.env.VITE_IBC_CHANNEL_NOBLE_OSMOSIS || 'channel-750';
+
+const routes = [
+  {
+    name: 'Cosmos Hub',
+    summary: 'Retro ↔ Cosmos',
+    outbound: retroToCosmosChannel,
+    inbound: cosmosToRetroChannel,
+    note: 'Retro channel then counterparty channel back from Cosmos Hub'
+  },
+  {
+    name: 'Osmosis',
+    summary: 'Retro ↔ Osmosis',
+    outbound: retroToOsmosisChannel,
+    inbound: osmosisToRetroChannel,
+    note: 'Direct swap/bridge path via Osmosis core IBC'
+  },
+  {
+    name: 'Noble (USDC)',
+    summary: 'Noble → Osmosis → Retro',
+    outbound: nobleToOsmosisChannel,
+    inbound: osmosisToRetroChannel,
+    note: 'Two-hop route Noble→Osmosis then Osmosis→Retro'
+  }
+];
+
+const copy = async (text: string) => {
+  try {
+    await navigator.clipboard?.writeText(text);
+  } catch {
+    // ignore
+  }
+};
+
 onMounted(() => {
   fetchChannels(200);
 });
@@ -23,11 +62,43 @@ onMounted(() => {
           </h1>
         </div>
         <p class="text-sm text-slate-300 mb-4">Channels, sequences, and denom trace resolution</p>
-        <div class="flex flex-wrap gap-2">
-          <button class="btn text-xs" :disabled="loading" @click="fetchChannels(200)">
-            {{ loading ? 'Loading...' : '?? Refresh Channels' }}
-          </button>
-        </div>
+        <button class="btn text-xs" :disabled="loading" @click="fetchChannels(200)">
+          {{ loading ? 'Loading...' : '↻ Refresh Channels' }}
+        </button>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-sm font-semibold text-slate-100">Route Directory</h2>
+        <span class="text-[11px] text-slate-500">Common IBC paths</span>
+      </div>
+      <div class="grid gap-3 md:grid-cols-3">
+        <article
+          v-for="route in routes"
+          :key="route.name"
+          class="rounded-2xl border border-white/10 bg-slate-900/60 p-4 space-y-2"
+        >
+          <div class="flex items-center justify-between">
+            <div>
+              <div class="text-xs uppercase tracking-[0.2em] text-slate-400">{{ route.summary }}</div>
+              <div class="text-sm font-semibold text-white">{{ route.name }}</div>
+            </div>
+          </div>
+          <div class="text-[11px] text-slate-400">{{ route.note }}</div>
+          <div class="text-xs text-slate-200 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">Outbound</span>
+              <code class="font-mono">{{ route.outbound || '—' }}</code>
+              <button class="btn text-[10px]" @click="copy(route.outbound)">Copy</button>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400">Inbound</span>
+              <code class="font-mono">{{ route.inbound || '—' }}</code>
+              <button class="btn text-[10px]" @click="copy(route.inbound)">Copy</button>
+            </div>
+          </div>
+        </article>
       </div>
     </div>
 

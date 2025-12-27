@@ -926,19 +926,16 @@ const handleCreatePool = async () => {
         <span class="text-[10px] text-slate-500">Live Pools</span>
       </div>
       <div class="text-3xl font-bold text-white mb-1">{{ poolCount }}</div>
-      <p class="text-xs text-slate-400">Active pools detected from on-chain DEX module.</p>
-      <div class="gap-2 grid grid-cols-3 mt-3 text-center">
-        <div class="badge border-indigo-400/40 text-indigo-100">
-          <div class="text-xs">RETRO/USDC</div>
-          <div class="text-sm font-bold text-white">{{ formatAmount('1', 'uretro') }} / {{ formatAmount('1', 'uusdc') }}</div>
-        </div>
-        <div class="badge border-indigo-400/40 text-indigo-100">
-          <div class="text-xs">RETRO/ATOM</div>
-          <div class="text-sm font-bold text-white">{{ formatAmount('1', 'uretro') }} / {{ formatAmount('1', 'uatom') }}</div>
-        </div>
-        <div class="badge border-indigo-400/40 text-indigo-100">
-          <div class="text-xs">USDC/ATOM</div>
-          <div class="text-sm font-bold text-white">{{ formatAmount('1', 'uusdc') }} / {{ formatAmount('1', 'uatom') }}</div>
+      <p class="text-xs text-slate-400" v-if="poolCount > 0">Active pools detected from on-chain DEX module.</p>
+      <p class="text-xs text-slate-500" v-else>No active pools reported by the DEX module.</p>
+      <div v-if="poolCount > 0" class="gap-2 grid grid-cols-3 mt-3 text-center">
+        <div
+          v-for="pool in pools.slice(0, 3)"
+          :key="pool.id"
+          class="badge border-indigo-400/40 text-indigo-100"
+        >
+          <div class="text-xs">{{ pool.token_a }}/{{ pool.token_b }}</div>
+          <div class="text-sm font-bold text-white">{{ formatAmount(pool.reserve_a, pool.token_a) }} / {{ formatAmount(pool.reserve_b, pool.token_b) }}</div>
         </div>
       </div>
     </div>
