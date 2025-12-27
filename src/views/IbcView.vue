@@ -14,7 +14,8 @@ const selectedAsset = ref<BridgeAsset>('RETRO');
 const routeOptions = [
   { value: 'cosmos', label: 'Cosmos Hub ↔ Retro' },
   { value: 'osmosis', label: 'Osmosis ↔ Retro' },
-  { value: 'noble', label: 'Noble (USDC) → Osmosis → Retro' }
+  // Noble does not have a direct Retro channel in this app yet; route is via Osmosis
+  { value: 'noble', label: 'Noble ↔ Retro (via Osmosis)' }
 ] as const;
 
 const directionOptions = [
@@ -36,6 +37,7 @@ const cosmosToRetroChannel = import.meta.env.VITE_IBC_CHANNEL_COSMOS_RETRO || 'c
 const retroToOsmosisChannel = import.meta.env.VITE_IBC_CHANNEL_RETRO_OSMOSIS || 'channel-1';
 const osmosisToRetroChannel = import.meta.env.VITE_IBC_CHANNEL_OSMOSIS_RETRO || 'channel-108593';
 const nobleToOsmosisChannel = import.meta.env.VITE_IBC_CHANNEL_NOBLE_OSMOSIS || 'channel-750';
+const osmosisToNobleChannel = import.meta.env.VITE_IBC_CHANNEL_OSMOSIS_NOBLE || 'channel-???';
 
 const routes = [
   {
@@ -53,11 +55,11 @@ const routes = [
     note: 'Direct swap/bridge path via Osmosis core IBC'
   },
   {
-    name: 'Noble (USDC)',
-    summary: 'Noble → Osmosis → Retro',
-    outbound: nobleToOsmosisChannel,
-    inbound: osmosisToRetroChannel,
-    note: 'Two-hop route Noble→Osmosis then Osmosis→Retro'
+    name: 'Noble (via Osmosis)',
+    summary: 'Noble ↔ Retro',
+    outbound: `${nobleToOsmosisChannel} → ${osmosisToRetroChannel}`,
+    inbound: `${retroToOsmosisChannel} → ${osmosisToNobleChannel}`,
+    note: 'Two-hop route using Osmosis as the router: Noble↔Osmosis and Osmosis↔Retro'
   }
 ];
 

@@ -64,12 +64,20 @@ const retroToOsmosisChannel = import.meta.env.VITE_IBC_CHANNEL_RETRO_OSMOSIS || 
 const osmosisToRetroChannel = import.meta.env.VITE_IBC_CHANNEL_OSMOSIS_RETRO || "channel-108593";
 const nobleToOsmosisChannel = import.meta.env.VITE_IBC_CHANNEL_NOBLE_OSMOSIS || "channel-750";
 const cosmosHubChainId = import.meta.env.VITE_COSMOS_CHAIN_ID || "cosmoshub-4";
-const ibcDirection = ref<"retroToCosmos" | "cosmosToRetro">("retroToCosmos");
+const ibcDirection = ref<"retroToCosmos" | "cosmosToRetro" | "retroToOsmosis" | "osmosisToRetro" | "retroToNoble" | "nobleToRetro">("retroToCosmos");
 const retroToCosmosAmount = ref("");
 const retroToCosmosRecipient = ref("");
 const retroToCosmosMemo = ref("");
 const cosmosToRetroAmount = ref("");
 const cosmosToRetroMemo = ref("");
+const retroToOsmosisAmount = ref("");
+const retroToOsmosisMemo = ref("");
+const osmosisToRetroAmount = ref("");
+const osmosisToRetroMemo = ref("");
+const nobleToRetroAmount = ref("");
+const nobleToRetroMemo = ref("");
+const retroToNobleAmount = ref("");
+const retroToNobleMemo = ref("");
 const ibcTransferring = ref(false);
 const cosmosWalletAddress = ref("");
 const fetchingCosmosAddress = ref(false);
@@ -108,6 +116,18 @@ const USDC_DENOMS_ON_RETRO = [
   // Legacy placeholder / future compatibility
   "ibc/usdc"
 ];
+
+// Osmosis USDC denom is chain-specific; treat as configurable/placeholder until confirmed.
+const USDC_DENOM_ON_OSMOSIS = import.meta.env.VITE_DENOM_USDC_ON_OSMOSIS || "uusdc";
+
+const ibcRouteOptions = computed(() => [
+  { value: "retroToCosmos", label: "Retro → Cosmos Hub", chain: "Cosmos Hub" },
+  { value: "cosmosToRetro", label: "Cosmos Hub → Retro", chain: "Cosmos Hub" },
+  { value: "retroToOsmosis", label: "Retro → Osmosis", chain: "Osmosis" },
+  { value: "osmosisToRetro", label: "Osmosis → Retro", chain: "Osmosis" },
+  { value: "retroToNoble", label: "Retro → Noble", chain: "Noble" },
+  { value: "nobleToRetro", label: "Noble → Retro", chain: "Noble" }
+] as const);
 
 const retroToCosmosAssetOptions = computed<{ value: BridgeAssetKind; label: string }[]>(() => [
   { value: "RETRO", label: tokenSymbol.value },
@@ -172,6 +192,223 @@ const addCustomToken = () => {
   customDenom.value = "";
   customDecimals.value = "6";
   toast.showSuccess(`Added custom token ${symbol}`);
+};
+
+const getRetroTokenDenomForAsset = (asset: BridgeAssetKind) => {
+  if (asset === "RETRO") return tokenDenom.value;
+  if (asset === "ATOM") return ATOM_IBC_DENOM_ON_RETRO;
+  if (asset === "OSMO") return OSMO_DENOMS_ON_RETRO[0];
+  return WBTC_IBC_DENOM_ON_RETRO || null;
+};
+
+const getOsmosisDenomForAsset = (asset: BridgeAssetKind) => {
+  if (asset === "ATOM") return "uatom";
+  if (asset === "OSMO") return "uosmo";
+  if (asset === "WBTC") return WBTC_DENOM_ON_COSMOS || null; // best-effort env reuse
+  if (asset === "RETRO") return RETRO_IBC_DENOM_ON_COSMOS; // best-effort fallback
+  return null;
+};
+
+const handleRetroToOsmosisTransfer = async () => {
+  if (!address.value) {
+    toast.showInfo("Connect your RetroChain wallet first.");
+    return;
+  }
+  if (!window.keplr) {
+    toast.showError("Keplr wallet not detected.");
+    return;
+  }
+  if (!isMainnet.value) {
+    toast.showWarning("IBC transfers are only enabled on mainnet.");
+    return;
+  }
+  if (!retroToOsmosisChannel) {
+    toast.showWarning("Set VITE_IBC_CHANNEL_RETRO_OSMOSIS in your env to enable this transfer.");
+    return;
+  }
+
+  const amountFloat = parseFloat(retroToOsmosisAmount.value);
+  if (!Number.isFinite(amountFloat) || amountFloat <= 0) {
+    toast.showWarning(`Enter a valid ${retroToCosmosAssetLabel.value} amount.`);
+    return;
+  }
+
+  const chainId = network.value === "mainnet" ? "retrochain-mainnet" : "retrochain-devnet-1";
+  const selectedAsset = retroToCosmosAsset.value;
+  const amountBase = toBaseAmount(amountFloat, selectedAsset);
+  const tokenDenomToSend = getRetroTokenDenomForAsset(selectedAsset);
+  if (!tokenDenomToSend) {
+    toast.showWarning("Token denom is not configured for this asset.");
+    return;
+  }
+
+  const memo = retroToOsmosisMemo.value || `IBC transfer to Osmosis (${retroToCosmosAssetLabel.value})`;
+
+  const msg = {
+    typeUrl: "/ibc.applications.transfer.v1.MsgTransfer",
+    value: {
+      sourcePort: "transfer",
+      sourceChannel: retroToOsmosisChannel,
+      token: {
+        denom: tokenDenomToSend,
+        amount: amountBase
+      },
+      sender: address.value,
+      receiver: address.value,
+      timeoutHeight: {
+        revisionNumber: "0",
+        revisionHeight: "0"
+      },
+      timeoutTimestamp: buildIbcTimeoutTimestamp(),
+      memo
+    }
+  };
+
+  const fee = {
+    amount: [{ denom: tokenDenom.value, amount: "6000" }],
+    gas: "250000"
+  };
+
+  ibcTransferring.value = true;
+  toast.showInfo(`Preparing ${retroToCosmosAssetLabel.value} → Osmosis transfer...`);
+  try {
+    const result = await window.keplr.signAndBroadcast(chainId, address.value, [msg], fee, memo);
+    if (result.code === 0) {
+      toast.showTxSuccess(result.transactionHash || "IBC transfer submitted");
+      retroToOsmosisAmount.value = "";
+      retroToOsmosisMemo.value = "";
+      await loadAccount(address.value);
+    } else {
+      throw new Error(result.rawLog || "IBC transfer failed");
+    }
+  } catch (e: any) {
+    toast.showTxError(e?.message || "IBC transfer failed");
+  } finally {
+    ibcTransferring.value = false;
+  }
+};
+
+const handleOsmosisToRetroTransfer = async () => {
+  if (!address.value) {
+    toast.showInfo("Connect your RetroChain wallet first.");
+    return;
+  }
+  if (!window.keplr) {
+    toast.showError("Keplr wallet not detected.");
+    return;
+  }
+  if (!isMainnet.value) {
+    toast.showWarning("IBC transfers are only enabled on mainnet.");
+    return;
+  }
+  if (!osmosisToRetroChannel) {
+    toast.showWarning("Set VITE_IBC_CHANNEL_OSMOSIS_RETRO in your env to enable this transfer.");
+    return;
+  }
+
+  ibcTransferring.value = true;
+  try {
+    const osmoSender = await ensureOsmosisAccount();
+    const amountFloat = parseFloat(osmosisToRetroAmount.value);
+    if (!Number.isFinite(amountFloat) || amountFloat <= 0) {
+      toast.showWarning(`Enter a valid ${cosmosToRetroAssetLabel.value} amount.`);
+      return;
+    }
+
+    const selectedAsset = cosmosToRetroAsset.value;
+    const amountBase = toBaseAmount(amountFloat, selectedAsset);
+    const denom = getOsmosisDenomForAsset(selectedAsset);
+    if (!denom) {
+      toast.showWarning("Token denom for Osmosis not configured for this asset.");
+      return;
+    }
+
+    const memo = osmosisToRetroMemo.value || `IBC transfer to RetroChain (${cosmosToRetroAssetLabel.value})`;
+    const msg = {
+      typeUrl: "/ibc.applications.transfer.v1.MsgTransfer",
+      value: {
+        sourcePort: "transfer",
+        sourceChannel: osmosisToRetroChannel,
+        token: {
+          denom,
+          amount: amountBase
+        },
+        sender: osmoSender,
+        receiver: address.value,
+        timeoutHeight: {
+          revisionNumber: "0",
+          revisionHeight: "0"
+        },
+        timeoutTimestamp: buildIbcTimeoutTimestamp(),
+        memo
+      }
+    };
+
+    const fee = {
+      amount: [{ denom: "uosmo", amount: "8000" }],
+      gas: "250000"
+    };
+
+    const result = await window.keplr.signAndBroadcast(OSMOSIS_CHAIN_ID, osmoSender, [msg], fee, memo);
+    if (result.code === 0) {
+      toast.showTxSuccess(result.transactionHash || "IBC transfer submitted");
+      osmosisToRetroAmount.value = "";
+      osmosisToRetroMemo.value = "";
+      await loadAccount(address.value);
+    } else {
+      throw new Error(result.rawLog || "IBC transfer failed");
+    }
+  } catch (e: any) {
+    toast.showTxError(e?.message || "IBC transfer failed");
+  } finally {
+    ibcTransferring.value = false;
+  }
+};
+
+const handleRetroToNobleTransfer = async () => {
+  toast.showInfo("Retro → Noble is not fully wired yet (requires Noble channel + denom mapping). Use Noble → Retro bridge flow for now.");
+};
+
+const handleNobleToRetroTransfer = async () => {
+  // Two-hop guidance already implemented elsewhere; keep this as a placeholder action.
+  toast.showInfo("Use the Noble bridge flow (Noble → Osmosis → Retro). This shortcut is a placeholder.");
+};
+
+const OSMOSIS_CHAIN_ID = import.meta.env.VITE_OSMOSIS_CHAIN_ID || "osmosis-1";
+const NOBLE_CHAIN_ID = import.meta.env.VITE_NOBLE_CHAIN_ID || "noble-1";
+
+const osmosisWalletAddress = ref("");
+const fetchingOsmosisAddress = ref(false);
+
+const nobleWalletAddress = ref("");
+const fetchingNobleAddress = ref(false);
+
+const ensureOsmosisAccount = async () => {
+  if (!window.keplr) throw new Error("Keplr unavailable");
+  if (osmosisWalletAddress.value) return osmosisWalletAddress.value;
+  fetchingOsmosisAddress.value = true;
+  try {
+    await window.keplr.enable(OSMOSIS_CHAIN_ID);
+    const key = await window.keplr.getKey(OSMOSIS_CHAIN_ID);
+    osmosisWalletAddress.value = key?.bech32Address || "";
+    return osmosisWalletAddress.value;
+  } finally {
+    fetchingOsmosisAddress.value = false;
+  }
+};
+
+const ensureNobleAccount = async () => {
+  if (!window.keplr) throw new Error("Keplr unavailable");
+  if (nobleWalletAddress.value) return nobleWalletAddress.value;
+  fetchingNobleAddress.value = true;
+  try {
+    await window.keplr.enable(NOBLE_CHAIN_ID);
+    const key = await window.keplr.getKey(NOBLE_CHAIN_ID);
+    nobleWalletAddress.value = key?.bech32Address || "";
+    return nobleWalletAddress.value;
+  } finally {
+    fetchingNobleAddress.value = false;
+  }
 };
 
 const selectedPool = computed(() => {
@@ -689,6 +926,14 @@ const handleRetroToCosmosTransfer = async () => {
 watch(ibcDirection, (direction) => {
   if (direction === "cosmosToRetro") {
     ensureCosmosAccount().catch(() => undefined);
+  }
+  if (direction === "osmosisToRetro") {
+    // Osmosis requires its own chain in Keplr
+    ensureOsmosisAccount().catch(() => undefined);
+  }
+  if (direction === "nobleToRetro") {
+    // Noble requires its own chain in Keplr
+    ensureNobleAccount().catch(() => undefined);
   }
 });
 
@@ -1518,21 +1763,16 @@ const handleCreatePool = async () => {
         </span>
       </div>
 
-      <div class="flex items-center gap-2 mb-3">
-        <button 
-          class="btn text-xs"
-          :class="ibcDirection === 'retroToCosmos' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-          @click="ibcDirection = 'retroToCosmos'"
+      <div class="mb-3">
+        <label class="text-xs text-slate-400 mb-2 block">Route</label>
+        <select
+          v-model="ibcDirection"
+          class="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
         >
-          RetroChain → Cosmos Hub
-        </button>
-        <button 
-          class="btn text-xs"
-          :class="ibcDirection === 'cosmosToRetro' ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
-          @click="ibcDirection = 'cosmosToRetro'"
-        >
-          Cosmos Hub → RetroChain
-        </button>
+          <option v-for="opt in ibcRouteOptions" :key="opt.value" :value="opt.value">
+            {{ opt.label }}
+          </option>
+        </select>
       </div>
 
       <div v-if="ibcDirection === 'retroToCosmos'" class="space-y-3">
@@ -1611,7 +1851,7 @@ const handleCreatePool = async () => {
         </p>
       </div>
 
-      <div v-else class="space-y-3">
+      <div v-else-if="ibcDirection === 'cosmosToRetro'" class="space-y-3">
         <p class="text-[11px] text-slate-500">
           Bridge {{ cosmosToRetroAssetLabel }} from Cosmos Hub into RetroChain. Keplr will prompt you to approve the Cosmos Hub transaction.
         </p>
@@ -1626,6 +1866,145 @@ const handleCreatePool = async () => {
             </option>
           </select>
         </div>
+
+      <div v-else-if="ibcDirection === 'retroToOsmosis'" class="space-y-3">
+        <p class="text-[11px] text-slate-500">
+          Send assets from RetroChain to Osmosis over channel {{ retroToOsmosisChannel }}.
+        </p>
+        <div>
+          <label class="text-xs text-slate-400 mb-2 block">Asset</label>
+          <select
+            v-model="retroToCosmosAsset"
+            class="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          >
+            <option v-for="opt in retroToCosmosAssetOptions" :key="opt.value" :value="opt.value">
+              {{ opt.label }}
+            </option>
+          </select>
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 mb-2 block">Amount ({{ retroToCosmosAssetLabel }})</label>
+          <input
+            v-model="retroToOsmosisAmount"
+            type="number"
+            :step="retroToCosmosAsset === 'WBTC' ? '0.00000001' : '0.000001'"
+            placeholder="0.0"
+            class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 mb-2 block">Memo (optional)</label>
+          <input
+            v-model="retroToOsmosisMemo"
+            type="text"
+            placeholder="IBC transfer memo"
+            class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          />
+        </div>
+        <button
+          class="btn btn-primary w-full"
+          @click="handleRetroToOsmosisTransfer"
+          :disabled="!isMainnet || !address || !retroToOsmosisAmount || ibcTransferring"
+        >
+          {{ ibcTransferring ? 'Submitting...' : `Send ${retroToCosmosAssetLabel} to Osmosis` }}
+        </button>
+      </div>
+
+      <div v-else-if="ibcDirection === 'osmosisToRetro'" class="space-y-3">
+        <p class="text-[11px] text-slate-500">
+          Bridge assets from Osmosis into RetroChain. Keplr will prompt you to approve the Osmosis transaction.
+        </p>
+        <div>
+          <label class="text-xs text-slate-400 mb-2 block">Amount ({{ cosmosToRetroAssetLabel }})</label>
+          <input
+            v-model="osmosisToRetroAmount"
+            type="number"
+            :step="cosmosToRetroAsset === 'WBTC' ? '0.00000001' : '0.000001'"
+            placeholder="0.0"
+            class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 mb-2 block">Memo (optional)</label>
+          <input
+            v-model="osmosisToRetroMemo"
+            type="text"
+            placeholder="IBC transfer memo"
+            class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          />
+        </div>
+        <button
+          class="btn btn-primary w-full"
+          @click="handleOsmosisToRetroTransfer"
+          :disabled="!isMainnet || !address || !osmosisToRetroAmount || ibcTransferring"
+        >
+          {{ ibcTransferring ? 'Submitting...' : `Send ${cosmosToRetroAssetLabel} to RetroChain` }}
+        </button>
+      </div>
+
+      <div v-else-if="ibcDirection === 'retroToNoble'" class="space-y-3">
+        <p class="text-[11px] text-slate-500">
+          Send USDC from RetroChain to Noble. Currently supported asset: USDC.
+        </p>
+        <div>
+          <label class="text-xs text-slate-400 mb-2 block">Amount (USDC)</label>
+          <input
+            v-model="retroToNobleAmount"
+            type="number"
+            step="0.000001"
+            placeholder="0.0"
+            class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 mb-2 block">Memo (optional)</label>
+          <input
+            v-model="retroToNobleMemo"
+            type="text"
+            placeholder="IBC transfer memo"
+            class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          />
+        </div>
+        <button
+          class="btn btn-primary w-full"
+          @click="handleRetroToNobleTransfer"
+          :disabled="!isMainnet || !address || !retroToNobleAmount || ibcTransferring"
+        >
+          {{ ibcTransferring ? 'Submitting...' : 'Send USDC to Noble' }}
+        </button>
+      </div>
+
+      <div v-else-if="ibcDirection === 'nobleToRetro'" class="space-y-3">
+        <p class="text-[11px] text-slate-500">
+          Noble → Retro uses a two-hop route via Osmosis. Use the Bridge flow above if you need the full guided path.
+        </p>
+        <div>
+          <label class="text-xs text-slate-400 mb-2 block">Amount (USDC)</label>
+          <input
+            v-model="nobleToRetroAmount"
+            type="number"
+            step="0.000001"
+            placeholder="0.0"
+            class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          />
+        </div>
+        <div>
+          <label class="text-xs text-slate-400 mb-2 block">Memo (optional)</label>
+          <input
+            v-model="nobleToRetroMemo"
+            type="text"
+            placeholder="IBC transfer memo"
+            class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+          />
+        </div>
+        <button
+          class="btn btn-primary w-full"
+          @click="handleNobleToRetroTransfer"
+          :disabled="!isMainnet || !address || !nobleToRetroAmount || ibcTransferring"
+        >
+          {{ ibcTransferring ? 'Submitting...' : 'Send USDC to RetroChain' }}
+        </button>
+      </div>
         <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
           <div class="flex items-center justify-between text-xs mb-1">
             <span class="text-slate-400">Cosmos Hub Wallet</span>
