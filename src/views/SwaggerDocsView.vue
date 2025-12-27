@@ -4,7 +4,9 @@ import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import RcBackLink from "@/components/RcBackLink.vue";
 import { useNetwork } from "@/composables/useNetwork";
 
-import SwaggerUI from "swagger-ui-dist/swagger-ui-bundle";
+// swagger-ui-dist does not ship TS types
+// eslint-disable-next-line @typescript-eslint/no-var-requires
+const SwaggerUI: any = require("swagger-ui-dist/swagger-ui-bundle");
 import "swagger-ui-dist/swagger-ui.css";
 
 const { restBase } = useNetwork();

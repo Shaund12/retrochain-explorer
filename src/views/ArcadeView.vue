@@ -233,17 +233,19 @@ const loadArcadeBurns = async () => {
     const txs = Array.isArray(data?.tx_responses) ? data.tx_responses : [];
     const burns = txs
       .map(parseArcadeBurn)
-      .filter((b) => b && Number.isFinite(b.amount)) as {
-        amount: number;
-        gameId?: string;
-        player?: string;
-        hash?: string;
-        timestamp?: string;
-      }[];
+      .filter(
+        (b: unknown): b is {
+          amount: number;
+          gameId?: string;
+          player?: string;
+          hash?: string;
+          timestamp?: string;
+        } => Boolean(b) && Number.isFinite((b as any).amount)
+      );
 
     arcadeBurns.value = burns;
     if (burns.length) {
-      arcadeBurnTotal.value = burns.reduce((sum, b) => sum + b.amount, 0);
+      arcadeBurnTotal.value = burns.reduce((sum: number, b: any) => sum + b.amount, 0);
     } else {
       arcadeBurnTotal.value = 0;
     }

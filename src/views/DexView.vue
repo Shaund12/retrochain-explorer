@@ -84,20 +84,6 @@ const WBTC_DENOM_ON_COSMOS =
 const retroToCosmosAsset = ref<BridgeAssetKind>("RETRO");
 const cosmosToRetroAsset = ref<BridgeAssetKind>("RETRO");
 
-const retroAssetOptions: { value: BridgeAssetKind; label: string }[] = [
-  { value: "RETRO", label: tokenSymbol.value },
-  { value: "ATOM", label: "ATOM" },
-  { value: "OSMO", label: "OSMO" },
-  { value: "WBTC", label: "WBTC" }
-];
-
-// Cosmos Hub only has RETRO (via IBC) or ATOM inbound; WBTC optional when configured
-const cosmosAssetOptions: { value: BridgeAssetKind; label: string }[] = [
-  { value: "RETRO", label: tokenSymbol.value },
-  { value: "ATOM", label: "ATOM" },
-  { value: "WBTC", label: "WBTC" }
-];
-
 // Create pool state
 const createTokenA = ref("RETRO");
 const createTokenB = ref("USDC");
@@ -122,6 +108,20 @@ const USDC_DENOMS_ON_RETRO = [
   // Legacy placeholder / future compatibility
   "ibc/usdc"
 ];
+
+const retroAssetOptions = computed<{ value: BridgeAssetKind; label: string }[]>(() => [
+  { value: "RETRO", label: tokenSymbol.value },
+  { value: "ATOM", label: "ATOM" },
+  { value: "OSMO", label: "OSMO" },
+  { value: "WBTC", label: "WBTC" }
+]);
+
+// Cosmos Hub only has RETRO (via IBC) or ATOM inbound; WBTC optional when configured
+const cosmosAssetOptions = computed<{ value: BridgeAssetKind; label: string }[]>(() => [
+  { value: "RETRO", label: tokenSymbol.value },
+  { value: "ATOM", label: "ATOM" },
+  { value: "WBTC", label: "WBTC" }
+]);
 
 const USDT_DENOMS_ON_RETRO = [
   // Placeholder until a real hash denom is known/added
@@ -1545,7 +1545,7 @@ const handleCreatePool = async () => {
             v-model="retroToCosmosAsset"
             class="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
           >
-            <option v-for="opt in retroAssetOptions" :key="opt.value" :value="opt.value">
+            <option v-for="opt in retroToCosmosAssetOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
             </option>
           </select>
@@ -1621,7 +1621,7 @@ const handleCreatePool = async () => {
             v-model="cosmosToRetroAsset"
             class="w-full px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
           >
-            <option v-for="opt in cosmosAssetOptions" :key="opt.value" :value="opt.value">
+            <option v-for="opt in cosmosToRetroAssetOptions" :key="opt.value" :value="opt.value">
               {{ opt.label }}
             </option>
           </select>

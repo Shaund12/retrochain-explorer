@@ -186,7 +186,9 @@ const loadArcadeBurnTotals = async () => {
     const txs = Array.isArray(data?.tx_responses) ? data.tx_responses : [];
     const burns = txs
       .map(parseArcadeBurn)
-      .filter((b) => b && Number.isFinite(b.amount)) as { amount: number; gameId?: string; player?: string }[];
+      .filter((b: any): b is { amount: number; gameId?: string; player?: string } =>
+        Boolean(b) && Number.isFinite(b.amount)
+      );
 
     if (burns.length) {
       arcadeBurnTotal.value = burns.reduce((sum, b) => sum + b.amount, 0);
@@ -339,12 +341,12 @@ const latestBlockTimeAbsolute = computed(() => {
 const latestProposerDisplay = computed(() => {
   const latest = latestBlockSummary.value;
   if (!latest) return "—";
-  return (
-    latest.proposerLabel?.name ||
-    latest.proposerMoniker ||
-    latest.proposerOperator?.slice(0, 16)?.concat("…") ||
-    "Unknown"
-  );
+    return (
+      ((latest as any).proposerLabel as any)?.name ||
+      latest.proposerMoniker ||
+      latest.proposerOperator?.slice(0, 16)?.concat("…") ||
+      "Unknown"
+    );
 });
 
 const latestProposerShort = computed(() => {

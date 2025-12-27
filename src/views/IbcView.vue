@@ -36,9 +36,11 @@ const routes = [
   }
 ];
 
-const copy = async (text: string) => {
+const copy = async (text?: string | null) => {
+  const value = (text || '').trim();
+  if (!value) return;
   try {
-    await navigator.clipboard?.writeText(text);
+    await navigator.clipboard?.writeText(value);
   } catch {
     // ignore
   }
@@ -90,12 +92,12 @@ onMounted(() => {
             <div class="flex items-center justify-between">
               <span class="text-slate-400">Outbound</span>
               <code class="font-mono">{{ route.outbound || '—' }}</code>
-              <button class="btn text-[10px]" @click="copy(route.outbound)">Copy</button>
+              <button class="btn text-[10px]" :disabled="!route.outbound" @click="copy(route.outbound)">Copy</button>
             </div>
             <div class="flex items-center justify-between">
               <span class="text-slate-400">Inbound</span>
               <code class="font-mono">{{ route.inbound || '—' }}</code>
-              <button class="btn text-[10px]" @click="copy(route.inbound)">Copy</button>
+              <button class="btn text-[10px]" :disabled="!route.inbound" @click="copy(route.inbound)">Copy</button>
             </div>
           </div>
         </article>
