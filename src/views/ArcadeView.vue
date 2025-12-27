@@ -6,6 +6,7 @@ import { useArcade } from "@/composables/useArcade";
 import RcArcadeGameCard from "@/components/RcArcadeGameCard.vue";
 import { useRouter } from "vue-router";
 import ApexChart from "vue3-apexcharts";
+import { useApi } from "@/composables/useApi";
 
 dayjs.extend(relativeTime);
 
@@ -22,6 +23,7 @@ const {
   fetchRecentSessions,
   fetchLatestAchievements
 } = useArcade();
+const api = useApi();
 
 const gamesList = computed(() => (Array.isArray(games.value) ? games.value : []));
 const leaderboardList = computed(() => (Array.isArray(leaderboard.value) ? leaderboard.value : []));
@@ -180,10 +182,97 @@ const apexOptions = computed(() => ({
   colors: ["#34d399", "#a78bfa"]
 }));
 
+const arcadeBurns = ref<{ amount: number; gameId?: string; player?: string; hash?: string; timestamp?: string }[]>([]);
+const arcadeBurnTotal = ref<number | null>(null);
+const arcadeBurnLoading = ref(false);
+
+const parseArcadeBurn = (tx?: any) => {
+  if (!tx) return null;
+  const events = Array.isArray(tx?.events) ? tx.events : [];
+  let tokensBurned: number | null = null;
+  let gameId: string | null = null;
+  let player: string | null = null;
+
+  events.forEach((ev: any) => {
+    const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
+    const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
+      if (curr?.key) acc[curr.key] = curr.value;
+      return acc;
+    }, {} as Record<string, string>);
+
+    if (ev?.type === "arcade.credits_inserted" && map.tokens_burned) {
+      const amt = Number(map.tokens_burned);
+      if (Number.isFinite(amt)) tokensBurned = amt;
+      if (map.game_id) gameId = map.game_id;
+      if (map.player) player = map.player;
+    }
+  });
+
+  if (tokensBurned === null) return null;
+  return {
+    amount: tokensBurned,
+    gameId: gameId || undefined,
+    player: player || undefined,
+    hash: tx?.txhash || tx?.hash,
+    timestamp: tx?.timestamp
+  } as const;
+};
+
+const loadArcadeBurns = async () => {
+  arcadeBurnLoading.value = true;
+  arcadeBurnTotal.value = null;
+  arcadeBurns.value = [];
+  try {
+    const { data } = await api.get("/cosmos/tx/v1beta1/txs", {
+      params: {
+        events: "message.action='/retrochain.arcade.v1.MsgInsertCoin'",
+        order_by: "ORDER_BY_DESC",
+        "pagination.limit": "100"
+      }
+    });
+    const txs = Array.isArray(data?.tx_responses) ? data.tx_responses : [];
+    const burns = txs
+      .map(parseArcadeBurn)
+      .filter((b) => b && Number.isFinite(b.amount)) as {
+        amount: number;
+        gameId?: string;
+        player?: string;
+        hash?: string;
+        timestamp?: string;
+      }[];
+
+    arcadeBurns.value = burns;
+    if (burns.length) {
+      arcadeBurnTotal.value = burns.reduce((sum, b) => sum + b.amount, 0);
+    } else {
+      arcadeBurnTotal.value = 0;
+    }
+  } catch (err) {
+    console.warn("Failed to load arcade burn totals", err);
+  } finally {
+    arcadeBurnLoading.value = false;
+  }
+};
+
+const arcadeBurnDisplay = computed(() => {
+  if (arcadeBurnTotal.value === null) return "—";
+  const retro = arcadeBurnTotal.value / 1_000_000;
+  return `${retro.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
+});
+
+const arcadeBurnCount = computed(() => arcadeBurns.value.length);
+const latestBurns = computed(() => arcadeBurns.value.slice(0, 5));
+
+const formatRetroAmount = (amt?: number | null) => {
+  if (!amt || !Number.isFinite(amt)) return "—";
+  const retro = amt / 1_000_000;
+  return `${retro.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
+};
+
 const refreshAll = async () => {
   refreshing.value = true;
   try {
-    await Promise.all([fetchGames(), fetchLeaderboard(20), fetchRecentSessions(10), fetchLatestAchievements(10)]);
+    await Promise.all([fetchGames(), fetchLeaderboard(20), fetchRecentSessions(10), fetchLatestAchievements(10), loadArcadeBurns()]);
   } finally {
     refreshing.value = false;
   }
@@ -275,6 +364,46 @@ const achievementIcon = (a: any) => {
         <button class="btn btn-primary text-xs" :disabled="refreshing || loading" @click="refreshAll">
           {{ refreshing ? 'Refreshing...' : 'Refresh Data' }}
         </button>
+      </div>
+    </div>
+
+    <div class="card border border-rose-500/60 bg-gradient-to-r from-rose-500/10 via-orange-500/10 to-amber-500/10 shadow-lg shadow-rose-500/20">
+      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="flex items-start gap-3">
+          <div class="text-4xl sm:text-5xl">🔥</div>
+          <div>
+            <div class="text-sm font-semibold text-rose-100 uppercase tracking-[0.18em]">Insert Coin Burn Counter</div>
+            <p class="text-xs sm:text-sm text-slate-100 mt-1">
+              Live RETRO burned from <code class="text-amber-200">MsgInsertCoin</code> arcade purchases.
+            </p>
+            <div class="flex items-center gap-3 mt-2 flex-wrap text-[11px] text-rose-100">
+              <span class="px-2 py-1 rounded-full bg-rose-500/20 border border-rose-400/40">{{ arcadeBurnDisplay }}</span>
+              <span class="px-2 py-1 rounded-full bg-amber-500/15 border border-amber-400/40">{{ arcadeBurnCount }} insertions</span>
+              <span class="px-2 py-1 rounded-full bg-orange-500/15 border border-orange-400/40" v-if="arcadeBurns.length">
+                Last: {{ formatRetroAmount(latestBurns[0]?.amount) }}
+              </span>
+              <span v-if="arcadeBurnLoading" class="text-[11px] text-amber-200">Syncing…</span>
+            </div>
+          </div>
+        </div>
+        <div class="w-full sm:w-auto flex-1">
+          <div class="grid gap-2 sm:grid-cols-2">
+            <div v-for="burn in latestBurns" :key="burn.hash || burn.timestamp" class="p-3 rounded-xl bg-slate-900/70 border border-rose-400/30 text-xs text-slate-100 flex items-center justify-between">
+              <div class="flex items-center gap-2 min-w-0">
+                <span class="text-lg">🔥</span>
+                <div class="min-w-0">
+                  <div class="font-semibold truncate">{{ formatRetroAmount(burn.amount) }}</div>
+                  <div class="text-[11px] text-slate-400 truncate">{{ burn.gameId || 'unregistered game' }}</div>
+                </div>
+              </div>
+              <div class="text-right text-[11px] text-amber-100">
+                <div>{{ burn.timestamp ? dayjs(burn.timestamp).fromNow() : 'just now' }}</div>
+                <div class="text-slate-500" v-if="burn.player">{{ shortAddr(burn.player, 10) }}</div>
+              </div>
+            </div>
+            <div v-if="!latestBurns.length" class="text-[11px] text-slate-400">No Insert Coin burns yet.</div>
+          </div>
+        </div>
       </div>
     </div>
 
