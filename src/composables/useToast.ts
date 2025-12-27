@@ -14,7 +14,7 @@ export function useToast() {
   const showSuccess = (message: string, title?: string) => {
     toast.success(title || "Success", {
       description: message,
-      icon: "??",
+      icon: "?",
       ...defaultOpts,
     });
   };
@@ -22,7 +22,7 @@ export function useToast() {
   const showError = (message: string, title?: string) => {
     toast.error(title || "Error", {
       description: message,
-      icon: "??",
+      icon: "?",
       duration: 7000,
       ...defaultOpts,
     });
@@ -41,7 +41,7 @@ export function useToast() {
   const showInfo = (message: string, title?: string) => {
     toast.info(title || "Notice", {
       description: message,
-      icon: "?",
+      icon: "??",
       ...defaultOpts,
     });
   };
