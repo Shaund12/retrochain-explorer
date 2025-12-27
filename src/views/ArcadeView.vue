@@ -318,7 +318,7 @@ const achievementIcon = (a: any) => {
           <div class="flex items-start gap-3">
             <div class="text-3xl sm:text-4xl">🚨👾🛸</div>
             <div>
-              <div class="text-sm font-semibold text-emerald-200 uppercase tracking-[0.18em]">Space Invaders Alert</div>
+            <div class="text-sm font-semibold text-emerald-200 uppercase tracking-[0.18em]">RetroVaders Alert</div>
               <p class="text-xs sm:text-sm text-slate-200 mt-1">
                 Aliens on the radar! Drop coins, blast waves, and race up the leaderboard. Suit up and defend RetroChain HQ.
               </p>
@@ -326,7 +326,7 @@ const achievementIcon = (a: any) => {
             </div>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <a class="btn btn-primary text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">Play Space Invaders</a>
+            <a class="btn btn-primary text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">Play RetroVaders</a>
             <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
           </div>
         </div>
@@ -360,7 +360,7 @@ const achievementIcon = (a: any) => {
       </div>
       <div class="flex gap-2 flex-wrap justify-end">
         <button class="btn text-xs" @click="router.push({ name: 'home' })">← Back to Home</button>
-        <a class="btn text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">🎮 Play Space Invaders</a>
+        <a class="btn text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">🎮 Play RetroVaders</a>
         <button class="btn btn-primary text-xs" :disabled="refreshing || loading" @click="refreshAll">
           {{ refreshing ? 'Refreshing...' : 'Refresh Data' }}
         </button>

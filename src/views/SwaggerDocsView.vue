@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import RcBackLink from "@/components/RcBackLink.vue";
 import { useNetwork } from "@/composables/useNetwork";
@@ -10,30 +10,31 @@ import "swagger-ui-dist/swagger-ui.css";
 const { restBase } = useNetwork();
 
 const DOCS_REST_BASE = import.meta.env.VITE_DOCS_REST_BASE || "https://retrochain.ddns.net/api/";
+const defaultSpecKey = "bank";
 
 const loading = ref(true);
 const error = ref<string | null>(null);
-const selectedSpec = ref("");
+const selectedSpec = ref(defaultSpecKey);
 
 // Hardcoded list of available specs based on public/api-docs contents
 const availableSpecs = [
-  { label: "Auth", file: "retrochain-auth.swagger.yaml" },
-  { label: "Bank", file: "retrochain-bank.swagger.yaml" },
-  { label: "Circuit", file: "retrochain-circuit.swagger.yaml" },
-  { label: "Consensus", file: "retrochain-consensus.swagger.yaml" },
-  { label: "Distribution", file: "retrochain-distribution.swagger.yaml" },
-  { label: "Evidence", file: "retrochain-evidence.swagger.yaml" },
-  { label: "Governance", file: "retrochain-gov.swagger.yaml" },
-  { label: "Group", file: "retrochain-group.swagger.yaml" },
-  { label: "Mint", file: "retrochain-mint.swagger.yaml" },
-  { label: "NFT", file: "retrochain-nft.swagger.yaml" },
-  { label: "Node", file: "retrochain-node.swagger.yaml" },
-  { label: "Params", file: "retrochain-params.swagger.yaml" },
-  { label: "Slashing", file: "retrochain-slashing.swagger.yaml" },
-  { label: "Staking", file: "retrochain-staking.swagger.yaml" },
-  { label: "Tendermint", file: "retrochain-tendermint.swagger.yaml" },
-  { label: "Transactions", file: "retrochain-tx.swagger.yaml" },
-  { label: "Upgrade", file: "retrochain-upgrade.swagger.yaml" },
+  { key: "auth", label: "Auth", file: "retrochain-auth.swagger.yaml" },
+  { key: "bank", label: "Bank", file: "retrochain-bank.swagger.yaml" },
+  { key: "circuit", label: "Circuit", file: "retrochain-circuit.swagger.yaml" },
+  { key: "consensus", label: "Consensus", file: "retrochain-consensus.swagger.yaml" },
+  { key: "distribution", label: "Distribution", file: "retrochain-distribution.swagger.yaml" },
+  { key: "evidence", label: "Evidence", file: "retrochain-evidence.swagger.yaml" },
+  { key: "governance", label: "Governance", file: "retrochain-gov.swagger.yaml" },
+  { key: "group", label: "Group", file: "retrochain-group.swagger.yaml" },
+  { key: "mint", label: "Mint", file: "retrochain-mint.swagger.yaml" },
+  { key: "nft", label: "NFT", file: "retrochain-nft.swagger.yaml" },
+  { key: "node", label: "Node", file: "retrochain-node.swagger.yaml" },
+  { key: "params", label: "Params", file: "retrochain-params.swagger.yaml" },
+  { key: "slashing", label: "Slashing", file: "retrochain-slashing.swagger.yaml" },
+  { key: "staking", label: "Staking", file: "retrochain-staking.swagger.yaml" },
+  { key: "tendermint", label: "Tendermint", file: "retrochain-tendermint.swagger.yaml" },
+  { key: "tx", label: "Transactions", file: "retrochain-tx.swagger.yaml" },
+  { key: "upgrade", label: "Upgrade", file: "retrochain-upgrade.swagger.yaml" },
 ];
 
 const effectiveRestBase = computed(() => DOCS_REST_BASE || restBase.value || "/api");
@@ -44,23 +45,25 @@ const docsBase = `${baseHref}/api-docs`;
 
 const swaggerUrls = availableSpecs.map((s) => ({
   name: s.label,
+  key: s.key,
   // Keep URLs relative so $ref: definitions.yaml resolves correctly beside each spec
   url: `${docsBase}/${s.file}`,
 }));
 
-const defaultSpec = "Bank";
-
-const initSwagger = () => {
+const initSwagger = (specKey: string = selectedSpec.value || defaultSpecKey) => {
   if (!SwaggerUI) throw new Error("Swagger UI not available");
   
   // Clear previous instance if any (though SwaggerUI usually replaces the dom node content)
   const domNode = document.getElementById("swagger-ui");
   if (domNode) domNode.innerHTML = "";
 
+  const target = swaggerUrls.find((s) => s.key === specKey) || swaggerUrls.find((s) => s.key === defaultSpecKey) || swaggerUrls[0];
+
   SwaggerUI({
     dom_id: "#swagger-ui",
     urls: swaggerUrls,
-    urlsPrimaryName: defaultSpec,
+    urlsPrimaryName: target?.name || undefined,
+    url: target?.url,
     deepLinking: true,
     persistAuthorization: true,
     displayRequestDuration: true,
@@ -88,14 +91,28 @@ onMounted(() => {
   loading.value = true;
   error.value = null;
   try {
-    initSwagger();
-    selectedSpec.value = defaultSpec;
+    selectedSpec.value = defaultSpecKey;
+    initSwagger(selectedSpec.value);
   } catch (e: any) {
     error.value = e?.message || String(e);
   } finally {
     loading.value = false;
   }
 });
+
+watch(
+  () => selectedSpec.value,
+  (next) => {
+    loading.value = true;
+    try {
+      initSwagger(next);
+    } catch (e: any) {
+      error.value = e?.message || String(e);
+    } finally {
+      loading.value = false;
+    }
+  }
+);
 </script>
 
 <template>
@@ -110,8 +127,17 @@ onMounted(() => {
         </p>
       </div>
       
-      <div class="text-sm text-slate-400">
-        Use the Swagger UI selector (top-right inside the docs) to switch modules.
+      <div class="flex items-center gap-2">
+        <label for="spec" class="text-[11px] uppercase tracking-[0.2em] text-slate-400">Module</label>
+        <select
+          id="spec"
+          v-model="selectedSpec"
+          class="px-3 py-2 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm"
+        >
+          <option v-for="spec in availableSpecs" :key="spec.key" :value="spec.key">
+            {{ spec.label }}
+          </option>
+        </select>
       </div>
     </div>
 
