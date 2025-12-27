@@ -4,7 +4,7 @@ import router from "./router";
 import "./assets/main.css";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
-import "vue-sonner/index.css";
+import "vue-sonner/style.css";
 
 // Enable dayjs relative time plugin globally
 dayjs.extend(relativeTime);
