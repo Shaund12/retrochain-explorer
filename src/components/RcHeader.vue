@@ -445,7 +445,6 @@ const navItems: NavItem[] = [
     label: "Participation",
     items: [
       { label: "Staking", to: { name: "staking" } },
-      { label: "Stake WBTC", to: { name: "btc-stake" } },
       { label: "Governance", to: { name: "governance" } },
       { label: "Account", to: { name: "account" } }
     ]
