@@ -100,6 +100,42 @@ const topTokenEarners = computed(() =>
     .slice(0, 5)
 );
 
+const recentSessions = computed(() => sessionsList.value.slice(0, 6));
+const recentAchievements = computed(() => achievementsList.value.slice(0, 6));
+
+const topAchievers = computed(() => {
+  const counts: Record<string, number> = {};
+  achievementsList.value.forEach((a: any) => {
+    const p = (a?.player || "").toString();
+    if (!p) return;
+    counts[p] = (counts[p] || 0) + 1;
+  });
+  return Object.entries(counts)
+    .sort((a, b) => b[1] - a[1])
+    .slice(0, 3)
+    .map(([player, count]) => ({ player, count }));
+});
+
+const sessionsToday = computed(() => sessionsList.value.filter((s: any) => dayjs(s.started_at).isAfter(dayjs().startOf("day"))).length);
+const achievementsToday = computed(() => achievementsList.value.filter((a: any) => dayjs(a.unlocked_at).isAfter(dayjs().startOf("day"))).length);
+
+const completionRate = computed(() => {
+  if (!sessionsList.value.length) return 0;
+  const completed = sessionsList.value.filter((s: any) => normalizeStatus(s.status) === "completed").length;
+  return Math.round((completed / sessionsList.value.length) * 100);
+});
+
+const mostPlayedGame = computed(() => {
+  if (!sessionsList.value.length) return null;
+  const counts = sessionsList.value.reduce((acc: Record<string, number>, s: any) => {
+    const key = s.game_id || "unknown";
+    acc[key] = (acc[key] || 0) + 1;
+    return acc;
+  }, {} as Record<string, number>);
+  const [id, count] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  return { gameId: id, count } as { gameId: string; count: number };
+});
+
 const chartDays = computed(() => {
   const days = [] as dayjs.Dayjs[];
   for (let i = 6; i >= 0; i -= 1) {
