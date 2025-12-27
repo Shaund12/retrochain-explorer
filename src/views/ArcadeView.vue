@@ -5,6 +5,7 @@ import relativeTime from "dayjs/plugin/relativeTime";
 import { useArcade } from "@/composables/useArcade";
 import RcArcadeGameCard from "@/components/RcArcadeGameCard.vue";
 import { useRouter } from "vue-router";
+import ApexChart from "vue3-apexcharts";
 
 dayjs.extend(relativeTime);
 
@@ -94,38 +95,49 @@ const topTokenEarners = computed(() =>
     .slice(0, 5)
 );
 
-const recentSessions = computed(() => sessions.value.slice(0, 6));
-const recentAchievements = computed(() => achievements.value.slice(0, 6));
-const topAchievers = computed(() => {
-  const counts: Record<string, number> = {};
-  achievements.value.forEach((a: any) => {
-    const p = (a?.player || "").toString();
-    if (!p) return;
-    counts[p] = (counts[p] || 0) + 1;
-  });
-  return Object.entries(counts)
-    .sort((a, b) => b[1] - a[1])
-    .slice(0, 3)
-    .map(([player, count]) => ({ player, count }));
+const chartDays = computed(() => {
+  const days = [] as dayjs.Dayjs[];
+  for (let i = 6; i >= 0; i -= 1) {
+    days.push(dayjs().subtract(i, "day"));
+  }
+  return days;
 });
 
-const sessionsToday = computed(() => sessions.value.filter((s: any) => dayjs(s.started_at).isAfter(dayjs().startOf("day"))).length);
-const achievementsToday = computed(() => achievements.value.filter((a: any) => dayjs(a.unlocked_at).isAfter(dayjs().startOf("day"))).length);
-const completionRate = computed(() => {
-  if (!sessions.value.length) return 0;
-  const completed = sessions.value.filter((s: any) => normalizeStatus(s.status) === "completed").length;
-  return Math.round((completed / sessions.value.length) * 100);
-});
-const mostPlayedGame = computed(() => {
-  if (!sessions.value.length) return null;
-  const counts = sessions.value.reduce((acc: Record<string, number>, s: any) => {
-    const key = s.game_id || "unknown";
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const [id, count] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
-  return { gameId: id, count } as { gameId: string; count: number };
-});
+const chartCategories = computed(() => chartDays.value.map((d) => d.format("MMM D")));
+
+const sessions7d = computed(() =>
+  chartDays.value.map((d) => sessions.value.filter((s: any) => dayjs(s.started_at).isSame(d, "day")).length)
+);
+
+const achievements7d = computed(() =>
+  chartDays.value.map((d) => achievements.value.filter((a: any) => dayjs(a.unlocked_at).isSame(d, "day")).length)
+);
+
+const apexSeries = computed(() => [
+  { name: "Sessions", data: sessions7d.value },
+  { name: "Achievements", data: achievements7d.value }
+]);
+
+const apexOptions = computed(() => ({
+  chart: { toolbar: { show: false }, background: "transparent", foreColor: "#cbd5e1" },
+  theme: { mode: "dark" },
+  dataLabels: { enabled: false },
+  stroke: { curve: "smooth", width: 3 },
+  fill: {
+    type: "gradient",
+    gradient: { shadeIntensity: 0.8, opacityFrom: 0.3, opacityTo: 0.05, stops: [0, 50, 100] }
+  },
+  grid: { borderColor: "rgba(148,163,184,0.25)", strokeDashArray: 3 },
+  xaxis: {
+    categories: chartCategories.value,
+    axisBorder: { color: "rgba(148,163,184,0.3)" },
+    axisTicks: { color: "rgba(148,163,184,0.3)" },
+    labels: { style: { colors: chartCategories.value.map(() => "#94a3b8") } }
+  },
+  yaxis: { labels: { style: { colors: ["#94a3b8"] } }, min: 0, forceNiceScale: true },
+  legend: { labels: { colors: "#e2e8f0" } },
+  colors: ["#34d399", "#a78bfa"]
+}));
 
 const refreshAll = async () => {
   refreshing.value = true;
@@ -251,23 +263,42 @@ const achievementIcon = (a: any) => {
     <div class="grid gap-3 md:grid-cols-2 xl:grid-cols-4">
       <div class="card border-indigo-500/40 bg-indigo-500/10">
         <div class="text-[11px] uppercase tracking-wider text-slate-300">Top Score</div>
-        <div class="text-3xl font-extrabold text-white flex items-center gap-2">🥇 <span>{{ topScore.toLocaleString() }}</span></div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">
+          🥇 <span>{{ topScore.toLocaleString() }}</span>
+        </div>
         <div class="text-xs text-slate-400">Highest total score across leaderboard</div>
       </div>
       <div class="card border-emerald-500/40 bg-emerald-500/10">
         <div class="text-[11px] uppercase tracking-wider text-slate-300">Players Ranked</div>
-        <div class="text-3xl font-extrabold text-white flex items-center gap-2">🧑‍🚀 <span>{{ totalPlayers }}</span></div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">
+          🧑‍🚀 <span>{{ totalPlayers }}</span>
+        </div>
         <div class="text-xs text-slate-400">Players with arcade activity</div>
       </div>
       <div class="card border-cyan-500/40 bg-cyan-500/10">
         <div class="text-[11px] uppercase tracking-wider text-slate-300">Average Score</div>
-        <div class="text-3xl font-extrabold text-white flex items-center gap-2">📈 <span>{{ avgScore.toLocaleString() }}</span></div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">
+          📈 <span>{{ avgScore.toLocaleString() }}</span>
+        </div>
         <div class="text-xs text-slate-400">Across all ranked players</div>
       </div>
       <div class="card border-amber-500/40 bg-amber-500/10">
         <div class="text-[11px] uppercase tracking-wider text-slate-300">Arcade Tokens</div>
-        <div class="text-3xl font-extrabold text-white flex items-center gap-2">🪙 <span>{{ totalArcadeTokens.toLocaleString() }}</span></div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">
+          🪙 <span>{{ totalArcadeTokens.toLocaleString() }}</span>
+        </div>
         <div class="text-xs text-slate-400">Sum across leaderboard</div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-slate-100">Arcade Pulse</h2>
+        <span class="text-[11px] text-slate-400">Sessions vs Achievements (7d)</span>
+      </div>
+      <div v-if="sessions.length === 0 && achievements.length === 0" class="text-xs text-slate-400">No activity yet.</div>
+      <div v-else>
+        <ApexChart type="area" height="240" :options="apexOptions" :series="apexSeries" />
       </div>
     </div>
 
@@ -530,7 +561,7 @@ const achievementIcon = (a: any) => {
     </div>
 
     <div class="card">
-      <div class="flex items-center justify-between mb-3">
+      <div class="flex items-center justify-between mb-2">
         <h2 class="text-sm font-semibold text-slate-100">Arcade Games</h2>
         <span class="text-[11px] text-slate-400">{{ visibleGames.length }} listed</span>
       </div>

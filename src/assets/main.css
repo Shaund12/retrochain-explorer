@@ -288,3 +288,21 @@ body {
   color: rgb(226, 232, 240);
 }
 
+/* Toast theming (vue-sonner) */
+.sonner-toast {
+  border-radius: 12px;
+  border: 1px solid rgba(148, 163, 184, 0.2);
+  backdrop-filter: blur(6px);
+  box-shadow: 0 15px 35px rgba(0, 0, 0, 0.25);
+}
+
+.rc-toast-warning {
+  background: linear-gradient(135deg, rgba(251, 191, 36, 0.12), rgba(249, 115, 22, 0.12));
+  border: 1px solid rgba(251, 191, 36, 0.35);
+  color: #fef3c7;
+}
+.rc-toast-warning .sonner-title,
+.rc-toast-warning .sonner-description {
+  color: #fef3c7;
+}
+

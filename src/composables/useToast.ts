@@ -1,72 +1,72 @@
 // src/composables/useToast.ts
-import { useToast as useVueToast } from "vue-toastification";
+import { toast } from "vue-sonner";
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
-export function useToast() {
-  const toast = useVueToast();
+const defaultOpts = {
+  position: "top-right" as const,
+  duration: 5200,
+  closeButton: true,
+  richColors: true,
+};
 
+export function useToast() {
   const showSuccess = (message: string, title?: string) => {
-    toast.success(title ? `${title}: ${message}` : message, {
-      timeout: 5000,
-      closeOnClick: true,
-      pauseOnFocusLoss: true,
-      pauseOnHover: true,
-      draggable: true,
-      draggablePercent: 0.6,
-      showCloseButtonOnHover: false,
-      hideProgressBar: false,
-      icon: "?",
+    toast.success(title || "Success", {
+      description: message,
+      icon: "??",
+      ...defaultOpts,
     });
   };
 
   const showError = (message: string, title?: string) => {
-    toast.error(title ? `${title}: ${message}` : message, {
-      timeout: 7000,
-      closeOnClick: true,
-      pauseOnFocusLoss: true,
-      pauseOnHover: true,
-      draggable: true,
-      icon: "?",
+    toast.error(title || "Error", {
+      description: message,
+      icon: "??",
+      duration: 7000,
+      ...defaultOpts,
     });
   };
 
   const showWarning = (message: string, title?: string) => {
-    toast.warning(title ? `${title}: ${message}` : message, {
-      timeout: 6000,
-      closeOnClick: true,
-      pauseOnFocusLoss: true,
-      pauseOnHover: true,
-      draggable: true,
+    toast(title || "Heads up", {
+      description: message,
       icon: "??",
+      duration: 6500,
+      ...defaultOpts,
+      class: "rc-toast-warning",
     });
   };
 
   const showInfo = (message: string, title?: string) => {
-    toast.info(title ? `${title}: ${message}` : message, {
-      timeout: 5000,
-      closeOnClick: true,
-      pauseOnFocusLoss: true,
-      pauseOnHover: true,
-      draggable: true,
-      icon: "??",
+    toast.info(title || "Notice", {
+      description: message,
+      icon: "?",
+      ...defaultOpts,
     });
   };
 
   const showTxSuccess = (txHash: string) => {
-    showSuccess(`Transaction successful! Hash: ${txHash.slice(0, 10)}...`, "Success");
+    const short = txHash ? `${txHash.slice(0, 10)}...` : "Transaction";
+    showSuccess(`Transaction successful! Hash: ${short}`, "Success");
   };
 
   const showTxError = (error: string) => {
-    showError(error, "Transaction Failed");
+    showError(error || "Transaction failed", "Transaction Failed");
   };
 
   const showConnecting = () => {
-    showInfo("Opening Keplr wallet...", "Connecting");
+    toast.loading("Opening Keplr wallet...", {
+      description: "Awaiting wallet approval",
+      icon: "??",
+      duration: 3000,
+      ...defaultOpts,
+    });
   };
 
   const showConnected = (address: string) => {
-    showSuccess(`Connected: ${address.slice(0, 10)}...${address.slice(-6)}`, "Wallet Connected");
+    const short = address ? `${address.slice(0, 10)}...${address.slice(-6)}` : "Wallet";
+    showSuccess(`Connected: ${short}`, "Wallet Connected");
   };
 
   const notify = (message: string) => {

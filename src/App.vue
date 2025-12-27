@@ -5,6 +5,7 @@ import RcMaintenanceBanner from "@/components/RcMaintenanceBanner.vue";
 import { useNetwork } from "@/composables/useNetwork";
 import { useChainInfo } from "@/composables/useChainInfo";
 import { computed, onMounted, ref } from "vue";
+import { Toaster } from "vue-sonner";
 
 const { restBase, rpcBase } = useNetwork();
 const { info, refresh } = useChainInfo();
@@ -131,6 +132,8 @@ onMounted(() => {
 
 <template>
 <div class="min-h-screen flex flex-col" :class="themeClass">
+  <!-- Toaster -->
+  <Toaster position="top-right" theme="dark" rich-colors close-button duration="5200" offset="12px" />
   <div v-if="activeHoliday === 'christmas'" class="festive-snow" :class="`snow-${snowLevel}`" aria-hidden="true"></div>
   <div v-if="activeHoliday === 'christmas'" class="festive-lights" aria-hidden="true">
     <span v-for="n in 32" :key="n" class="bulb" :style="{ '--i': n }"></span>
