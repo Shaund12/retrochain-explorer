@@ -23,17 +23,22 @@ const {
   fetchLatestAchievements
 } = useArcade();
 
+const gamesList = computed(() => (Array.isArray(games.value) ? games.value : []));
+const leaderboardList = computed(() => (Array.isArray(leaderboard.value) ? leaderboard.value : []));
+const sessionsList = computed(() => (Array.isArray(sessions.value) ? sessions.value : []));
+const achievementsList = computed(() => (Array.isArray(achievements.value) ? achievements.value : []));
+
 const refreshing = ref(false);
 const showSpaceInvadersNotice = ref(true);
 const spaceInvadersNoticeKey = "space-invaders-beta-dismissed";
 
 // Hide placeholder/test entries
-const visibleGames = computed(() => games.value.filter((g) => (g.game_id || "").toLowerCase() !== "test"));
+const visibleGames = computed(() => gamesList.value.filter((g) => (g.game_id || "").toLowerCase() !== "test"));
 
 const blockedGameIds = ["test", "test-game", "testgame"];
 const blockedPlayersFromTestGames = computed(() => {
   const set = new Set<string>();
-  sessions.value.forEach((s: any) => {
+  sessionsList.value.forEach((s: any) => {
     const gid = (s?.game_id || "").toString().toLowerCase();
     if (blockedGameIds.includes(gid)) {
       const player = (s?.player || "").toString().toLowerCase();
@@ -45,7 +50,7 @@ const blockedPlayersFromTestGames = computed(() => {
 
 // Filter leaderboard to drop test game noise
 const visibleLeaderboard = computed(() =>
-  leaderboard.value.filter((entry: any) => {
+  leaderboardList.value.filter((entry: any) => {
     const player = (entry?.player || "").toString().toLowerCase();
     const title = (entry?.title || "").toString().toLowerCase();
     const gameId = (entry?.game_id || "").toString().toLowerCase();
@@ -73,16 +78,16 @@ const formatStatus = (status: any) => {
   if (val === "failed") return "❌ Failed";
   return val ? `ℹ️ ${val}` : "—";
 };
-const totalSessions = computed(() => sessions.value.length);
-const activeSessions = computed(() => sessions.value.filter((s: any) => normalizeStatus(s.status) === "active").length);
-const totalAchievements = computed(() => achievements.value.length);
+const totalSessions = computed(() => sessionsList.value.length);
+const activeSessions = computed(() => sessionsList.value.filter((s: any) => normalizeStatus(s.status) === "active").length);
+const totalAchievements = computed(() => achievementsList.value.length);
 const totalUniquePlayers = computed(() => {
   const set = new Set<string>();
-  sessions.value.forEach((s: any) => {
+  sessionsList.value.forEach((s: any) => {
     const p = (s?.player || "").toString().toLowerCase();
     if (p) set.add(p);
   });
-  achievements.value.forEach((a: any) => {
+  achievementsList.value.forEach((a: any) => {
     const p = (a?.player || "").toString().toLowerCase();
     if (p) set.add(p);
   });
@@ -106,11 +111,11 @@ const chartDays = computed(() => {
 const chartCategories = computed(() => chartDays.value.map((d) => d.format("MMM D")));
 
 const sessions7d = computed(() =>
-  chartDays.value.map((d) => sessions.value.filter((s: any) => dayjs(s.started_at).isSame(d, "day")).length)
+  chartDays.value.map((d) => sessionsList.value.filter((s: any) => dayjs(s.started_at).isSame(d, "day")).length)
 );
 
 const achievements7d = computed(() =>
-  chartDays.value.map((d) => achievements.value.filter((a: any) => dayjs(a.unlocked_at).isSame(d, "day")).length)
+  chartDays.value.map((d) => achievementsList.value.filter((a: any) => dayjs(a.unlocked_at).isSame(d, "day")).length)
 );
 
 const apexSeries = computed(() => [
@@ -296,7 +301,7 @@ const achievementIcon = (a: any) => {
         <h2 class="text-sm font-semibold text-slate-100">Arcade Pulse</h2>
         <span class="text-[11px] text-slate-400">Sessions vs Achievements (7d)</span>
       </div>
-      <div v-if="sessions.length === 0 && achievements.length === 0" class="text-xs text-slate-400">No activity yet.</div>
+      <div v-if="sessionsList.length === 0 && achievementsList.length === 0" class="text-xs text-slate-400">No activity yet.</div>
       <div v-else>
         <ApexChart type="area" height="240" :options="apexOptions" :series="apexSeries" />
       </div>
@@ -331,7 +336,7 @@ const achievementIcon = (a: any) => {
           <h2 class="text-sm font-semibold text-slate-100">Leaderboard</h2>
           <span class="text-[11px] text-slate-400">Live from /arcade/v1/leaderboard</span>
         </div>
-        <div v-if="leaderboard.length === 0" class="text-xs text-slate-400">No leaderboard entries yet.</div>
+        <div v-if="leaderboardList.length === 0" class="text-xs text-slate-400">No leaderboard entries yet.</div>
         <div v-else class="overflow-x-auto">
           <table class="table min-w-full">
             <thead>
@@ -345,7 +350,7 @@ const achievementIcon = (a: any) => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="entry in leaderboard" :key="entry.player" class="text-[11px]">
+              <tr v-for="entry in leaderboardList" :key="entry.player" class="text-[11px]">
                 <td class="font-mono">
                   <span v-if="entry.rank === 1">🥇</span>
                   <span v-else-if="entry.rank === 2">🥈</span>
