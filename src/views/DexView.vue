@@ -765,7 +765,7 @@ const handleCosmosToRetroTransfer = async () => {
     gas: "250000"
   };
 
-  toast.showInfo(`Submitting ${cosmosToRetroAssetLabel.value} → RetroChain transfer...`);
+  toast.showInfo(`Submitting ${cosmosToRetroAssetLabel} → RetroChain transfer...`);
   try {
     const result = await window.keplr.signAndBroadcast(
       cosmosHubChainId,
@@ -1117,7 +1117,7 @@ const handleCreatePool = async () => {
               <span v-if="!address">—</span>
               <span v-else-if="accountLoading">Syncing…</span>
               <span v-else>{{ formatTokenBalance(tokenOut) }}</span>
-            </div>
+            </span>
           </div>
         </div>
         <div class="flex items-center gap-3">
