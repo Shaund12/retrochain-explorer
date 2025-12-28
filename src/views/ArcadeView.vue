@@ -25,6 +25,55 @@ const {
 } = useArcade();
 const api = useApi();
 
+const selectedGame = ref<any | null>(null);
+const gameModalOpen = ref(false);
+
+const openGameModal = (game: any) => {
+  selectedGame.value = game;
+  gameModalOpen.value = true;
+};
+
+const closeGameModal = () => {
+  gameModalOpen.value = false;
+  selectedGame.value = null;
+};
+
+const resolveGameLaunchUrl = (game: any) => {
+  const gid = (game?.game_id || "").toString().toLowerCase();
+  // Known built-in hosted games
+  if (gid === "retrovaders") return "/arcade/arcade/";
+  if (gid === "retronoid") return "/retronoid/retronoid/";
+
+  // API-provided launch URL (if present)
+  const direct = (game?.launch_url || game?.play_url || game?.url) as string | undefined;
+  if (direct && typeof direct === "string") return direct;
+
+  return null;
+};
+
+const playSelectedGame = () => {
+  const url = resolveGameLaunchUrl(selectedGame.value);
+  if (!url) return;
+  // Use router only for internal paths
+  if (url.startsWith("/")) {
+    window.location.href = url;
+    return;
+  }
+  window.open(url, "_blank", "noopener");
+};
+
+const selectedGameLaunchUrl = computed(() => resolveGameLaunchUrl(selectedGame.value));
+const selectedGameIcon = computed(() => {
+  const genre = (selectedGame.value?.genre || "").toString().toLowerCase();
+  if (genre === "shooter") return "🎯";
+  if (genre === "puzzle") return "🧩";
+  if (genre === "racing") return "🏎️";
+  if (genre === "platformer") return "🦘";
+  if (genre === "fighting") return "🥊";
+  if (genre === "rpg") return "🧙‍♂️";
+  return "🎮";
+});
+
 const gamesList = computed(() => (Array.isArray(games.value) ? games.value : []));
 const leaderboardList = computed(() => (Array.isArray(leaderboard.value) ? leaderboard.value : []));
 const sessionsList = computed(() => (Array.isArray(sessions.value) ? sessions.value : []));
@@ -34,8 +83,16 @@ const refreshing = ref(false);
 const showSpaceInvadersNotice = ref(true);
 const spaceInvadersNoticeKey = "space-invaders-beta-dismissed";
 
-// Hide placeholder/test entries
-const visibleGames = computed(() => gamesList.value.filter((g) => (g.game_id || "").toLowerCase() !== "test"));
+// Hide placeholder/test entries and legacy/renamed games.
+// Note: "space-invaders" is deprecated and has been renamed to RetroVaders.
+const visibleGames = computed(() =>
+  gamesList.value.filter((g) => {
+    const gid = (g.game_id || "").toString().toLowerCase();
+    if (gid === "test") return false;
+    if (gid === "space-invaders" || gid === "spaceinvaders" || gid === "space_invaders") return false;
+    return true;
+  })
+);
 
 const blockedGameIds = ["test", "test-game", "testgame"];
 const blockedPlayersFromTestGames = computed(() => {
@@ -739,7 +796,66 @@ const achievementIcon = (a: any) => {
       </div>
       <div v-if="visibleGames.length === 0" class="text-xs text-slate-400">No games registered yet.</div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <RcArcadeGameCard v-for="game in visibleGames" :key="game.game_id" :game="game" />
+        <RcArcadeGameCard v-for="game in visibleGames" :key="game.game_id" :game="game" @click="openGameModal" />
+      </div>
+    </div>
+
+    <!-- Game Details Modal -->
+    <div
+      v-if="gameModalOpen && selectedGame"
+      class="fixed inset-0 z-[100] flex items-center justify-center p-4"
+      @click.self="closeGameModal"
+    >
+      <div class="absolute inset-0 bg-black/70 backdrop-blur-sm"></div>
+      <div class="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-[rgba(10,14,39,0.98)] shadow-2xl shadow-black/50">
+        <div class="p-5 border-b border-white/10 flex items-start justify-between gap-4">
+          <div class="flex items-start gap-3">
+            <div class="text-4xl">{{ selectedGameIcon }}</div>
+            <div>
+              <div class="text-xs uppercase tracking-[0.2em] text-slate-400">{{ selectedGame.game_id }}</div>
+              <h3 class="text-xl font-bold text-white">{{ selectedGame.name }}</h3>
+              <div class="mt-1 flex flex-wrap gap-2 text-[11px]">
+                <span class="badge border-white/10 text-slate-200">{{ selectedGame.genre || 'arcade' }}</span>
+                <span v-if="selectedGame.difficulty" class="badge border-white/10 text-slate-200">{{ selectedGame.difficulty }}</span>
+                <span v-if="selectedGame.active" class="badge border-emerald-500/40 text-emerald-200">Active</span>
+                <span v-else class="badge border-slate-500/40 text-slate-300">Inactive</span>
+              </div>
+            </div>
+          </div>
+          <button class="btn btn-xs" @click="closeGameModal">Close</button>
+        </div>
+
+        <div class="p-5 space-y-4">
+          <div class="text-sm text-slate-200" v-if="selectedGame.description">
+            {{ selectedGame.description }}
+          </div>
+          <div v-else class="text-sm text-slate-400">No description provided.</div>
+
+          <div class="grid grid-cols-1 sm:grid-cols-2 gap-3">
+            <div class="p-3 rounded-xl border border-white/10 bg-white/5">
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Max Score</div>
+              <div class="text-sm font-semibold text-white">{{ selectedGame.max_score?.toLocaleString?.() ?? '—' }}</div>
+            </div>
+            <div class="p-3 rounded-xl border border-white/10 bg-white/5">
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Status</div>
+              <div class="text-sm font-semibold text-white">{{ selectedGame.active ? 'Active' : 'Inactive' }}</div>
+            </div>
+          </div>
+
+          <div v-if="selectedGameLaunchUrl" class="p-3 rounded-xl border border-emerald-500/30 bg-emerald-500/10">
+            <div class="text-[11px] uppercase tracking-wider text-emerald-200">Play</div>
+            <div class="text-[11px] text-slate-200 font-mono break-all">{{ selectedGameLaunchUrl }}</div>
+            <div class="mt-3 flex gap-2">
+              <button class="btn btn-primary btn-sm" @click="playSelectedGame">Play now</button>
+              <a v-if="selectedGameLaunchUrl.startsWith('/')" class="btn btn-sm" :href="selectedGameLaunchUrl" target="_blank" rel="noopener">Open in new tab</a>
+              <a v-else class="btn btn-sm" :href="selectedGameLaunchUrl" target="_blank" rel="noopener">Open link</a>
+            </div>
+          </div>
+          <div v-else class="p-3 rounded-xl border border-amber-500/30 bg-amber-500/10">
+            <div class="text-[11px] uppercase tracking-wider text-amber-200">Play</div>
+            <div class="text-sm text-slate-200">No launch URL configured for this game yet.</div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
