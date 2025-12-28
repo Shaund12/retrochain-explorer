@@ -13,6 +13,7 @@ const router = useRouter();
 const { getContractInfo, getCodeInfo, getContractCodeHash, smartQueryContract, getContractExecutions } = useContracts();
 const { address: walletAddress, connect, signAndBroadcast } = useKeplr();
 const toast = useToast();
+const { copyToClipboard } = toast;
 const { current: network, restBase } = useNetwork();
 
 const contractAddress = computed(() => String(route.params.address || ""));
@@ -182,12 +183,7 @@ const createdTxIndex = computed(() => contractInfo.value?.created?.tx_index);
 
 const copy = async (value?: string | null) => {
   if (!value) return;
-  try {
-    await navigator.clipboard?.writeText?.(value);
-    toast.showInfo("Copied to clipboard");
-  } catch {
-    // ignore
-  }
+  await copyToClipboard(value, "Copied");
 };
 
 const applyTemplate = (payload: string) => {

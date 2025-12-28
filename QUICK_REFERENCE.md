@@ -141,23 +141,23 @@ const handleConnect = async () => {
 |------|------|-------|----------|
 | warning | ?? | Yellow/Amber | Development, Beta |
 | info | ?? | Blue/Indigo | Information, Active |
-| danger | ?? | Red/Rose | Critical, Irreversible |
+| danger | ? | Red/Rose | Critical, Irreversible |
 
 ## File Locations
 
 ```
 src/
-??? composables/
-?   ??? useToast.ts          ? Toast composable
-??? components/
-?   ??? RcDisclaimer.vue     ? Disclaimer component
-??? views/
-?   ??? BuyView.vue          ? Has disclaimer
-?   ??? DexView.vue          ? Has disclaimer
-?   ??? StakingView.vue      ? Has disclaimer
-??? assets/
-?   ??? main.css             ? Toast styles
-??? main.ts                  ? Toast init
+?? composables/
+  ?? useToast.ts          ? Toast composable
+?? components/
+  ?? RcDisclaimer.vue     ? Disclaimer component
+?? views/
+  ?? BuyView.vue          ? Has disclaimer
+  ?? DexView.vue          ? Has disclaimer
+  ?? StakingView.vue      ? Has disclaimer
+?? assets/
+  ?? main.css             ? Toast styles
+?? main.ts                ? Toast init
 ```
 
 ## Configuration

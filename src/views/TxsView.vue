@@ -1,15 +1,18 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from "vue";
 import { useTxs } from "@/composables/useTxs";
+import { useBlocks } from "@/composables/useBlocks";
 import { useRouter } from "vue-router";
 import dayjs from "dayjs";
 import { formatCoins } from "@/utils/format";
 import { getTokenMeta } from "@/constants/tokens";
 import { useToast } from "@/composables/useToast";
+import RcTableToolbar from "@/components/RcTableToolbar.vue";
 
 const { txs, loading, error, searchRecent } = useTxs();
+const { blocks, loading: blocksLoading, fetchLatest } = useBlocks();
 const router = useRouter();
-const { copyToClipboard } = useToast();
+const { copyToClipboard, shareLink } = useToast();
 
 const STORAGE_KEY = "retrochain.txsView";
 
@@ -97,6 +100,7 @@ const filteredTxs = computed(() =>
 );
 
 const copy = async (text: string) => copyToClipboard(text, "Copied");
+const sharePage = async () => shareLink();
 
 watch([statusFilter, messageFilter, limit], () => {
   safeWrite({ status: statusFilter.value, msg: messageFilter.value, limit: limit.value });
@@ -215,12 +219,33 @@ const loadMore = async () => {
 };
 
 onMounted(async () => {
+  fetchLatest(8);
   await searchRecent(limit.value);
 });
 </script>
 
 <template>
   <div class="card">
+    <div class="mb-3">
+      <div class="flex items-center justify-between mb-2">
+        <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Latest blocks</div>
+        <button class="btn text-[10px]" @click="fetchLatest(8)" :disabled="blocksLoading">{{ blocksLoading ? '…' : 'Refresh' }}</button>
+      </div>
+      <div class="flex flex-wrap gap-2">
+        <button
+          v-for="b in blocks.slice(0, 8)"
+          :key="b.height"
+          class="px-2 py-1 rounded-md border border-slate-800 bg-slate-900/60 hover:bg-slate-900/90 transition text-[11px] text-slate-200"
+          @click="router.push({ name: 'block-detail', params: { height: b.height } })"
+        >
+          <span class="font-mono">#{{ b.height }}</span>
+          <span class="text-slate-500 ml-2">{{ dayjs(b.time).fromNow() }}</span>
+          <span class="text-slate-400 ml-2">·</span>
+          <span class="text-slate-300 ml-2">{{ (b.txs ?? 0) }} tx</span>
+        </button>
+      </div>
+    </div>
+
     <div class="grid grid-cols-2 sm:grid-cols-4 gap-3 mb-4 text-xs">
       <div class="p-3 rounded-lg border border-slate-800 bg-slate-900/60">
         <div class="text-[11px] uppercase tracking-[0.2em] text-slate-500">Total</div>
@@ -260,6 +285,7 @@ onMounted(async () => {
           <button class="btn text-[10px]" :class="statusFilter==='all' ? 'border-indigo-400/70 bg-indigo-500/10' : ''" @click="statusFilter='all'">All</button>
           <button class="btn text-[10px]" :class="statusFilter==='success' ? 'border-emerald-400/70 bg-emerald-500/10' : ''" @click="statusFilter='success'">Success</button>
           <button class="btn text-[10px]" :class="statusFilter==='failed' ? 'border-rose-400/70 bg-rose-500/10' : ''" @click="statusFilter='failed'">Failed</button>
+          <span class="badge text-[10px] border-slate-700 text-slate-300 ml-1">Showing {{ filteredTxs.length }} / {{ totalTxs }}</span>
         </div>
         <div class="flex flex-wrap items-center gap-2 mt-2 text-[11px] text-slate-400">
           <span class="uppercase tracking-[0.2em]">Message Type</span>
@@ -319,6 +345,24 @@ onMounted(async () => {
 
     <table class="table">
       <thead>
+        <tr>
+          <th colspan="5" class="p-0">
+            <RcTableToolbar label="Tx feed">
+              <button class="btn text-[10px]" @click.stop="sharePage()">Share</button>
+              <button class="btn text-[10px]" @click.stop="searchRecent(limit)" :disabled="loading">
+                {{ loading ? 'Loading…' : 'Refresh' }}
+              </button>
+              <button
+                v-if="txs.length >= limit"
+                class="btn text-[10px]"
+                @click.stop="loadMore"
+                :disabled="loading"
+              >
+                Load more
+              </button>
+            </RcTableToolbar>
+          </th>
+        </tr>
         <tr class="text-xs text-slate-300">
           <th>Hash &amp; Status</th>
           <th>Height</th>
@@ -331,7 +375,7 @@ onMounted(async () => {
         <tr
           v-for="t in filteredTxs"
           :key="t.hash"
-          class="cursor-pointer"
+          class="cursor-pointer hover:bg-white/5 transition-colors"
           @click="router.push({ name: 'tx-detail', params: { hash: t.hash } })"
         >
           <td class="font-mono text-[11px]">
