@@ -1,0 +1,206 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>Retrochain Arcade - RetroNoid</title>
+    <style>
+      :root {
+        color-scheme: dark;
+        --bg: #070A12;
+        --panel: rgba(255, 255, 255, 0.06);
+        --text: rgba(255, 255, 255, 0.92);
+        --muted: rgba(255, 255, 255, 0.65);
+        --border: rgba(255, 255, 255, 0.10);
+        --accent: rgba(132, 87, 255, 1);
+        --good: rgba(80, 220, 140, 1);
+        --bad: rgba(255, 90, 120, 1);
+      }
+
+      * { box-sizing: border-box; }
+      html, body { height: 100%; overflow: hidden; }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
+        background: radial-gradient(1200px 800px at 20% 10%, rgba(132, 87, 255, 0.25), transparent 55%),
+                    radial-gradient(900px 600px at 80% 30%, rgba(80, 220, 140, 0.12), transparent 60%),
+                    var(--bg);
+        color: var(--text);
+        overflow: hidden;
+        display: flex;
+        align-items: center;
+        justify-content: center;
+        min-height: 100vh;
+      }
+
+      /* Match RetroVaders: centered shell that fits without page scrolling */
+      .wrap {
+        width: min(1400px, 98vw);
+        height: 100vh;
+        margin: 0 auto;
+        padding: 14px 14px 12px;
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
+        border-radius: 16px;
+        display: flex;
+        flex-direction: column;
+        min-height: 0;
+      }
+
+      header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 0 4px 10px; border-bottom: 1px solid var(--border); }
+      h1 { margin: 0; font-size: 22px; letter-spacing: 0.2px; }
+      .sub { color: var(--muted); font-size: 13px; margin-top: 6px; line-height: 1.55; }
+
+      .row { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 12px; flex: 1; min-height: 0; }
+      @media (min-width: 900px) { .row { grid-template-columns: 1fr 320px; } }
+
+      .card {
+        border: 1px solid var(--border);
+        background: linear-gradient(180deg, var(--panel), rgba(255,255,255,0.03));
+        border-radius: 14px;
+        padding: 12px;
+        min-height: 0;
+      }
+
+      .game-card { display: flex; flex-direction: column; min-height: 0; }
+      .side-card { overflow: auto; }
+
+      .canvas-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
+
+      .hud { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
+      .pill {
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+        padding: 6px 10px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.08);
+        font-size: 12px;
+        color: rgba(255,255,255,0.82);
+      }
+
+      button {
+        border: 1px solid var(--border);
+        background: rgba(255,255,255,0.06);
+        color: rgba(255,255,255,0.92);
+        padding: 10px 12px;
+        border-radius: 12px;
+        font-weight: 700;
+        cursor: pointer;
+      }
+      button.primary {
+        background: linear-gradient(180deg, rgba(132,87,255,0.30), rgba(132,87,255,0.12));
+        border-color: rgba(132,87,255,0.40);
+      }
+      button:focus-visible { outline: 2px solid rgba(132,87,255,0.55); outline-offset: 2px; }
+
+      canvas {
+        width: 100%;
+        height: 100%;
+        max-height: 100%;
+        max-width: 100%;
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        display: block;
+        background: rgba(0,0,0,0.25);
+        touch-action: none;
+        user-select: none;
+        -webkit-user-select: none;
+        -webkit-tap-highlight-color: transparent;
+      }
+
+      /* Mobile ergonomics (tap targets + spacing) */
+      @media (max-width: 520px) {
+        .wrap { padding: 14px 14px 12px; }
+        .controls { gap: 8px; }
+        .controls button { min-height: 44px; padding: 12px 14px; }
+        .controls .pill { min-height: 38px; padding: 8px 10px; }
+        #touchPowerups button { flex: 1 1 92px; }
+      }
+
+      .k { color: var(--muted); font-size: 12px; }
+      .ok { color: rgba(120, 255, 200, 1); }
+      .bad { color: rgba(255, 120, 140, 1); }
+
+      .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+      .hr { height: 1px; background: var(--border); margin: 12px 0; }
+      code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; }
+    </style>
+  </head>
+
+  <body>
+    <div class="wrap">
+      <header>
+        <div>
+          <h1>RetroNoid</h1>
+          <div class="sub">Powered by Retrochain Arcade</div>
+        </div>
+        <div class="pill">Path: <code>/retronoid/</code></div>
+      </header>
+
+      <div class="row">
+        <div class="card game-card">
+          <div class="hud">
+            <div class="pill">Score: <span id="score">0</span></div>
+            <div class="pill">Lives: <span id="lives">3</span></div>
+            <div class="pill">Level: <span id="level">1</span></div>
+            <div class="pill" id="status">Ready</div>
+          </div>
+
+          <div class="controls">
+            <button id="btnConnect">Connect Keplr</button>
+            <button id="btnInsert" disabled>Insert Coin</button>
+            <button id="btnRegister" style="display:none" disabled>Register RetroNoid</button>
+            <span class="pill" id="creditsPill">Credits: —</span>
+            <span class="pill" title="Sound on/off">
+              🔊 <input id="soundToggle" type="checkbox" checked style="margin-left: 6px;" />
+            </span>
+            <span class="pill" title="Volume" style="gap: 10px;">
+              Vol <input id="soundVol" type="range" min="0" max="100" value="45" style="width: 110px;" />
+            </span>
+            <button id="btnHome">Home</button>
+            <button id="btnStart" class="primary">Start</button>
+            <button id="btnPause">Pause</button>
+            <button id="btnReset">Reset</button>
+          </div>
+
+          <div class="controls" id="touchPowerups" style="display:none; margin-top: 10px; align-items: center;">
+            <span class="pill">Powerups</span>
+            <button id="btnPWide" type="button">Wide</button>
+            <button id="btnPSlow" type="button">Slow</button>
+            <button id="btnPMult" type="button">2×</button>
+          </div>
+
+          <div class="canvas-wrap">
+            <canvas id="game" width="1100" height="680" aria-label="RetroNoid game canvas"></canvas>
+          </div>
+
+          <div class="sub" style="margin-top: 10px;">
+            Controls: <code>←</code>/<code>→</code> move • <code>Space</code> launch • <code>P</code> pause • Mouse/touch drag supported • Tap to launch.
+          </div>
+        </div>
+
+        <div class="card side-card">
+          <div style="font-weight: 800; letter-spacing: 0.2px;">How it works</div>
+          <div class="sub">
+            - Keep the ball in play with your paddle.
+            <br />
+            - Each brick is worth points; some bricks take 2 hits.
+            <br />
+            - Clear all bricks to advance.
+          </div>
+
+          <div class="hr"></div>
+
+          <div style="font-weight: 800; letter-spacing: 0.2px;">Notes</div>
+          <div class="sub">
+            Connect Keplr  Insert Coin  Start. A session is started on-chain and your final score is submitted when you hit Game Over.
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <script src="./main.js"></script>
+  </body>
+</html>
