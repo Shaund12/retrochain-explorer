@@ -133,7 +133,21 @@ onMounted(() => {
 <template>
 <div class="min-h-screen flex flex-col" :class="themeClass">
   <!-- Toaster -->
-  <Toaster position="top-right" theme="dark" rich-colors close-button duration="5200" offset="12px" />
+  <Toaster
+    position="top-right"
+    theme="dark"
+    rich-colors
+    close-button
+    duration="5200"
+    offset="12px"
+    :icons="{
+      success: () => '✅',
+      info: () => 'ℹ️',
+      warning: () => '⚠️',
+      error: () => '⛔',
+      loading: () => '🔌'
+    }"
+  />
   <div v-if="activeHoliday === 'christmas'" class="festive-snow" :class="`snow-${snowLevel}`" aria-hidden="true"></div>
   <div v-if="activeHoliday === 'christmas'" class="festive-lights" aria-hidden="true">
     <span v-for="n in 32" :key="n" class="bulb" :style="{ '--i': n }"></span>

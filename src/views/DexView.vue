@@ -1739,12 +1739,12 @@ const handleCreatePool = async () => {
   </div>
 </div>
 
-  <!-- Bridge experience (always available; gated by tab only when DEX is enabled) -->
+  <!-- IBC experience (always available; gated by tab only when DEX is enabled) -->
   <div v-if="dexFeaturesEnabled ? activeTab === 'bridge' : true" class="space-y-4 max-w-2xl mx-auto">
     <div class="card">
       <div class="flex items-center justify-between mb-3">
         <div>
-          <h2 class="text-sm font-semibold text-slate-100">IBC Transfer · Cosmos Hub</h2>
+          <h2 class="text-sm font-semibold text-slate-100">IBC Transfer</h2>
           <p class="text-[11px] text-slate-500 mt-1">
             Retro channel:
             <span class="font-mono text-slate-300">{{ retroToCosmosChannel }}</span>
