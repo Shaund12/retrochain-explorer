@@ -42,7 +42,8 @@ export function useChainInfo() {
         const header = block.header ?? {};
         const height = header.height ? parseInt(header.height, 10) : NaN;
         const time = header.time;
-        const totalTxs = header.total_txs ? parseInt(header.total_txs, 10) : NaN;
+        const totalTxsRaw = (header as any).total_txs ?? (header as any).totalTxs ?? (block as any)?.block?.header?.total_txs;
+        const totalTxs = totalTxsRaw ? parseInt(String(totalTxsRaw), 10) : NaN;
         info.value.latestBlockHeight = height;
         info.value.latestBlockTime = time
           ? dayjs(time).format("YYYY-MM-DD HH:mm:ss")
@@ -87,9 +88,7 @@ export function useChainInfo() {
         }
       }
 
-      if (headerTotalTxs !== null) {
-        info.value.totalTxs = headerTotalTxs;
-      }
+      info.value.totalTxs = headerTotalTxs;
     } catch (e: any) {
       error.value = e?.message ?? String(e);
     } finally {
