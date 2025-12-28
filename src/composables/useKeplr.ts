@@ -898,12 +898,34 @@ export function useKeplr() {
       }
 
       const { txBytesBase64 } = await signTx(feeToUse, "broadcast");
-      const broadcastRes = await api.post("/cosmos/tx/v1beta1/txs", {
-        tx_bytes: txBytesBase64,
-        mode: "BROADCAST_MODE_SYNC"
-      });
+      const broadcastRes = await api.post(
+        "/cosmos/tx/v1beta1/txs",
+        {
+          tx_bytes: txBytesBase64,
+          mode: "BROADCAST_MODE_SYNC"
+        },
+        {
+          // Prevent axios from trying to JSON-parse HTML error pages.
+          // We'll detect it and surface a clearer message.
+          transformResponse: [(data) => data]
+        }
+      );
 
-      const txResponse = broadcastRes.data?.tx_response;
+      let payload: any;
+      const raw = broadcastRes.data;
+      if (typeof raw === "string") {
+        const trimmed = raw.trim();
+        if (trimmed.startsWith("<")) {
+          throw new Error(
+            "REST broadcast returned HTML (likely proxy/routing issue). Check VITE_REST_API_URL and that /api proxies to the chain REST endpoint."
+          );
+        }
+        payload = JSON.parse(trimmed);
+      } else {
+        payload = raw;
+      }
+
+      const txResponse = payload?.tx_response;
       if (txResponse?.code !== 0) {
         throw new Error(txResponse?.raw_log || txResponse?.log || "Transaction failed");
       }
