@@ -218,6 +218,16 @@ const sessions7d = computed(() =>
   chartDays.value.map((d) => sessionsList.value.filter((s: any) => dayjs(s.started_at).isSame(d, "day")).length)
 );
 
+const avgLevel7d = computed(() =>
+  chartDays.value.map((d) => {
+    const daySessions = sessionsList.value.filter((s: any) => dayjs(s.started_at).isSame(d, "day"));
+    if (!daySessions.length) return 0;
+    const levels = daySessions.map((s: any) => Number(s.level_reached ?? 0)).filter((n) => Number.isFinite(n));
+    if (!levels.length) return 0;
+    return Number((levels.reduce((a, b) => a + b, 0) / levels.length).toFixed(2));
+  })
+);
+
 const achievements7d = computed(() =>
   chartDays.value.map((d) => achievementsList.value.filter((a: any) => dayjs(a.unlocked_at).isSame(d, "day")).length)
 );
@@ -226,6 +236,58 @@ const apexSeries = computed(() => [
   { name: "Sessions", data: sessions7d.value },
   { name: "Achievements", data: achievements7d.value }
 ]);
+
+const apexLevelSeries = computed(() => [{ name: "Avg Level", data: avgLevel7d.value }]);
+
+const apexLevelOptions = computed(() => ({
+  chart: { toolbar: { show: false }, background: "transparent", foreColor: "#cbd5e1" },
+  theme: { mode: "dark" },
+  dataLabels: { enabled: false },
+  stroke: { curve: "smooth", width: 3 },
+  fill: {
+    type: "gradient",
+    gradient: { shadeIntensity: 0.8, opacityFrom: 0.25, opacityTo: 0.05, stops: [0, 50, 100] }
+  },
+  grid: { borderColor: "rgba(148,163,184,0.25)", strokeDashArray: 3 },
+  xaxis: {
+    categories: chartCategories.value,
+    axisBorder: { color: "rgba(148,163,184,0.3)" },
+    axisTicks: { color: "rgba(148,163,184,0.3)" },
+    labels: { style: { colors: chartCategories.value.map(() => "#94a3b8") } }
+  },
+  yaxis: { labels: { style: { colors: ["#94a3b8"] } }, min: 0, forceNiceScale: true },
+  legend: { labels: { colors: "#e2e8f0" } },
+  colors: ["#60a5fa"]
+}));
+
+const highestLevelEver = computed(() => {
+  const levels = sessionsList.value.map((s: any) => Number(s.level_reached ?? 0)).filter((n) => Number.isFinite(n));
+  return levels.length ? Math.max(...levels) : 0;
+});
+
+const highestLevelToday = computed(() => {
+  const levels = sessionsList.value
+    .filter((s: any) => dayjs(s.started_at).isAfter(dayjs().startOf("day")))
+    .map((s: any) => Number(s.level_reached ?? 0))
+    .filter((n) => Number.isFinite(n));
+  return levels.length ? Math.max(...levels) : 0;
+});
+
+const topLevelClimbers = computed(() => {
+  const bestByPlayer = new Map<string, { player: string; level: number; score: number; gameId?: string }>();
+  sessionsList.value.forEach((s: any) => {
+    const player = (s?.player || "").toString();
+    if (!player) return;
+    const level = Number(s?.level_reached ?? 0);
+    if (!Number.isFinite(level)) return;
+    const score = Number(s?.score ?? 0);
+    const current = bestByPlayer.get(player);
+    if (!current || level > current.level || (level === current.level && score > current.score)) {
+      bestByPlayer.set(player, { player, level, score: Number.isFinite(score) ? score : 0, gameId: s?.game_id });
+    }
+  });
+  return [...bestByPlayer.values()].sort((a, b) => b.level - a.level || b.score - a.score).slice(0, 5);
+});
 
 const apexOptions = computed(() => ({
   chart: { toolbar: { show: false }, background: "transparent", foreColor: "#cbd5e1" },
@@ -527,6 +589,14 @@ const achievementIcon = (a: any) => {
         </div>
         <div class="text-xs text-slate-400">Sum across leaderboard</div>
       </div>
+
+      <div class="card border-sky-500/40 bg-sky-500/10">
+        <div class="text-[11px] uppercase tracking-wider text-slate-300">Highest Level</div>
+        <div class="text-3xl font-extrabold text-white flex items-center gap-2">
+          🧗 <span>{{ highestLevelEver.toLocaleString() }}</span>
+        </div>
+        <div class="text-xs text-slate-400">Best level reached across all sessions</div>
+      </div>
     </div>
 
     <div class="card">
@@ -537,6 +607,17 @@ const achievementIcon = (a: any) => {
       <div v-if="sessionsList.length === 0 && achievementsList.length === 0" class="text-xs text-slate-400">No activity yet.</div>
       <div v-else>
         <ApexChart type="area" height="240" :options="apexOptions" :series="apexSeries" />
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-slate-100">Level Momentum</h2>
+        <span class="text-[11px] text-slate-400">Average level reached (7d)</span>
+      </div>
+      <div v-if="sessionsList.length === 0" class="text-xs text-slate-400">No sessions yet.</div>
+      <div v-else>
+        <ApexChart type="area" height="220" :options="apexLevelOptions" :series="apexLevelSeries" />
       </div>
     </div>
 
@@ -560,6 +641,34 @@ const achievementIcon = (a: any) => {
         <div class="text-[11px] uppercase tracking-wider text-slate-300">Most Played</div>
         <div class="text-3xl font-extrabold text-white flex items-center gap-2">🎲 <span>{{ mostPlayedGame?.gameId ?? '—' }}</span></div>
         <div class="text-xs text-slate-400">Plays: {{ mostPlayedGame?.count ?? '—' }}</div>
+      </div>
+
+      <div class="card lg:col-span-3">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-sm font-semibold text-slate-100">Top Level Climbers</h2>
+          <span class="text-[11px] text-slate-400">Highest level reached per player</span>
+        </div>
+        <div class="flex flex-wrap gap-2 text-[11px] mb-3">
+          <span class="px-2 py-1 rounded bg-sky-500/10 text-sky-200 border border-sky-400/30">Highest today: {{ highestLevelToday }}</span>
+          <span class="px-2 py-1 rounded bg-indigo-500/10 text-indigo-200 border border-indigo-400/30">Highest ever: {{ highestLevelEver }}</span>
+        </div>
+        <div v-if="topLevelClimbers.length === 0" class="text-xs text-slate-400">No level data yet.</div>
+        <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-2">
+          <div
+            v-for="p in topLevelClimbers"
+            :key="p.player"
+            class="p-3 rounded-lg bg-slate-900/60 border border-sky-400/30 flex items-center justify-between"
+          >
+            <div>
+              <div class="text-sm font-semibold text-white">{{ shortAddr(p.player, 14) }}</div>
+              <div class="text-[11px] text-slate-400">Game: {{ p.gameId || '—' }}</div>
+            </div>
+            <div class="text-right">
+              <div class="text-sky-200 font-extrabold text-lg">Lvl {{ p.level }}</div>
+              <div class="text-[11px] text-emerald-300">Score {{ Number(p.score || 0).toLocaleString() }}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
