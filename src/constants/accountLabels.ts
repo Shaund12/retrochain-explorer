@@ -59,19 +59,19 @@ const RAW_LABELS: Record<string, AccountLabelMeta> = {
   "cosmos1f05vqgh9ufgfykn3g8zx45j273x0kxaj23akuz": {
     id: "ibc_relayer",
     label: "IBC Relayer Hot Wallet",
-    description: "Target: 4,998.572638 RETRO (~0.01%). Hot wallet for packet fees and relays between partner zones.",
+    description: "Buffer ~ 5,000 RETRO. Packet fees + relay ops between zones (small topped-up wallet).",
     icon: "🔁"
   },
   "cosmos1jv65s3grqf6v6jl3dp4t6c9t9rk99cd88lyufl": {
     id: "staking_rewards_vault",
     label: "Commission Sweep (Auto)",
-    description: "Target: 162,508.513858 RETRO (~0.16%). Automated commission sweep/routing wallet—not user staking rewards.",
+    description: "No target (auto / variable). Auto-filled and routed by commission sweep logic; show live balance only.",
     icon: "🏦"
   },
   "cosmos1wa0cujn3n478pnh6x37xhv99h7t3mnfyjs8pp8": {
     id: "claimdrop_reserve",
-    label: "Claimdrop Reserve",
-    description: "Claimable RETRO distribution pool for claimdrop recipients.",
+    label: "Claimdrop Pool",
+    description: "Target: 250,000.000000 RETRO. Claimdrop distribution pool (e.g., 1,000 × 250).",
     icon: "🎉"
   }
 };

@@ -12,13 +12,15 @@ const TARGETS_URETRO: Record<string, string> = {
   foundation_validator: "10000000000000", // 10,000,000
   ecosystem_rewards: "35000000000000", // 35,000,000
   liquidity_fund: "10000000000000", // 10,000,000
-  community_fund: "8721193994610", // 8,721,193.994610
+  community_pool: "20000000000000", // 20,000,000
   dev_fund: "8000000000000", // 8,000,000
+  community_fund: "8721193994610", // 8,721,193.994610
   dev_profit: "6000000000000", // 6,000,000
   kitty_charity: "1007310758033", // 1,007,310.758033
-  community_pool: "20000000000000", // 20,000,000
-  ibc_relayer: "4998572638", // 4,998.572638
-  staking_rewards_vault: "162508513858" // 162,508.513858
+  claimdrop_reserve: "250000000000", // 250,000
+  // System wallets (no targets)
+  ibc_relayer: "", // buffer wallet (~5,000) - show live balance only
+  staking_rewards_vault: "" // commission sweep router - show live balance only
 };
 
 type LabeledWallet = WalletSummary & {
@@ -48,7 +50,7 @@ const ecosystemAccounts = computed(() =>
       return {
         ...acc,
         targetUretro: targetBig,
-        targetDisplay: targetBig ? formatAmount(targetBig.toString(), acc.denom, { minDecimals: 2, maxDecimals: 2 }) : undefined,
+        targetDisplay: targetBig && targetBig > 0n ? formatAmount(targetBig.toString(), acc.denom, { minDecimals: 2, maxDecimals: 2 }) : undefined,
         coveragePct: coverage
       } as LabeledWallet;
     })
@@ -58,9 +60,7 @@ const totalBalance = computed(() =>
   ecosystemAccounts.value.reduce((sum, acc) => sum + parseInt(acc.balance || '0'), 0)
 );
 
-const totalTarget = computed(() => {
-  return ecosystemAccounts.value.reduce((sum, acc) => sum + (acc.targetUretro ?? 0n), 0n);
-});
+const totalTarget = computed(() => ecosystemAccounts.value.reduce((sum, acc) => sum + (acc.targetUretro ?? 0n), 0n));
 
 const totalCoverage = computed(() => {
   if (!totalTarget.value) return null;
