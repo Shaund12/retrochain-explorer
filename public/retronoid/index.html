@@ -18,7 +18,7 @@
       }
 
       * { box-sizing: border-box; }
-      html, body { height: 100%; overflow: hidden; }
+      html, body { height: 100%; overflow-x: hidden; }
       body {
         margin: 0;
         font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Helvetica, Arial;
@@ -26,19 +26,17 @@
                     radial-gradient(900px 600px at 80% 30%, rgba(80, 220, 140, 0.12), transparent 60%),
                     var(--bg);
         color: var(--text);
-        overflow: hidden;
-        display: flex;
-        align-items: center;
-        justify-content: center;
+        overflow-x: hidden;
+        overflow-y: auto;
         min-height: 100vh;
       }
 
       /* Match RetroVaders: centered shell that fits without page scrolling */
       .wrap {
-        width: min(1400px, 98vw);
-        height: 100vh;
+        width: min(1600px, 99vw);
+        min-height: 100vh;
         margin: 0 auto;
-        padding: 14px 14px 12px;
+        padding: 12px 10px 10px;
         border: 1px solid var(--border);
         background: linear-gradient(180deg, rgba(255,255,255,0.06), rgba(255,255,255,0.03));
         border-radius: 16px;
@@ -47,25 +45,94 @@
         min-height: 0;
       }
 
+      /* Fullscreen: prevent page scroll + remove outer chrome spacing */
+      body.is-fs {
+        overflow: hidden;
+      }
+
+      body.is-fs .wrap {
+        width: 100vw;
+        max-width: none;
+        min-height: 100vh;
+        border-radius: 0;
+        border-left: 0;
+        border-right: 0;
+      }
+
       header { display: flex; align-items: center; justify-content: space-between; gap: 12px; flex-wrap: wrap; padding: 0 4px 10px; border-bottom: 1px solid var(--border); }
       h1 { margin: 0; font-size: 22px; letter-spacing: 0.2px; }
       .sub { color: var(--muted); font-size: 13px; margin-top: 6px; line-height: 1.55; }
 
-      .row { display: grid; grid-template-columns: 1fr; gap: 12px; margin-top: 12px; flex: 1; min-height: 0; }
+      .row { display: grid; grid-template-columns: 1fr; gap: 10px; margin-top: 10px; flex: 1; min-height: 0; }
       @media (min-width: 900px) { .row { grid-template-columns: 1fr 320px; } }
+
+      /* Give the game more horizontal room in windowed mode */
+      @media (min-width: 1080px) {
+        .row { grid-template-columns: 1fr 280px; }
+      }
+
+      .row.sidebar-collapsed { grid-template-columns: 1fr; }
+      .row.sidebar-collapsed .side-card { display: none; }
 
       .card {
         border: 1px solid var(--border);
         background: linear-gradient(180deg, var(--panel), rgba(255,255,255,0.03));
         border-radius: 14px;
-        padding: 12px;
+        padding: 10px;
         min-height: 0;
+      }
+
+      /* Fullscreen API applies styles to the fullscreen element, not :fullscreen body */
+      .game-card:fullscreen {
+        width: 100vw;
+        height: 100vh;
+        margin: 0;
+        border-radius: 0;
+      }
+
+      /* Fullscreen mode: let the game card fill the container */
+      .game-card.is-fullscreen {
+        padding: 10px;
+      }
+
+      /* In fullscreen, make the canvas area truly center and use all available space */
+      .game-card.is-fullscreen .canvas-wrap {
+        margin-top: 10px;
+        min-height: 0;
+        align-items: center;
+        justify-content: center;
       }
 
       .game-card { display: flex; flex-direction: column; min-height: 0; }
       .side-card { overflow: auto; }
 
-      .canvas-wrap { flex: 1; min-height: 0; display: flex; align-items: center; justify-content: center; margin-top: 10px; }
+      .canvas-wrap {
+        flex: 1;
+        min-height: 0;
+        display: grid;
+        place-items: center;
+        margin-top: 6px;
+        width: 100%;
+      }
+
+      /* Non-fullscreen: keep a stable canvas size and allow the page to scroll */
+      .game-card:not(.is-fullscreen) .canvas-wrap {
+        flex: 0 0 auto;
+        max-height: min(62vh, 620px);
+      }
+
+      .game-card:not(.is-fullscreen) canvas {
+        width: 100%;
+        height: auto;
+      }
+
+      .game-card {
+        align-items: center;
+      }
+
+      .game-card > * {
+        width: 100%;
+      }
 
       .hud { display: flex; gap: 10px; flex-wrap: wrap; align-items: center; justify-content: space-between; }
       .pill {
@@ -98,8 +165,10 @@
       canvas {
         width: 100%;
         height: 100%;
-        max-height: 100%;
         max-width: 100%;
+        max-height: 100%;
+        object-fit: contain;
+        margin: 0 auto;
         border: 1px solid var(--border);
         border-radius: 14px;
         display: block;
@@ -123,9 +192,19 @@
       .ok { color: rgba(120, 255, 200, 1); }
       .bad { color: rgba(255, 120, 140, 1); }
 
-      .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 10px; }
+      .controls { display: flex; gap: 8px; flex-wrap: wrap; margin-top: 8px; }
       .hr { height: 1px; background: var(--border); margin: 12px 0; }
       code { font-family: ui-monospace, SFMono-Regular, Menlo, Monaco, Consolas, monospace; font-size: 12px; }
+
+      .icon-btn {
+        padding: 8px 10px;
+        border-radius: 999px;
+        font-size: 12px;
+        line-height: 1;
+        display: inline-flex;
+        align-items: center;
+        gap: 8px;
+      }
     </style>
   </head>
 
@@ -139,8 +218,8 @@
         <div class="pill">Path: <code>/retronoid/</code></div>
       </header>
 
-      <div class="row">
-        <div class="card game-card">
+      <div class="row" id="layoutRow">
+        <div class="card game-card" id="gameCard">
           <div class="hud">
             <div class="pill">Score: <span id="score">0</span></div>
             <div class="pill">Lives: <span id="lives">3</span></div>
@@ -159,6 +238,14 @@
             <span class="pill" title="Volume" style="gap: 10px;">
               Vol <input id="soundVol" type="range" min="0" max="100" value="45" style="width: 110px;" />
             </span>
+            <span class="pill" title="Music on/off">
+              🎵 <input id="musicToggle" type="checkbox" checked style="margin-left: 6px;" />
+            </span>
+            <span class="pill" title="Bloom effect (GPU/CPU cost)">
+              ✨ <input id="bloomToggle" type="checkbox" checked style="margin-left: 6px;" />
+            </span>
+            <button id="btnSidebar" class="icon-btn" type="button" title="Toggle sidebar">ℹ️ Panel</button>
+            <button id="btnFullscreen" class="icon-btn" type="button" title="Fullscreen">⛶ Fullscreen</button>
             <button id="btnHome">Home</button>
             <button id="btnStart" class="primary">Start</button>
             <button id="btnPause">Pause</button>
@@ -181,7 +268,7 @@
           </div>
         </div>
 
-        <div class="card side-card">
+        <div class="card side-card" id="sideCard">
           <div style="font-weight: 800; letter-spacing: 0.2px;">How it works</div>
           <div class="sub">
             - Keep the ball in play with your paddle.
@@ -200,6 +287,129 @@
         </div>
       </div>
     </div>
+
+    <script>
+      (() => {
+        const row = document.getElementById('layoutRow');
+        const side = document.getElementById('sideCard');
+        const btnSidebar = document.getElementById('btnSidebar');
+        const btnFs = document.getElementById('btnFullscreen');
+        const gameCard = document.getElementById('gameCard');
+        const canvas = document.getElementById('game');
+
+        const KEY = 'rc1_retronoid_sidebar_open';
+        const KEY_FS = 'rc1_retronoid_fullscreen';
+
+        const baseCanvas = canvas ? { w: canvas.width, h: canvas.height } : { w: 1100, h: 680 };
+
+        const fitCanvasToContainer = () => {
+          if (!canvas) return;
+          // Only adjust internal resolution; CSS controls the element size.
+          const wrap = canvas.closest('.canvas-wrap');
+          if (!wrap) return;
+          const rect = wrap.getBoundingClientRect();
+          const cssW = Math.max(320, Math.floor(rect.width));
+          const cssH = Math.max(240, Math.floor(rect.height));
+          if (!Number.isFinite(cssW) || !Number.isFinite(cssH)) return;
+
+          const dpr = Math.max(1, Math.min(2.5, window.devicePixelRatio || 1));
+          const targetW = Math.floor(cssW * dpr);
+          const targetH = Math.floor(cssH * dpr);
+
+          if (canvas.width !== targetW) canvas.width = targetW;
+          if (canvas.height !== targetH) canvas.height = targetH;
+        };
+
+        const restoreCanvasBase = () => {
+          if (!canvas) return;
+          // Prefer matching the current layout size; falling back to the authored base size.
+          // This avoids keeping the fullscreen internal buffer after exiting fullscreen.
+          try {
+            fitCanvasToContainer();
+            return;
+          } catch {}
+          canvas.width = baseCanvas.w;
+          canvas.height = baseCanvas.h;
+        };
+
+        const applySidebar = (open) => {
+          if (!row) return;
+          row.classList.toggle('sidebar-collapsed', !open);
+          if (btnSidebar) btnSidebar.textContent = open ? 'ℹ️ Panel' : 'ℹ️ Panel (hidden)';
+          try { localStorage.setItem(KEY, open ? '1' : '0'); } catch {}
+          // Give the layout a tick to settle then resize the canvas.
+          setTimeout(fitCanvasToContainer, 40);
+        };
+
+        const readSidebar = () => {
+          try {
+            const raw = localStorage.getItem(KEY);
+            if (raw === '0') return false;
+            if (raw === '1') return true;
+          } catch {}
+          // Default: show panel on wide screens only.
+          return window.matchMedia && window.matchMedia('(min-width: 1100px)').matches;
+        };
+
+        if (btnSidebar) {
+          btnSidebar.addEventListener('click', () => {
+            const open = !(row && row.classList.contains('sidebar-collapsed'));
+            applySidebar(!open);
+          });
+        }
+
+        // Fullscreen uses the Fullscreen API; falls back gracefully.
+        const setFsBtn = () => {
+          const isFs = !!document.fullscreenElement;
+          if (btnFs) btnFs.textContent = isFs ? '⛶ Exit' : '⛶ Fullscreen';
+          if (isFs) {
+            setTimeout(fitCanvasToContainer, 60);
+          } else {
+            // After exiting fullscreen the layout changes; re-fit to the new container.
+            setTimeout(restoreCanvasBase, 80);
+          }
+        };
+
+        const toggleFullscreen = async () => {
+          if (!gameCard) return;
+          try {
+            if (!document.fullscreenElement) {
+              await gameCard.requestFullscreen();
+              gameCard.classList.add('is-fullscreen');
+              document.body && document.body.classList.add('is-fs');
+              try { localStorage.setItem(KEY_FS, '1'); } catch {}
+            } else {
+              await document.exitFullscreen();
+              gameCard.classList.remove('is-fullscreen');
+              document.body && document.body.classList.remove('is-fs');
+              try { localStorage.setItem(KEY_FS, '0'); } catch {}
+            }
+          } catch {
+            // ignore
+          }
+          setFsBtn();
+        };
+
+        if (btnFs) btnFs.addEventListener('click', () => void toggleFullscreen());
+        document.addEventListener('fullscreenchange', () => {
+          if (!document.fullscreenElement) {
+            gameCard && gameCard.classList.remove('is-fullscreen');
+            document.body && document.body.classList.remove('is-fs');
+            setTimeout(fitCanvasToContainer, 80);
+          }
+          setFsBtn();
+        });
+
+        window.addEventListener('resize', () => {
+          // Keep the backing buffer matched to the element size in both modes.
+          setTimeout(fitCanvasToContainer, 20);
+        });
+
+        // Init
+        applySidebar(readSidebar());
+        setFsBtn();
+      })();
+    </script>
 
     <script src="./main.js"></script>
   </body>

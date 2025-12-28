@@ -21,11 +21,14 @@
 
   const soundToggleEl = document.getElementById("soundToggle");
   const soundVolEl = document.getElementById("soundVol");
+  const musicToggleEl = document.getElementById("musicToggle");
 
   const touchPowerupsEl = document.getElementById("touchPowerups");
   const btnPWide = document.getElementById("btnPWide");
   const btnPSlow = document.getElementById("btnPSlow");
   const btnPMult = document.getElementById("btnPMult");
+
+  const bloomToggleEl = document.getElementById("bloomToggle");
 
   const GAME_ID = "retronoid";
   const DEV_PROFIT_ADDR = "cosmos1us0jjdd5dj0v499g959jatpnh6xuamwhwdrrgq";
@@ -83,20 +86,52 @@
   };
 
   // --- Game constants (simple, deterministic) ---
-  const W = canvas.width;
-  const H = canvas.height;
+  // Logical world size (stable gameplay). Canvas pixels may change for HiDPI/fullscreen.
+  const WORLD_W = 1100;
+  const WORLD_H = 680;
+
+  // Back-compat aliases: older code paths and cached clients may still reference W/H.
+  // Keep them defined so the game never hard-crashes.
+  const W = WORLD_W;
+  const H = WORLD_H;
+
+  let scaleX = 1;
+  let scaleY = 1;
+  let viewScale = 1;
+  let viewOffX = 0;
+  let viewOffY = 0;
+
+  function syncCanvasScale() {
+    const cw = Number(canvas.width) || WORLD_W;
+    const ch = Number(canvas.height) || WORLD_H;
+
+    // Use uniform scale to preserve aspect ratio and center (letterbox). This avoids
+    // cropping/zooming surprises when switching between fullscreen and windowed.
+    viewScale = Math.min(cw / WORLD_W, ch / WORLD_H);
+    viewOffX = Math.floor((cw - WORLD_W * viewScale) * 0.5);
+    viewOffY = Math.floor((ch - WORLD_H * viewScale) * 0.5);
+
+    scaleX = viewScale;
+    scaleY = viewScale;
+
+    // Center the logical world in the available pixel buffer.
+    ctx.setTransform(viewScale, 0, 0, viewScale, viewOffX, viewOffY);
+  }
+
+  // Keep scale in sync if canvas internal size is changed by the page (fullscreen/HiDPI).
+  syncCanvasScale();
 
   const paddle = {
     w: 140,
     h: 14,
-    x: (W - 140) / 2,
-    y: H - 40,
+    x: (WORLD_W - 140) / 2,
+    y: WORLD_H - 40,
     speed: 880,
   };
 
   const ball = {
     r: 8,
-    x: W / 2,
+    x: WORLD_W / 2,
     y: paddle.y - 8 - 1,
     vx: 0,
     vy: 0,
@@ -173,6 +208,69 @@
   const BASE_PADDLE_W = paddle.w;
   const UI_FONT_FAMILY = (typeof getComputedStyle === "function" ? getComputedStyle(document.body).fontFamily : "") || "system-ui";
 
+  // --- Bloom / glow post-processing (no libs) ---
+  const BLOOM_KEY = `rc1_retronoid_bloom_${GAME_ID}`;
+  let bloomEnabled = true;
+  const bloomCanvas = document.createElement("canvas");
+  const bloomCtx = bloomCanvas.getContext("2d", { alpha: true });
+
+  function loadBloomPref() {
+    try {
+      const v = localStorage.getItem(BLOOM_KEY);
+      if (v != null) bloomEnabled = v !== "0";
+    } catch {
+      // ignore
+    }
+  }
+
+  function saveBloomPref() {
+    try {
+      localStorage.setItem(BLOOM_KEY, bloomEnabled ? "1" : "0");
+    } catch {
+      // ignore
+    }
+  }
+
+  function ensureBloomBuffer() {
+    if (!bloomCtx) return;
+    // Match main canvas pixel resolution.
+    if (bloomCanvas.width !== canvas.width) bloomCanvas.width = canvas.width;
+    if (bloomCanvas.height !== canvas.height) bloomCanvas.height = canvas.height;
+    bloomCtx.setTransform(1, 0, 0, 1, 0, 0);
+  }
+
+  function applyBloomPass() {
+    if (!bloomEnabled || !bloomCtx) return;
+    ensureBloomBuffer();
+
+    try {
+      // Copy current framebuffer.
+      bloomCtx.clearRect(0, 0, bloomCanvas.width, bloomCanvas.height);
+      bloomCtx.globalCompositeOperation = "source-over";
+      bloomCtx.filter = "none";
+      bloomCtx.drawImage(canvas, 0, 0);
+    } catch {
+      return;
+    }
+
+    // Blur the copied image, then add it back with lighter blending.
+    const blurPx = Math.max(6, Math.min(18, Math.round(Math.max(canvas.width, canvas.height) * 0.008)));
+    try {
+      ctx.save();
+      ctx.setTransform(1, 0, 0, 1, 0, 0);
+      ctx.globalCompositeOperation = "lighter";
+      ctx.globalAlpha = 0.22;
+      ctx.filter = `blur(${blurPx}px) saturate(1.25)`;
+      ctx.drawImage(bloomCanvas, 0, 0);
+      ctx.filter = "none";
+      ctx.globalAlpha = 1;
+      ctx.globalCompositeOperation = "source-over";
+      ctx.restore();
+    } catch {
+      // ignore
+    }
+  }
+
   // --- Sound (no assets): lightweight WebAudio synth ---
   const SOUND_KEY = `rc1_retronoid_sound_${GAME_ID}`;
   const SOUND_VOL_KEY = `rc1_retronoid_sound_vol_${GAME_ID}`;
@@ -181,22 +279,34 @@
   let soundVol = 0.45;
   let audioCtx = null;
   let masterGain = null;
+  let musicEnabled = true;
+  let musicGain = null;
+  let musicTimer = null;
+  let musicStep = 0;
+
+  const MUSIC_KEY = `rc1_retronoid_music_${GAME_ID}`;
 
   function readSoundPrefs() {
     try {
       const raw = localStorage.getItem(SOUND_KEY);
       if (raw != null) soundEnabled = raw !== "0";
+      const m = localStorage.getItem(MUSIC_KEY);
+      if (m != null) musicEnabled = m !== "0";
       const v = Number(localStorage.getItem(SOUND_VOL_KEY));
       if (Number.isFinite(v)) soundVol = Math.max(0, Math.min(1, v));
     } catch {
       // ignore
     }
+
+    // Post: bloom/glow overlay
+    applyBloomPass();
   }
 
   function writeSoundPrefs() {
     try {
       localStorage.setItem(SOUND_KEY, soundEnabled ? "1" : "0");
       localStorage.setItem(SOUND_VOL_KEY, String(soundVol));
+      localStorage.setItem(MUSIC_KEY, musicEnabled ? "1" : "0");
     } catch {
       // ignore
     }
@@ -211,7 +321,82 @@
     masterGain = audioCtx.createGain();
     masterGain.gain.value = Math.max(0, Math.min(1, soundVol));
     masterGain.connect(audioCtx.destination);
+
+    musicGain = audioCtx.createGain();
+    musicGain.gain.value = 0.18;
+    musicGain.connect(masterGain);
     return audioCtx;
+  }
+
+  function stopMusic() {
+    if (musicTimer) {
+      clearInterval(musicTimer);
+      musicTimer = null;
+    }
+  }
+
+  function musicNote(freq, dur, type, gainVal) {
+    if (!musicEnabled || !soundEnabled) return;
+    const ctx = ensureAudio();
+    if (!ctx || !musicGain || ctx.state === "suspended") return;
+    const now = ctx.currentTime;
+    const osc = ctx.createOscillator();
+    const g = ctx.createGain();
+    osc.type = type || "triangle";
+    osc.frequency.setValueAtTime(freq, now);
+    g.gain.setValueAtTime(0.0001, now);
+    g.gain.exponentialRampToValueAtTime(Math.max(0.0002, gainVal || 0.06), now + 0.01);
+    g.gain.exponentialRampToValueAtTime(0.0001, now + Math.max(0.03, dur || 0.12));
+    osc.connect(g);
+    g.connect(musicGain);
+    osc.start(now);
+    osc.stop(now + Math.max(0.05, dur || 0.12) + 0.02);
+  }
+
+  function startMusic() {
+    stopMusic();
+    if (!musicEnabled || !soundEnabled) return;
+    const ctx = ensureAudio();
+    if (!ctx) return;
+
+    // Simple 16-step loop. Tempo bumps slightly with level.
+    musicStep = 0;
+    const baseBpm = 120;
+    const bpm = Math.min(155, baseBpm + Math.max(0, (state.level | 0) - 1) * 3);
+    const stepMs = Math.round((60_000 / bpm) / 4); // 16th notes
+
+    // Scales in Hz
+    const C2 = 65.41;
+    const C3 = 130.81;
+
+    // Pattern (minor-ish): degrees multiplied by semitone ratio.
+    const semitone = (n) => Math.pow(2, n / 12);
+    const bass = [0, 0, 3, 0, 5, 5, 3, 0, 0, 0, 7, 0, 5, 5, 3, 0];
+    const lead = [12, 15, 12, 19, 12, 15, 22, 19, 12, 15, 12, 24, 19, 17, 15, 12];
+
+    musicTimer = setInterval(() => {
+      // Only play while actually running and not paused/menu/store.
+      if (!state.running || state.paused || storeOpen || menuOpen) {
+        musicStep = (musicStep + 1) % 16;
+        return;
+      }
+
+      const i = musicStep % 16;
+      const bSemi = bass[i];
+      const lSemi = lead[i];
+
+      // Bass on 8th-ish
+      if (i % 2 === 0) {
+        musicNote(C2 * semitone(bSemi), 0.10, "square", 0.05);
+      }
+
+      // Lead on 16th with rests when repeating
+      if (i % 4 !== 3) {
+        musicNote(C3 * semitone(lSemi), 0.08, "triangle", 0.028);
+      }
+
+      musicStep = (musicStep + 1) % 16;
+    }, stepMs);
   }
 
   async function unlockAudio() {
@@ -301,12 +486,25 @@
   function setSoundEnabled(v) {
     soundEnabled = !!v;
     if (!soundEnabled && audioCtx) {
+      stopMusic();
       try { audioCtx.close(); } catch {}
       audioCtx = null;
       masterGain = null;
+      musicGain = null;
     }
     writeSoundPrefs();
     if (soundToggleEl) soundToggleEl.checked = soundEnabled;
+  }
+
+  function setMusicEnabled(v) {
+    musicEnabled = !!v;
+    writeSoundPrefs();
+    if (musicToggleEl) musicToggleEl.checked = musicEnabled;
+    if (!musicEnabled) {
+      stopMusic();
+      return;
+    }
+    void unlockAudio().then(() => startMusic());
   }
 
   function setSoundVolume01(v) {
@@ -453,7 +651,7 @@
         continue;
       }
       d.y += d.vy * dt;
-      if (d.y - d.h > H + 30) {
+      if (d.y - d.h > WORLD_H + 30) {
         drops.splice(i, 1);
         continue;
       }
@@ -576,7 +774,7 @@
     const now = performance.now();
     if (powerUpId === "wide") {
       wideUntilMs = Math.max(wideUntilMs, now + 15000);
-      paddle.w = Math.min(W - 20, Math.max(paddle.w, BASE_PADDLE_W * 1.35));
+      paddle.w = Math.min(WORLD_W - 20, Math.max(paddle.w, BASE_PADDLE_W * 1.35));
     } else if (powerUpId === "slowball") {
       slowBallUntilMs = Math.max(slowBallUntilMs, now + 12000);
     } else if (powerUpId === "mult") {
@@ -1739,8 +1937,8 @@ message MsgUsePowerUp {
     const count = 170;
     for (let i = 0; i < count; i++) {
       const s = seed0 + i * 11;
-      const x = randSeeded(s + 0) * W;
-      const y = randSeeded(s + 1) * H;
+      const x = randSeeded(s + 0) * WORLD_W;
+      const y = randSeeded(s + 1) * WORLD_H;
       const r = 0.6 + randSeeded(s + 2) * 2.2;
       const a = 0.03 + randSeeded(s + 3) * 0.22;
       const tw = 0.35 + randSeeded(s + 4) * 1.8;
@@ -1754,8 +1952,8 @@ message MsgUsePowerUp {
     for (let i = 0; i < 16; i++) {
       const s = seed0 + 9000 + i * 17;
       big.push({
-        x: randSeeded(s + 0) * W,
-        y: randSeeded(s + 1) * H,
+        x: randSeeded(s + 0) * WORLD_W,
+        y: randSeeded(s + 1) * WORLD_H,
         r: 1.8 + randSeeded(s + 2) * 2.6,
         a: 0.08 + randSeeded(s + 3) * 0.18,
         phase: randSeeded(s + 4) * Math.PI * 2,
@@ -1920,7 +2118,7 @@ message MsgUsePowerUp {
     laserUntilMs = 0;
     laserShots.length = 0;
     drops.length = 0;
-    paddle.x = (W - paddle.w) / 2;
+    paddle.x = (WORLD_W - paddle.w) / 2;
     rebuildBricks();
     resetBallToPaddle();
     updateHud();
@@ -2207,6 +2405,17 @@ message MsgUsePowerUp {
   }
 
   function draw() {
+    // Resync transform (canvas internal size can change due to fullscreen/HiDPI fit).
+    syncCanvasScale();
+
+    // Clear the full pixel buffer (letterbox area) before drawing the world.
+    // Temporarily reset transform so fill covers the entire canvas.
+    ctx.save();
+    ctx.setTransform(1, 0, 0, 1, 0, 0);
+    ctx.fillStyle = "rgba(0,0,0,1)";
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+    ctx.restore();
+
     // Background
     const t = fxNow() * 0.001;
     {
@@ -2246,8 +2455,8 @@ message MsgUsePowerUp {
       for (const s of STARFIELD.stars) {
         const tw = 0.65 + 0.35 * Math.sin(t * s.tw + s.phase);
         ctx.globalAlpha = s.a * tw;
-        const x = (s.x + (t * s.drift)) % W;
-        const y = (s.y + (t * s.drift * 0.35)) % H;
+      const x = (s.x + (t * s.drift)) % WORLD_W;
+      const y = (s.y + (t * s.drift * 0.35)) % WORLD_H;
         if (s.r <= 1.2) {
           ctx.fillRect(x, y, 1, 1);
         } else {
@@ -2559,30 +2768,30 @@ message MsgUsePowerUp {
       ctx.fillStyle = "rgba(255,90,120,0.95)";
       ctx.font = "900 28px ui-sans-serif, system-ui";
       ctx.textAlign = "center";
-      ctx.fillText("GAME OVER", W / 2, H / 2);
+        ctx.fillText("GAME OVER", WORLD_W / 2, WORLD_H / 2);
       ctx.font = "600 14px ui-sans-serif, system-ui";
       ctx.fillStyle = "rgba(255,255,255,0.65)";
-      ctx.fillText("Press Reset to try again", W / 2, H / 2 + 24);
+        ctx.fillText("Press Reset to try again", WORLD_W / 2, WORLD_H / 2 + 24);
     } else if (ball.stuck && state.running && !state.paused) {
       ctx.fillStyle = "rgba(255,255,255,0.65)";
       ctx.font = "700 14px ui-sans-serif, system-ui";
       ctx.textAlign = "center";
       if (IS_TOUCH_DEVICE && !touchControlsHintDismissed) {
-        ctx.fillText("Drag to move", W / 2, H / 2);
-        ctx.fillText("Tap to launch", W / 2, H / 2 + 20);
+        ctx.fillText("Drag to move", WORLD_W / 2, WORLD_H / 2);
+        ctx.fillText("Tap to launch", WORLD_W / 2, WORLD_H / 2 + 20);
       } else {
-        ctx.fillText(IS_TOUCH_DEVICE ? "Tap to launch" : "Press Space to launch", W / 2, H / 2);
+        ctx.fillText(IS_TOUCH_DEVICE ? "Tap to launch" : "Press Space to launch", WORLD_W / 2, WORLD_H / 2);
       }
     } else if (state.paused) {
       ctx.fillStyle = "rgba(255,255,255,0.75)";
       ctx.font = "900 24px ui-sans-serif, system-ui";
       ctx.textAlign = "center";
-      ctx.fillText("PAUSED", W / 2, H / 2);
+      ctx.fillText("PAUSED", WORLD_W / 2, WORLD_H / 2);
     } else if (!state.running) {
       ctx.fillStyle = "rgba(255,255,255,0.65)";
       ctx.font = "800 16px ui-sans-serif, system-ui";
       ctx.textAlign = "center";
-      ctx.fillText("Press Start", W / 2, H / 2);
+      ctx.fillText("Press Start", WORLD_W / 2, WORLD_H / 2);
     }
   }
 
@@ -2661,8 +2870,11 @@ message MsgUsePowerUp {
 
   function canvasPointFromEvent(e) {
     const rect = canvas.getBoundingClientRect();
-    const x = (e.clientX - rect.left) * (canvas.width / rect.width);
-    const y = (e.clientY - rect.top) * (canvas.height / rect.height);
+    // Map from CSS pixels -> canvas pixels -> logical world units.
+    const px = (e.clientX - rect.left) * (canvas.width / rect.width);
+    const py = (e.clientY - rect.top) * (canvas.height / rect.height);
+    const x = px / (scaleX || 1);
+    const y = py / (scaleY || 1);
     return { x, y };
   }
 
@@ -2738,6 +2950,7 @@ message MsgUsePowerUp {
       try {
         await unlockAudio();
         await ensureWallet();
+        startMusic();
         setStatus("Starting session on-chain...");
         const sid = await startOnchainSession();
         if (!sid) return;
@@ -2764,6 +2977,17 @@ message MsgUsePowerUp {
   window.addEventListener("keyup", onKeyUp);
   bindPointer();
 
+  // Bloom toggle wiring
+  loadBloomPref();
+  if (bloomToggleEl) {
+    bloomToggleEl.checked = !!bloomEnabled;
+    bloomToggleEl.addEventListener("change", () => {
+      bloomEnabled = !!bloomToggleEl.checked;
+      saveBloomPref();
+      sfx("powerup");
+    });
+  }
+
   // Sound UI wiring
   readSoundPrefs();
   if (soundToggleEl) {
@@ -2772,6 +2996,13 @@ message MsgUsePowerUp {
       setSoundEnabled(!!soundToggleEl.checked);
       void unlockAudio();
       sfx("powerup");
+    });
+  }
+
+  if (musicToggleEl) {
+    musicToggleEl.checked = !!musicEnabled;
+    musicToggleEl.addEventListener("change", () => {
+      setMusicEnabled(!!musicToggleEl.checked);
     });
   }
   if (soundVolEl) {
