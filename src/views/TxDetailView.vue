@@ -490,12 +490,7 @@ const ibcPackets = computed(() => {
   return packets;
 });
 
-const copyToClipboard = async (text: string) => {
-  try {
-    await navigator.clipboard?.writeText?.(text);
-    // no toast system wired here; silent success
-  } catch {}
-};
+const copyToClipboard = async (text: string) => toastCopy(text, "Copied");
 
 const downloadJson = (obj: any, filename = "tx.json") => {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
@@ -648,6 +643,7 @@ onMounted(async () => {
               <div class="flex items-center gap-2 whitespace-nowrap">
                 <code class="text-[11px] break-words sm:break-all text-slate-200 truncate max-w-[240px] sm:max-w-none">{{ hash }}</code>
                 <button class="btn text-[10px] sm:text-[11px]" @click="copyToClipboard(hash)">Copy</button>
+                <button class="btn text-[10px] sm:text-[11px]" @click="shareLink()">Share</button>
               </div>
             </div>
             <div>

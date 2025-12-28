@@ -1,17 +1,50 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from "vue";
+import { onMounted, ref, computed, watch } from "vue";
 import { useTxs } from "@/composables/useTxs";
 import { useRouter } from "vue-router";
 import dayjs from "dayjs";
 import { formatCoins } from "@/utils/format";
 import { getTokenMeta } from "@/constants/tokens";
+import { useToast } from "@/composables/useToast";
 
 const { txs, loading, error, searchRecent } = useTxs();
 const router = useRouter();
+const { copyToClipboard } = useToast();
 
-const statusFilter = ref<"all" | "success" | "failed">("all");
-const messageFilter = ref<string>("all");
-const limit = ref(20);
+const STORAGE_KEY = "retrochain.txsView";
+
+const safeRead = () => {
+  try {
+    return typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
+  } catch {
+    return null;
+  }
+};
+
+const safeWrite = (value: unknown) => {
+  try {
+    if (typeof window === "undefined") return;
+    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
+  } catch {
+    // ignore
+  }
+};
+
+const stored = (() => {
+  const raw = safeRead();
+  if (!raw) return null;
+  try {
+    return JSON.parse(raw) as { status?: string; msg?: string; limit?: number };
+  } catch {
+    return null;
+  }
+})();
+
+const statusFilter = ref<"all" | "success" | "failed">(
+  stored?.status === "success" || stored?.status === "failed" ? (stored.status as any) : "all"
+);
+const messageFilter = ref<string>(typeof stored?.msg === "string" ? stored!.msg : "all");
+const limit = ref(typeof stored?.limit === "number" && stored.limit > 0 ? stored.limit : 20);
 
 const totalTxs = computed(() => txs.value.length);
 const successCount = computed(() => txs.value.filter((t) => (t.code ?? 0) === 0).length);
@@ -63,7 +96,11 @@ const filteredTxs = computed(() =>
   })
 );
 
-const copy = async (text: string) => { try { await navigator.clipboard?.writeText?.(text); } catch {} };
+const copy = async (text: string) => copyToClipboard(text, "Copied");
+
+watch([statusFilter, messageFilter, limit], () => {
+  safeWrite({ status: statusFilter.value, msg: messageFilter.value, limit: limit.value });
+});
 
 const prettyMessageType = (type: string) => {
   if (!type) return "Unknown";

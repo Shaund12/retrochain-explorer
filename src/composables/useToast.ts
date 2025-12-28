@@ -77,6 +77,23 @@ export function useToast() {
     showInfo(message);
   };
 
+  const copyToClipboard = async (text: string, label = "Copied") => {
+    try {
+      await navigator.clipboard?.writeText?.(text);
+      showSuccess(label, "Copied");
+      return true;
+    } catch {
+      showError("Unable to copy to clipboard", "Copy failed");
+      return false;
+    }
+  };
+
+  const shareLink = async (url?: string, label = "Link copied") => {
+    const link = url || (typeof window !== "undefined" ? window.location.href : "");
+    if (!link) return false;
+    return copyToClipboard(link, label);
+  };
+
   return {
     showSuccess,
     showError,
@@ -87,6 +104,8 @@ export function useToast() {
     showConnecting,
     showConnected,
     notify,
+    copyToClipboard,
+    shareLink,
   };
 }
 

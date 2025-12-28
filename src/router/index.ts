@@ -44,12 +44,12 @@ import DocsHubView from "@/views/DocsHubView.vue";
 import SwaggerDocsView from "@/views/SwaggerDocsView.vue";
 
 const routes: RouteRecordRaw[] = [
-  { path: "/", name: "home", component: HomeView },
-  { path: "/blocks", name: "blocks", component: BlocksView },
-  { path: "/blocks/:height", name: "block-detail", component: BlockDetailView, props: true },
-  { path: "/txs", name: "txs", component: TxsView },
-  { path: "/txs/:hash", name: "tx-detail", component: TxDetailView, props: true },
-  { path: "/account/:address?", name: "account", component: AccountView, props: true },
+  { path: "/", name: "home", component: HomeView, meta: { title: "Home" } },
+  { path: "/blocks", name: "blocks", component: BlocksView, meta: { title: "Blocks" } },
+  { path: "/blocks/:height", name: "block-detail", component: BlockDetailView, props: true, meta: { title: "Block" } },
+  { path: "/txs", name: "txs", component: TxsView, meta: { title: "Transactions" } },
+  { path: "/txs/:hash", name: "tx-detail", component: TxDetailView, props: true, meta: { title: "Transaction" } },
+  { path: "/account/:address?", name: "account", component: AccountView, props: true, meta: { title: "Account" } },
   { path: "/accounts", name: "accounts", component: AccountsView },
   { path: "/accounts/ecosystem", name: "ecosystem-accounts", component: EcosystemWalletsView },
   { path: "/ibc", name: "ibc", component: IbcView },
@@ -82,17 +82,39 @@ const routes: RouteRecordRaw[] = [
   { path: "/docs/ibc-relayers", name: "docs-ibc-relayers", component: DocsIbcRelayersView },
   { path: "/docs/fees-flow", name: "docs-fees-flow", component: DocsFeeCollectorFlowView },
   { path: "/docs/validator-uptime", name: "docs-validator-uptime", component: DocsValidatorUptimeView },
-  { path: "/contracts", name: "contracts", component: ContractsView },
-  { path: "/contracts/:address", name: "contract-detail", component: ContractDetailView, props: true },
+  { path: "/contracts", name: "contracts", component: ContractsView, meta: { title: "Contracts" } },
+  { path: "/contracts/:address", name: "contract-detail", component: ContractDetailView, props: true, meta: { title: "Contract" } },
   { path: "/changelog", name: "changelog", component: ChangelogView },
   { path: "/legal", name: "legal", component: LegalView },
   { path: "/api-test", name: "api-test", component: ApiTestView },
-  { path: "/:pathMatch(.*)*", name: "not-found", component: NotFoundView }
+  { path: "/:pathMatch(.*)*", name: "not-found", component: NotFoundView, meta: { title: "Not Found" } }
 ];
 
 const router = createRouter({
   history: createWebHistory(),
   routes
+});
+
+router.afterEach((to) => {
+  const base = "RetroChain Explorer";
+  const title = (to.meta?.title as string | undefined) || "";
+  if (to.name === "tx-detail" && typeof to.params.hash === "string") {
+    document.title = `${base} — Tx ${to.params.hash.slice(0, 10)}…`;
+    return;
+  }
+  if (to.name === "block-detail" && to.params.height) {
+    document.title = `${base} — Block #${String(to.params.height)}`;
+    return;
+  }
+  if (to.name === "account" && typeof to.params.address === "string") {
+    document.title = `${base} — Account ${to.params.address.slice(0, 10)}…`;
+    return;
+  }
+  if (to.name === "contract-detail" && typeof to.params.address === "string") {
+    document.title = `${base} — Contract ${to.params.address.slice(0, 10)}…`;
+    return;
+  }
+  document.title = title ? `${base} — ${title}` : base;
 });
 
 export default router;

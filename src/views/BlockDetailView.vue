@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
+import { useToast } from "@/composables/useToast";
 import { useBlocks } from "@/composables/useBlocks";
 import { useToast } from "@/composables/useToast";
 import { useApi } from "@/composables/useApi";
@@ -11,6 +12,7 @@ import dayjs from "dayjs";
 
 const route = useRoute();
 const router = useRouter();
+const { copyToClipboard, shareLink } = useToast();
 const { fetchByHeight } = useBlocks();
 const { notify } = useToast();
 const api = useApi();
