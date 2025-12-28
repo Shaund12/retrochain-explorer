@@ -17,6 +17,20 @@ export function useAccount() {
   const rewards = ref<any[]>([]);
   const unbondings = ref<any[]>([]);
 
+  const looksLikeValoper = (address: string) => /valoper1/i.test(address);
+
+  const resolveToAccountAddress = async (address: string) => {
+    if (!looksLikeValoper(address)) return address;
+    try {
+      const res = await api.get(`/cosmos/staking/v1beta1/validators/${address}`);
+      // Cosmos SDK: `validator.operator_address` is valoper, `validator.delegator_address` is the account address.
+      const delegator = res.data?.validator?.delegator_address;
+      return typeof delegator === "string" && delegator.length > 0 ? delegator : address;
+    } catch {
+      return address;
+    }
+  };
+
   const load = async (address: string) => {
     loading.value = true;
     error.value = null;
@@ -25,15 +39,16 @@ export function useAccount() {
     delegations.value = [];
     rewards.value = [];
     unbondings.value = [];
-    bech32Address.value = address;
+    const resolvedAddress = await resolveToAccountAddress(address);
+    bech32Address.value = resolvedAddress;
 
     try {
       const [accRes, balRes, delRes, rewRes, unbRes] = await Promise.allSettled([
-        api.get(`/cosmos/auth/v1beta1/accounts/${address}`),
-        api.get(`/cosmos/bank/v1beta1/balances/${address}`),
-        api.get(`/cosmos/staking/v1beta1/delegations/${address}`),
-        api.get(`/cosmos/distribution/v1beta1/delegators/${address}/rewards`),
-        api.get(`/cosmos/staking/v1beta1/delegators/${address}/unbonding_delegations`)
+        api.get(`/cosmos/auth/v1beta1/accounts/${resolvedAddress}`),
+        api.get(`/cosmos/bank/v1beta1/balances/${resolvedAddress}`),
+        api.get(`/cosmos/staking/v1beta1/delegations/${resolvedAddress}`),
+        api.get(`/cosmos/distribution/v1beta1/delegators/${resolvedAddress}/rewards`),
+        api.get(`/cosmos/staking/v1beta1/delegators/${resolvedAddress}/unbonding_delegations`)
       ]);
 
       if (balRes.status === "fulfilled") {
