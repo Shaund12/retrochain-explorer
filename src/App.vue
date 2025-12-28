@@ -4,7 +4,7 @@ import RcHeader from "@/components/RcHeader.vue";
 import RcMaintenanceBanner from "@/components/RcMaintenanceBanner.vue";
 import { useNetwork } from "@/composables/useNetwork";
 import { useChainInfo } from "@/composables/useChainInfo";
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, h } from "vue";
 import { Toaster } from "vue-sonner";
 
 const { restBase, rpcBase } = useNetwork();
@@ -133,7 +133,7 @@ onMounted(() => {
 <template>
 <div class="min-h-screen flex flex-col" :class="themeClass">
   <!-- Toaster -->
-  <Toaster
+   <Toaster
     position="top-right"
     theme="dark"
     rich-colors
@@ -141,11 +141,11 @@ onMounted(() => {
     duration="5200"
     offset="12px"
     :icons="{
-      success: () => '✅',
-      info: () => 'ℹ️',
-      warning: () => '⚠️',
-      error: () => '⛔',
-      loading: () => '🔌'
+       success: () => h('span', { class: 'rc-toast-icon' }, '✅'),
+       info: () => h('span', { class: 'rc-toast-icon' }, 'ℹ️'),
+       warning: () => h('span', { class: 'rc-toast-icon' }, '⚠️'),
+       error: () => h('span', { class: 'rc-toast-icon' }, '⛔'),
+       loading: () => h('span', { class: 'rc-toast-icon' }, '🔌')
     }"
   />
   <div v-if="activeHoliday === 'christmas'" class="festive-snow" :class="`snow-${snowLevel}`" aria-hidden="true"></div>
