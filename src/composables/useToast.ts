@@ -1,9 +1,10 @@
 // src/composables/useToast.ts
 import { toast } from "vue-sonner";
+import { h } from "vue";
 
 // vue-sonner expects `icon` to be a VNode/Component in some versions.
-// Passing a plain string like "?" can be treated as a tag name (invalid), causing createElement errors.
-const iconVNode = (emoji: string) => () => emoji;
+// Return a real VNode to prevent emoji strings being treated as invalid tag names.
+const iconVNode = (emoji: string) => () => h("span", { class: "rc-toast-icon" }, emoji);
 
 export type ToastType = "success" | "error" | "warning" | "info";
 
@@ -17,7 +18,7 @@ export function useToast() {
   const showSuccess = (message: string, title?: string) => {
     toast.success(title || "Success", {
       description: message,
-      icon: iconVNode("?"),
+      icon: iconVNode("✅"),
       ...defaultOpts,
     });
   };
@@ -25,7 +26,7 @@ export function useToast() {
   const showError = (message: string, title?: string) => {
     toast.error(title || "Error", {
       description: message,
-      icon: iconVNode("?"),
+      icon: iconVNode("⛔"),
       ...defaultOpts,
       duration: 7000,
     });
@@ -34,7 +35,7 @@ export function useToast() {
   const showWarning = (message: string, title?: string) => {
     toast(title || "Heads up", {
       description: message,
-      icon: iconVNode("??"),
+      icon: iconVNode("⚠️"),
       ...defaultOpts,
       duration: 6500,
       class: "rc-toast-warning",
@@ -44,7 +45,7 @@ export function useToast() {
   const showInfo = (message: string, title?: string) => {
     toast.info(title || "Notice", {
       description: message,
-      icon: iconVNode("??"),
+      icon: iconVNode("ℹ️"),
       ...defaultOpts,
     });
   };
@@ -61,7 +62,7 @@ export function useToast() {
   const showConnecting = () => {
     toast.loading("Opening Keplr wallet...", {
       description: "Awaiting wallet approval",
-      icon: iconVNode("??"),
+      icon: iconVNode("🔌"),
       ...defaultOpts,
       duration: 3000,
     });
