@@ -99,22 +99,22 @@ router.afterEach((to) => {
   const base = "RetroChain Explorer";
   const title = (to.meta?.title as string | undefined) || "";
   if (to.name === "tx-detail" && typeof to.params.hash === "string") {
-    document.title = `${base} — Tx ${to.params.hash.slice(0, 10)}…`;
+    document.title = `${base} Â· ðŸ”Ž Tx ${to.params.hash.slice(0, 10)}â€¦`;
     return;
   }
   if (to.name === "block-detail" && to.params.height) {
-    document.title = `${base} — Block #${String(to.params.height)}`;
+    document.title = `${base} Â· ðŸ§± Block #${String(to.params.height)}`;
     return;
   }
   if (to.name === "account" && typeof to.params.address === "string") {
-    document.title = `${base} — Account ${to.params.address.slice(0, 10)}…`;
+    document.title = `${base} Â· ðŸ‘¤ Account ${to.params.address.slice(0, 10)}â€¦`;
     return;
   }
   if (to.name === "contract-detail" && typeof to.params.address === "string") {
-    document.title = `${base} — Contract ${to.params.address.slice(0, 10)}…`;
+    document.title = `${base} Â· ðŸ“„ Contract ${to.params.address.slice(0, 10)}â€¦`;
     return;
   }
-  document.title = title ? `${base} — ${title}` : base;
+  document.title = title ? `${base} Â· ${title}` : base;
 });
 
 export default router;
