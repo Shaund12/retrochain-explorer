@@ -11,7 +11,7 @@ import GovernanceView from "@/views/GovernanceView.vue";
 import StakingView from "@/views/StakingView.vue";
 import BtcStakeView from "@/views/BtcStakeView.vue";
 import BuyView from "@/views/BuyView.vue";
-import DexView from "@/views/DexView.vue";
+import IbcInfoView from "@/views/DexView.vue";
 import ArcadeView from "@/views/ArcadeView.vue";
 import TokenomicsView from "@/views/TokenomicsView.vue";
 import DocsTokenomicsView from "@/views/DocsTokenomicsView.vue";
@@ -60,7 +60,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/staking", name: "staking", component: StakingView },
   { path: "/staking/wbtc", name: "btc-stake", component: BtcStakeView },
   { path: "/buy", name: "buy", component: BuyView },
-  { path: "/dex", name: "dex", component: DexView },
+  { path: "/ibc-info", name: "ibc-info", component: IbcInfoView },
   { path: "/arcadedash", name: "arcade", component: ArcadeView },
   { path: "/arcade", redirect: { name: "arcade" } },
   { path: "/tokens", name: "tokens", component: TokensView },

@@ -9,7 +9,6 @@ export type ToastType = "success" | "error" | "warning" | "info";
 
 const defaultOpts = {
   position: "top-right" as const,
-  duration: 5200,
   closeButton: true,
   richColors: true,
 };
@@ -27,8 +26,8 @@ export function useToast() {
     toast.error(title || "Error", {
       description: message,
       icon: iconVNode("?"),
-      duration: 7000,
       ...defaultOpts,
+      duration: 7000,
     });
   };
 
@@ -36,8 +35,8 @@ export function useToast() {
     toast(title || "Heads up", {
       description: message,
       icon: iconVNode("??"),
-      duration: 6500,
       ...defaultOpts,
+      duration: 6500,
       class: "rc-toast-warning",
     });
   };
@@ -63,8 +62,8 @@ export function useToast() {
     toast.loading("Opening Keplr wallet...", {
       description: "Awaiting wallet approval",
       icon: iconVNode("??"),
-      duration: 3000,
       ...defaultOpts,
+      duration: 3000,
     });
   };
 

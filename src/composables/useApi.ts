@@ -24,6 +24,22 @@ const api = axios.create({
   timeout: 10000
 });
 
+// If a proxy misroutes /api to an HTML page (SPA/NGINX), axios JSON parsing throws
+// "Unexpected token '<'". Convert that into a clearer error message.
+api.interceptors.response.use(
+  (res) => res,
+  (err) => {
+    try {
+      const data = err?.response?.data;
+      if (typeof data === "string" && data.trim().startsWith("<")) {
+        err.message =
+          "API returned HTML instead of JSON (proxy/routing issue). Ensure VITE_REST_API_URL points to a Cosmos REST endpoint and that /api is correctly proxied.";
+      }
+    } catch {}
+    return Promise.reject(err);
+  }
+);
+
 // react to network changes
 // Note: axios instance baseURL can be updated
 try {

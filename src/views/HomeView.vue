@@ -99,9 +99,9 @@ const toggleCollapse = (id: string) => {
 
 const moveCard = (id: string, delta: number) => {
   const ordered = dashboardCards
-    .filter((c) => c.show())
-    .map((c) => ({ ...c, order: getOrder(c.id) }))
-    .sort((a, b) => a.order - b.order);
+      .filter((c: any) => c.show())
+      .map((c: any) => ({ ...c, order: getOrder(c.id) }))
+      .sort((a: any, b: any) => a.order - b.order);
 
   const index = ordered.findIndex((c) => c.id === id);
   if (index === -1) return;
@@ -146,7 +146,7 @@ const arcadeBurnLoading = ref(false);
 const arcadeBurnTotal = ref<number | null>(null);
 const arcadeBurnLatest = ref<{ amount: number; gameId?: string; player?: string } | null>(null);
 
-const parseArcadeBurn = (tx: any) => {
+const parseArcadeBurn = (tx: any): { amount: number; gameId?: string; player?: string } | null => {
   const events = Array.isArray(tx?.events) ? tx.events : [];
   let tokensBurned: number | null = null;
   let gameId: string | null = null;
@@ -184,11 +184,13 @@ const loadArcadeBurnTotals = async () => {
       }
     });
     const txs = Array.isArray(data?.tx_responses) ? data.tx_responses : [];
-    const burns = txs
-      .map(parseArcadeBurn)
-      .filter((b: any): b is { amount: number; gameId?: string; player?: string } =>
-        Boolean(b) && Number.isFinite(b.amount)
-      );
+    const burns: Array<{ amount: number; gameId?: string; player?: string }> = [];
+    for (const txResp of txs as any[]) {
+      const parsed = parseArcadeBurn(txResp as any);
+      if (parsed && typeof parsed.amount === "number" && Number.isFinite(parsed.amount)) {
+        burns.push(parsed);
+      }
+    }
 
     if (burns.length) {
       arcadeBurnTotal.value = burns.reduce((sum, b) => sum + b.amount, 0);
@@ -341,12 +343,13 @@ const latestBlockTimeAbsolute = computed(() => {
 const latestProposerDisplay = computed(() => {
   const latest = latestBlockSummary.value;
   if (!latest) return "—";
-    return (
-      ((latest as any).proposerLabel as any)?.name ||
-      latest.proposerMoniker ||
-      latest.proposerOperator?.slice(0, 16)?.concat("…") ||
-      "Unknown"
-    );
+  const proposerLabel = (latest as any).proposerLabel as string | { label?: string } | undefined;
+  return (
+    (typeof proposerLabel === "string" ? proposerLabel : proposerLabel?.label) ||
+    latest.proposerMoniker ||
+    latest.proposerOperator?.slice(0, 16)?.concat("…") ||
+    "Unknown"
+  );
 });
 
 const latestProposerShort = computed(() => {
