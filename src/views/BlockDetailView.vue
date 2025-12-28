@@ -3,7 +3,6 @@ import { onMounted, ref, computed, watch } from "vue";
 import { useRoute, useRouter } from "vue-router";
 import { useToast } from "@/composables/useToast";
 import { useBlocks } from "@/composables/useBlocks";
-import { useToast } from "@/composables/useToast";
 import { useApi } from "@/composables/useApi";
 import { useValidators, type ValidatorWithVotingPower } from "@/composables/useValidators";
 import { decodeConsensusAddress } from "@/utils/consensus";
@@ -12,9 +11,8 @@ import dayjs from "dayjs";
 
 const route = useRoute();
 const router = useRouter();
-const { copyToClipboard, shareLink } = useToast();
+const { copyToClipboard, shareLink, notify } = useToast();
 const { fetchByHeight } = useBlocks();
-const { notify } = useToast();
 const api = useApi();
 const {
   validators,
@@ -58,9 +56,7 @@ const base64Txs = computed(() => (block.value?.data?.txs as string[]) || []);
 const prettyTime = computed(() => (time.value && time.value !== "—" ? dayjs(time.value).format("YYYY-MM-DD HH:mm:ss") : "—"));
 const relativeTime = computed(() => (time.value && time.value !== "—" ? dayjs(time.value).fromNow() : ""));
 
-const copy = async (text: string) => {
-  try { await navigator.clipboard?.writeText?.(text); } catch {}
-};
+const copy = async (text: string) => copyToClipboard(text, "Copied");
 
 const formatNumber = (value?: number | null) => {
   if (value === null || value === undefined) return "—";
@@ -222,6 +218,7 @@ watch(
             <div class="flex items-center gap-2">
               <code class="text-[11px] break-all">{{ blockHash }}</code>
               <button class="btn text-[10px]" @click="copy(blockHash)">Copy</button>
+              <button class="btn text-[10px]" @click="shareLink()">Share</button>
             </div>
           </div>
           <div>
