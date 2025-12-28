@@ -6,7 +6,7 @@ defineProps<{
 }>();
 
 const emit = defineEmits<{
-  click: [game: Game];
+  select: [game: Game];
 }>();
 
 const getDifficultyColor = (difficulty?: string) => {
@@ -47,7 +47,7 @@ const getGameIcon = (genre?: string) => {
 <template>
   <div
     class="card cursor-pointer hover:scale-[1.02] transition-transform"
-    @click="emit('click', game)"
+    @click="emit('select', game)"
   >
     <div class="flex items-start justify-between mb-3">
       <div class="flex items-center gap-3">

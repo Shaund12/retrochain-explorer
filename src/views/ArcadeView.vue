@@ -88,8 +88,17 @@ const spaceInvadersNoticeKey = "space-invaders-beta-dismissed";
 const visibleGames = computed(() =>
   gamesList.value.filter((g) => {
     const gid = (g.game_id || "").toString().toLowerCase();
+    const name = (g.name || "").toString().toLowerCase();
     if (gid === "test") return false;
-    if (gid === "space-invaders" || gid === "spaceinvaders" || gid === "space_invaders") return false;
+    if (
+      gid === "space-invaders" ||
+      gid === "spaceinvaders" ||
+      gid === "space_invaders" ||
+      name === "space invaders" ||
+      name === "space-invaders" ||
+      name === "spaceinvaders"
+    )
+      return false;
     return true;
   })
 );
@@ -796,7 +805,7 @@ const achievementIcon = (a: any) => {
       </div>
       <div v-if="visibleGames.length === 0" class="text-xs text-slate-400">No games registered yet.</div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
-        <RcArcadeGameCard v-for="game in visibleGames" :key="game.game_id" :game="game" @click="openGameModal" />
+        <RcArcadeGameCard v-for="game in visibleGames" :key="game.game_id" :game="game" @select="openGameModal" />
       </div>
     </div>
 
