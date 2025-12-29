@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, onUnmounted, computed, ref } from "vue";
+import { onMounted, onUnmounted, computed, ref, watch } from "vue";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { useArcade } from "@/composables/useArcade";
@@ -8,6 +8,8 @@ import { useRouter } from "vue-router";
 import ApexChart from "vue3-apexcharts";
 import { useApi } from "@/composables/useApi";
 import { useKeplr } from "@/composables/useKeplr";
+import { useContracts } from "@/composables/useContracts";
+import { useToast } from "@/composables/useToast";
 
 dayjs.extend(relativeTime);
 
@@ -25,7 +27,8 @@ const {
   fetchLatestAchievements
 } = useArcade();
 const api = useApi();
-const { address: keplrAddress } = useKeplr();
+const { address: keplrAddress, connect, signAndBroadcast } = useKeplr();
+const toast = useToast();
 
 const selectedGame = ref<any | null>(null);
 const gameModalOpen = ref(false);
@@ -661,8 +664,86 @@ function tierClasses(t: Tier) {
   return "border-white/10 text-slate-400 bg-white/5";
 }
 
-const battleClaimsOnchainSoon = true;
-const battleClaimComingSoonText = "Coming soon — claimable after next RC on-chain upgrade.";
+const { smartQueryContract } = useContracts();
+
+const battlePointsContract = (import.meta.env.VITE_BATTLEPOINTS_CONTRACT || "").trim();
+const battleClaimsOnchainSoon = false;
+const battleClaimComingSoonText = "";
+
+const claimLoadingByQuest = ref<Record<string, boolean>>({});
+const claimedByQuest = ref<Record<string, boolean>>({});
+
+const refreshClaimed = async () => {
+  if (!myWalletAddr.value) {
+    claimedByQuest.value = {};
+    return;
+  }
+  if (!battlePointsContract) {
+    return;
+  }
+  try {
+    const res: any = await smartQueryContract(battlePointsContract, { claimed: { player: myWalletAddr.value } });
+    // supports either { claimed: [ids...] } or { quests: { [id]: bool } }
+    const ids = Array.isArray(res?.claimed) ? (res.claimed as string[]) : [];
+    const map: Record<string, boolean> = {};
+    ids.forEach((id) => (map[id] = true));
+    if (res?.quests && typeof res.quests === "object") {
+      Object.entries(res.quests as Record<string, any>).forEach(([k, v]) => (map[k] = Boolean(v)));
+    }
+    claimedByQuest.value = map;
+  } catch {
+    // If query isn't implemented yet, leave claims unknown.
+  }
+};
+
+const claimQuest = async (questId: string) => {
+  if (!questId) return;
+  if (!battlePointsContract) {
+    toast.showError("BattlePoints contract not configured.");
+    return;
+  }
+  try {
+    if (!keplrAddress.value) {
+      await connect();
+    }
+    if (!keplrAddress.value) return;
+
+    claimLoadingByQuest.value = { ...claimLoadingByQuest.value, [questId]: true };
+
+    const msg = {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: {
+        sender: keplrAddress.value,
+        contract: battlePointsContract,
+        msg: new TextEncoder().encode(JSON.stringify({ claim_quest: { quest_id: questId } })),
+        funds: []
+      }
+    };
+
+    const fee = "auto" as any;
+    const res: any = await signAndBroadcast("retrochain-mainnet", [msg], fee, "Claim battle quest");
+    if (res?.code && Number(res.code) !== 0) {
+      throw new Error(res?.rawLog || res?.raw_log || "Transaction failed");
+    }
+
+    toast.showSuccess("Quest claimed.");
+    await refreshClaimed();
+  } catch (e: any) {
+    toast.showError(e?.message || "Claim failed.");
+  } finally {
+    claimLoadingByQuest.value = { ...claimLoadingByQuest.value, [questId]: false };
+  }
+};
+
+onMounted(() => {
+  refreshClaimed();
+});
+
+// Refresh claim map whenever the wallet changes.
+// (computed myWalletAddr depends on keplrAddress)
+watch(myWalletAddr, () => {
+  refreshClaimed();
+});
 
 const mySessionsInBattle = computed(() => {
   if (!myWalletAddr.value) return [] as any[];
@@ -1042,10 +1123,11 @@ const myStreakRank = computed(() => {
                 <button
                   v-if="myWalletAddr"
                   class="btn btn-xs"
-                  :class="q.ready ? 'btn-primary' : ''"
-                  :disabled="true"
+                  :class="q.claimed ? '' : q.ready ? 'btn-primary' : ''"
+                  :disabled="q.claimed || !q.ready || claimLoadingByQuest[q.id]"
+                  @click="claimQuest(q.id)"
                 >
-                  {{ q.ready ? 'Coming soon' : 'Locked' }}
+                  {{ q.claimed ? 'Claimed' : claimLoadingByQuest[q.id] ? 'Claiming…' : q.ready ? 'Claim' : 'Locked' }}
                 </button>
               </div>
               <div class="mt-2">

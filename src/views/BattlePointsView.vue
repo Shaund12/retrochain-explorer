@@ -5,7 +5,7 @@ import { useKeplr } from "@/composables/useKeplr";
 import { useContracts } from "@/composables/useContracts";
 
 const router = useRouter();
-const { address } = useKeplr();
+const { address, connect, signAndBroadcast } = useKeplr();
 const { smartQueryContract } = useContracts();
 
 const contractAddress = ref<string>(import.meta.env.VITE_BATTLEPOINTS_CONTRACT || "");
@@ -16,9 +16,26 @@ const loading = ref(false);
 const error = ref<string | null>(null);
 const points = ref<number | null>(null);
 
+type ShopItem = {
+  item_id: string;
+  name?: string;
+  description?: string;
+  price_points?: number;
+  art_style?: string;
+  palette?: string;
+  enabled?: boolean;
+};
+
+const shopLoading = ref(false);
+const buyLoading = ref<string | null>(null);
+const items = ref<ShopItem[]>([]);
+const svgPreviewByItemId = ref<Record<string, string>>({});
+
 const hasWallet = computed(() => Boolean(address.value));
 
 const hasContract = computed(() => Boolean(contractAddress.value.trim()));
+
+const canBuy = computed(() => hasWallet.value && hasContract.value && items.value.length > 0);
 
 const load = async () => {
   error.value = null;
@@ -48,7 +65,96 @@ const load = async () => {
   }
 };
 
-onMounted(load);
+const loadShop = async () => {
+  error.value = null;
+  items.value = [];
+  svgPreviewByItemId.value = {};
+
+  const addr = contractAddress.value.trim();
+  if (!addr) {
+    error.value = "BattlePoints contract address is not configured. Set VITE_BATTLEPOINTS_CONTRACT.";
+    return;
+  }
+
+  shopLoading.value = true;
+  try {
+    const res: any = await smartQueryContract(addr, { shop_items: {} });
+    const list = (res?.items ?? res?.shop_items ?? res ?? []) as any[];
+    items.value = Array.isArray(list) ? list : [];
+
+    const enabled = items.value.filter((i) => i && (i.enabled ?? true) !== false);
+    await Promise.all(
+      enabled.slice(0, 6).map(async (i) => {
+        const id = i?.item_id;
+        if (!id) return;
+        try {
+          const svgRes: any = await smartQueryContract(addr, { svg_preview: { item_id: id } });
+          const svg = svgRes?.svg ?? svgRes?.image ?? svgRes?.data;
+          if (typeof svg === "string" && svg.trim().startsWith("<svg")) {
+            svgPreviewByItemId.value = { ...svgPreviewByItemId.value, [id]: svg };
+          }
+        } catch {
+          // preview is optional; ignore
+        }
+      })
+    );
+  } catch (e: any) {
+    error.value = e?.message || "Failed to query shop items.";
+  } finally {
+    shopLoading.value = false;
+  }
+};
+
+const buyItem = async (item: ShopItem) => {
+  error.value = null;
+  const addr = contractAddress.value.trim();
+  if (!addr) {
+    error.value = "BattlePoints contract address is not configured.";
+    return;
+  }
+
+  if (!address.value) {
+    await connect();
+  }
+  if (!address.value) return;
+
+  const itemId = item.item_id;
+  if (!itemId) {
+    error.value = "Invalid shop item.";
+    return;
+  }
+
+  buyLoading.value = itemId;
+  try {
+    const msg = {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: {
+        sender: address.value,
+        contract: addr,
+        msg: new TextEncoder().encode(JSON.stringify({ buy_nft: { item_id: itemId } })),
+        funds: []
+      }
+    };
+
+    const fee = "auto" as any;
+    const res: any = await signAndBroadcast("retrochain-mainnet", [msg], fee, "Buy NFT with Battle Points");
+    if (res?.code && Number(res.code) !== 0) {
+      throw new Error(res?.rawLog || res?.raw_log || "Transaction failed");
+    }
+
+    await load();
+    await loadShop();
+  } catch (e: any) {
+    error.value = e?.message || "Buy failed.";
+  } finally {
+    buyLoading.value = null;
+  }
+};
+
+onMounted(async () => {
+  await load();
+  await loadShop();
+});
 </script>
 
 <template>
@@ -61,7 +167,9 @@ onMounted(load);
       </div>
       <div class="flex gap-2 flex-wrap justify-end">
         <button class="btn text-xs" @click="router.push({ name: 'arcade' })">← Back to Arcade</button>
-        <button class="btn btn-primary text-xs" :disabled="loading" @click="load">{{ loading ? 'Loading…' : 'Refresh' }}</button>
+        <button class="btn btn-primary text-xs" :disabled="loading || shopLoading" @click="() => Promise.all([load(), loadShop()])">
+          {{ loading || shopLoading ? 'Loading…' : 'Refresh' }}
+        </button>
       </div>
     </div>
 
@@ -80,9 +188,55 @@ onMounted(load);
 
       <div class="card border border-indigo-500/40 bg-indigo-500/10">
         <div class="text-[11px] uppercase tracking-wider text-slate-300">Store</div>
-        <div class="text-sm text-slate-200 mt-1">Coming soon: browse items and buy NFTs with points.</div>
-        <div class="text-xs text-slate-400 mt-2">
-          This page will query <code class="font-mono">ShopItems</code> and call <code class="font-mono">BuyNft</code> once the contract is deployed.
+        <div class="text-sm text-slate-200 mt-1">Spend points to mint on-chain SVG NFTs.</div>
+        <div class="text-xs text-slate-400 mt-2" v-if="!hasWallet">Connect Keplr to buy.</div>
+        <div class="text-xs text-slate-400 mt-2" v-else-if="shopLoading">Loading items…</div>
+        <div class="text-xs text-slate-400 mt-2" v-else-if="items.length === 0">No store items returned by the contract.</div>
+      </div>
+    </div>
+
+    <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-3" v-if="items.length">
+      <div
+        v-for="it in items"
+        :key="it.item_id"
+        class="card border border-white/10 bg-slate-900/60"
+      >
+        <div class="flex items-start justify-between gap-2">
+          <div class="min-w-0">
+            <div class="text-sm font-semibold text-white truncate">{{ it.name || it.item_id }}</div>
+            <div class="text-[11px] text-slate-400" v-if="it.description">{{ it.description }}</div>
+            <div class="text-[11px] text-slate-400 mt-1" v-if="it.art_style || it.palette">
+              <span v-if="it.art_style">Style: <span class="text-slate-200">{{ it.art_style }}</span></span>
+              <span v-if="it.art_style && it.palette"> · </span>
+              <span v-if="it.palette">Palette: <span class="text-slate-200">{{ it.palette }}</span></span>
+            </div>
+          </div>
+          <div class="text-right">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400">Price</div>
+            <div class="text-lg font-bold text-emerald-200">{{ Number(it.price_points || 0).toLocaleString() }}</div>
+          </div>
+        </div>
+
+        <div class="mt-3 rounded-lg bg-black/30 border border-white/10 overflow-hidden" v-if="svgPreviewByItemId[it.item_id]">
+          <div class="w-full" v-html="svgPreviewByItemId[it.item_id]" />
+        </div>
+
+        <div class="mt-3 flex items-center justify-between gap-2">
+          <div class="text-[11px] text-slate-400">
+            <span v-if="it.enabled === false" class="text-amber-200">Disabled</span>
+            <span v-else>Ready</span>
+          </div>
+          <button
+            class="btn btn-xs"
+            :class="(it.enabled ?? true) !== false && canBuy && (points ?? 0) >= Number(it.price_points || 0) ? 'btn-primary' : ''"
+            :disabled="(it.enabled ?? true) === false || !hasWallet || buyLoading === it.item_id || (points ?? 0) < Number(it.price_points || 0)"
+            @click="buyItem(it)"
+          >
+            <span v-if="buyLoading === it.item_id">Buying…</span>
+            <span v-else-if="!hasWallet">Connect</span>
+            <span v-else-if="(points ?? 0) < Number(it.price_points || 0)">Need {{ Number(it.price_points || 0).toLocaleString() }}</span>
+            <span v-else>Buy</span>
+          </button>
         </div>
       </div>
     </div>

@@ -188,7 +188,13 @@ export function useNfts() {
         data: cls?.data ?? null,
         source: "nft-module"
       };
-    } catch {
+    } catch (err: any) {
+      // If the backend supports the cosmos nft module but this class doesn't exist,
+      // just return null so callers can fall back to CW721 smart queries.
+      const msg = err?.response?.data?.message || err?.message;
+      if (typeof msg === "string" && msg.toLowerCase().includes("class does not exist")) {
+        return null;
+      }
       return null;
     }
   };
@@ -304,10 +310,14 @@ export function useNfts() {
       const asString = String(classId || "");
       let detail: NftClassDetail | null = null;
 
-      // Try x/nft first
-      detail = await fetchClassFromNftModule(asString);
+      const looksLikeAddress = asString.startsWith("cosmos1") || asString.startsWith("osmo1");
 
-      const looksLikeAddress = asString.startsWith("cosmos1") || asString.startsWith("osmo1") || asString.includes("1");
+      // If this looks like a CW721 contract address, don't hit x/nft module first
+      // (it will often return "class does not exist").
+      if (!looksLikeAddress) {
+        detail = await fetchClassFromNftModule(asString);
+      }
+
       if (!detail && looksLikeAddress) {
         detail = await fetchClassFromCw721(asString);
       }
