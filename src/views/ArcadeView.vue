@@ -661,20 +661,8 @@ function tierClasses(t: Tier) {
   return "border-white/10 text-slate-400 bg-white/5";
 }
 
-const battleKey = computed(() => `${battlePeriod.value}:${battleGame.value}`);
-const battleClaimKey = (questId: string) => `arcade:battle:claim:${questId}:${battleKey.value}:${myWalletAddr.value || "anon"}`;
-const isQuestClaimed = (questId: string) => {
-  try {
-    return localStorage.getItem(battleClaimKey(questId)) === "1";
-  } catch {
-    return false;
-  }
-};
-const claimQuest = (questId: string) => {
-  try {
-    localStorage.setItem(battleClaimKey(questId), "1");
-  } catch {}
-};
+const battleClaimsOnchainSoon = true;
+const battleClaimComingSoonText = "Coming soon — claimable after next RC on-chain upgrade.";
 
 const mySessionsInBattle = computed(() => {
   if (!myWalletAddr.value) return [] as any[];
@@ -740,7 +728,7 @@ const quests = computed((): Quest[] => {
 
   return q.map((qq) => {
     const ready = hasWallet && qq.current >= qq.target;
-    const claimed = hasWallet && isQuestClaimed(qq.id);
+    const claimed = false;
     return {
       ...qq,
       ready,
@@ -1041,6 +1029,9 @@ const myStreakRank = computed(() => {
             <div class="text-[11px] uppercase tracking-wider text-indigo-200">🎯 Battle Quests</div>
             <div class="text-[11px] text-slate-400" v-if="!myWalletAddr">Connect Keplr for progress</div>
           </div>
+          <div v-if="battleClaimsOnchainSoon" class="mt-2 text-[11px] text-indigo-200/90">
+            {{ battleClaimComingSoonText }}
+          </div>
           <div class="mt-2 space-y-2">
             <div v-for="q in quests" :key="q.id" class="p-2 rounded-lg bg-white/5 border border-white/10">
               <div class="flex items-center justify-between gap-2">
@@ -1051,11 +1042,10 @@ const myStreakRank = computed(() => {
                 <button
                   v-if="myWalletAddr"
                   class="btn btn-xs"
-                  :class="q.ready && !q.claimed ? 'btn-primary' : ''"
-                  :disabled="!q.ready || q.claimed"
-                  @click="claimQuest(q.id)"
+                  :class="q.ready ? 'btn-primary' : ''"
+                  :disabled="true"
                 >
-                  {{ q.claimed ? 'Claimed' : q.ready ? 'Claim' : 'Locked' }}
+                  {{ q.ready ? 'Coming soon' : 'Locked' }}
                 </button>
               </div>
               <div class="mt-2">
