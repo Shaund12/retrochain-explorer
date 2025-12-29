@@ -9,12 +9,16 @@ const { address } = useKeplr();
 const { smartQueryContract } = useContracts();
 
 const contractAddress = ref<string>(import.meta.env.VITE_BATTLEPOINTS_CONTRACT || "");
+const cw20Address = ref<string>(import.meta.env.VITE_BATTLEPOINTS_CW20 || "");
+const cw721Address = ref<string>(import.meta.env.VITE_BATTLEPOINTS_CW721 || "");
 
 const loading = ref(false);
 const error = ref<string | null>(null);
 const points = ref<number | null>(null);
 
 const hasWallet = computed(() => Boolean(address.value));
+
+const hasContract = computed(() => Boolean(contractAddress.value.trim()));
 
 const load = async () => {
   error.value = null;
@@ -79,6 +83,50 @@ onMounted(load);
         <div class="text-sm text-slate-200 mt-1">Coming soon: browse items and buy NFTs with points.</div>
         <div class="text-xs text-slate-400 mt-2">
           This page will query <code class="font-mono">ShopItems</code> and call <code class="font-mono">BuyNft</code> once the contract is deployed.
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="flex items-center justify-between mb-2">
+        <h2 class="text-sm font-semibold text-slate-100">Contracts</h2>
+        <span class="text-[11px] text-slate-400">Configured via env vars</span>
+      </div>
+
+      <div class="grid gap-3 md:grid-cols-3">
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-white/10">
+          <div class="text-[11px] uppercase tracking-wider text-slate-500">BattlePoints</div>
+          <input
+            v-model="contractAddress"
+            type="text"
+            class="mt-2 w-full px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-100 text-xs font-mono"
+            placeholder="VITE_BATTLEPOINTS_CONTRACT"
+          />
+          <div class="mt-2 text-[11px]" :class="hasContract ? 'text-emerald-200' : 'text-amber-200'">
+            {{ hasContract ? 'Ready' : 'Missing address' }}
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-white/10">
+          <div class="text-[11px] uppercase tracking-wider text-slate-500">CW20 Battle Points</div>
+          <input
+            v-model="cw20Address"
+            type="text"
+            class="mt-2 w-full px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-100 text-xs font-mono"
+            placeholder="VITE_BATTLEPOINTS_CW20"
+          />
+          <div class="mt-2 text-[11px] text-slate-500">Minter: BattlePoints contract</div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-white/10">
+          <div class="text-[11px] uppercase tracking-wider text-slate-500">CW721 Collection</div>
+          <input
+            v-model="cw721Address"
+            type="text"
+            class="mt-2 w-full px-3 py-2 rounded-lg bg-slate-900/80 border border-slate-700 text-slate-100 text-xs font-mono"
+            placeholder="VITE_BATTLEPOINTS_CW721"
+          />
+          <div class="mt-2 text-[11px] text-slate-500">Minter: BattlePoints contract</div>
         </div>
       </div>
     </div>
