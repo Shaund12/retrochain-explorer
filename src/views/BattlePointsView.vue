@@ -56,8 +56,8 @@ onMounted(load);
         <p class="text-sm text-slate-300 mt-1">View your points and browse store items.</p>
       </div>
       <div class="flex gap-2 flex-wrap justify-end">
-        <button class="btn text-xs" @click="router.push({ name: 'arcade' })">? Back to Arcade</button>
-        <button class="btn btn-primary text-xs" :disabled="loading" @click="load">{{ loading ? 'LoadingÖ' : 'Refresh' }}</button>
+        <button class="btn text-xs" @click="router.push({ name: 'arcade' })">‚Üê Back to Arcade</button>
+        <button class="btn btn-primary text-xs" :disabled="loading" @click="load">{{ loading ? 'Loading‚Ä¶' : 'Refresh' }}</button>
       </div>
     </div>
 
@@ -66,7 +66,7 @@ onMounted(load);
         <div class="text-[11px] uppercase tracking-wider text-slate-300">My Battle Points</div>
         <div class="text-3xl font-extrabold text-white mt-1">
           <span v-if="!hasWallet" class="text-slate-400">Connect Keplr</span>
-          <span v-else-if="loading" class="text-slate-300">Ö</span>
+          <span v-else-if="loading" class="text-slate-300">‚Ä¶</span>
           <span v-else>{{ (points ?? 0).toLocaleString() }}</span>
         </div>
         <div class="text-xs text-slate-400 mt-1" v-if="contractAddress">
