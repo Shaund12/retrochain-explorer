@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from "vue";
+import { onMounted, onUnmounted, computed, ref } from "vue";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { useArcade } from "@/composables/useArcade";
@@ -7,6 +7,7 @@ import RcArcadeGameCard from "@/components/RcArcadeGameCard.vue";
 import { useRouter } from "vue-router";
 import ApexChart from "vue3-apexcharts";
 import { useApi } from "@/composables/useApi";
+import { useKeplr } from "@/composables/useKeplr";
 
 dayjs.extend(relativeTime);
 
@@ -24,6 +25,7 @@ const {
   fetchLatestAchievements
 } = useArcade();
 const api = useApi();
+const { address: keplrAddress } = useKeplr();
 
 const selectedGame = ref<any | null>(null);
 const gameModalOpen = ref(false);
@@ -408,12 +410,26 @@ const refreshAll = async () => {
   }
 };
 
+let tickTimer: number | undefined;
+
 onMounted(async () => {
   try {
     const stored = localStorage.getItem(spaceInvadersNoticeKey);
     showSpaceInvadersNotice.value = stored !== "true";
   } catch {}
+
+  tickTimer = window.setInterval(() => {
+    nowTick.value = Date.now();
+  }, 1000);
+
   await refreshAll();
+});
+
+onUnmounted(() => {
+  if (tickTimer != null) {
+    clearInterval(tickTimer);
+    tickTimer = undefined;
+  }
 });
 
 const dismissSpaceInvadersNotice = () => {
@@ -438,6 +454,212 @@ const achievementIcon = (a: any) => {
   if (text.includes("win") || text.includes("victory") || text.includes("champ")) return "🏆";
   return "🎖️";
 };
+
+type BattlePeriod = "daily" | "weekly" | "monthly";
+const battlePeriod = ref<BattlePeriod>("daily");
+
+type BattleGame = "all" | "retrovaders" | "retronoid";
+const battleGame = ref<BattleGame>("all");
+
+const normalizeGameId = (gid: any) => String(gid || "").toLowerCase().trim();
+const normalizeAddr = (a: any) => String(a || "").toLowerCase().trim();
+
+const startOfPeriod = (p: BattlePeriod) => {
+  if (p === "daily") return dayjs().startOf("day");
+  if (p === "weekly") return dayjs().startOf("week");
+  return dayjs().startOf("month");
+};
+
+const endOfPeriod = (p: BattlePeriod) => {
+  if (p === "daily") return dayjs().endOf("day");
+  if (p === "weekly") return dayjs().endOf("week");
+  return dayjs().endOf("month");
+};
+
+const nowTick = ref(0);
+const battleEndsIn = computed(() => {
+  void nowTick.value;
+  const end = endOfPeriod(battlePeriod.value);
+  const now = dayjs();
+  const diffSec = Math.max(0, end.diff(now, "second"));
+  const s = diffSec % 60;
+  const m = Math.floor(diffSec / 60) % 60;
+  const h = Math.floor(diffSec / 3600);
+  if (h <= 0) return `${m}m ${s}s`;
+  return `${h}h ${m}m`;
+});
+
+const sessionsInBattleWindow = computed(() => {
+  const start = startOfPeriod(battlePeriod.value);
+  return sessionsList.value.filter((s: any) => {
+    const t = dayjs(s?.started_at);
+    return t.isValid() && (t.isAfter(start) || t.isSame(start));
+  });
+});
+
+const sessionsInBattle = computed(() =>
+  sessionsInBattleWindow.value.filter((s: any) => {
+    if (battleGame.value === "all") return true;
+    const gid = normalizeGameId(s?.game_id || s?.gameId);
+    return gid === battleGame.value;
+  })
+);
+
+const burnsInBattleWindow = computed(() => {
+  const start = startOfPeriod(battlePeriod.value);
+  return arcadeBurns.value.filter((b) => {
+    const t = dayjs(b?.timestamp);
+    return t.isValid() && (t.isAfter(start) || t.isSame(start));
+  });
+});
+
+const burnsInBattle = computed(() =>
+  burnsInBattleWindow.value.filter((b) => {
+    if (battleGame.value === "all") return true;
+    const gid = normalizeGameId(b?.gameId);
+    return gid === battleGame.value;
+  })
+);
+
+type BattleRow = { player: string; score: number; games: number; runs: number };
+const scoreBattleLeaders = computed(() => {
+  const byPlayer = new Map<string, BattleRow>();
+  sessionsInBattle.value.forEach((s: any) => {
+    const player = (s?.player || s?.creator || "").toString();
+    if (!player) return;
+    const score = Number(s?.score ?? 0);
+    if (!Number.isFinite(score)) return;
+    const gameId = (s?.game_id || s?.gameId || "unknown").toString();
+
+    const cur = byPlayer.get(player) || { player, score: 0, games: 0, runs: 0 };
+    cur.score = Math.max(cur.score, score);
+    cur.runs += 1;
+    (cur as any)._games = (cur as any)._games || new Set<string>();
+    (cur as any)._games.add(gameId);
+    cur.games = (cur as any)._games.size;
+    byPlayer.set(player, cur);
+  });
+  return [...byPlayer.values()]
+    .sort((a, b) => b.score - a.score || b.runs - a.runs)
+    .slice(0, 10);
+});
+
+const grinders = computed(() => {
+  const counts = new Map<string, number>();
+  sessionsInBattle.value.forEach((s: any) => {
+    const player = (s?.player || s?.creator || "").toString();
+    if (!player) return;
+    counts.set(player, (counts.get(player) || 0) + 1);
+  });
+  return [...counts.entries()]
+    .map(([player, runs]) => ({ player, runs }))
+    .sort((a, b) => b.runs - a.runs)
+    .slice(0, 10);
+});
+
+const battleSummary = computed(() => {
+  const s = sessionsInBattle.value;
+  const players = new Set(s.map((x: any) => (x?.player || x?.creator || "").toString()).filter(Boolean));
+  return {
+    sessions: s.length,
+    players: players.size,
+    topScore: scoreBattleLeaders.value[0]?.score || 0
+  };
+});
+
+const burnBattleLeaders = computed(() => {
+  const sums = new Map<string, number>();
+  burnsInBattle.value.forEach((b) => {
+    const player = (b?.player || "").toString();
+    if (!player) return;
+    const amt = Number(b?.amount ?? 0);
+    if (!Number.isFinite(amt) || amt <= 0) return;
+    sums.set(player, (sums.get(player) || 0) + amt);
+  });
+  return [...sums.entries()]
+    .map(([player, burned]) => ({ player, burned }))
+    .sort((a, b) => b.burned - a.burned)
+    .slice(0, 10);
+});
+
+const burnBattleSummary = computed(() => {
+  const burns = burnsInBattle.value;
+  const total = burns.reduce((sum, b) => sum + Number(b.amount || 0), 0);
+  const unique = new Set(burns.map((b) => (b.player || "").toString()).filter(Boolean));
+  return {
+    burns: burns.length,
+    players: unique.size,
+    totalBurned: Number.isFinite(total) ? total : 0
+  };
+});
+
+const myWalletAddr = computed(() => normalizeAddr(keplrAddress.value));
+
+const myScoreRank = computed(() => {
+  if (!myWalletAddr.value) return null;
+  const rows = scoreBattleLeaders.value;
+  const idx = rows.findIndex((r) => normalizeAddr(r.player) === myWalletAddr.value);
+  if (idx < 0) return null;
+  return { rank: idx + 1, row: rows[idx] };
+});
+
+const myGrindRank = computed(() => {
+  if (!myWalletAddr.value) return null;
+  const rows = grinders.value;
+  const idx = rows.findIndex((r) => normalizeAddr(r.player) === myWalletAddr.value);
+  if (idx < 0) return null;
+  return { rank: idx + 1, row: rows[idx] };
+});
+
+const myBurnRank = computed(() => {
+  if (!myWalletAddr.value) return null;
+  const rows = burnBattleLeaders.value;
+  const idx = rows.findIndex((r) => normalizeAddr(r.player) === myWalletAddr.value);
+  if (idx < 0) return null;
+  return { rank: idx + 1, row: rows[idx] };
+});
+
+type Tier = "bronze" | "silver" | "gold" | null;
+function scoreTierFrom(score: number): Tier {
+  const s = Number(score || 0);
+  if (!Number.isFinite(s) || s <= 0) return null;
+  if (s >= 15000) return "gold";
+  if (s >= 8000) return "silver";
+  if (s >= 3000) return "bronze";
+  return null;
+}
+
+function runsTierFrom(runs: number): Tier {
+  const n = Number(runs || 0);
+  if (!Number.isFinite(n) || n <= 0) return null;
+  if (n >= 25) return "gold";
+  if (n >= 12) return "silver";
+  if (n >= 5) return "bronze";
+  return null;
+}
+
+function burnedTierFrom(uretroBurned: number): Tier {
+  const x = Number(uretroBurned || 0);
+  if (!Number.isFinite(x) || x <= 0) return null;
+  if (x >= 50_000_000) return "gold"; // 50 RETRO
+  if (x >= 20_000_000) return "silver"; // 20 RETRO
+  if (x >= 5_000_000) return "bronze"; // 5 RETRO
+  return null;
+}
+
+function tierLabel(t: Tier) {
+  if (t === "gold") return "Gold";
+  if (t === "silver") return "Silver";
+  if (t === "bronze") return "Bronze";
+  return "—";
+}
+
+function tierClasses(t: Tier) {
+  if (t === "gold") return "border-amber-400/60 text-amber-200 bg-amber-500/10";
+  if (t === "silver") return "border-slate-300/40 text-slate-200 bg-white/5";
+  if (t === "bronze") return "border-orange-400/50 text-orange-200 bg-orange-500/10";
+  return "border-white/10 text-slate-400 bg-white/5";
+}
 </script>
 
 <template>
@@ -607,6 +829,140 @@ const achievementIcon = (a: any) => {
       <div v-if="sessionsList.length === 0 && achievementsList.length === 0" class="text-xs text-slate-400">No activity yet.</div>
       <div v-else>
         <ApexChart type="area" height="240" :options="apexOptions" :series="apexSeries" />
+      </div>
+    </div>
+
+    <div class="card border border-fuchsia-500/40 bg-gradient-to-r from-fuchsia-500/10 via-indigo-500/10 to-slate-900/30">
+      <div class="flex flex-col gap-2 sm:flex-row sm:items-center sm:justify-between">
+        <div>
+          <h2 class="text-sm font-semibold text-slate-100">Battles</h2>
+          <div class="text-[11px] text-slate-400">
+            {{ battlePeriod === 'daily' ? 'Daily' : battlePeriod === 'weekly' ? 'Weekly' : 'Monthly' }} battles · Ends in {{ battleEndsIn }}
+          </div>
+        </div>
+        <div class="flex gap-2 flex-wrap">
+          <button class="btn btn-xs" :class="battlePeriod === 'daily' ? 'btn-primary' : ''" @click="battlePeriod = 'daily'">Daily</button>
+          <button class="btn btn-xs" :class="battlePeriod === 'weekly' ? 'btn-primary' : ''" @click="battlePeriod = 'weekly'">Weekly</button>
+          <button class="btn btn-xs" :class="battlePeriod === 'monthly' ? 'btn-primary' : ''" @click="battlePeriod = 'monthly'">Monthly</button>
+        </div>
+      </div>
+
+      <div class="mt-2 flex gap-2 flex-wrap">
+        <button class="btn btn-xs" :class="battleGame === 'all' ? 'btn-primary' : ''" @click="battleGame = 'all'">All games</button>
+        <button class="btn btn-xs" :class="battleGame === 'retrovaders' ? 'btn-primary' : ''" @click="battleGame = 'retrovaders'">RetroVaders</button>
+        <button class="btn btn-xs" :class="battleGame === 'retronoid' ? 'btn-primary' : ''" @click="battleGame = 'retronoid'">RetroNoid</button>
+        <span class="text-[11px] text-slate-400 self-center" v-if="battleGame !== 'all'">Showing: {{ battleGame }}</span>
+      </div>
+
+      <div class="mt-3 grid gap-3 lg:grid-cols-4">
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-white/10">
+          <div class="text-[11px] uppercase tracking-wider text-slate-400">Battle Snapshot</div>
+          <div class="mt-2 grid grid-cols-3 gap-2">
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="text-[10px] text-slate-400">Sessions</div>
+              <div class="text-lg font-extrabold text-white">{{ battleSummary.sessions }}</div>
+            </div>
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="text-[10px] text-slate-400">Players</div>
+              <div class="text-lg font-extrabold text-white">{{ battleSummary.players }}</div>
+            </div>
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="text-[10px] text-slate-400">Top Score</div>
+              <div class="text-lg font-extrabold text-white">{{ Number(battleSummary.topScore || 0).toLocaleString() }}</div>
+            </div>
+          </div>
+          <div class="mt-3 text-[11px] text-slate-400">Tip: Score Battle uses best single-session score in this period.</div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-rose-400/20">
+          <div class="text-[11px] uppercase tracking-wider text-rose-200">🔥 Burn Battle Snapshot</div>
+          <div class="mt-2 grid grid-cols-3 gap-2">
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="text-[10px] text-slate-400">Burns</div>
+              <div class="text-lg font-extrabold text-white">{{ burnBattleSummary.burns }}</div>
+            </div>
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="text-[10px] text-slate-400">Players</div>
+              <div class="text-lg font-extrabold text-white">{{ burnBattleSummary.players }}</div>
+            </div>
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="text-[10px] text-slate-400">Total Burned</div>
+              <div class="text-lg font-extrabold text-white">{{ formatRetroAmount(burnBattleSummary.totalBurned) }}</div>
+            </div>
+          </div>
+          <div class="mt-3 text-[11px] text-slate-400">
+            Burn Battle uses <code class="text-rose-200">MsgInsertCoin</code> events in this period.
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-emerald-400/20">
+          <div class="flex items-center justify-between">
+            <div class="text-[11px] uppercase tracking-wider text-emerald-200">🏆 Score Battle</div>
+            <div class="text-[11px] text-slate-400">Top 10</div>
+          </div>
+          <div v-if="scoreBattleLeaders.length === 0" class="text-xs text-slate-400 mt-2">No sessions in this battle window yet.</div>
+          <div v-else class="mt-2 space-y-2">
+            <div v-for="(r, idx) in scoreBattleLeaders" :key="r.player" class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="min-w-0">
+                <div class="text-xs text-white font-semibold flex items-center gap-2">
+                  <span class="font-mono text-[11px] text-slate-300">#{{ idx + 1 }}</span>
+                  <span class="truncate">{{ shortAddr(r.player, 14) }}</span>
+                </div>
+                <div class="text-[11px] text-slate-400">Runs {{ r.runs }} · Games {{ r.games }}</div>
+              </div>
+              <div class="text-right">
+                <div class="text-emerald-200 font-extrabold">{{ Number(r.score || 0).toLocaleString() }}</div>
+                <div class="text-[10px] text-slate-500">best score</div>
+              </div>
+            </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-rose-400/20">
+          <div class="flex items-center justify-between">
+            <div class="text-[11px] uppercase tracking-wider text-rose-200">🔥 Burn Battle</div>
+            <div class="text-[11px] text-slate-400">Top 10</div>
+          </div>
+          <div v-if="burnBattleLeaders.length === 0" class="text-xs text-slate-400 mt-2">No burns in this battle window yet.</div>
+          <div v-else class="mt-2 space-y-2">
+            <div v-for="(r, idx) in burnBattleLeaders" :key="r.player" class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="min-w-0">
+                <div class="text-xs text-white font-semibold flex items-center gap-2">
+                  <span class="font-mono text-[11px] text-slate-300">#{{ idx + 1 }}</span>
+                  <span class="truncate">{{ shortAddr(r.player, 14) }}</span>
+                </div>
+                <div class="text-[11px] text-slate-400">Insert Coin burns</div>
+              </div>
+              <div class="text-right">
+                <div class="text-rose-200 font-extrabold">{{ formatRetroAmount(r.burned) }}</div>
+                <div class="text-[10px] text-slate-500">RETRO</div>
+              </div>
+            </div>
+          </div>
+        </div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-amber-400/20">
+          <div class="flex items-center justify-between">
+            <div class="text-[11px] uppercase tracking-wider text-amber-200">⛏️ Grind Battle</div>
+            <div class="text-[11px] text-slate-400">Top 10</div>
+          </div>
+          <div v-if="grinders.length === 0" class="text-xs text-slate-400 mt-2">No sessions in this battle window yet.</div>
+          <div v-else class="mt-2 space-y-2">
+            <div v-for="(r, idx) in grinders" :key="r.player" class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="min-w-0">
+                <div class="text-xs text-white font-semibold flex items-center gap-2">
+                  <span class="font-mono text-[11px] text-slate-300">#{{ idx + 1 }}</span>
+                  <span class="truncate">{{ shortAddr(r.player, 14) }}</span>
+                </div>
+                <div class="text-[11px] text-slate-400">Sessions played</div>
+              </div>
+              <div class="text-right">
+                <div class="text-amber-200 font-extrabold">{{ r.runs }}</div>
+                <div class="text-[10px] text-slate-500">runs</div>
+              </div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
 
