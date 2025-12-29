@@ -660,6 +660,187 @@ function tierClasses(t: Tier) {
   if (t === "bronze") return "border-orange-400/50 text-orange-200 bg-orange-500/10";
   return "border-white/10 text-slate-400 bg-white/5";
 }
+
+const battleKey = computed(() => `${battlePeriod.value}:${battleGame.value}`);
+const battleClaimKey = (questId: string) => `arcade:battle:claim:${questId}:${battleKey.value}:${myWalletAddr.value || "anon"}`;
+const isQuestClaimed = (questId: string) => {
+  try {
+    return localStorage.getItem(battleClaimKey(questId)) === "1";
+  } catch {
+    return false;
+  }
+};
+const claimQuest = (questId: string) => {
+  try {
+    localStorage.setItem(battleClaimKey(questId), "1");
+  } catch {}
+};
+
+const mySessionsInBattle = computed(() => {
+  if (!myWalletAddr.value) return [] as any[];
+  return sessionsInBattle.value.filter((s: any) => normalizeAddr(s?.player || s?.creator) === myWalletAddr.value);
+});
+
+const myBurnsInBattle = computed(() => {
+  if (!myWalletAddr.value) return [] as any[];
+  return burnsInBattle.value.filter((b) => normalizeAddr(b?.player) === myWalletAddr.value);
+});
+
+const myBattleBestScore = computed(() => {
+  const scores = mySessionsInBattle.value.map((s: any) => Number(s?.score ?? 0)).filter((n: number) => Number.isFinite(n));
+  return scores.length ? Math.max(...scores) : 0;
+});
+
+const myBattleRuns = computed(() => mySessionsInBattle.value.length);
+
+const myBattleBurned = computed(() => {
+  const total = myBurnsInBattle.value.reduce((sum: number, b: any) => sum + Number(b?.amount || 0), 0);
+  return Number.isFinite(total) ? total : 0;
+});
+
+type Quest = {
+  id: string;
+  title: string;
+  detail: string;
+  metricLabel: string;
+  current: number;
+  target: number;
+  ready: boolean;
+  claimed: boolean;
+};
+
+const quests = computed((): Quest[] => {
+  const hasWallet = Boolean(myWalletAddr.value);
+  const q = [
+    {
+      id: "q_runs_3",
+      title: "Warm Up",
+      detail: "Play 3 runs in this battle window.",
+      metricLabel: "runs",
+      current: myBattleRuns.value,
+      target: 3
+    },
+    {
+      id: "q_score_5k",
+      title: "Score Hunter",
+      detail: "Hit 5,000+ best score in this battle window.",
+      metricLabel: "best score",
+      current: myBattleBestScore.value,
+      target: 5000
+    },
+    {
+      id: "q_burn_1",
+      title: "Insert Coin",
+      detail: "Burn 1.00 RETRO via Insert Coin in this battle window.",
+      metricLabel: "RETRO burned",
+      current: Math.round((myBattleBurned.value / 1_000_000) * 100) / 100,
+      target: 1
+    }
+  ];
+
+  return q.map((qq) => {
+    const ready = hasWallet && qq.current >= qq.target;
+    const claimed = hasWallet && isQuestClaimed(qq.id);
+    return {
+      ...qq,
+      ready,
+      claimed
+    };
+  });
+});
+
+const teamBattle = computed(() => {
+  const byGame: Record<"retrovaders" | "retronoid", { runs: number; players: Set<string>; bestScore: number; burned: number }> = {
+    retrovaders: { runs: 0, players: new Set<string>(), bestScore: 0, burned: 0 },
+    retronoid: { runs: 0, players: new Set<string>(), bestScore: 0, burned: 0 }
+  };
+
+  sessionsInBattleWindow.value.forEach((s: any) => {
+    const gid = normalizeGameId(s?.game_id || s?.gameId);
+    if (gid !== "retrovaders" && gid !== "retronoid") return;
+    byGame[gid].runs += 1;
+    const p = (s?.player || s?.creator || "").toString();
+    if (p) byGame[gid].players.add(p);
+    const sc = Number(s?.score ?? 0);
+    if (Number.isFinite(sc)) byGame[gid].bestScore = Math.max(byGame[gid].bestScore, sc);
+  });
+
+  burnsInBattleWindow.value.forEach((b) => {
+    const gid = normalizeGameId(b?.gameId);
+    if (gid !== "retrovaders" && gid !== "retronoid") return;
+    const amt = Number(b?.amount ?? 0);
+    if (Number.isFinite(amt)) byGame[gid].burned += amt;
+  });
+
+  const rvPlayers = byGame.retrovaders.players.size;
+  const rnPlayers = byGame.retronoid.players.size;
+  const rvScore = byGame.retrovaders.bestScore;
+  const rnScore = byGame.retronoid.bestScore;
+  const rvRuns = byGame.retrovaders.runs;
+  const rnRuns = byGame.retronoid.runs;
+  const rvBurn = byGame.retrovaders.burned;
+  const rnBurn = byGame.retronoid.burned;
+
+  const scoreWinner = rvScore === rnScore ? "tie" : rvScore > rnScore ? "retrovaders" : "retronoid";
+  const runsWinner = rvRuns === rnRuns ? "tie" : rvRuns > rnRuns ? "retrovaders" : "retronoid";
+  const burnWinner = rvBurn === rnBurn ? "tie" : rvBurn > rnBurn ? "retrovaders" : "retronoid";
+  const playerWinner = rvPlayers === rnPlayers ? "tie" : rvPlayers > rnPlayers ? "retrovaders" : "retronoid";
+
+  return {
+    retrovaders: { players: rvPlayers, runs: rvRuns, bestScore: rvScore, burned: rvBurn },
+    retronoid: { players: rnPlayers, runs: rnRuns, bestScore: rnScore, burned: rnBurn },
+    winners: { players: playerWinner, runs: runsWinner, score: scoreWinner, burn: burnWinner }
+  };
+});
+
+const streakBattleLeaders = computed(() => {
+  const map = new Map<string, Set<string>>();
+  const start = startOfPeriod(battlePeriod.value);
+  const end = endOfPeriod(battlePeriod.value);
+
+  sessionsList.value.forEach((s: any) => {
+    const t = dayjs(s?.started_at);
+    if (!t.isValid()) return;
+    if (t.isBefore(start) || t.isAfter(end)) return;
+    const gid = normalizeGameId(s?.game_id || s?.gameId);
+    if (battleGame.value !== "all" && gid !== battleGame.value) return;
+    const player = (s?.player || s?.creator || "").toString();
+    if (!player) return;
+    const dayKey = t.format("YYYY-MM-DD");
+    if (!map.has(player)) map.set(player, new Set<string>());
+    map.get(player)!.add(dayKey);
+  });
+
+  const calcStreak = (days: string[]) => {
+    const set = new Set(days);
+    let best = 0;
+    let cur = 0;
+    for (let d = start.startOf("day"); d.isBefore(end) || d.isSame(end, "day"); d = d.add(1, "day")) {
+      const key = d.format("YYYY-MM-DD");
+      if (set.has(key)) {
+        cur += 1;
+        best = Math.max(best, cur);
+      } else {
+        cur = 0;
+      }
+    }
+    return best;
+  };
+
+  return [...map.entries()]
+    .map(([player, set]) => ({ player, streak: calcStreak([...set]) }))
+    .filter((r) => r.streak > 0)
+    .sort((a, b) => b.streak - a.streak)
+    .slice(0, 10);
+});
+
+const myStreakRank = computed(() => {
+  if (!myWalletAddr.value) return null;
+  const rows = streakBattleLeaders.value;
+  const idx = rows.findIndex((r) => normalizeAddr(r.player) === myWalletAddr.value);
+  if (idx < 0) return null;
+  return { rank: idx + 1, row: rows[idx] };
+});
 </script>
 
 <template>
@@ -854,6 +1035,103 @@ function tierClasses(t: Tier) {
         <span class="text-[11px] text-slate-400 self-center" v-if="battleGame !== 'all'">Showing: {{ battleGame }}</span>
       </div>
 
+      <div class="mt-3 grid gap-3 lg:grid-cols-3">
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-indigo-400/20">
+          <div class="flex items-center justify-between">
+            <div class="text-[11px] uppercase tracking-wider text-indigo-200">🎯 Battle Quests</div>
+            <div class="text-[11px] text-slate-400" v-if="!myWalletAddr">Connect Keplr for progress</div>
+          </div>
+          <div class="mt-2 space-y-2">
+            <div v-for="q in quests" :key="q.id" class="p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="flex items-center justify-between gap-2">
+                <div class="min-w-0">
+                  <div class="text-xs font-semibold text-white truncate">{{ q.title }}</div>
+                  <div class="text-[11px] text-slate-400">{{ q.detail }}</div>
+                </div>
+                <button
+                  v-if="myWalletAddr"
+                  class="btn btn-xs"
+                  :class="q.ready && !q.claimed ? 'btn-primary' : ''"
+                  :disabled="!q.ready || q.claimed"
+                  @click="claimQuest(q.id)"
+                >
+                  {{ q.claimed ? 'Claimed' : q.ready ? 'Claim' : 'Locked' }}
+                </button>
+              </div>
+              <div class="mt-2">
+                <div class="flex items-center justify-between text-[10px] text-slate-400">
+                  <span>{{ q.metricLabel }}</span>
+                  <span>{{ q.current }} / {{ q.target }}</span>
+                </div>
+                <div class="mt-1 h-2 rounded-full bg-black/30 border border-white/10 overflow-hidden">
+                  <div
+                    class="h-full bg-gradient-to-r from-indigo-400 via-fuchsia-400 to-emerald-400"
+                    :style="{ width: `${Math.min(100, Math.round((q.current / Math.max(1, q.target)) * 100))}%` }"
+                  ></div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-emerald-400/20">
+          <div class="text-[11px] uppercase tracking-wider text-emerald-200">🆚 Team Battle (this window)</div>
+          <div class="mt-2 grid grid-cols-2 gap-2">
+            <div class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
+              <div class="text-xs font-semibold text-emerald-100">RetroVaders</div>
+              <div class="text-[11px] text-slate-300">Players: {{ teamBattle.retrovaders.players }}</div>
+              <div class="text-[11px] text-slate-300">Runs: {{ teamBattle.retrovaders.runs }}</div>
+              <div class="text-[11px] text-slate-300">Best score: {{ Number(teamBattle.retrovaders.bestScore || 0).toLocaleString() }}</div>
+              <div class="text-[11px] text-slate-300">Burned: {{ formatRetroAmount(teamBattle.retrovaders.burned) }}</div>
+            </div>
+            <div class="p-2 rounded-lg bg-amber-500/10 border border-amber-400/20">
+              <div class="text-xs font-semibold text-amber-100">RetroNoid</div>
+              <div class="text-[11px] text-slate-300">Players: {{ teamBattle.retronoid.players }}</div>
+              <div class="text-[11px] text-slate-300">Runs: {{ teamBattle.retronoid.runs }}</div>
+              <div class="text-[11px] text-slate-300">Best score: {{ Number(teamBattle.retronoid.bestScore || 0).toLocaleString() }}</div>
+              <div class="text-[11px] text-slate-300">Burned: {{ formatRetroAmount(teamBattle.retronoid.burned) }}</div>
+            </div>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-400">
+            Winners — Players: <span class="text-slate-200">{{ teamBattle.winners.players }}</span> · Runs:
+            <span class="text-slate-200">{{ teamBattle.winners.runs }}</span> · Score:
+            <span class="text-slate-200">{{ teamBattle.winners.score }}</span> · Burn:
+            <span class="text-slate-200">{{ teamBattle.winners.burn }}</span>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-sky-400/20">
+          <div class="flex items-center justify-between">
+            <div class="text-[11px] uppercase tracking-wider text-sky-200">📅 Streak Battle</div>
+            <div class="text-[11px] text-slate-400">Top 10</div>
+          </div>
+          <div v-if="streakBattleLeaders.length === 0" class="text-xs text-slate-400 mt-2">No streaks yet in this window.</div>
+          <div v-else class="mt-2 space-y-2">
+            <div v-for="(r, idx) in streakBattleLeaders" :key="r.player" class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="text-xs text-white font-semibold flex items-center gap-2 min-w-0">
+                <span class="font-mono text-[11px] text-slate-300">#{{ idx + 1 }}</span>
+                <span class="truncate">{{ shortAddr(r.player, 14) }}</span>
+              </div>
+              <div class="text-right">
+                <div class="text-sky-200 font-extrabold">{{ r.streak }}</div>
+                <div class="text-[10px] text-slate-500">days</div>
+              </div>
+            </div>
+
+            <div v-if="myStreakRank" class="mt-2 p-2 rounded-lg border border-sky-400/50 bg-sky-500/10">
+              <div class="text-[11px] uppercase tracking-wider text-sky-200">My Rank</div>
+              <div class="flex items-center justify-between">
+                <div class="text-xs text-white font-semibold">#{{ myStreakRank.rank }} · {{ shortAddr(myStreakRank.row.player, 14) }}</div>
+                <div class="text-right">
+                  <div class="text-sky-200 font-extrabold">{{ myStreakRank.row.streak }}</div>
+                  <div class="text-[10px] text-slate-500">days</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+
       <div class="mt-3 grid gap-3 lg:grid-cols-4">
         <div class="p-3 rounded-xl bg-slate-900/60 border border-white/10">
           <div class="text-[11px] uppercase tracking-wider text-slate-400">Battle Snapshot</div>
@@ -916,28 +1194,16 @@ function tierClasses(t: Tier) {
               </div>
             </div>
 
-        <div class="p-3 rounded-xl bg-slate-900/60 border border-rose-400/20">
-          <div class="flex items-center justify-between">
-            <div class="text-[11px] uppercase tracking-wider text-rose-200">🔥 Burn Battle</div>
-            <div class="text-[11px] text-slate-400">Top 10</div>
-          </div>
-          <div v-if="burnBattleLeaders.length === 0" class="text-xs text-slate-400 mt-2">No burns in this battle window yet.</div>
-          <div v-else class="mt-2 space-y-2">
-            <div v-for="(r, idx) in burnBattleLeaders" :key="r.player" class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10">
-              <div class="min-w-0">
-                <div class="text-xs text-white font-semibold flex items-center gap-2">
-                  <span class="font-mono text-[11px] text-slate-300">#{{ idx + 1 }}</span>
-                  <span class="truncate">{{ shortAddr(r.player, 14) }}</span>
+            <div v-if="myScoreRank" class="mt-2 p-2 rounded-lg border border-emerald-400/50 bg-emerald-500/10">
+              <div class="text-[11px] uppercase tracking-wider text-emerald-200">My Rank</div>
+              <div class="flex items-center justify-between">
+                <div class="text-xs text-white font-semibold">#{{ myScoreRank.rank }} · {{ shortAddr(myScoreRank.row.player, 14) }}</div>
+                <div class="text-right">
+                  <div class="text-emerald-200 font-extrabold">{{ Number(myScoreRank.row.score || 0).toLocaleString() }}</div>
+                  <div class="text-[10px] text-slate-500">best score</div>
                 </div>
-                <div class="text-[11px] text-slate-400">Insert Coin burns</div>
-              </div>
-              <div class="text-right">
-                <div class="text-rose-200 font-extrabold">{{ formatRetroAmount(r.burned) }}</div>
-                <div class="text-[10px] text-slate-500">RETRO</div>
               </div>
             </div>
-          </div>
-        </div>
           </div>
         </div>
 
@@ -959,6 +1225,51 @@ function tierClasses(t: Tier) {
               <div class="text-right">
                 <div class="text-amber-200 font-extrabold">{{ r.runs }}</div>
                 <div class="text-[10px] text-slate-500">runs</div>
+              </div>
+            </div>
+
+            <div v-if="myGrindRank" class="mt-2 p-2 rounded-lg border border-amber-400/50 bg-amber-500/10">
+              <div class="text-[11px] uppercase tracking-wider text-amber-200">My Rank</div>
+              <div class="flex items-center justify-between">
+                <div class="text-xs text-white font-semibold">#{{ myGrindRank.rank }} · {{ shortAddr(myGrindRank.row.player, 14) }}</div>
+                <div class="text-right">
+                  <div class="text-amber-200 font-extrabold">{{ myGrindRank.row.runs }}</div>
+                  <div class="text-[10px] text-slate-500">runs</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="p-3 rounded-xl bg-slate-900/60 border border-rose-400/20">
+          <div class="flex items-center justify-between">
+            <div class="text-[11px] uppercase tracking-wider text-rose-200">🔥 Burn Battle</div>
+            <div class="text-[11px] text-slate-400">Top 10</div>
+          </div>
+          <div v-if="burnBattleLeaders.length === 0" class="text-xs text-slate-400 mt-2">No burns in this battle window yet.</div>
+          <div v-else class="mt-2 space-y-2">
+            <div v-for="(r, idx) in burnBattleLeaders" :key="r.player" class="flex items-center justify-between p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="min-w-0">
+                <div class="text-xs text-white font-semibold flex items-center gap-2">
+                  <span class="font-mono text-[11px] text-slate-300">#{{ idx + 1 }}</span>
+                  <span class="truncate">{{ shortAddr(r.player, 14) }}</span>
+                </div>
+                <div class="text-[11px] text-slate-400">Insert Coin burns</div>
+              </div>
+              <div class="text-right">
+                <div class="text-rose-200 font-extrabold">{{ formatRetroAmount(r.burned) }}</div>
+                <div class="text-[10px] text-slate-500">RETRO</div>
+              </div>
+            </div>
+
+            <div v-if="myBurnRank" class="mt-2 p-2 rounded-lg border border-rose-400/50 bg-rose-500/10">
+              <div class="text-[11px] uppercase tracking-wider text-rose-200">My Rank</div>
+              <div class="flex items-center justify-between">
+                <div class="text-xs text-white font-semibold">#{{ myBurnRank.rank }} · {{ shortAddr(myBurnRank.row.player, 14) }}</div>
+                <div class="text-right">
+                  <div class="text-rose-200 font-extrabold">{{ formatRetroAmount(myBurnRank.row.burned) }}</div>
+                  <div class="text-[10px] text-slate-500">RETRO</div>
+                </div>
               </div>
             </div>
           </div>
