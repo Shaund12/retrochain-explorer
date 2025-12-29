@@ -24,6 +24,12 @@
     } catch {
       // ignore
     }
+
+  function requiredGameId() {
+    const gid = String(GAME_ID || "").trim();
+    if (!gid) throw new Error("GAME_ID is empty in client. Cannot start session.");
+    return gid;
+  }
     return;
   }
 
@@ -266,6 +272,9 @@
   const SOUND_KEY = `rc1_retrv_sound_${GAME_ID}`;
   const MUSIC_KEY = `rc1_retrv_music_${GAME_ID}`;
   const VOL_KEY = `rc1_retrv_vol_${GAME_ID}`;
+
+  // Powerups are purchased in the store using Arcade Tokens (on-chain) and then
+  // consumed from local inventory during gameplay.
 
   function readAudioPrefs() {
     try {
@@ -2746,6 +2755,51 @@ message MsgClaimAchievement {
     return { accountNumber, sequence };
   }
 
+  // Optimistic local cache to avoid account sequence races between consecutive txs.
+  // Cosmos ante handler expects sequence to be exact.
+  const accountStateCache = new Map();
+
+  async function getAccountStateCached(address) {
+    const fresh = await getAccountInfo(address);
+    const key = String(address || "");
+    const prev = accountStateCache.get(key);
+    if (prev && prev.accountNumber === String(fresh.accountNumber)) {
+      const prevSeq = BigInt(prev.sequence);
+      const freshSeq = BigInt(fresh.sequence);
+      // Never go backward.
+      const seq = (prevSeq > freshSeq ? prevSeq : freshSeq).toString();
+      const merged = { accountNumber: String(fresh.accountNumber), sequence: seq };
+      accountStateCache.set(key, merged);
+      return merged;
+    }
+    const next = { accountNumber: String(fresh.accountNumber), sequence: String(fresh.sequence) };
+    accountStateCache.set(key, next);
+    return next;
+  }
+
+  function bumpAccountSequence(address, accountNumber, usedSequence) {
+    const key = String(address || "");
+    if (!key) return;
+    try {
+      const cached = accountStateCache.get(key);
+      const used = BigInt(String(usedSequence));
+      const next = (used + 1n).toString();
+      if (cached && String(cached.accountNumber) === String(accountNumber)) {
+        const cur = BigInt(String(cached.sequence));
+        if (BigInt(next) > cur) accountStateCache.set(key, { accountNumber: String(accountNumber), sequence: next });
+        return;
+      }
+      accountStateCache.set(key, { accountNumber: String(accountNumber), sequence: next });
+    } catch {
+      // ignore
+    }
+  }
+
+  function isAccountSequenceMismatchError(err) {
+    const msg = String(err?.message || err || "");
+    return msg.toLowerCase().includes("account sequence mismatch") || msg.toLowerCase().includes("incorrect account sequence");
+  }
+
   async function signAndBroadcast(typeUrl, msgBytes, memo) {
     return signAndBroadcastMulti([{ typeUrl, value: msgBytes }], memo);
   }
@@ -2834,73 +2888,87 @@ message MsgClaimAchievement {
       const PubKey = root.lookupType("cosmos.crypto.secp256k1.PubKey");
       const SignMode = root.lookupEnum("cosmos.tx.signing.v1beta1.SignMode");
 
-      const { accountNumber, sequence } = await getAccountInfo(walletAddr);
+      const tryOnce = async ({ forceFreshAccountState } = {}) => {
+        const state = forceFreshAccountState ? await getAccountInfo(walletAddr) : await getAccountStateCached(walletAddr);
+        const accountNumber = String(state.accountNumber);
+        const sequence = String(state.sequence);
 
-      const gasLimit = await estimateGasLimitFor(messages, memo || "", root, accountNumber, sequence);
-      const feeAmount = feeAmountForGas(gasLimit);
+        const gasLimit = await estimateGasLimitFor(messages, memo || "", root, accountNumber, sequence);
+        const feeAmount = feeAmountForGas(gasLimit);
 
-      const bodyBytes = TxBody.encode({
-        messages,
-        memo: memo || "",
-      }).finish();
+        const bodyBytes = TxBody.encode({
+          messages,
+          memo: memo || "",
+        }).finish();
 
-      const pubKeyAny = {
-        typeUrl: "/cosmos.crypto.secp256k1.PubKey",
-        value: PubKey.encode({ key: walletPubKeyBytes }).finish(),
-      };
+        const pubKeyAny = {
+          typeUrl: "/cosmos.crypto.secp256k1.PubKey",
+          value: PubKey.encode({ key: walletPubKeyBytes }).finish(),
+        };
 
-      const authInfoBytes = AuthInfo.encode({
-        signerInfos: [
-          {
-            publicKey: pubKeyAny,
-            modeInfo: { single: { mode: SignMode.values.SIGN_MODE_DIRECT } },
-            sequence: sequence,
+        const authInfoBytes = AuthInfo.encode({
+          signerInfos: [
+            {
+              publicKey: pubKeyAny,
+              modeInfo: { single: { mode: SignMode.values.SIGN_MODE_DIRECT } },
+              sequence: sequence,
+            },
+          ],
+          fee: {
+            // Simulated with buffer. Keep gas price at 0.01 uretro/gas.
+            amount: [{ denom: "uretro", amount: feeAmount }],
+            gasLimit: gasLimit,
           },
-        ],
-        fee: {
-          // Simulated with buffer. Keep gas price at 0.01 uretro/gas.
-          amount: [{ denom: "uretro", amount: feeAmount }],
-          gasLimit: gasLimit,
-        },
-      }).finish();
+        }).finish();
 
-      const signDoc = {
-        bodyBytes,
-        authInfoBytes,
-        chainId,
-        accountNumber: accountNumber,
+        const signDoc = {
+          bodyBytes,
+          authInfoBytes,
+          chainId,
+          accountNumber: accountNumber,
+        };
+
+        const { signed, signature } = await window.keplr.signDirect(chainId, walletAddr, signDoc);
+        const sigBytes = base64ToBytes(signature.signature);
+
+        const txRawBytes = TxRaw.encode({
+          bodyBytes: signed.bodyBytes,
+          authInfoBytes: signed.authInfoBytes,
+          signatures: [sigBytes],
+        }).finish();
+
+        const broadcastRes = await fetch(apiUrl("/cosmos/tx/v1beta1/txs"), {
+          method: "POST",
+          headers: { "content-type": "application/json" },
+          body: JSON.stringify({
+            tx_bytes: bytesToBase64(txRawBytes),
+            mode: "BROADCAST_MODE_SYNC",
+          }),
+        });
+
+        const broadcastJson = await broadcastRes.json().catch(() => ({}));
+        if (!broadcastRes.ok) {
+          throw new Error(broadcastJson?.message || `Broadcast failed (${broadcastRes.status})`);
+        }
+
+        const code = broadcastJson?.tx_response?.code;
+        if (typeof code === "number" && code !== 0) {
+          const rawLog = broadcastJson?.tx_response?.raw_log || "";
+          throw new Error(rawLog || `Tx failed with code ${code}`);
+        }
+
+        // Optimistically bump sequence after a successful broadcast.
+        bumpAccountSequence(walletAddr, accountNumber, sequence);
+        return broadcastJson;
       };
 
-      const { signed, signature } = await window.keplr.signDirect(chainId, walletAddr, signDoc);
-      const sigBytes = base64ToBytes(signature.signature);
-
-      const txRawBytes = TxRaw.encode({
-        bodyBytes: signed.bodyBytes,
-        authInfoBytes: signed.authInfoBytes,
-        signatures: [sigBytes],
-      }).finish();
-
-      const broadcastRes = await fetch(apiUrl("/cosmos/tx/v1beta1/txs"), {
-        method: "POST",
-        headers: { "content-type": "application/json" },
-        body: JSON.stringify({
-          tx_bytes: bytesToBase64(txRawBytes),
-          mode: "BROADCAST_MODE_SYNC",
-        }),
-      });
-
-      const broadcastJson = await broadcastRes.json().catch(() => ({}));
-      if (!broadcastRes.ok) {
-        throw new Error(broadcastJson?.message || `Broadcast failed (${broadcastRes.status})`);
+      try {
+        return await tryOnce({ forceFreshAccountState: false });
+      } catch (e) {
+        if (!isAccountSequenceMismatchError(e)) throw e;
+        // Refetch and retry once.
+        return await tryOnce({ forceFreshAccountState: true });
       }
-
-      const code = broadcastJson?.tx_response?.code;
-      if (typeof code === "number" && code !== 0) {
-        const rawLog = broadcastJson?.tx_response?.raw_log || "";
-        throw new Error(rawLog || `Tx failed with code ${code}`);
-      }
-
-      return broadcastJson;
     } finally {
       onchainBusy = false;
     }
@@ -3044,10 +3112,44 @@ message MsgClaimAchievement {
     const MsgClaimAchievement = root.lookupType("retrochain.arcade.v1.MsgClaimAchievement");
     const messages = ids.map((id) => ({
       typeUrl: "/retrochain.arcade.v1.MsgClaimAchievement",
-      value: MsgClaimAchievement.encode({ creator: walletAddr, achievementId: id, gameId: GAME_ID }).finish(),
+      // Embedded proto schema uses snake_case field names.
+      value: MsgClaimAchievement.encode({ creator: walletAddr, achievement_id: id, game_id: GAME_ID }).finish(),
     }));
 
     return signAndBroadcastMulti(messages, `Claim achievements (${GAME_ID})`);
+  }
+
+  function decodeEventAttrKeyMaybe(b64OrText) {
+    if (b64OrText == null) return "";
+    const s = String(b64OrText);
+    // Cosmos SDK may return event attribute keys/values as plain strings or base64.
+    // Try base64 decode and fall back to the original string.
+    try {
+      const decoded = atob(s);
+      // Only accept if it decodes to something that looks like an identifier.
+      if (/^[\w./:-]{1,128}$/.test(decoded)) return decoded;
+    } catch {
+      // ignore
+    }
+    return s;
+  }
+
+  function extractSessionIdFromStartTx(res) {
+    try {
+      const evs = res?.tx_response?.events;
+      if (!Array.isArray(evs)) return null;
+      const started = evs.find((e) => e?.type === "arcade.game_started");
+      const attrs = Array.isArray(started?.attributes) ? started.attributes : [];
+      for (const a of attrs) {
+        const k = decodeEventAttrKeyMaybe(a?.key);
+        if (k !== "session_id") continue;
+        const v = decodeEventAttrKeyMaybe(a?.value);
+        if (v != null && String(v) !== "") return String(v);
+      }
+      return null;
+    } catch {
+      return null;
+    }
   }
 
   async function refreshCredits() {
@@ -3065,7 +3167,7 @@ message MsgClaimAchievement {
       const costStr = cost != null ? cost.toString() : "?";
       if (puMetaEl) {
         puMetaEl.textContent = walletAddr
-          ? `Tokens: ${cachedArcadeTokens.toString()} • Base: ${costStr} • Shield x${powerupPriceUnits.shield}, Rapid x${powerupPriceUnits.rapid}, Bomb x${powerupPriceUnits.bomb} • Use 1/2/3 during a run.`
+          ? `Tokens: ${cachedArcadeTokens.toString()} • Base: ${costStr} • Buy in Store, then use 1-9 during a run.`
           : "Connect Keplr to use tokens.";
       }
 
@@ -3090,7 +3192,7 @@ message MsgClaimAchievement {
     const costStr = cachedPowerUpCost != null ? cachedPowerUpCost.toString() : "?";
     if (puMetaEl) {
       puMetaEl.textContent = walletAddr
-        ? `Tokens: ${cachedArcadeTokens.toString()} • Base: ${costStr} • Shield x${powerupPriceUnits.shield}, Rapid x${powerupPriceUnits.rapid}, Bomb x${powerupPriceUnits.bomb}, Life x${powerupPriceUnits.life}, 2x x${powerupPriceUnits.mult}, Triple x${powerupPriceUnits.triple}, Pierce x${powerupPriceUnits.pierce}, Slow x${powerupPriceUnits.slow}, Magnet x${powerupPriceUnits.magnet}, Continue x${powerupPriceUnits.cont} • Use 1-9 during a run.`
+        ? `Tokens: ${cachedArcadeTokens.toString()} • Base: ${costStr} • Shield x${powerupPriceUnits.shield}, Rapid x${powerupPriceUnits.rapid}, Bomb x${powerupPriceUnits.bomb}, Life x${powerupPriceUnits.life}, 2x x${powerupPriceUnits.mult}, Triple x${powerupPriceUnits.triple}, Pierce x${powerupPriceUnits.pierce}, Slow x${powerupPriceUnits.slow}, Magnet x${powerupPriceUnits.magnet}, Continue x${powerupPriceUnits.cont} • Buy in Store.`
         : "Connect Keplr to use tokens.";
     }
   }
@@ -3168,13 +3270,42 @@ message MsgClaimAchievement {
 
   async function purchasePowerUp(powerUpId) {
     if (powerupBusy || onchainBusy) return;
+    if (!storeOpen) {
+      setStatus("Powerups can only be bought in the store between waves.");
+      sfx("pause");
+      return;
+    }
     if (!walletAddr) {
       setStatus("Connect Keplr to buy powerups.");
       sfx("pause");
       return;
     }
-    if (!running || !currentSessionId) {
+    if (!running) {
       setStatus("Start a run first.");
+      sfx("pause");
+      return;
+    }
+
+    const puId = String(powerUpId || "").trim();
+    if (!puId) {
+      setStatus("Invalid power-up.");
+      sfx("pause");
+      return;
+    }
+
+    // Ensure we are spending against an ACTIVE session.
+    // Waiting briefly here avoids "session not active" races when the store opens quickly after start.
+    const sid = await ensureActiveSessionId();
+    if (!sid) {
+      setStatus("Session not active yet. Wait a moment and try again.");
+      sfx("pause");
+      return;
+    }
+
+    try {
+      await waitForSessionActive(sid, { timeoutMs: 8000, pollMs: 650 });
+    } catch {
+      setStatus("Session not active yet. Wait a moment and try again.");
       sfx("pause");
       return;
     }
@@ -3193,20 +3324,23 @@ message MsgClaimAchievement {
     powerupBusy = true;
     try {
       resumeAudioFromGesture();
-      setStatus(`Buying ${powerUpId} x${units} (confirm in Keplr)...`);
+      setStatus(`Buying ${puId} x${units} (confirm in Keplr)...`);
       const root = await getProtoRoot();
       const MsgUsePowerUp = root.lookupType("retrochain.arcade.v1.MsgUsePowerUp");
-      const msgBytes = MsgUsePowerUp.encode({ creator: walletAddr, sessionId: String(currentSessionId), powerUpId }).finish();
+      const sidNum = Number(sid);
+      if (!Number.isFinite(sidNum) || sidNum <= 0) throw new Error(`Invalid session id: ${sid}`);
+      // Proto field names are snake_case in our embedded schema.
+      const msgBytes = MsgUsePowerUp.encode({ creator: walletAddr, session_id: sidNum, power_up_id: puId }).finish();
       const msgs = Array.from({ length: units }, () => ({ typeUrl: "/retrochain.arcade.v1.MsgUsePowerUp", value: msgBytes }));
-      await signAndBroadcastMulti(msgs, `Buy power-up: ${powerUpId} x${units}`);
+      await signAndBroadcastMulti(msgs, `Buy power-up: ${puId} x${units}`);
 
-      // Life is an instant effect. If you're already at max lives, store it instead.
-      if (powerUpId === "life" && running && lives < MAX_LIVES) {
+      // Add to local inventory (life is instant if not at max).
+      if (puId === "life" && running && lives < MAX_LIVES) {
         applyLocalPowerUp("life");
-        setStatus("Extra life granted (+1).");
+        setStatus("Extra life granted (+1). ");
         sfx("power");
       } else {
-        powerupInventory[powerUpId] = (powerupInventory[powerUpId] || 0) + 1;
+        powerupInventory[puId] = (powerupInventory[puId] || 0) + 1;
         sfx("power");
       }
 
@@ -3214,8 +3348,8 @@ message MsgClaimAchievement {
       if (totalCost > 0n) addTokensSpent(totalCost);
       await refreshCredits();
       updateStoreUi();
-      if (powerUpId !== "life") {
-        setStatus(`${powerUpId} purchased.`);
+      if (puId !== "life") {
+        setStatus(`${puId} purchased.`);
       } else if (lives >= MAX_LIVES) {
         setStatus(`Extra life stored (already at ${MAX_LIVES} lives). Use Life (4) later.`);
       }
@@ -3267,13 +3401,8 @@ message MsgClaimAchievement {
       return;
     }
 
-    // If empty, guide the user to the store where Arcade Tokens are spent on-chain.
-    try {
-      if (walletAddr) await refreshCredits();
-    } catch {
-      // ignore
-    }
-    setStatus("No stored powerups. Buy between waves in the store (Arcade Tokens). ");
+    // No inventory available: must buy in the store.
+    setStatus("No stored powerups. Buy in the store between waves (or at run start).");
     sfx("pause");
   }
 
@@ -3317,24 +3446,86 @@ message MsgClaimAchievement {
     return s.includes("ACTIVE") && !s.includes("INACTIVE");
   }
 
-  async function discoverLatestSessionId() {
-    if (!walletAddr) return null;
-    const data = await apiGetJson(`/arcade/v1/sessions/player/${walletAddr}?limit=25`);
-    const sessions = data?.sessions || [];
-    const mine = sessions.filter((s) => s.game_id === GAME_ID);
-    if (mine.length === 0) return null;
-
-    const active = mine.filter((s) => isActiveSessionStatus(s.status));
-    const pickFrom = active.length ? active : mine;
-    pickFrom.sort((a, b) => Number(b.session_id || 0) - Number(a.session_id || 0));
-    return pickFrom[0].session_id;
+  async function fetchMySessions({ limit = 25 } = {}) {
+    if (!walletAddr) return [];
+    const data = await apiGetJson(`/arcade/v1/sessions/player/${walletAddr}?limit=${encodeURIComponent(String(limit))}`);
+    return data?.sessions || [];
   }
 
-  async function waitForLatestSessionId({ timeoutMs = 12000, pollMs = 800 } = {}) {
+  function pickLatestSessionIdForGame({ sessions, requireActive } = {}) {
+    const list = Array.isArray(sessions) ? sessions : [];
+    const mine = list.filter((s) => (s?.game_id || s?.gameId) === GAME_ID);
+    if (mine.length === 0) return null;
+
+    const active = mine.filter((s) => isActiveSessionStatus(s?.status));
+    if (requireActive && active.length === 0) return null;
+
+    const pickFrom = requireActive ? active : active.length ? active : mine;
+    pickFrom.sort(
+      (a, b) =>
+        Number(b?.session_id || b?.sessionId || 0) -
+        Number(a?.session_id || a?.sessionId || 0)
+    );
+    return pickFrom[0]?.session_id || pickFrom[0]?.sessionId || null;
+  }
+
+  async function discoverLatestSessionId({ requireActive = false } = {}) {
+    if (!walletAddr) return null;
+    const sessions = await fetchMySessions({ limit: 50 });
+    return pickLatestSessionIdForGame({ sessions, requireActive: !!requireActive });
+  }
+
+  async function fetchSessionById(sessionId) {
+    if (sessionId == null || sessionId === "") return null;
+    try {
+      const data = await apiGetJson(`/arcade/v1/sessions/${encodeURIComponent(String(sessionId))}`);
+      return data?.session || data;
+    } catch {
+      return null;
+    }
+  }
+
+  async function ensureActiveSessionId() {
+    // RetroNoid-style: fetch sessions once, then select latest ACTIVE for this game.
+    if (!walletAddr) return null;
+
+    const sessions = await fetchMySessions({ limit: 60 });
+
+    if (currentSessionId) {
+      const hit = sessions.find((s) => String(s?.session_id || s?.sessionId || "") === String(currentSessionId));
+      if (hit && isActiveSessionStatus(hit?.status)) return String(currentSessionId);
+    }
+
+    const sid = pickLatestSessionIdForGame({ sessions, requireActive: true });
+    if (sid == null || sid === "") return null;
+    currentSessionId = String(sid);
+    return currentSessionId;
+  }
+
+  async function waitForSessionActive(sessionId, { timeoutMs = 12000, pollMs = 800 } = {}) {
+    if (!walletAddr) throw new Error("Wallet not connected.");
+    if (sessionId == null || sessionId === "") throw new Error("No session id.");
+
+    const target = String(sessionId);
     const deadline = Date.now() + timeoutMs;
     while (Date.now() < deadline) {
       try {
-        const sid = await discoverLatestSessionId();
+        const sessions = await fetchMySessions({ limit: 80 });
+        const hit = sessions.find((s) => String(s?.session_id || s?.sessionId || "") === target);
+        if (hit && isActiveSessionStatus(hit?.status)) return;
+      } catch {
+        // ignore transient REST errors
+      }
+      await new Promise((r) => setTimeout(r, pollMs));
+    }
+    throw new Error("Session not active yet.");
+  }
+
+  async function waitForLatestSessionId({ timeoutMs = 12000, pollMs = 800, requireActive = false } = {}) {
+    const deadline = Date.now() + timeoutMs;
+    while (Date.now() < deadline) {
+      try {
+        const sid = await discoverLatestSessionId({ requireActive });
         if (sid != null && sid !== "") return sid;
       } catch {
         // ignore transient REST errors during polling
@@ -4119,15 +4310,19 @@ message MsgClaimAchievement {
       tokensAtRunStart = cachedArcadeTokens;
       const root = await getProtoRoot();
       const MsgStartSession = root.lookupType("retrochain.arcade.v1.MsgStartSession");
-      const msgBytes = MsgStartSession.encode({ creator: walletAddr, gameId: GAME_ID, difficulty: String(difficultyId) }).finish();
+      const gid = requiredGameId();
+      const msgBytes = MsgStartSession.encode({ creator: walletAddr, game_id: gid, gameId: gid, difficulty: String(difficultyId) }).finish();
       await signAndBroadcast("/retrochain.arcade.v1.MsgStartSession", msgBytes, "Start RetroVaders");
 
-      // Broadcast is async (SYNC), so wait briefly for the session to appear via REST.
-      currentSessionId = await waitForLatestSessionId();
+      // Match RetroNoid: wait for REST to show an ACTIVE session.
+      currentSessionId = await waitForLatestSessionId({ timeoutMs: 15000, pollMs: 650, requireActive: true });
       if (!currentSessionId) {
         setStatus("Session started, but couldn't confirm session id yet. Try again in a moment.");
         return;
       }
+
+      // Extra safety: still wait for ACTIVE if REST returned a transient id.
+      await waitForSessionActive(currentSessionId, { timeoutMs: 15000, pollMs: 650 });
 
       if (difficultyId === 4) unlockAchievement("nightmare");
 
@@ -4358,7 +4553,8 @@ message MsgClaimAchievement {
     await ensureWallet();
     const root = await getProtoRoot();
     const MsgInsertCoin = root.lookupType("retrochain.arcade.v1.MsgInsertCoin");
-    const msgBytes = MsgInsertCoin.encode({ creator: walletAddr, credits: "1", gameId: GAME_ID }).finish();
+    // Embedded proto schema uses snake_case field names.
+    const msgBytes = MsgInsertCoin.encode({ creator: walletAddr, credits: "1", game_id: GAME_ID, gameId: GAME_ID }).finish();
     const res = await signAndBroadcast("/retrochain.arcade.v1.MsgInsertCoin", msgBytes, "Insert Coin");
     const txhash = res?.tx_response?.txhash;
     setStatus(txhash ? `Inserted coin. Tx: ${txhash}` : "Inserted coin.");
@@ -4372,16 +4568,16 @@ message MsgClaimAchievement {
     const msgBytes = MsgRegisterGame.encode({
       creator: walletAddr,
       game: {
-        gameId: GAME_ID,
+        game_id: GAME_ID,
         name: "RetroVaders",
         description: "Classic alien-blasting shooter on RetroChain Arcade.",
         genre: 1, // GENRE_SHOOTER
-        creditsPerPlay: "1",
-        maxPlayers: "1",
-        multiplayerEnabled: false,
+        credits_per_play: "1",
+        max_players: "1",
+        multiplayer_enabled: false,
         developer: DEV_PROFIT_ADDR,
         active: true,
-        baseDifficulty: "1",
+        base_difficulty: "1",
       },
     }).finish();
 
@@ -4393,16 +4589,30 @@ message MsgClaimAchievement {
 
   async function submitScore(finalScore) {
     await ensureWallet();
-    if (!currentSessionId) currentSessionId = await waitForLatestSessionId({ timeoutMs: 8000, pollMs: 700 });
+    // Score submission is typically done after the run ends, so the session may no longer be ACTIVE.
+    // Use the latest session id for this game, preferring ACTIVE if one exists but falling back to latest overall.
+    if (!currentSessionId) {
+      currentSessionId = await waitForLatestSessionId({ timeoutMs: 15000, pollMs: 650, requireActive: false });
+    }
     if (!currentSessionId) throw new Error("No session id available.");
+
+    const sidNum = Number(currentSessionId);
+    if (!Number.isFinite(sidNum) || sidNum <= 0) throw new Error(`Invalid session id: ${currentSessionId}`);
     const root = await getProtoRoot();
     const MsgSubmitScore = root.lookupType("retrochain.arcade.v1.MsgSubmitScore");
+
+    const scoreNum = Number(finalScore);
+    if (!Number.isFinite(scoreNum) || scoreNum < 0) throw new Error("Invalid score.");
+
+    const levelNum = Number(level);
+    if (!Number.isFinite(levelNum) || levelNum < 0) throw new Error("Invalid level.");
+
     const msgBytes = MsgSubmitScore.encode({
       creator: walletAddr,
-      sessionId: String(currentSessionId),
-      score: String(finalScore),
-      level: String(level),
-      gameOver: true,
+      session_id: sidNum,
+      score: Math.floor(scoreNum),
+      level: Math.floor(levelNum),
+      game_over: true,
     }).finish();
     const res = await signAndBroadcast("/retrochain.arcade.v1.MsgSubmitScore", msgBytes, "Submit RetroVaders Score");
     const txhash = res?.tx_response?.txhash;
@@ -4420,7 +4630,8 @@ message MsgClaimAchievement {
         const cleaned = (entered || "").trim().toUpperCase();
         if (cleaned && /^[A-Z]{3}$/.test(cleaned)) {
           const MsgSetHighScoreInitials = root.lookupType("retrochain.arcade.v1.MsgSetHighScoreInitials");
-          const initBytes = MsgSetHighScoreInitials.encode({ creator: walletAddr, gameId: GAME_ID, initials: cleaned }).finish();
+          // Embedded proto schema uses snake_case field names.
+          const initBytes = MsgSetHighScoreInitials.encode({ creator: walletAddr, game_id: GAME_ID, initials: cleaned }).finish();
           await signAndBroadcast("/retrochain.arcade.v1.MsgSetHighScoreInitials", initBytes, "Set High Score Initials");
         }
       }
