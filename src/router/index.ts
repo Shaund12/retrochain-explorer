@@ -42,6 +42,8 @@ import EcosystemWalletsView from "@/views/EcosystemWalletsView.vue";
 import IbcView from "@/views/IbcView.vue";
 import DocsHubView from "@/views/DocsHubView.vue";
 import SwaggerDocsView from "@/views/SwaggerDocsView.vue";
+import BattlePointsView from "@/views/BattlePointsView.vue";
+import BattlePointsTrackerView from "@/views/BattlePointsTrackerView.vue";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", name: "home", component: HomeView, meta: { title: "Home" } },
@@ -63,6 +65,8 @@ const routes: RouteRecordRaw[] = [
   { path: "/ibc-info", name: "ibc-info", component: IbcInfoView },
   { path: "/arcadedash", name: "arcade", component: ArcadeView },
   { path: "/arcade", redirect: { name: "arcade" } },
+  { path: "/battlepoints", name: "battlepoints", component: BattlePointsView, meta: { title: "Battle Points" } },
+  { path: "/battlepoints/tracker", name: "battlepoints-tracker", component: BattlePointsTrackerView, meta: { title: "Battle Points Tracker" } },
   { path: "/tokens", name: "tokens", component: TokensView },
   { path: "/nft/:id", name: "nft-detail", component: NftDetailView, props: true },
   { path: "/tokenomics", name: "tokenomics", component: TokenomicsView },
