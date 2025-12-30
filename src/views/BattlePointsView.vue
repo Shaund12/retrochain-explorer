@@ -23,6 +23,8 @@ type ShopItem = {
   price_points?: number;
   art_style?: string;
   palette?: string;
+  image?: string;
+  token_uri?: string;
   enabled?: boolean;
 };
 
@@ -87,6 +89,13 @@ const loadShop = async () => {
       enabled.slice(0, 6).map(async (i) => {
         const id = i?.item_id;
         if (!id) return;
+
+        // Prefer contract-provided image (preview-ready contracts return data:image/svg+xml;base64,...)
+        const direct = (i as any)?.image;
+        if (typeof direct === "string" && direct.startsWith("data:image/svg+xml")) {
+          svgPreviewByItemId.value = { ...svgPreviewByItemId.value, [id]: direct };
+          return;
+        }
         try {
           const svgRes: any = await smartQueryContract(addr, { svg_preview: { item_id: id } });
           const svg = svgRes?.svg ?? svgRes?.image ?? svgRes?.data;
@@ -126,6 +135,9 @@ const buyItem = async (item: ShopItem) => {
 
   buyLoading.value = itemId;
   try {
+    if (typeof TextEncoder === "undefined") {
+      throw new Error("TextEncoder is unavailable in this environment.");
+    }
     const msg = {
       typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
       value: {
@@ -218,7 +230,13 @@ onMounted(async () => {
         </div>
 
         <div class="mt-3 rounded-lg bg-black/30 border border-white/10 overflow-hidden" v-if="svgPreviewByItemId[it.item_id]">
-          <div class="w-full" v-html="svgPreviewByItemId[it.item_id]" />
+          <img
+            v-if="String(svgPreviewByItemId[it.item_id]).startsWith('data:image')"
+            :src="svgPreviewByItemId[it.item_id]"
+            :alt="it.name || it.item_id"
+            class="w-full h-auto block"
+          />
+          <div v-else class="w-full" v-html="svgPreviewByItemId[it.item_id]" />
         </div>
 
         <div class="mt-3 flex items-center justify-between gap-2">
