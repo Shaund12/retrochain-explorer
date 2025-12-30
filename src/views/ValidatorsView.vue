@@ -258,7 +258,9 @@ const goDelegate = (validatorAddress: string) => {
                 <div class="flex flex-col gap-1">
                   <div class="flex items-center gap-2">
                     <span class="font-medium text-slate-100 text-sm">{{ v.description?.moniker || "Validator" }}</span>
-                    <button class="btn text-[10px]" @click.stop="copy(v.operatorAddress)">Copy</button>
+                    <RcIconButton variant="ghost" size="xs" title="Copy address" @click.stop="copy(v.operatorAddress)">
+                      <Copy class="h-3.5 w-3.5" />
+                    </RcIconButton>
                   </div>
                   <div class="text-[11px] text-slate-500 font-mono">{{ shortAddress(v.operatorAddress) }}</div>
                   <div v-if="v.description?.website" class="text-[11px] text-cyan-300 truncate">
@@ -307,7 +309,9 @@ const goDelegate = (validatorAddress: string) => {
                 {{ (parseFloat(v.commission?.commissionRates?.rate || "0") * 100).toFixed(1) }}%
               </td>
               <td class="text-right py-3">
-                <button class="btn text-[11px]" @click.stop="goDelegate(v.operatorAddress)">Delegate</button>
+                <RcIconButton variant="primary" size="sm" title="Delegate" @click.stop="goDelegate(v.operatorAddress)">
+                  <HandCoins class="h-4 w-4" />
+                </RcIconButton>
               </td>
             </tr>
           </tbody>

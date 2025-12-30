@@ -197,13 +197,15 @@ onMounted(() => {
             <code class="text-xs font-mono text-slate-200">
               {{ selectedDirection === 'outbound' ? (selectedRouteInfo().outbound || '—') : (selectedRouteInfo().inbound || '—') }}
             </code>
-            <button
-              class="btn text-[10px]"
+            <RcIconButton
+              variant="ghost"
+              size="xs"
+              title="Copy"
               :disabled="!(selectedDirection === 'outbound' ? selectedRouteInfo().outbound : selectedRouteInfo().inbound)"
               @click="copy(selectedDirection === 'outbound' ? selectedRouteInfo().outbound : selectedRouteInfo().inbound)"
             >
-              Copy
-            </button>
+              <Copy class="h-3.5 w-3.5" />
+            </RcIconButton>
           </div>
         </div>
       </div>
@@ -227,12 +229,28 @@ onMounted(() => {
               <div class="flex items-center justify-between">
                 <span class="text-slate-400">Outbound</span>
                 <code class="font-mono">{{ route.outbound || '—' }}</code>
-                <button class="btn text-[10px]" :disabled="!route.outbound" @click="copy(route.outbound)">Copy</button>
+                <RcIconButton
+                  variant="ghost"
+                  size="xs"
+                  title="Copy"
+                  :disabled="!route.outbound"
+                  @click="copy(route.outbound)"
+                >
+                  <Copy class="h-3.5 w-3.5" />
+                </RcIconButton>
               </div>
               <div class="flex items-center justify-between">
                 <span class="text-slate-400">Inbound</span>
                 <code class="font-mono">{{ route.inbound || '—' }}</code>
-                <button class="btn text-[10px]" :disabled="!route.inbound" @click="copy(route.inbound)">Copy</button>
+                <RcIconButton
+                  variant="ghost"
+                  size="xs"
+                  title="Copy"
+                  :disabled="!route.inbound"
+                  @click="copy(route.inbound)"
+                >
+                  <Copy class="h-3.5 w-3.5" />
+                </RcIconButton>
               </div>
             </div>
           </article>

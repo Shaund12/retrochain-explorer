@@ -336,12 +336,9 @@ const fetchLivePrices = async () => {
               <td class="text-xs">
                 <div class="flex items-center gap-2 font-mono">
                   <span>{{ account.address.slice(0, 12) }}...{{ account.address.slice(-8) }}</span>
-                  <button 
-                    class="btn text-[10px]" 
-                    @click.stop="copy(account.address)"
-                  >
-                    Copy
-                  </button>
+                  <RcIconButton variant="ghost" size="xs" title="Copy address" @click.stop="copy(account.address)">
+                    <Copy class="h-3.5 w-3.5" />
+                  </RcIconButton>
                 </div>
                 <div
                   v-if="account.knownLabel"
@@ -363,12 +360,14 @@ const fetchLivePrices = async () => {
               </td>
               
               <td>
-                <button 
-                  class="btn text-xs"
+                <RcIconButton
+                  variant="ghost"
+                  size="sm"
+                  title="View account"
                   @click.stop="router.push({ name: 'account', params: { address: account.address } })"
                 >
-                  View →
-                </button>
+                  <ArrowRight class="h-4 w-4" />
+                </RcIconButton>
               </td>
             </tr>
           </tbody>

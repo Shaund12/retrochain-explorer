@@ -181,20 +181,24 @@ watch(
         </div>
 
         <div class="flex items-center gap-2">
-          <button
-            class="btn text-xs"
+          <RcIconButton
+            variant="ghost"
+            size="sm"
+            title="Previous"
             :disabled="height <= 1 || loading"
             @click="goToHeight(height - 1)"
           >
-            ← Prev
-          </button>
-          <button
-            class="btn text-xs"
+            <ChevronLeft class="h-4 w-4" />
+          </RcIconButton>
+          <RcIconButton
+            variant="ghost"
+            size="sm"
+            title="Next"
             :disabled="loading"
             @click="goToHeight(height + 1)"
           >
-            Next →
-          </button>
+            <ChevronRight class="h-4 w-4" />
+          </RcIconButton>
         </div>
       </div>
 
@@ -217,8 +221,12 @@ watch(
             </div>
             <div class="flex items-center gap-2">
               <code class="text-[11px] break-all">{{ blockHash }}</code>
-              <button class="btn text-[10px]" @click="copy(blockHash)">Copy</button>
-              <button class="btn text-[10px]" @click="shareLink()">Share</button>
+              <RcIconButton variant="ghost" size="xs" title="Copy hash" @click="copy(blockHash)">
+                <Copy class="h-3.5 w-3.5" />
+              </RcIconButton>
+              <RcIconButton variant="ghost" size="xs" title="Share" @click="shareLink()">
+                <Share2 class="h-3.5 w-3.5" />
+              </RcIconButton>
             </div>
           </div>
           <div>
@@ -252,7 +260,9 @@ watch(
               </div>
               <div class="flex items-center gap-2">
                 <code class="text-[11px] break-all flex-1">{{ proposerAddressRaw }}</code>
-                <button class="btn text-[10px]" @click="copy(proposerAddressRaw)">Copy</button>
+                <RcIconButton variant="ghost" size="xs" title="Copy proposer" @click="copy(proposerAddressRaw)">
+                  <Copy class="h-3.5 w-3.5" />
+                </RcIconButton>
               </div>
             </div>
           </div>
