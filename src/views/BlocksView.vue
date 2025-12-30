@@ -5,6 +5,8 @@ import { useAutoRefresh } from "@/composables/useAutoRefresh";
 import { useRouter } from "vue-router";
 import { useNetwork } from "@/composables/useNetwork";
 import dayjs from "dayjs";
+import RcIconButton from "@/components/RcIconButton.vue";
+import { Copy, Pause, Play, RefreshCw, Plus } from "lucide-vue-next";
 
 const copy = async (text: string) => {
   try { await navigator.clipboard?.writeText?.(text); } catch {}
@@ -141,16 +143,24 @@ const formatPercent = (value?: number | null, digits = 1) => {
         >
           Latest: <span class="font-mono ml-1">#{{ latestHeight }}</span>
         </div>
-        <button
-          class="btn text-xs"
-          :class="autoRefreshEnabled ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
+        <RcIconButton
+          :variant="autoRefreshEnabled ? 'primary' : 'ghost'"
+          size="sm"
+          :title="autoRefreshEnabled ? `Auto-refresh (${countdown}s)` : 'Auto-refresh paused'"
           @click="toggleAutoRefresh"
         >
-          {{ autoRefreshEnabled ? `Auto (${countdown}s)` : "Paused" }}
-        </button>
-        <button class="btn text-xs" @click="refreshBlocks" :disabled="loading">
-          {{ loading ? "Loading..." : "Refresh" }}
-        </button>
+          <component :is="autoRefreshEnabled ? Pause : Play" class="h-4 w-4" />
+        </RcIconButton>
+
+        <RcIconButton
+          variant="ghost"
+          size="sm"
+          title="Refresh"
+          :disabled="loading"
+          @click="refreshBlocks"
+        >
+          <RefreshCw class="h-4 w-4" />
+        </RcIconButton>
       </div>
     </div>
 
@@ -228,7 +238,15 @@ const formatPercent = (value?: number | null, digits = 1) => {
               <td class="font-mono text-[12px] text-slate-300 py-2">
                 <div class="flex items-center gap-2 whitespace-nowrap">
                   <span class="truncate max-w-[220px] inline-block align-middle">{{ b.hash ? b.hash.slice(0, 32) : "-" }}</span>
-                  <button v-if="b.hash" class="btn text-[10px]" @click.stop="copy(b.hash)">Copy</button>
+                  <RcIconButton
+                    v-if="b.hash"
+                    variant="ghost"
+                    size="xs"
+                    title="Copy hash"
+                    @click.stop="copy(b.hash)"
+                  >
+                    <Copy class="h-3.5 w-3.5" />
+                  </RcIconButton>
                 </div>
               </td>
               <td class="text-xs text-slate-300 py-2">
@@ -265,9 +283,9 @@ const formatPercent = (value?: number | null, digits = 1) => {
       </div>
       
       <div class="mt-4 text-center">
-        <button class="btn text-xs" @click="loadMore" :disabled="loading">
-          Load More Blocks
-        </button>
+        <RcIconButton variant="ghost" size="sm" title="Load more" @click="loadMore" :disabled="loading">
+          <Plus class="h-4 w-4" />
+        </RcIconButton>
       </div>
     </div>
   </div>

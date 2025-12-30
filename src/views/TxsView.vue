@@ -1,6 +1,7 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from "vue";
 import { useDebounce, useStorage } from "@vueuse/core";
+import { useAutoAnimate } from "@formkit/auto-animate/vue";
 import { useTxs } from "@/composables/useTxs";
 import { useBlocks } from "@/composables/useBlocks";
 import { useRouter } from "vue-router";
@@ -9,6 +10,8 @@ import { formatCoins } from "@/utils/format";
 import { getTokenMeta } from "@/constants/tokens";
 import { useToast } from "@/composables/useToast";
 import RcTableToolbar from "@/components/RcTableToolbar.vue";
+import RcIconButton from "@/components/RcIconButton.vue";
+import { Share2, RefreshCw, ChevronRight, Copy as CopyIcon } from "lucide-vue-next";
 import {
   useVueTable,
   getCoreRowModel,
@@ -78,6 +81,8 @@ const hashQuery = computed<string>({
 const BACKEND_PAGE_SIZE = 100;
 const limit = ref(BACKEND_PAGE_SIZE);
 const debouncedHashQuery = useDebounce(hashQuery, 200);
+
+const [quickFiltersEl] = useAutoAnimate({ duration: 140 });
 
 const txStats = computed(() => {
   const totals = new Map<string, bigint>();
@@ -507,7 +512,7 @@ onMounted(async () => {
               {{ prettyMessageType(type) }}
             </option>
           </select>
-          <div class="flex flex-wrap gap-1">
+          <div class="flex flex-wrap gap-1" ref="quickFiltersEl">
             <button
               v-for="type in topMessageQuickFilters"
               :key="type"
@@ -521,12 +526,14 @@ onMounted(async () => {
         </div>
       </div>
       <div class="flex gap-2">
-        <button class="btn text-xs" @click="refresh()" :disabled="loading">
-          {{ loading ? 'Loading...' : 'Refresh' }}
-        </button>
-        <button class="btn text-xs" @click="nextPageSmart()" :disabled="loading">
-          {{ loading ? 'Loading...' : 'Next' }}
-        </button>
+        <RcIconButton v-tooltip="'Refresh'" class="text-xs" @click="refresh()" :disabled="loading">
+          <RefreshCw class="w-4 h-4" :class="loading ? 'animate-spin' : ''" />
+          <span class="hidden sm:inline">Refresh</span>
+        </RcIconButton>
+        <RcIconButton v-tooltip="'Next page'" class="text-xs" @click="nextPageSmart()" :disabled="loading">
+          <ChevronRight class="w-4 h-4" />
+          <span class="hidden sm:inline">Next</span>
+        </RcIconButton>
       </div>
     </div>
 
@@ -571,7 +578,10 @@ onMounted(async () => {
           <option :value="100">100</option>
         </select>
         <button class="btn text-xs" @click="table.previousPage()" :disabled="!table.getCanPreviousPage()">Prev</button>
-        <button class="btn text-xs" @click="nextPageSmart()" :disabled="loading">Next</button>
+        <RcIconButton v-tooltip="'Next page'" class="text-xs" @click="nextPageSmart()" :disabled="loading">
+          <ChevronRight class="w-4 h-4" />
+          <span class="hidden sm:inline">Next</span>
+        </RcIconButton>
       </div>
     </div>
 
@@ -580,11 +590,18 @@ onMounted(async () => {
         <tr>
           <th colspan="5" class="p-0">
             <RcTableToolbar label="Tx feed">
-              <button class="btn text-[10px]" @click.stop="sharePage()">Share</button>
-              <button class="btn text-[10px]" @click.stop="refresh()" :disabled="loading">
-                {{ loading ? 'Loading…' : 'Refresh' }}
-              </button>
-              <button class="btn text-[10px]" @click.stop="nextPageSmart()" :disabled="loading">Next</button>
+              <RcIconButton v-tooltip="'Share'" class="text-[10px]" @click.stop="sharePage()">
+                <Share2 class="w-3.5 h-3.5" />
+                <span class="hidden sm:inline">Share</span>
+              </RcIconButton>
+              <RcIconButton v-tooltip="'Refresh'" class="text-[10px]" @click.stop="refresh()" :disabled="loading">
+                <RefreshCw class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''" />
+                <span class="hidden sm:inline">Refresh</span>
+              </RcIconButton>
+              <RcIconButton v-tooltip="'Next page'" class="text-[10px]" @click.stop="nextPageSmart()" :disabled="loading">
+                <ChevronRight class="w-3.5 h-3.5" />
+                <span class="hidden sm:inline">Next</span>
+              </RcIconButton>
             </RcTableToolbar>
           </th>
         </tr>
@@ -629,7 +646,10 @@ onMounted(async () => {
             <div class="flex flex-col gap-1">
               <div class="flex items-center gap-2">
                 <span v-tooltip="t.hash">{{ t.hash.slice(0, 18) }}...</span>
-                <button class="btn text-[10px]" v-tooltip="'Copy hash'" @click.stop="copy(t.hash)">Copy</button>
+                <RcIconButton class="text-[10px]" v-tooltip="'Copy hash'" @click.stop="copy(t.hash)">
+                  <CopyIcon class="w-3.5 h-3.5" />
+                  <span class="hidden sm:inline">Copy</span>
+                </RcIconButton>
               </div>
               <span
                 class="badge text-[10px]"
@@ -679,11 +699,18 @@ onMounted(async () => {
     <div v-else class="border border-slate-800 rounded-lg overflow-hidden">
       <div class="bg-slate-900/60 border-b border-slate-800">
         <RcTableToolbar label="Tx feed">
-          <button class="btn text-[10px]" @click.stop="sharePage()">Share</button>
-          <button class="btn text-[10px]" @click.stop="refresh()" :disabled="loading">
-            {{ loading ? 'Loading…' : 'Refresh' }}
-          </button>
-          <button class="btn text-[10px]" @click.stop="nextPageSmart()" :disabled="loading">Next</button>
+          <RcIconButton v-tooltip="'Share'" class="text-[10px]" @click.stop="sharePage()">
+            <Share2 class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Share</span>
+          </RcIconButton>
+          <RcIconButton v-tooltip="'Refresh'" class="text-[10px]" @click.stop="refresh()" :disabled="loading">
+            <RefreshCw class="w-3.5 h-3.5" :class="loading ? 'animate-spin' : ''" />
+            <span class="hidden sm:inline">Refresh</span>
+          </RcIconButton>
+          <RcIconButton v-tooltip="'Next page'" class="text-[10px]" @click.stop="nextPageSmart()" :disabled="loading">
+            <ChevronRight class="w-3.5 h-3.5" />
+            <span class="hidden sm:inline">Next</span>
+          </RcIconButton>
         </RcTableToolbar>
         <div class="grid grid-cols-[minmax(220px,2fr)_140px_minmax(220px,1.2fr)_minmax(240px,1.6fr)_170px] text-xs text-slate-300 px-3 py-2 gap-3">
           <div>Hash &amp; Status</div>
@@ -727,7 +754,10 @@ onMounted(async () => {
             <div class="flex flex-col gap-1">
               <div class="flex items-center gap-2">
                 <span v-tooltip="t.hash">{{ t.hash.slice(0, 18) }}...</span>
-                <button class="btn text-[10px]" v-tooltip="'Copy hash'" @click.stop="copy(t.hash)">Copy</button>
+                <RcIconButton class="text-[10px]" v-tooltip="'Copy hash'" @click.stop="copy(t.hash)">
+                  <CopyIcon class="w-3.5 h-3.5" />
+                  <span class="hidden sm:inline">Copy</span>
+                </RcIconButton>
               </div>
               <span
                 class="badge text-[10px]"

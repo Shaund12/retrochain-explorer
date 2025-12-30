@@ -10,6 +10,8 @@ import { formatCoins } from "@/utils/format";
 import { useQuery } from "@tanstack/vue-query";
 import { shortenMiddle } from "@/utils/stringFormat";
 import { attributesToMap } from "@/utils/txEvents";
+import RcIconButton from "@/components/RcIconButton.vue";
+import { Copy, Share2, Download, Braces } from "lucide-vue-next";
 
 const { getTx } = useTxs();
 const route = useRoute();
@@ -597,10 +599,41 @@ const downloadJson = (obj: any, filename = "tx.json") => {
           Transaction Details
         </h1>
         <div class="mb-3 flex items-center gap-2">
-          <button class="btn text-xs sm:text-[12px]" :class="viewMode==='pretty' ? 'border-emerald-400/70 bg-emerald-500/10' : ''" @click="viewMode='pretty'">Pretty</button>
-          <button class="btn text-xs sm:text-[12px]" :class="viewMode==='raw' ? 'border-indigo-400/70 bg-indigo-500/10' : ''" @click="viewMode='raw'">Raw JSON</button>
-          <button class="btn text-xs sm:text-[12px]" @click="copyTxToClipboard(JSON.stringify(tx, null, 2))">Copy JSON</button>
-          <button class="btn text-xs sm:text-[12px]" @click="downloadJson(tx)">Download</button>
+          <RcIconButton
+            :variant="viewMode === 'pretty' ? 'primary' : 'ghost'"
+            size="sm"
+            title="Pretty"
+            @click="viewMode='pretty'"
+          >
+            <span class="text-[11px] sm:text-xs">Pretty</span>
+          </RcIconButton>
+
+          <RcIconButton
+            :variant="viewMode === 'raw' ? 'primary' : 'ghost'"
+            size="sm"
+            title="Raw JSON"
+            @click="viewMode='raw'"
+          >
+            <Braces class="h-4 w-4" />
+          </RcIconButton>
+
+          <RcIconButton
+            variant="ghost"
+            size="sm"
+            title="Copy JSON"
+            @click="copyTxToClipboard(JSON.stringify(tx, null, 2))"
+          >
+            <Copy class="h-4 w-4" />
+          </RcIconButton>
+
+          <RcIconButton
+            variant="ghost"
+            size="sm"
+            title="Download JSON"
+            @click="downloadJson(tx)"
+          >
+            <Download class="h-4 w-4" />
+          </RcIconButton>
         </div>
 
         <div v-if="loading" class="text-xs text-slate-400">
@@ -618,8 +651,12 @@ const downloadJson = (obj: any, filename = "tx.json") => {
               </div>
               <div class="flex items-center gap-2 whitespace-nowrap">
                 <code class="text-[11px] break-words sm:break-all text-slate-200 truncate max-w-[240px] sm:max-w-none">{{ hash }}</code>
-                <button class="btn text-[10px] sm:text-[11px]" @click="copyTxToClipboard(hash)">Copy</button>
-                <button class="btn text-[10px] sm:text-[11px]" @click="shareLink()">Share</button>
+                <RcIconButton variant="ghost" size="xs" title="Copy hash" @click="copyTxToClipboard(hash)">
+                  <Copy class="h-3.5 w-3.5" />
+                </RcIconButton>
+                <RcIconButton variant="ghost" size="xs" title="Share" @click="shareLink()">
+                  <Share2 class="h-3.5 w-3.5" />
+                </RcIconButton>
               </div>
             </div>
             <div>
@@ -679,7 +716,14 @@ const downloadJson = (obj: any, filename = "tx.json") => {
                     </span>
                     <span class="text-[11px] text-slate-500">Message #{{ idx + 1 }}</span>
                   </div>
-                  <button class="btn text-[10px] sm:text-[11px]" @click="copyTxToClipboard(JSON.stringify(msg, null, 2))">Copy JSON</button>
+                  <RcIconButton
+                    variant="ghost"
+                    size="xs"
+                    title="Copy message JSON"
+                    @click="copyTxToClipboard(JSON.stringify(msg, null, 2))"
+                  >
+                    <Copy class="h-3.5 w-3.5" />
+                  </RcIconButton>
                 </div>
                 <p v-if="getMessageSummary(msg)" class="text-xs text-slate-400 mb-2">
                   {{ getMessageSummary(msg) }}

@@ -1,6 +1,15 @@
 <script setup lang="ts">
 import { onMounted, computed, ref } from "vue";
 import { useStorage } from "@vueuse/core";
+import { useAutoAnimate } from "@formkit/auto-animate/vue";
+import {
+  ArrowUp,
+  ArrowDown,
+  ChevronDown,
+  ChevronUp,
+  ChevronRight,
+  RefreshCw
+} from "lucide-vue-next";
 import { useChainInfo } from "@/composables/useChainInfo";
 import { useBlocks } from "@/composables/useBlocks";
 import { useTxs } from "@/composables/useTxs";
@@ -137,6 +146,8 @@ const orderedCards = computed(() => {
     .map((c) => ({ ...c, order: getOrder(c.id) }))
     .sort((a, b) => a.order - b.order);
 });
+
+const [cardsEl] = useAutoAnimate({ duration: 160 });
 
 const refreshAll = async () => {
   await Promise.all([
@@ -645,7 +656,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
         <RcSearchBar />
       </div>
 
-      <div class="flex flex-col gap-4">
+      <div class="flex flex-col gap-4" ref="cardsEl">
         <div
           v-for="card in orderedCards"
           :key="card.id"
@@ -655,10 +666,17 @@ function sparkPath(data: number[], width = 160, height = 40) {
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-semibold text-slate-100">{{ card.title }}</h2>
             <div class="flex items-center gap-1">
-              <button class="btn text-[10px]" @click="moveCard(card.id, -1)">↑</button>
-              <button class="btn text-[10px]" @click="moveCard(card.id, 1)">↓</button>
+              <button class="btn text-[10px]" v-tooltip="'Move up'" @click="moveCard(card.id, -1)">
+                <ArrowUp class="w-3.5 h-3.5" />
+              </button>
+              <button class="btn text-[10px]" v-tooltip="'Move down'" @click="moveCard(card.id, 1)">
+                <ArrowDown class="w-3.5 h-3.5" />
+              </button>
               <button class="btn text-[10px]" @click="toggleCollapse(card.id)">
-                {{ isCollapsed(card.id) ? 'Expand' : 'Collapse' }}
+                <span class="inline-flex items-center gap-1">
+                  <component :is="isCollapsed(card.id) ? ChevronDown : ChevronUp" class="w-3.5 h-3.5" />
+                  <span>{{ isCollapsed(card.id) ? 'Expand' : 'Collapse' }}</span>
+                </span>
               </button>
             </div>
           </div>
@@ -917,7 +935,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                       </thead>
                       <tbody>
                         <tr
-                          v-for="b in blocks"
+                          v-for="b in blocks.slice(0, blockPageSize)"
                           :key="b.height"
                           class="cursor-pointer hover:bg-white/5 transition-colors"
                           @click="router.push({ name: 'block-detail', params: { height: b.height } })"
@@ -982,7 +1000,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                       </thead>
                       <tbody>
                         <tr
-                          v-for="t in txs"
+                          v-for="t in txs.slice(0, txPageSize)"
                           :key="t.hash"
                           class="cursor-pointer"
                           @click="goToTx(t.hash)"
