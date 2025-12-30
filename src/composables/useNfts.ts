@@ -261,17 +261,26 @@ export function useNfts() {
           try {
             const info = await queryContractSmart(contract, { nft_info: { token_id: tokenId } });
             const extension = info?.extension ?? {};
-            let image = extension.image || extension.image_url || extension.mediaUri || info?.token_uri;
+            let image = extension.image || extension.image_url || extension.mediaUri;
             let name = extension.name || tokenId;
             let description = extension.description;
 
             // If no inline metadata provides image, attempt to fetch/parse the token_uri JSON
-            if ((!image || image === info?.token_uri) && typeof info?.token_uri === "string") {
+            if (!image && typeof info?.token_uri === "string") {
               const meta = await parseJsonMetadata(info.token_uri);
               if (meta) {
                 image = meta.image || image;
                 name = meta.name || name;
                 description = meta.description || description;
+              }
+            }
+
+            // Final fallback: only use token_uri as image if it actually looks like an image URI.
+            if (!image && typeof info?.token_uri === "string") {
+              const uri = info.token_uri;
+              const lower = uri.toLowerCase();
+              if (lower.startsWith("data:image/") || lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".gif") || lower.endsWith(".webp") || lower.endsWith(".svg")) {
+                image = uri;
               }
             }
             return {
