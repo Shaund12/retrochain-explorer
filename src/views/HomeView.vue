@@ -31,9 +31,7 @@ const spaceInvadersNoticeKey = "home-space-invaders-beta-dismissed";
 const HOME_STATE_KEY = "rc_home_state_v1";
 type HomeState = {
   blockPage: number;
-  blockPageSize: number;
   txPage: number;
-  txPageSize: number;
   autoRefreshEnabled: boolean;
 };
 
@@ -41,9 +39,7 @@ const homeState = useStorage<HomeState>(
   HOME_STATE_KEY,
   {
     blockPage: 0,
-    blockPageSize: 10,
     txPage: 0,
-    txPageSize: 10,
     autoRefreshEnabled: true
   },
   undefined,
@@ -57,7 +53,7 @@ const blockPage = computed({
   }
 });
 
-const blockPageSize = computed(() => Math.max(1, Math.floor(homeState.value.blockPageSize || 10)));
+const blockPageSize = 10;
 
 const txPage = computed({
   get: () => homeState.value.txPage,
@@ -66,7 +62,7 @@ const txPage = computed({
   }
 });
 
-const txPageSize = computed(() => Math.max(1, Math.floor(homeState.value.txPageSize || 10)));
+const txPageSize = 10;
 
 const CARD_STORAGE_KEY = "rc_home_cards_v1";
 const dashboardCards = [
