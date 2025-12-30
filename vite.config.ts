@@ -4,8 +4,18 @@ import * as path from "node:path";
 
 export default defineConfig(({ mode }) => {
   const env = loadEnv(mode, process.cwd(), "");
-  const restTarget = env.VITE_REST_API_URL || "http://localhost:1317";
-  const rpcTarget = env.VITE_RPC_URL || "http://localhost:26657";
+  // Frontend base URLs can be relative (e.g. '/api', '/rpc') when running behind nginx.
+  // The Vite dev server proxy, however, needs a real upstream target.
+  const restTarget =
+    env.VITE_REST_PROXY_TARGET ||
+    (env.VITE_REST_API_URL && /^https?:\/\//i.test(env.VITE_REST_API_URL)
+      ? env.VITE_REST_API_URL
+      : "http://localhost:1317");
+  const rpcTarget =
+    env.VITE_RPC_PROXY_TARGET ||
+    (env.VITE_RPC_URL && /^https?:\/\//i.test(env.VITE_RPC_URL)
+      ? env.VITE_RPC_URL
+      : "http://localhost:26657");
   return {
     plugins: [vue()],
     resolve: {
