@@ -488,8 +488,6 @@ const endOfPeriod = (p: BattlePeriod) => {
   return dayjs().endOf("month");
 };
 
-type BattleGame = "all" | "retrovaders" | "retronoid";
-
 type BattleWindow = { start_ts: number; end_ts: number };
 const computeBattleWindowUtc = (p: BattlePeriod): BattleWindow => {
   const now = new Date();
