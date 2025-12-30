@@ -371,18 +371,27 @@ export function useContracts() {
   const smartQueryContract = async (address: string, message: Record<string, any> | string) => {
     const key = address?.trim();
     if (!key) throw new Error("Contract address is required.");
-    // Some callers mistakenly wrap the query in { query_msg: ... }.
-    // CosmWasm expects the raw QueryMsg object (e.g. { points: {...} }).
-    // Unwrap to avoid "unknown variant `query_msg`" errors.
+    // smartQuery REST expects POST body: { query_msg: <base64(raw QueryMsg JSON)> }
+    // Callers should normally pass the raw QueryMsg object (e.g. { points: {...} }).
+    // However, some call sites may already pass the REST wrapper.
+    // Handle all cases without double-wrapping / double-encoding.
+    const msgAny: any = message as any;
+
+    // Case 1: already a REST wrapper with base64 string.
+    if (msgAny && typeof msgAny === "object" && typeof msgAny.query_msg === "string") {
+      const res = await api.post(`/cosmwasm/wasm/v1/contract/${key}/smart`, {
+        query_msg: msgAny.query_msg
+      });
+      const payload = res.data?.data ?? res.data?.smart_response?.data;
+      return decodeBase64Json(payload);
+    }
+
+    // Case 2: wrapper with inner object -> unwrap.
     const normalizedMessage: any =
-      typeof message === "object" && message !== null && "query_msg" in (message as any) && (message as any).query_msg
-        ? (message as any).query_msg
-        : message;
+      msgAny && typeof msgAny === "object" && msgAny.query_msg && typeof msgAny.query_msg === "object" ? msgAny.query_msg : message;
 
     const encoded = encodeJsonToBase64(normalizedMessage);
-    const res = await api.post(`/cosmwasm/wasm/v1/contract/${key}/smart`, {
-      query_msg: encoded
-    });
+    const res = await api.post(`/cosmwasm/wasm/v1/contract/${key}/smart`, { query_msg: encoded });
     const payload = res.data?.data ?? res.data?.smart_response?.data;
     return decodeBase64Json(payload);
   };
