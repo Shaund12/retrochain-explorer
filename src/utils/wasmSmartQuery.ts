@@ -76,6 +76,9 @@ export const buildSmartQueryBase64 = (message: SmartQueryInput): string => {
     return encodeJsonToBase64(rawQuery as Record<string, any>);
 };
 
+const base64ToBase64Url = (b64: string) =>
+    b64.replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+
 export const smartQueryContract = async (
     api: { get: (url: string) => Promise<any> },
     address: string,
@@ -85,7 +88,10 @@ export const smartQueryContract = async (
     if (!key) throw new Error("Contract address is required.");
 
     const queryB64 = buildSmartQueryBase64(message);
-    const encodedPath = encodeURIComponent(queryB64);
+    // CosmWasm REST expects the query msg as base64 (URL path segment).
+    // Some proxies/LCDs will mis-handle padding '=' or encoded '%3D' in the path.
+    // Convert to base64url to keep the path safe and consistent.
+    const encodedPath = base64ToBase64Url(queryB64);
 
     const res = await api.get(`/cosmwasm/wasm/v1/contract/${key}/smart/${encodedPath}`);
 
