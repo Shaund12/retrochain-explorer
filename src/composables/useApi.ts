@@ -34,13 +34,44 @@ function resolveBaseUrl() {
 const { restBase } = useNetwork();
 const api = axios.create({
   baseURL: resolveBaseUrl(),
-  timeout: 10000
+  timeout: 10000,
+  // Avoid axios trying to JSON.parse HTML error pages returned by proxies/SPAs.
+  // We'll handle JSON parsing ourselves in the response interceptor.
+  transformResponse: [(data) => data]
 });
 
 // If a proxy misroutes /api to an HTML page (SPA/NGINX), axios JSON parsing throws
 // "Unexpected token '<'". Convert that into a clearer error message.
 api.interceptors.response.use(
-  (res) => res,
+  (res) => {
+    const raw = res?.data;
+    // If axios has already given us an object, keep it.
+    if (raw && typeof raw === "object") return res;
+
+    if (typeof raw === "string") {
+      const trimmed = raw.trim();
+      // Detect SPA/proxy fallback HTML.
+      if (
+        trimmed.startsWith("<") ||
+        /^<!doctype\s+html/i.test(trimmed) ||
+        /^<html/i.test(trimmed)
+      ) {
+        const hint = trimmed.slice(0, 140).replace(/\s+/g, " ");
+        throw new Error(
+          `API returned HTML instead of JSON (proxy/routing issue). Check that /api proxies to the chain REST endpoint. Response starts with: ${hint}`
+        );
+      }
+
+      // Most Cosmos endpoints are JSON; parse it so existing callers keep working.
+      try {
+        res.data = JSON.parse(trimmed);
+      } catch {
+        // leave as string if it isn't JSON
+      }
+    }
+
+    return res;
+  },
   (err) => {
     try {
       const data = err?.response?.data;
