@@ -103,6 +103,39 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "2025.12.30",
+    codename: "Arcade BattlePoints Claims",
+    date: "2025-12-30",
+    summary:
+      "Fixed BattlePoints quest claim tracking in the Arcade view by aligning smart queries with the on-chain contract interface and surfacing query failures for debugging.",
+    changes: [
+      {
+        type: "fix",
+        title: "BattlePoints claims query uses correct QueryMsg",
+        description:
+          "Arcade quests now query the BattlePoints contract using `claims_for_player` (instead of the non-existent `claimed` variant) to load claim state from chain."
+      },
+      {
+        type: "improvement",
+        title: "Quest UI reflects claimed state",
+        description:
+          "The Battle Quests list now marks quests as claimed when returned by the contract and disables the Claim button accordingly."
+      },
+      {
+        type: "improvement",
+        title: "Smart query errors are no longer silently swallowed",
+        description:
+          "When the BattlePoints smart query fails, the Arcade view logs the HTTP status/URL and shows a toast so missing LCD/proxy issues are visible."
+      },
+      {
+        type: "note",
+        title: "Follow-up: period-scoped claim status (not finished)",
+        description:
+          "Arcade quests currently load claim state via `claims_for_player` without period/game/window scoping. If the contract expects per-window isolation, switch to `claim_status` with period/game_filter/window per quest."
+      }
+    ]
+  },
+  {
     version: "2025.12.22-2",
     codename: "GitBook Sprint",
     date: "2025-12-22",
