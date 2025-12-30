@@ -80,7 +80,7 @@ const loadShop = async () => {
 
   shopLoading.value = true;
   try {
-    const res: any = await smartQueryContract(addr, { shop_items: {} });
+    const res: any = await smartQueryContract(addr, { shop_items: { start_after: null, limit: 50 } });
     const list = (res?.items ?? res?.shop_items ?? res ?? []) as any[];
     items.value = Array.isArray(list) ? list : [];
 
@@ -97,7 +97,7 @@ const loadShop = async () => {
           return;
         }
         try {
-          const svgRes: any = await smartQueryContract(addr, { svg_preview: { item_id: id } });
+          const svgRes: any = await smartQueryContract(addr, { svg_image: { item_id: id } });
           const svg = svgRes?.svg ?? svgRes?.image ?? svgRes?.data;
           if (typeof svg === "string" && svg.trim().startsWith("<svg")) {
             svgPreviewByItemId.value = { ...svgPreviewByItemId.value, [id]: svg };
