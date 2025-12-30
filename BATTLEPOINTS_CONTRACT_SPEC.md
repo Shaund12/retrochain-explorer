@@ -4,7 +4,7 @@ This document describes the **Battle Points + Quest Claim** system currently rep
 
 The UI currently shows quest progress but claim is disabled with:
 
-> “Coming soon — claimable after next RC on-chain upgrade.”
+> Â“Coming soon Â— claimable after next RC on-chain upgrade.Â”
 
 This contract is intended to power that future claim.
 
@@ -68,7 +68,7 @@ Additionally (v1.1 / next step), the system should:
 ### Why
 CosmWasm contracts cannot query arbitrary historical sessions or tx logs. You need a trusted producer:
 
-- the chain’s Arcade module (future), OR
+- the chainÂ’s Arcade module (future), OR
 - an indexer/backend service you run, OR
 - a governance-controlled feeder.
 
@@ -259,7 +259,7 @@ For this project, NFT visuals should be generated as **SVG** based on:
 - `palette`
 - `seed`
 
-Because CW721 tokens reference metadata via `token_uri` (off-chain) while “image_data” is a metadata convention, the most practical on-chain approach is:
+Because CW721 tokens reference metadata via `token_uri` (off-chain) while Â“image_dataÂ” is a metadata convention, the most practical on-chain approach is:
 
 - Store the generated SVG (or the inputs required to generate it) in the BattlePoints contract.
 - Provide a query that returns base64 SVG (or raw SVG) for a minted `token_id`.
@@ -468,7 +468,7 @@ CW721 ownership is the source of truth. Optionally also store:
 
 - `(buyer, token_id) => { item_id, spent_points, purchased_at }`
 
-This can help build a “purchase history” query without crawling CW721.
+This can help build a Â“purchase historyÂ” query without crawling CW721.
 
 For on-chain SVG, a per-mint record is effectively required.
 
@@ -500,7 +500,7 @@ Mint {
 }
 ```
 
-Implementation note: you’ll likely include the `cw721` crate types (or define the mint message struct matching the deployed cw721-base version).
+Implementation note: youÂ’ll likely include the `cw721` crate types (or define the mint message struct matching the deployed cw721-base version).
 
 ---
 
@@ -564,7 +564,7 @@ A claim is uniquely scoped by:
 Rules:
 
 1. Stats must exist for the exact scope.
-2. Quest must be “ready” by the rules above.
+2. Quest must be Â“readyÂ” by the rules above.
 3. Claim must not already exist.
 4. On success:
    - write `ClaimRecord`
@@ -648,4 +648,4 @@ Answer these before finalizing v1:
 - Keep storage keys stable.
 - Use `Addr::unchecked` only after validation.
 - Use `env.block.time.seconds()` for `claimed_at`.
-- Don’t add external dependencies beyond standard CosmWasm + cw-utils/cw-storage-plus unless required.
+- DonÂ’t add external dependencies beyond standard CosmWasm + cw-utils/cw-storage-plus unless required.

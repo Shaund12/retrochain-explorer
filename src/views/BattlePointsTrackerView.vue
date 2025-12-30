@@ -126,7 +126,7 @@ onMounted(refresh);
       <div class="flex gap-2 flex-wrap justify-end">
         <button class="btn text-xs" @click="router.push({ name: 'arcade' })">? Back to Arcade</button>
         <button class="btn text-xs" @click="router.push({ name: 'battlepoints' })">Open Store</button>
-        <button class="btn btn-primary text-xs" :disabled="loading" @click="refresh">{{ loading ? 'Refreshing…' : 'Refresh' }}</button>
+        <button class="btn btn-primary text-xs" :disabled="loading" @click="refresh">{{ loading ? 'RefreshingÂ…' : 'Refresh' }}</button>
       </div>
     </div>
 

@@ -57,7 +57,9 @@ const statusFilter = ref<"all" | "success" | "failed">(
   stored?.status === "success" || stored?.status === "failed" ? (stored.status as any) : "all"
 );
 const messageFilter = ref<string>(typeof stored?.msg === "string" ? stored!.msg : "all");
-const limit = ref(typeof stored?.limit === "number" && stored.limit > 0 ? stored.limit : 20);
+// Backend fetch batch size. Keep this independent from the table UI page size.
+// The UI can show 10/20/50/100 per page, while we keep appending records in fixed chunks.
+const limit = ref(typeof stored?.limit === "number" && stored.limit > 0 ? stored.limit : 100);
 const hashQuery = ref<string>(typeof stored?.q === "string" ? stored!.q : "");
 
 const totalTxs = computed(() => txs.value.length);
@@ -179,6 +181,15 @@ watch([statusFilter, messageFilter, hashQuery], () => {
   pagination.value = { ...pagination.value, pageIndex: 0 };
   page.value = 0;
 });
+
+watch(
+  () => pagination.value.pageSize,
+  () => {
+    // Changing the UI page size should not change what we fetch from the backend,
+    // but we should reset the UI to the first page to avoid a confusing jump.
+    pagination.value = { ...pagination.value, pageIndex: 0 };
+  }
+);
 
 const rowCountDisplay = computed(() => {
   const total = table.getFilteredRowModel().rows.length;

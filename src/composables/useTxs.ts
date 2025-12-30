@@ -187,30 +187,25 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
         console.error("Failed to fetch transactions:", e);
       }
 
-      // Fallback #1: use gRPC-gateway /cosmos/tx endpoint with pagination via POST body
+      // Fallback #1: use gRPC-gateway /cosmos/tx endpoint with pagination.
+      // Important: do NOT mix "pagination.key" and "pagination.offset"; many SDK nodes will
+      // ignore/override one of them and you'll keep getting the same page.
       try {
         const collected: TxSummary[] = [];
-        let nextKey: string | undefined;
+        const batchSize = Math.min(100, Math.max(1, limit));
+        const offset = Math.max(0, page) * batchSize;
 
-         const batchSize = Math.min(100, Math.max(1, limit));
-         const offset = page * batchSize;
-         let fetched = 0;
-         while (collected.length < batchSize) {
-           const pageLimit = Math.min(100, batchSize - collected.length);
-
-          const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
-            params: {
-              events: "tx.height>0",
-              order_by: "ORDER_BY_DESC",
-              "pagination.limit": String(pageLimit),
-              ...(offset ? { "pagination.offset": String(offset + fetched) } : {}),
-              ...(nextKey ? { "pagination.key": nextKey } : {})
-            },
-            paramsSerializer: defaultParamsSerializer
-          });
+        const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
+          params: {
+            events: "tx.height>0",
+            order_by: "ORDER_BY_DESC",
+            "pagination.limit": String(batchSize),
+            ...(offset ? { "pagination.offset": String(offset) } : {})
+          },
+          paramsSerializer: defaultParamsSerializer
+        });
           const responses: any[] = res.data?.tx_responses ?? [];
-          if (!responses.length) break;
-
+        if (responses.length) {
           for (const resp of responses) {
             collected.push({
               hash: resp.txhash,
@@ -225,16 +220,7 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
               fees: resp?.tx?.auth_info?.fee?.amount || [],
               burns: aggregateBurnTotals(resp)
             });
-
-             if (collected.length >= batchSize) {
-              break;
-            }
           }
-
-          nextKey = res.data?.pagination?.next_key || undefined;
-           if (!nextKey && !offset) break;
-          fetched += responses.length;
-          if (!nextKey && offset) break;
         }
 
         if (collected.length) {
