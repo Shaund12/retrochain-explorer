@@ -371,7 +371,15 @@ export function useContracts() {
   const smartQueryContract = async (address: string, message: Record<string, any> | string) => {
     const key = address?.trim();
     if (!key) throw new Error("Contract address is required.");
-    const encoded = encodeJsonToBase64(message);
+    // Some callers mistakenly wrap the query in { query_msg: ... }.
+    // CosmWasm expects the raw QueryMsg object (e.g. { points: {...} }).
+    // Unwrap to avoid "unknown variant `query_msg`" errors.
+    const normalizedMessage: any =
+      typeof message === "object" && message !== null && "query_msg" in (message as any) && (message as any).query_msg
+        ? (message as any).query_msg
+        : message;
+
+    const encoded = encodeJsonToBase64(normalizedMessage);
     const res = await api.post(`/cosmwasm/wasm/v1/contract/${key}/smart`, {
       query_msg: encoded
     });
