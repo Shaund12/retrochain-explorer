@@ -1,19 +1,34 @@
 <script setup lang="ts">
-import { onMounted, ref, computed } from "vue";
+import { ref, computed } from "vue";
 import { useRoute, RouterLink } from "vue-router";
 import { useTxs } from "@/composables/useTxs";
 import { getTokenMeta } from "@/constants/tokens";
 import dayjs from "dayjs";
 import { formatCoins } from "@/utils/format";
+import { useQuery } from "@tanstack/vue-query";
+import { shortenMiddle } from "@/utils/stringFormat";
 
 const { getTx } = useTxs();
 const route = useRoute();
 const hash = String(route.params.hash);
 
-const loading = ref(false);
-const error = ref<string | null>(null);
 const tx = ref<any | null>(null);
 const viewMode = ref<"pretty" | "raw">("pretty");
+
+const { data, isPending, error } = useQuery({
+  queryKey: ["tx", hash],
+  queryFn: () => getTx(hash),
+  enabled: Boolean(hash),
+  staleTime: 30_000
+});
+
+const loading = computed(() => isPending.value);
+
+// Keep existing code working by mirroring query data into local `tx` ref
+computed(() => {
+  tx.value = data.value ?? null;
+  return tx.value;
+});
 
 const messages = computed(() => {
   return tx.value?.tx?.body?.messages || [];
@@ -156,10 +171,7 @@ interface MessageDetail {
   value: string;
 }
 
-const shortAddress = (addr?: string, size = 10) => {
-  if (!addr) return "—";
-  return `${addr.slice(0, size)}…${addr.slice(-6)}`;
-};
+const shortAddress = (addr?: string, size = 10) => shortenMiddle(addr, { head: size, tail: 6, delimiter: "…" });
 
 const isAccountAddress = (val?: string | null) => {
   if (!val) return false;
@@ -502,19 +514,7 @@ const downloadJson = (obj: any, filename = "tx.json") => {
   URL.revokeObjectURL(url);
 };
 
-onMounted(async () => {
-  loading.value = true;
-  error.value = null;
-  try {
-    fetchLivePrices();
-    const res = await getTx(hash);
-    tx.value = res;
-  } catch (e: any) {
-    error.value = e?.message ?? String(e);
-  } finally {
-    loading.value = false;
-  }
-});
+fetchLivePrices();
 </script>
 
 <template>
@@ -631,7 +631,7 @@ onMounted(async () => {
           Loading transaction…
         </div>
         <div v-if="error" class="text-xs text-rose-300">
-          {{ error }}
+          {{ (error as any)?.message ?? String(error) }}
         </div>
 
         <div v-if="tx && viewMode==='pretty'" class="space-y-3">

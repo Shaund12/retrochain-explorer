@@ -8,6 +8,8 @@ import { useKeplr } from "@/composables/useKeplr";
 import { useToast } from "@/composables/useToast";
 import { useNetwork } from "@/composables/useNetwork";
 import { normalizeSmartQueryInput } from "@/utils/normalizeSmartQueryInput";
+import { compareHashes, formatHash, normalizeHex } from "@/utils/hashFormat";
+import { shortenMiddle } from "@/utils/stringFormat";
 
 const route = useRoute();
 const router = useRouter();
@@ -72,33 +74,13 @@ const codeDownloadUrl = computed(() => {
   return `${base}/cosmwasm/wasm/v1/code/${contractInfo.value.code_id}`;
 });
 
-const normalizeHex = (value?: string | null) => {
-  if (!value) return "";
-  const trimmed = value.trim();
-  if (!trimmed) return "";
-  const hex = trimmed.startsWith("0x") || trimmed.startsWith("0X") ? trimmed.slice(2) : trimmed;
-  return /^[0-9a-fA-F]+$/.test(hex) ? hex.toLowerCase() : "";
-};
-
-const formatHash = (value?: string | null) => {
-  if (!value) return "";
-  const normalized = normalizeHex(value);
-  if (normalized) {
-    return `0x${normalized}`;
-  }
-  return value;
-};
-
 const normalizedContractHash = computed(() => normalizeHex(contractCodeHash.value));
 const normalizedCodeHash = computed(() => normalizeHex(codeInfo.value?.dataHash));
 
 const contractHashDisplay = computed(() => formatHash(contractCodeHash.value));
 const codeHashDisplay = computed(() => formatHash(codeInfo.value?.dataHash));
 
-const verificationStatus = computed(() => {
-  if (!normalizedContractHash.value || !normalizedCodeHash.value) return "unknown";
-  return normalizedContractHash.value === normalizedCodeHash.value ? "verified" : "mismatch";
-});
+const verificationStatus = computed(() => compareHashes(contractCodeHash.value, codeInfo.value?.dataHash));
 
 const verificationLabel = computed(() => {
   if (verificationStatus.value === "verified") return "Verified";
