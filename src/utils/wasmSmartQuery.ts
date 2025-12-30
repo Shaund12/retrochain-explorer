@@ -88,6 +88,20 @@ export const smartQueryContract = async (
     const encodedPath = encodeURIComponent(queryB64);
 
     const res = await api.get(`/cosmwasm/wasm/v1/contract/${key}/smart/${encodedPath}`);
-    const payload = res.data?.data ?? res.data?.smart_response?.data;
+
+    const data = res?.data;
+    const payload = data?.data ?? data?.smart_response?.data;
+
+    // If the API returns HTML (usually proxy misconfig / SPA fallback), fail with a clearer error.
+    if (typeof payload === "string") {
+        const trimmed = payload.trim();
+        if (trimmed.startsWith("<") || /^<!doctype\s+html/i.test(trimmed) || /^<html/i.test(trimmed)) {
+            const hint = trimmed.slice(0, 120).replace(/\s+/g, " ");
+            throw new Error(
+                `Smart query returned HTML instead of JSON/base64. Check REST base URL/proxy and CosmWasm endpoints. Response starts with: ${hint}`
+            );
+        }
+    }
+
     return decodeBase64Json(payload);
 };
