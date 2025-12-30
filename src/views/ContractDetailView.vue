@@ -234,10 +234,28 @@ const runSmartQuery = async () => {
       throw new Error(jsonErr?.message || "Invalid JSON payload");
     }
 
-    // Users sometimes paste the REST wrapper shape {"query_msg":"base64..."} or {"query_msg":{...}}.
+    // Users sometimes paste REST wrapper payloads:
+    //  - {"query_msg": { ... }}
+    //  - {"query_msg": "<base64>"}
     // The explorer expects the raw contract QueryMsg object here.
     if (parsed && typeof parsed === "object" && "query_msg" in parsed) {
-      parsed = (parsed as any).query_msg;
+      const inner = (parsed as any).query_msg;
+      if (typeof inner === "string" && inner.trim()) {
+        try {
+          const b64 = inner.trim();
+          const decoded = typeof atob === "function" ? atob(b64) : (globalThis as any)?.Buffer?.from(b64, "base64")?.toString("utf-8");
+          if (decoded) {
+            parsed = JSON.parse(decoded);
+          } else {
+            parsed = JSON.parse(inner);
+          }
+        } catch {
+          // If decoding/parsing fails, fall back to using inner directly.
+          parsed = inner as any;
+        }
+      } else {
+        parsed = inner;
+      }
     }
     const result = await smartQueryContract(contractAddress.value, parsed);
     smartQueryResult.value = JSON.stringify(result, null, 2);
