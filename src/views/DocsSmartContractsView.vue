@@ -84,7 +84,7 @@ onMounted(() => {
           <li><code>GET /cosmwasm/wasm/v1/code/&lt;codeId&gt;</code> (code info)</li>
           <li><code>GET /cosmwasm/wasm/v1/code/&lt;codeId&gt;/contracts</code> (contracts for code)</li>
           <li><code>GET /cosmwasm/wasm/v1/contract/&lt;addr&gt;</code> (contract info)</li>
-          <li><code>GET /cosmwasm/wasm/v1/contract/&lt;addr&gt;/smart/&lt;base64(json)&gt;</code> (smart query)</li>
+          <li><code>GET /cosmwasm/wasm/v1/contract/&lt;addr&gt;/smart/&lt;base64(json)&gt;</code> (smart query: base64-encoded <em>raw</em> QueryMsg JSON)</li>
         </ul>
       </div>
 
@@ -111,7 +111,8 @@ onMounted(() => {
         <div class="text-xs uppercase tracking-wider text-slate-400">Explorer recommendations</div>
         <ul class="list-disc list-inside text-sm text-slate-300 space-y-1 mt-2">
           <li>Show <code>code_id</code> and <code>creator</code> prominently.</li>
-          <li>Provide common smart queries (e.g. CW20: <code>{ token_info: {} }</code>).</li>
+          <li>Provide common smart queries (e.g. CW20: <code>{ token_info: {} }</code>, CW721: <code>{ nft_info: { token_id: "1" } }</code>).</li>
+          <li>Avoid wrapping queries in <code>{ query_msg: ... }</code> when pasting into the explorer UI; paste the contract's QueryMsg object directly.</li>
           <li>Handle missing CosmWasm endpoints gracefully (404/501) depending on node build.</li>
         </ul>
       </div>

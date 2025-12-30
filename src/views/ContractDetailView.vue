@@ -356,6 +356,12 @@ const loadDetails = async () => {
       const lowered = String(msg).toLowerCase();
       if (lowered.includes("unknown variant") && lowered.includes("token_info")) {
         contractFlavor.value = "cw721";
+
+        // If the textarea is still showing the CW20 template or empty, set it to a CW721-safe default.
+        const trimmed = smartQueryInput.value.trim();
+        if (!trimmed || trimmed.includes('"token_info"') || trimmed.includes('"balance"') || trimmed.includes('"allowance"')) {
+          smartQueryInput.value = '{\n  "contract_info": {}\n}';
+        }
       }
     }
 
