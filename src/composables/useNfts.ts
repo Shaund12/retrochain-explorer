@@ -35,6 +35,25 @@ const decodeBase64 = (value: string) => {
   }
 };
 
+const normalizeImageUri = (value?: string): string | undefined => {
+  if (!value || typeof value !== "string") return undefined;
+  const v = value.trim();
+  const lower = v.toLowerCase();
+
+  // If contract already provides base64 SVG data URI, keep as-is.
+  if (lower.startsWith("data:image/svg+xml;base64,")) return v;
+
+  // Some NFT metadata uses data:image/svg+xml,<svg ...> (NOT base64). This must be URL-encoded.
+  if (lower.startsWith("data:image/svg+xml,")) {
+    const raw = v.slice("data:image/svg+xml,".length);
+    // If it already looks encoded, keep it.
+    if (/%[0-9a-f]{2}/i.test(raw)) return v;
+    return `data:image/svg+xml,${encodeURIComponent(raw)}`;
+  }
+
+  return v;
+};
+
 const parseJsonMetadata = async (uri: string): Promise<Record<string, any> | null> => {
   if (!uri) return null;
   try {
@@ -269,7 +288,7 @@ export function useNfts() {
             if (!image && typeof info?.token_uri === "string") {
               const meta = await parseJsonMetadata(info.token_uri);
               if (meta) {
-                image = meta.image || image;
+                image = normalizeImageUri(meta.image) || image;
                 name = meta.name || name;
                 description = meta.description || description;
               }
@@ -280,7 +299,7 @@ export function useNfts() {
               const uri = info.token_uri;
               const lower = uri.toLowerCase();
               if (lower.startsWith("data:image/") || lower.endsWith(".png") || lower.endsWith(".jpg") || lower.endsWith(".jpeg") || lower.endsWith(".gif") || lower.endsWith(".webp") || lower.endsWith(".svg")) {
-                image = uri;
+                image = normalizeImageUri(uri);
               }
             }
             return {
