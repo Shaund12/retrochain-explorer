@@ -16,6 +16,9 @@ const bytesToBase64 = (bytes: Uint8Array) => {
     throw new Error("Base64 encoding is not supported in this environment.");
 };
 
+const bytesToBase64Url = (bytes: Uint8Array) =>
+    bytesToBase64(bytes).replace(/\+/g, "-").replace(/\//g, "_").replace(/=+$/g, "");
+
 const encodeJsonToBase64 = (payload: Record<string, any> | string) => {
     const json = typeof payload === "string" ? payload : JSON.stringify(payload);
     if (typeof TextEncoder !== "undefined") {
@@ -24,6 +27,17 @@ const encodeJsonToBase64 = (payload: Record<string, any> | string) => {
     }
     const nodeBuffer = (globalThis as any)?.Buffer;
     if (nodeBuffer) return nodeBuffer.from(json, "utf-8").toString("base64");
+    throw new Error("TextEncoder is not available to encode query payload.");
+};
+
+const encodeJsonToBase64Url = (payload: Record<string, any> | string) => {
+    const json = typeof payload === "string" ? payload : JSON.stringify(payload);
+    if (typeof TextEncoder !== "undefined") {
+        const encoder = new TextEncoder();
+        return bytesToBase64Url(encoder.encode(json));
+    }
+    const nodeBuffer = (globalThis as any)?.Buffer;
+    if (nodeBuffer) return nodeBuffer.from(json, "utf-8").toString("base64url");
     throw new Error("TextEncoder is not available to encode query payload.");
 };
 
@@ -86,9 +100,10 @@ export const smartQueryContract = async (
     const key = address?.trim();
     if (!key) throw new Error("Contract address is required.");
 
-    const queryB64 = buildSmartQueryBase64(message);
-    // CosmWasm REST expects standard base64 for `query_data`.
-    // Keep base64 intact but URL-encode it because it is part of the URL path.
+    // Some LCDs expect standard base64, others accept base64url. We default to standard base64,
+    // but allow opting into base64url via env so deployments can match their LCD behavior.
+    const useBase64Url = (import.meta as any)?.env?.VITE_COSMWASM_SMARTQUERY_BASE64URL === "true";
+    const queryB64 = useBase64Url ? encodeJsonToBase64Url(message as any) : buildSmartQueryBase64(message);
     const encodedPath = encodePathSegment(queryB64);
 
     const res = await api.get(`/cosmwasm/wasm/v1/contract/${key}/smart/${encodedPath}`);
