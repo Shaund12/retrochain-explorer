@@ -1,7 +1,9 @@
 // src/composables/useTxs.ts
 import { ref } from "vue";
-import { sha256 } from "@cosmjs/crypto";
 import { useApi } from "./useApi";
+import { base64ToBytes, bytesToHex } from "@/utils/encoding";
+import { sha256Bytes } from "@/utils/crypto";
+import { defaultParamsSerializer } from "@/utils/pagination";
 
 export interface TxSummary {
   hash: string;
@@ -171,24 +173,9 @@ const parseTransfers = (logsOrEvents: any, address: string): TxSummary["transfer
   return transfers;
 };
 
-const bytesToHex = (bytes: Uint8Array) =>
-  Array.from(bytes)
-    .map((b) => b.toString(16).padStart(2, "0"))
-    .join("")
-    .toUpperCase();
-
-const hashBytes = async (bytes: Uint8Array): Promise<Uint8Array> => {
-  const subtle = globalThis.crypto?.subtle;
-  if (subtle) {
-    const digest = await subtle.digest("SHA-256", bytes);
-    return new Uint8Array(digest);
-  }
-  return sha256(bytes);
-};
-
 const hashFromBase64 = async (b64: string) => {
-  const bytes = Uint8Array.from(atob(b64), (c) => c.charCodeAt(0));
-  const digest = await hashBytes(bytes);
+  const bytes = base64ToBytes(b64);
+  const digest = await sha256Bytes(bytes);
   return bytesToHex(digest);
 };
 
@@ -382,19 +369,7 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
               ...(offset ? { "pagination.offset": String(offset + fetched) } : {}),
               ...(nextKey ? { "pagination.key": nextKey } : {})
             },
-            paramsSerializer: (params) => {
-              const search = new URLSearchParams();
-              Object.keys(params).forEach((key) => {
-                const value = (params as any)[key];
-                if (value === undefined || value === null) return;
-                if (Array.isArray(value)) {
-                  value.forEach((entry) => search.append(key, entry));
-                } else {
-                  search.append(key, value);
-                }
-              });
-              return search.toString();
-            }
+            paramsSerializer: defaultParamsSerializer
           });
           const responses: any[] = res.data?.tx_responses ?? [];
           if (!responses.length) break;
@@ -523,19 +498,7 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
               order_by: "ORDER_BY_DESC",
               "pagination.limit": String(fetchCount)
             },
-            paramsSerializer: (params) => {
-              const search = new URLSearchParams();
-              Object.keys(params).forEach((key) => {
-                const value = (params as any)[key];
-                if (value === undefined || value === null) return;
-                if (Array.isArray(value)) {
-                  value.forEach((entry) => search.append(key, entry));
-                } else {
-                  search.append(key, value);
-                }
-              });
-              return search.toString();
-            }
+            paramsSerializer: defaultParamsSerializer
           });
 
           const responses: any[] = res.data?.tx_responses ?? [];
@@ -559,8 +522,9 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
             };
             collected.push(summary);
           }
-        } catch (filterErr) {
-          const message = filterErr?.response?.data?.message || filterErr?.message || "";
+        } catch (filterErr: unknown) {
+          const err = filterErr as any;
+          const message = (err && err.response && err.response.data && err.response.data.message) || (err && err.message) || "";
           if (typeof message === "string" && message.toLowerCase().includes("index")) {
             indexerDisabled = true;
           }
@@ -572,8 +536,9 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
       const start = pageIndex * pageSize;
       const end = start + pageSize + 1;
       txs.value = collected.slice(start, end);
-    } catch (e: any) {
-      error.value = e?.message ?? String(e);
+    } catch (e: unknown) {
+      const err: any = e as any;
+      error.value = err?.message ?? String(e);
       txs.value = [];
     } finally {
       loading.value = false;

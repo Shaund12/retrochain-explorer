@@ -2,6 +2,8 @@ import { ref } from "vue";
 import { useApi } from "./useApi";
 import { smartQueryContract as smartQuery } from "@/utils/wasmSmartQuery";
 import { isIgnorableSmartQueryError } from "@/utils/isIgnorableSmartQueryError";
+import { normalizeNftImageUri, parseTokenUriMetadata } from "@/utils/nftMetadata";
+import { defaultParamsSerializer as paramsSerializer, fetchPaginated } from "@/utils/pagination";
 
 export interface NftClassDetail {
   id: string;
@@ -22,81 +24,7 @@ export interface NftTokenMeta {
   data?: Record<string, any> | null;
 }
 
-interface PaginatedResponse<T> {
-  items: T[];
-  nextKey?: string;
-}
-
-const decodeBase64 = (value: string) => {
-  try {
-    if (typeof atob === "function") return atob(value);
-    const buf = (globalThis as any)?.Buffer?.from(value, "base64");
-    return buf ? buf.toString("utf-8") : value;
-  } catch {
-    return value;
-  }
-};
-
-const normalizeImageUri = (value?: string): string | undefined => {
-  if (!value || typeof value !== "string") return undefined;
-  const v = value.trim().replace(/\s+/g, " ");
-  const lower = v.toLowerCase();
-
-  // Never treat JSON data URIs as images.
-  if (lower.startsWith("data:application/json")) return undefined;
-
-  // If contract already provides base64 SVG data URI, keep as-is.
-  if (lower.startsWith("data:image/svg+xml;base64,")) return v;
-
-  // Some NFT metadata uses data:image/svg+xml,<svg ...> (NOT base64). This must be URL-encoded.
-  if (lower.startsWith("data:image/svg+xml,")) {
-    const raw = v.slice("data:image/svg+xml,".length);
-    if (/%[0-9a-f]{2}/i.test(raw)) return v; // already encoded
-    return `data:image/svg+xml,${encodeURIComponent(raw)}`;
-  }
-
-  return v;
-};
-
-const parseJsonMetadata = async (uri: string): Promise<Record<string, any> | null> => {
-  if (!uri) return null;
-  try {
-    const lower = uri.toLowerCase();
-
-    if (lower.startsWith("data:application/json;base64,")) {
-      const b64 = uri.split(",", 2)[1] || "";
-      const json = decodeBase64(b64);
-      return JSON.parse(json);
-    }
-
-    if (lower.startsWith("data:application/json;utf8,")) {
-      const encoded = uri.split(",", 2)[1] || "";
-      return JSON.parse(decodeURIComponent(encoded));
-    }
-
-    if (lower.startsWith("data:application/json,")) {
-      const encoded = uri.split(",", 2)[1] || "";
-      return JSON.parse(decodeURIComponent(encoded));
-    }
-
-    const res = await fetch(uri);
-    if (!res.ok) return null;
-    return await res.json();
-  } catch {
-    return null;
-  }
-};
-
-const paramsSerializer = (params: Record<string, any>) => {
-  const search = new URLSearchParams();
-  Object.keys(params).forEach((key) => {
-    const value = params[key];
-    if (value === undefined || value === null) return;
-    if (Array.isArray(value)) value.forEach((entry) => search.append(key, entry));
-    else search.append(key, value);
-  });
-  return search.toString();
-};
+// NFT metadata helper logic extracted to `src/utils/nftMetadata.ts`.
 
 export function useNfts() {
   const api = useApi();
@@ -106,26 +34,8 @@ export function useNfts() {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
-  const fetchPaginated = async <T>(path: string, dataKey: string, limit = 200): Promise<PaginatedResponse<T>> => {
-    const items: T[] = [];
-    let nextKey: string | undefined;
-
-    do {
-      const res = await api.get(path, {
-        params: {
-          "pagination.limit": String(limit),
-          ...(nextKey ? { "pagination.key": nextKey } : {})
-        },
-        paramsSerializer
-      });
-
-      const chunk: T[] = res.data?.[dataKey] ?? [];
-      items.push(...chunk);
-      nextKey = res.data?.pagination?.next_key || undefined;
-    } while (nextKey);
-
-    return { items };
-  };
+  const fetchPaginatedLocal = async <T>(path: string, dataKey: string, limit = 200) =>
+    fetchPaginated<T>(api as any, path, dataKey, { limit, paramsSerializer });
 
   // Shared canonical smart query (GET /smart/{base64}) via utils/wasmSmartQuery
   const queryContractSmart = async (address: string, payload: Record<string, any>) => {
@@ -187,7 +97,7 @@ export function useNfts() {
 
   const fetchTokensFromNftModule = async (classId: string): Promise<NftTokenMeta[]> => {
     try {
-      const res = await fetchPaginated<any>(`/cosmos/nft/v1beta1/nfts/${encodeURIComponent(classId)}`, "nfts", 100);
+      const res = await fetchPaginatedLocal<any>(`/cosmos/nft/v1beta1/nfts/${encodeURIComponent(classId)}`, "nfts", 100);
       return res.items.map((nft: any) => ({
         id: nft?.id || nft?.token_id || "",
         name: nft?.name || nft?.id || nft?.token_id,
@@ -234,9 +144,9 @@ export function useNfts() {
 
             // If no inline metadata provides image, attempt to fetch/parse the token_uri JSON
             if (!image && typeof info?.token_uri === "string") {
-              const meta = await parseJsonMetadata(info.token_uri);
+                const meta = await parseTokenUriMetadata(info.token_uri);
               if (meta) {
-                image = normalizeImageUri(meta.image) || image;
+                  image = normalizeNftImageUri(meta.image) || image;
                 name = meta.name || name;
                 description = meta.description || description;
               }
@@ -255,7 +165,7 @@ export function useNfts() {
                 lower.endsWith(".webp") ||
                 lower.endsWith(".svg")
               ) {
-                image = normalizeImageUri(uri);
+                  image = normalizeNftImageUri(uri);
               }
             }
 

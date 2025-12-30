@@ -1,6 +1,7 @@
 import { ref } from "vue";
 import { useApi } from "./useApi";
 import dayjs from "dayjs";
+import { defaultParamsSerializer } from "@/utils/pagination";
 
 export interface ChainInfo {
   latestBlockHeight: number | null;
@@ -60,19 +61,7 @@ export function useChainInfo() {
               "pagination.count_total": "true",
               events: ["tm.event='Tx'"]
             },
-            paramsSerializer: (params) => {
-              const search = new URLSearchParams();
-              Object.keys(params).forEach((key) => {
-                const value = (params as any)[key];
-                if (value === undefined || value === null) return;
-                if (Array.isArray(value)) {
-                  value.forEach((entry) => search.append(key, entry));
-                } else {
-                  search.append(key, value);
-                }
-              });
-              return search.toString();
-            }
+            paramsSerializer: defaultParamsSerializer
           });
           const total = res.data?.pagination?.total;
           const parsed = typeof total === "string" ? parseInt(total, 10) : Number(total);

@@ -3,6 +3,7 @@ import { computed, onMounted, ref } from "vue";
 import { useRouter } from "vue-router";
 import { useKeplr } from "@/composables/useKeplr";
 import { useContracts } from "@/composables/useContracts";
+import { normalizeNftImageUri } from "@/utils/nftMetadata";
 
 const router = useRouter();
 const { address, connect, signAndBroadcast } = useKeplr();
@@ -92,8 +93,9 @@ const loadShop = async () => {
 
         // Prefer contract-provided image (preview-ready contracts return data:image/svg+xml;base64,...)
         const direct = (i as any)?.image;
-        if (typeof direct === "string" && direct.startsWith("data:image/svg+xml")) {
-          svgPreviewByItemId.value = { ...svgPreviewByItemId.value, [id]: direct };
+        const normalized = typeof direct === "string" ? normalizeNftImageUri(direct) : undefined;
+        if (normalized && normalized.startsWith("data:image/svg+xml")) {
+          svgPreviewByItemId.value = { ...svgPreviewByItemId.value, [id]: normalized };
           return;
         }
         try {

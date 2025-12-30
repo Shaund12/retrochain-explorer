@@ -3,6 +3,9 @@ import { useApi } from "./useApi";
 import { getTokenMeta, type TokenMeta } from "@/constants/tokens";
 import { smartQueryContract as smartQueryGet } from "@/utils/wasmSmartQuery";
 import { isIgnorableSmartQueryError } from "@/utils/isIgnorableSmartQueryError";
+import { formatNumberSmart } from "@/utils/format";
+import { fetchCodeInfos as fetchWasmCodeInfos, fetchContractsForCode as fetchWasmContractsForCode } from "@/utils/cosmwasmDiscovery";
+import { defaultParamsSerializer as paramsSerializer, fetchPaginated } from "@/utils/pagination";
 
 export interface BankToken {
   denom: string;
@@ -44,40 +47,17 @@ export interface NftClassMeta {
   source?: "nft-module" | "ics721" | "cw721" | string;
 }
 
-interface PaginatedResponse<T> {
-  items: T[];
-  nextKey?: string;
-}
-
 let denomTraceEndpointSupported = true;
 const BLOCKED_CW20_CONTRACTS = new Set([
   "cosmos1yyca08xqdgvjz0psg56z67ejh9xms6l436u8y58m82npdqqhmmtq8xrd4s",
   "cosmos14hj2tavq8fpesdwxxcu44rty3hh90vhujrvcmstl4zr3txmfvw9s4hmalr"
 ]);
 
-const paramsSerializer = (params: Record<string, any>) => {
-  const search = new URLSearchParams();
-  Object.keys(params).forEach((key) => {
-    const value = params[key];
-    if (value === undefined || value === null) return;
-    if (Array.isArray(value)) {
-      value.forEach((entry) => search.append(key, entry));
-    } else {
-      search.append(key, value);
-    }
-  });
-  return search.toString();
-};
-
 function formatWithExponent(amount: string, exponent: number, symbol: string) {
-  const value = Number(amount) / Math.pow(10, exponent);
-  if (!Number.isFinite(value)) {
-    return `${amount} ${symbol}`;
-  }
-  return `${value.toLocaleString(undefined, {
-    minimumFractionDigits: 2,
-    maximumFractionDigits: 6
-  })} ${symbol}`;
+  // `formatNumberSmart` already handles digit splitting and locale-friendly thousands.
+  // Mirror the previous behavior: min 2, max 6 decimals.
+  const display = formatNumberSmart(String(amount ?? "0"), exponent, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: false });
+  return `${display} ${symbol}`;
 }
 
 export function useAssets() {
@@ -91,51 +71,12 @@ export function useAssets() {
 
   // Smart-query base64 encoding/decoding is centralized in `src/utils/wasmSmartQuery.ts`.
 
-  const fetchPaginated = async <T>(path: string, dataKey: string, limit = 200): Promise<PaginatedResponse<T>> => {
-    const items: T[] = [];
-    let nextKey: string | undefined;
+  const fetchPaginatedLocal = async <T>(path: string, dataKey: string, limit = 200) =>
+    fetchPaginated<T>(api as any, path, dataKey, { limit, paramsSerializer });
 
-    do {
-      const res = await api.get(path, {
-        params: {
-          "pagination.limit": String(limit),
-          ...(nextKey ? { "pagination.key": nextKey } : {})
-        },
-        paramsSerializer
-      });
-      const chunk: T[] = res.data?.[dataKey] ?? [];
-      items.push(...chunk);
-      nextKey = res.data?.pagination?.next_key || undefined;
-    } while (nextKey);
-
-    return { items };
-  };
-
-const fetchCodeInfos = async () => {
-  try {
-    const { items } = await fetchPaginated<any>("/cosmwasm/wasm/v1/code", "code_infos", 100);
-    return items;
-  } catch (err) {
-    console.warn("Failed to fetch code infos", err);
-    return [];
-  }
-};
-
-const fetchContractsForCode = async (codeId: string, limit = 50) => {
-  try {
-    const res = await api.get(`/cosmwasm/wasm/v1/code/${codeId}/contracts`, {
-      params: {
-        "pagination.limit": String(limit),
-        "pagination.reverse": "true"
-      },
-      paramsSerializer
-    });
-    return Array.isArray(res.data?.contracts) ? (res.data.contracts as string[]) : [];
-  } catch (err) {
-    console.warn(`Failed to fetch contracts for code ${codeId}`, err);
-    return [];
-  }
-};
+  const fetchCodeInfos = async () => fetchWasmCodeInfos(api as any, { limit: 100, paramsSerializer });
+  const fetchContractsForCode = async (codeId: string, limit = 50) =>
+    fetchWasmContractsForCode(api as any, codeId, { limit, reverse: true, paramsSerializer });
 
   const fetchDenomTrace = async (hash: string) => {
     if (!denomTraceEndpointSupported) return null;
@@ -338,8 +279,8 @@ const fetchContractsForCode = async (codeId: string, limit = 50) => {
 
     try {
       const [supplyRes, metadataRes] = await Promise.all([
-        fetchPaginated<any>("/cosmos/bank/v1beta1/supply", "supply"),
-        fetchPaginated<any>("/cosmos/bank/v1beta1/denoms_metadata", "metadatas")
+        fetchPaginatedLocal<any>("/cosmos/bank/v1beta1/supply", "supply"),
+        fetchPaginatedLocal<any>("/cosmos/bank/v1beta1/denoms_metadata", "metadatas")
       ]);
 
       const metadataMap = new Map<string, any>();

@@ -2,6 +2,9 @@ import { ref } from "vue";
 import { useApi } from "./useApi";
 import { smartQueryContract as smartQueryGet } from "@/utils/wasmSmartQuery";
 import { smartQueryContract as smartQueryContractShared } from "@/utils/wasmSmartQuery";
+import { base64ToBytes, base64ToString, bytesToHex } from "@/utils/encoding";
+import { sha256Bytes } from "@/utils/crypto";
+import { defaultParamsSerializer } from "@/utils/pagination";
 
 export interface WasmCodeInfo {
     codeId: string;
@@ -44,64 +47,7 @@ const DEFAULT_FETCH_OPTIONS: FetchOptions = {
 
 type ExtendedCodeInfo = WasmCodeInfo & { raw?: any };
 
-const base64ToString = (value: string) => {
-    if (!value) return "";
-    if (typeof atob === "function") {
-        const binary = atob(value);
-        const len = binary.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i += 1) bytes[i] = binary.charCodeAt(i);
-        const decoder = typeof TextDecoder !== "undefined" ? new TextDecoder() : null;
-        return decoder ? decoder.decode(bytes) : binary;
-    }
-    const nodeBuffer = (globalThis as any)?.Buffer;
-    if (nodeBuffer) return nodeBuffer.from(value, "base64").toString("utf-8");
-    throw new Error("Base64 decoding is not supported in this environment.");
-};
-
-const bytesToHex = (bytes: Uint8Array) =>
-    Array.from(bytes)
-        .map((b) => b.toString(16).padStart(2, "0"))
-        .join("");
-
-const base64ToBytes = (value: string) => {
-    if (!value) return new Uint8Array(0);
-    if (typeof atob === "function") {
-        const binary = atob(value);
-        const len = binary.length;
-        const bytes = new Uint8Array(len);
-        for (let i = 0; i < len; i += 1) bytes[i] = binary.charCodeAt(i);
-        return bytes;
-    }
-    const nodeBuffer = (globalThis as any)?.Buffer;
-    if (nodeBuffer) {
-        const buf = nodeBuffer.from(value, "base64");
-        return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
-    }
-    throw new Error("Base64 decoding is not supported in this environment.");
-};
-
-const bytesToBase64 = (bytes: Uint8Array) => {
-    if (typeof btoa === "function") {
-        let binary = "";
-        bytes.forEach((b) => (binary += String.fromCharCode(b)));
-        return btoa(binary);
-    }
-    const nodeBuffer = (globalThis as any)?.Buffer;
-    if (nodeBuffer) return nodeBuffer.from(bytes).toString("base64");
-    throw new Error("Base64 encoding is not supported in this environment.");
-};
-
-const encodeJsonToBase64 = (payload: Record<string, any> | string) => {
-    const json = typeof payload === "string" ? payload : JSON.stringify(payload);
-    if (typeof TextEncoder !== "undefined") {
-        const encoder = new TextEncoder();
-        return bytesToBase64(encoder.encode(json));
-    }
-    const nodeBuffer = (globalThis as any)?.Buffer;
-    if (nodeBuffer) return nodeBuffer.from(json, "utf-8").toString("base64");
-    throw new Error("TextEncoder is not available to encode query payload.");
-};
+// Base64/hex helpers are centralized in `src/utils/encoding.ts`.
 
 const decodeBase64Json = (value?: string | null) => {
     if (!value) return null;
@@ -113,28 +59,7 @@ const decodeBase64Json = (value?: string | null) => {
     }
 };
 
-const serializeParams = (params: Record<string, any>) => {
-    const search = new URLSearchParams();
-    Object.keys(params).forEach((key) => {
-        const value = params[key];
-        if (value === undefined || value === null) return;
-        if (Array.isArray(value)) {
-            value.forEach((entry) => search.append(key, entry));
-            return;
-        }
-        search.append(key, value);
-    });
-    return search.toString();
-};
-
-const sha256Hex = async (bytes: Uint8Array) => {
-    const subtle = globalThis.crypto?.subtle;
-    if (!subtle || typeof subtle.digest !== "function") {
-        throw new Error("WebCrypto SHA-256 is unavailable in this environment.");
-    }
-    const digest = await subtle.digest("SHA-256", bytes);
-    return bytesToHex(new Uint8Array(digest));
-};
+const sha256Hex = async (bytes: Uint8Array) => bytesToHex(await sha256Bytes(bytes));
 
 const normalizeHexHash = (value?: string | null) => {
     if (!value) return undefined;
@@ -355,7 +280,7 @@ export function useContracts() {
                 order_by: "ORDER_BY_DESC",
                 "pagination.limit": String(limit)
             },
-            paramsSerializer: serializeParams
+            paramsSerializer: defaultParamsSerializer
         });
         return res.data?.tx_responses ?? [];
     };
