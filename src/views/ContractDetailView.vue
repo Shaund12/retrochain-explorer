@@ -218,6 +218,12 @@ const runSmartQuery = async () => {
     } catch (jsonErr: any) {
       throw new Error(jsonErr?.message || "Invalid JSON payload");
     }
+
+    // Users sometimes paste the REST wrapper shape {"query_msg":"base64..."} or {"query_msg":{...}}.
+    // The explorer expects the raw contract QueryMsg object here.
+    if (parsed && typeof parsed === "object" && "query_msg" in parsed) {
+      parsed = (parsed as any).query_msg;
+    }
     const result = await smartQueryContract(contractAddress.value, parsed);
     smartQueryResult.value = JSON.stringify(result, null, 2);
     if (hasStorage) {
