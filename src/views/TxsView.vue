@@ -61,6 +61,7 @@ const messageFilter = ref<string>(typeof stored?.msg === "string" ? stored!.msg 
 // Backend fetch batch size. Keep this independent from the table UI page size.
 // The UI can show 10/20/50/100 per page, while we keep appending records in fixed chunks.
 const limit = ref(typeof stored?.limit === "number" && stored.limit > 0 ? stored.limit : 100);
+const BACKEND_PAGE_SIZE = 100;
 const hashQuery = ref<string>(typeof stored?.q === "string" ? stored!.q : "");
 const debouncedHashQuery = useDebounce(hashQuery, 200);
 
@@ -190,6 +191,9 @@ watch(
     // Changing the UI page size should not change what we fetch from the backend,
     // but we should reset the UI to the first page to avoid a confusing jump.
     pagination.value = { ...pagination.value, pageIndex: 0 };
+    // Also reset backend paging/cursor to avoid mismatch with previously loaded chunks.
+    page.value = 0;
+    searchRecent(BACKEND_PAGE_SIZE, 0);
   }
 );
 
@@ -209,9 +213,19 @@ const nextPageSmart = async () => {
     return;
   }
   if (loading.value) return;
-  // We've reached the end of the currently loaded dataset.
-  // Fetch additional pages from the chain and then advance if possible.
-  await loadMore();
+
+  // We're at the end of currently loaded rows. Fetch enough backend chunks so the
+  // next UI page has data (especially important when pageSize is 50/100).
+  const nextUiPageIndex = table.getState().pagination.pageIndex + 1;
+  const neededRows = (nextUiPageIndex + 1) * table.getState().pagination.pageSize;
+  while (!loading.value && txs.value.length < neededRows) {
+    await loadMore();
+    // If the backend can't provide more, avoid infinite loop.
+    if (txs.value.length >= neededRows) break;
+    // Heuristic: if loadMore didn't add anything, stop.
+    if (!table.getCanNextPage() && txs.value.length < neededRows) break;
+  }
+
   if (table.getCanNextPage()) table.nextPage();
 };
 
@@ -221,7 +235,7 @@ const sharePage = async () => shareLink();
 const refresh = async () => {
   page.value = 0;
   pagination.value = { ...pagination.value, pageIndex: 0 };
-  await searchRecent(limit.value, page.value);
+  await searchRecent(BACKEND_PAGE_SIZE, 0);
 };
 
 watch([statusFilter, messageFilter, limit, hashQuery], () => {
@@ -339,13 +353,13 @@ const page = ref(0);
 
 const loadMore = async () => {
   page.value += 1;
-  await searchRecent(limit.value, page.value);
+  await searchRecent(BACKEND_PAGE_SIZE, page.value);
 };
 
 onMounted(async () => {
   fetchLatest(8);
   page.value = 0;
-  await searchRecent(limit.value, page.value);
+  await searchRecent(BACKEND_PAGE_SIZE, 0);
 });
 </script>
 
