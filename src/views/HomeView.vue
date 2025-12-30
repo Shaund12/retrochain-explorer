@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, computed, ref } from "vue";
+import { useStorage } from "@vueuse/core";
 import { useChainInfo } from "@/composables/useChainInfo";
 import { useBlocks } from "@/composables/useBlocks";
 import { useTxs } from "@/composables/useTxs";
@@ -27,10 +28,45 @@ const api = useApi();
 const showSpaceInvadersNotice = ref(true);
 const spaceInvadersNoticeKey = "home-space-invaders-beta-dismissed";
 
-const blockPage = ref(0);
-const blockPageSize = 10;
-const txPage = ref(0);
-const txPageSize = 10;
+const HOME_STATE_KEY = "rc_home_state_v1";
+type HomeState = {
+  blockPage: number;
+  blockPageSize: number;
+  txPage: number;
+  txPageSize: number;
+  autoRefreshEnabled: boolean;
+};
+
+const homeState = useStorage<HomeState>(
+  HOME_STATE_KEY,
+  {
+    blockPage: 0,
+    blockPageSize: 10,
+    txPage: 0,
+    txPageSize: 10,
+    autoRefreshEnabled: true
+  },
+  undefined,
+  { mergeDefaults: true }
+);
+
+const blockPage = computed({
+  get: () => homeState.value.blockPage,
+  set: (v: number) => {
+    homeState.value = { ...homeState.value, blockPage: Math.max(0, Math.floor(v || 0)) };
+  }
+});
+
+const blockPageSize = computed(() => Math.max(1, Math.floor(homeState.value.blockPageSize || 10)));
+
+const txPage = computed({
+  get: () => homeState.value.txPage,
+  set: (v: number) => {
+    homeState.value = { ...homeState.value, txPage: Math.max(0, Math.floor(v || 0)) };
+  }
+});
+
+const txPageSize = computed(() => Math.max(1, Math.floor(homeState.value.txPageSize || 10)));
 
 const CARD_STORAGE_KEY = "rc_home_cards_v1";
 const dashboardCards = [
@@ -48,7 +84,8 @@ const defaultOrderMap = dashboardCards.reduce<Record<string, number>>((map, card
   return map;
 }, {});
 
-const cardState = ref<Record<string, { order: number; collapsed: boolean }>>({});
+type CardState = Record<string, { order: number; collapsed: boolean }>;
+const cardState = useStorage<CardState>(CARD_STORAGE_KEY, {} as CardState, undefined, { mergeDefaults: true });
 
 const blockStartHeight = (page: number) => {
   const latest = info.value.latestBlockHeight || blocks.value[0]?.height;
@@ -56,17 +93,7 @@ const blockStartHeight = (page: number) => {
   return Math.max(1, latest - page * blockPageSize);
 };
 
-const loadCardState = () => {
-  try {
-    const saved = localStorage.getItem(CARD_STORAGE_KEY);
-    if (saved) {
-      const parsed = JSON.parse(saved) as Record<string, { order: number; collapsed: boolean }>;
-      cardState.value = { ...parsed };
-    }
-  } catch (e) {
-    console.warn("Failed to load card layout", e);
-  }
-
+const ensureCardStateDefaults = () => {
   cardState.value = dashboardCards.reduce<Record<string, { order: number; collapsed: boolean }>>((map, card) => {
     const existing = cardState.value[card.id];
     map[card.id] = {
@@ -75,14 +102,6 @@ const loadCardState = () => {
     };
     return map;
   }, {});
-};
-
-const persistCardState = () => {
-  try {
-    localStorage.setItem(CARD_STORAGE_KEY, JSON.stringify(cardState.value));
-  } catch (e) {
-    console.warn("Failed to persist card layout", e);
-  }
 };
 
 const getOrder = (id: string) => cardState.value[id]?.order ?? defaultOrderMap[id] ?? 0;
@@ -94,7 +113,6 @@ const toggleCollapse = (id: string) => {
     ...cardState.value,
     [id]: { ...current, collapsed: !current.collapsed }
   };
-  persistCardState();
 };
 
 const moveCard = (id: string, delta: number) => {
@@ -115,8 +133,6 @@ const moveCard = (id: string, delta: number) => {
   ordered.forEach((c, idx) => {
     cardState.value[c.id] = { order: idx, collapsed: cardState.value[c.id]?.collapsed ?? false };
   });
-
-  persistCardState();
 };
 
 const orderedCards = computed(() => {
@@ -137,10 +153,16 @@ const refreshAll = async () => {
   ]);
 };
 
-const { enabled: autoRefreshEnabled, countdown, toggle: toggleAutoRefresh } = useAutoRefresh(
-  refreshAll,
-  10000
-);
+const {
+  enabled: autoRefreshEnabled,
+  countdown,
+  toggle: internalToggleAutoRefresh
+} = useAutoRefresh(refreshAll, 10000);
+
+const toggleAutoRefresh = () => {
+  internalToggleAutoRefresh();
+  homeState.value = { ...homeState.value, autoRefreshEnabled: autoRefreshEnabled.value };
+};
 
 const arcadeBurnLoading = ref(false);
 const arcadeBurnTotal = ref<number | null>(null);
@@ -216,7 +238,13 @@ onMounted(async () => {
     const stored = localStorage.getItem(spaceInvadersNoticeKey);
     showSpaceInvadersNotice.value = stored !== "true";
   } catch {}
-  loadCardState();
+  ensureCardStateDefaults();
+
+  // Apply persisted auto-refresh preference (start paused if stored false).
+  if (!homeState.value.autoRefreshEnabled && autoRefreshEnabled.value) {
+    internalToggleAutoRefresh();
+  }
+
   await refreshAll();
 });
 
