@@ -153,7 +153,26 @@ const loadPersistedInputs = () => {
   const savedExec = localStorage.getItem(storageKey("execMsg"));
   const savedFunds = localStorage.getItem(storageKey("execFunds"));
   const savedMemo = localStorage.getItem(storageKey("execMemo"));
-  if (savedQuery) smartQueryInput.value = savedQuery;
+  if (savedQuery) {
+    // Migrate legacy saved inputs that wrapped the query in {query_msg: ...}
+    // so contracts like BattlePoints (no query_msg variant) won't error repeatedly.
+    try {
+      const parsed = JSON.parse(savedQuery);
+      if (parsed && typeof parsed === "object" && "query_msg" in parsed) {
+        const inner = (parsed as any).query_msg;
+        if (inner && typeof inner === "object") {
+          smartQueryInput.value = JSON.stringify(inner, null, 2);
+          localStorage.setItem(storageKey("smartQuery"), smartQueryInput.value);
+        } else {
+          smartQueryInput.value = savedQuery;
+        }
+      } else {
+        smartQueryInput.value = savedQuery;
+      }
+    } catch {
+      smartQueryInput.value = savedQuery;
+    }
+  }
   if (savedExec) executeMsgInput.value = savedExec;
   if (savedFunds) executeFunds.value = savedFunds;
   if (savedMemo) executeMemo.value = savedMemo;
