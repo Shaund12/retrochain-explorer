@@ -595,10 +595,10 @@ function sparkPath(data: number[], width = 160, height = 40) {
           <!-- Network Info Tags -->
           <div class="flex flex-wrap gap-2 text-[11px] text-slate-400">
             <span class="badge">
-              REST: <code>{{ REST_DISPLAY }}</code>
+              REST: <code v-tooltip="REST_DISPLAY">{{ REST_DISPLAY }}</code>
             </span>
             <span class="badge">
-              RPC: <code>{{ RPC_DISPLAY }}</code>
+              RPC: <code v-tooltip="RPC_DISPLAY">{{ RPC_DISPLAY }}</code>
             </span>
             <span class="badge">Token: {{ network === 'mainnet' ? 'RETRO / uretro' : 'DRETRO / udretro' }}</span>
           </div>
@@ -781,7 +781,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                     </div>
                     <div>
                       <dt class="uppercase tracking-wider text-[10px] text-slate-500">Proposer</dt>
-                      <dd class="text-sm text-slate-100 truncate" :title="latestProposerDisplay">{{ latestProposerShort }}</dd>
+                      <dd class="text-sm text-slate-100 truncate" v-tooltip="latestProposerDisplay">{{ latestProposerShort }}</dd>
                     </div>
                     <div>
                       <dt class="uppercase tracking-wider text-[10px] text-slate-500">Gas Used</dt>
@@ -901,8 +901,8 @@ function sparkPath(data: number[], width = 160, height = 40) {
                           <td class="font-mono text-[12px] py-2">{{ b.height }}</td>
                           <td class="font-mono text-[12px] py-2">
                             <div class="flex items-center gap-2 whitespace-nowrap">
-                              <span class="truncate max-w-[180px] inline-block align-middle">{{ shortString(b.hash, 16) }}</span>
-                              <button class="btn text-[10px]" @click.stop="copy(b.hash)">Copy</button>
+                              <span class="truncate max-w-[180px] inline-block align-middle" v-tooltip="b.hash">{{ shortString(b.hash, 16) }}</span>
+                              <button class="btn text-[10px]" v-tooltip="'Copy hash'" @click.stop="copy(b.hash)">Copy</button>
                             </div>
                           </td>
                           <td class="text-xs py-2">
@@ -964,7 +964,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                           @click="goToTx(t.hash)"
                         >
                           <td class="font-mono text-[11px]">
-                            {{ shortString(t.hash, 10) }}
+                            <span v-tooltip="t.hash">{{ shortString(t.hash, 10) }}</span>
                           </td>
                           <td class="font-mono text-[11px]">{{ t.height }}</td>
                           <td class="text-xs">

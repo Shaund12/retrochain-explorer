@@ -1,6 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from "vue";
-import { useDebounce } from "@vueuse/core";
+import { useDebounce, useStorage } from "@vueuse/core";
 import { useTxs } from "@/composables/useTxs";
 import { useBlocks } from "@/composables/useBlocks";
 import { useRouter } from "vue-router";
@@ -27,80 +27,145 @@ const { copyToClipboard, shareLink } = useToast();
 
 const STORAGE_KEY = "retrochain.txsView";
 
-const safeRead = () => {
-  try {
-    return typeof window !== "undefined" ? window.localStorage.getItem(STORAGE_KEY) : null;
-  } catch {
-    return null;
-  }
+type PersistedState = {
+  status: "all" | "success" | "failed";
+  msg: string;
+  q: string;
+  pageSize: number;
+  sorting: SortingState;
+  useVirtual: boolean;
 };
 
-const safeWrite = (value: unknown) => {
-  try {
-    if (typeof window === "undefined") return;
-    window.localStorage.setItem(STORAGE_KEY, JSON.stringify(value));
-  } catch {
-    // ignore
+const persisted = useStorage<PersistedState>(
+  STORAGE_KEY,
+  {
+    status: "all",
+    msg: "all",
+    q: "",
+    pageSize: 20,
+    sorting: [{ id: "timestamp", desc: true }],
+    useVirtual: false
+  },
+  undefined,
+  {
+    mergeDefaults: true
   }
-};
-
-const stored = (() => {
-  const raw = safeRead();
-  if (!raw) return null;
-  try {
-    return JSON.parse(raw) as { status?: string; msg?: string; limit?: number; q?: string };
-  } catch {
-    return null;
-  }
-})();
-
-const statusFilter = ref<"all" | "success" | "failed">(
-  stored?.status === "success" || stored?.status === "failed" ? (stored.status as any) : "all"
 );
-const messageFilter = ref<string>(typeof stored?.msg === "string" ? stored!.msg : "all");
+
+const statusFilter = computed<"all" | "success" | "failed">({
+  get: () => persisted.value.status,
+  set: (v) => {
+    persisted.value = { ...persisted.value, status: v };
+  }
+});
+
+const messageFilter = computed<string>({
+  get: () => persisted.value.msg,
+  set: (v) => {
+    persisted.value = { ...persisted.value, msg: v };
+  }
+});
+
+const hashQuery = computed<string>({
+  get: () => persisted.value.q,
+  set: (v) => {
+    persisted.value = { ...persisted.value, q: v };
+  }
+});
+
 // Backend fetch batch size. Keep this independent from the table UI page size.
 // The UI can show 10/20/50/100 per page, while we keep appending records in fixed chunks.
-const limit = ref(typeof stored?.limit === "number" && stored.limit > 0 ? stored.limit : 100);
 const BACKEND_PAGE_SIZE = 100;
-const hashQuery = ref<string>(typeof stored?.q === "string" ? stored!.q : "");
+const limit = ref(BACKEND_PAGE_SIZE);
 const debouncedHashQuery = useDebounce(hashQuery, 200);
 
-const totalTxs = computed(() => txs.value.length);
-const successCount = computed(() => txs.value.filter((t) => (t.code ?? 0) === 0).length);
-const failedCount = computed(() => totalTxs.value - successCount.value);
-const successRate = computed(() => (totalTxs.value ? (successCount.value / totalTxs.value) * 100 : null));
-const avgGasUsed = computed(() => {
-  const nums = txs.value.map((t) => Number(t.gasUsed)).filter((n) => Number.isFinite(n) && n > 0);
-  if (!nums.length) return null;
-  return nums.reduce((a, b) => a + b, 0) / nums.length;
-});
-const avgFeeDisplay = computed(() => {
-  const fees = txs.value.flatMap((t) => (Array.isArray(t.fees) ? t.fees : [])).filter((f) => f?.amount && f?.denom);
-  if (!fees.length) return "—";
-  return formatCoins(fees.slice(0, 3), { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
-});
-const avgFeeUsd = computed(() => {
-  const usdVals = txs.value
-    .map((t) => feeUsdValue(t.fees as any))
-    .filter((v): v is number => typeof v === "number" && Number.isFinite(v));
-  if (!usdVals.length) return null;
-  const avg = usdVals.reduce((a, b) => a + b, 0) / usdVals.length;
-  return avg;
-});
-const topMessageQuickFilters = computed(() => availableMessageTypes.value.slice(0, 4));
+const txStats = computed(() => {
+  const totals = new Map<string, bigint>();
+  const msgCounts = new Map<string, number>();
+  let total = 0;
+  let success = 0;
+  let gasSum = 0;
+  let gasCount = 0;
+  const feeUsdValues: number[] = [];
+  const feeCoinSamples: { amount: string; denom: string }[] = [];
 
-const availableMessageTypes = computed(() => {
-  const counts = new Map<string, number>();
-  txs.value.forEach((tx) => {
-    (tx.messageTypes || []).forEach((type) => {
-      if (!type) return;
-      counts.set(type, (counts.get(type) ?? 0) + 1);
-    });
-  });
-  return Array.from(counts.entries())
+  for (const t of txs.value as any[]) {
+    total += 1;
+    if ((t.code ?? 0) === 0) success += 1;
+
+    const used = Number(t.gasUsed);
+    if (Number.isFinite(used) && used > 0) {
+      gasSum += used;
+      gasCount += 1;
+    }
+
+    const fees = Array.isArray(t.fees) ? t.fees : [];
+    const usd = feeUsdValue(fees as any);
+    if (typeof usd === "number" && Number.isFinite(usd)) feeUsdValues.push(usd);
+
+    for (const f of fees) {
+      if (f?.amount && f?.denom) feeCoinSamples.push(f);
+      if (feeCoinSamples.length >= 3) break;
+    }
+
+    const burns = Array.isArray(t.burns) ? t.burns : [];
+    for (const b of burns) {
+      if (!b?.amount || !b?.denom) continue;
+      try {
+        const amt = BigInt(b.amount);
+        totals.set(b.denom, (totals.get(b.denom) ?? 0n) + amt);
+      } catch {}
+    }
+
+    const messageTypes = Array.isArray(t.messageTypes) ? t.messageTypes : [];
+    for (const type of messageTypes) {
+      if (!type) continue;
+      msgCounts.set(type, (msgCounts.get(type) ?? 0) + 1);
+    }
+  }
+
+  const availableMessageTypes = Array.from(msgCounts.entries())
     .sort((a, b) => b[1] - a[1])
     .map(([type]) => type);
+
+  const burnedTotalsDisplay = !totals.size
+    ? "—"
+    : formatCoins(
+        Array.from(totals.entries()).map(([denom, amount]) => ({ denom, amount: amount.toString() })),
+        { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true }
+      );
+
+  const avgGasUsed = gasCount ? gasSum / gasCount : null;
+  const avgFeeUsd = feeUsdValues.length
+    ? feeUsdValues.reduce((a, b) => a + b, 0) / feeUsdValues.length
+    : null;
+  const avgFeeDisplay = feeCoinSamples.length
+    ? formatCoins(feeCoinSamples.slice(0, 3), { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true })
+    : "—";
+
+  return {
+    total,
+    success,
+    failed: total - success,
+    successRate: total ? (success / total) * 100 : null,
+    avgGasUsed,
+    avgFeeDisplay,
+    avgFeeUsd,
+    availableMessageTypes,
+    burnedTotalsDisplay
+  };
 });
+
+const totalTxs = computed(() => txStats.value.total);
+const successCount = computed(() => txStats.value.success);
+const failedCount = computed(() => txStats.value.failed);
+const successRate = computed(() => txStats.value.successRate);
+const avgGasUsed = computed(() => txStats.value.avgGasUsed);
+const avgFeeDisplay = computed(() => txStats.value.avgFeeDisplay);
+const avgFeeUsd = computed(() => txStats.value.avgFeeUsd);
+const availableMessageTypes = computed(() => txStats.value.availableMessageTypes);
+const burnedTotalsDisplay = computed(() => txStats.value.burnedTotalsDisplay);
+const topMessageQuickFilters = computed(() => availableMessageTypes.value.slice(0, 4));
 
 const filteredTxs = computed(() =>
   txs.value.filter((t) => {
@@ -123,8 +188,14 @@ const hashFilteredTxs = computed(() => {
 
 type TxRow = (typeof filteredTxs.value)[number];
 
-const sorting = ref<SortingState>([{ id: "timestamp", desc: true }]);
-const pagination = ref<PaginationState>({ pageIndex: 0, pageSize: 20 });
+const sorting = computed<SortingState>({
+  get: () => persisted.value.sorting,
+  set: (v) => {
+    persisted.value = { ...persisted.value, sorting: v };
+  }
+});
+
+const pagination = ref<PaginationState>({ pageIndex: 0, pageSize: persisted.value.pageSize || 20 });
 
 const columns = computed<ColumnDef<TxRow>[]>(() => [
   {
@@ -180,6 +251,13 @@ const table = useVueTable({
   getPaginationRowModel: getPaginationRowModel()
 });
 
+watch(
+  () => pagination.value.pageSize,
+  (ps) => {
+    persisted.value = { ...persisted.value, pageSize: ps };
+  }
+);
+
 watch([statusFilter, messageFilter, hashQuery], () => {
   pagination.value = { ...pagination.value, pageIndex: 0 };
   page.value = 0;
@@ -203,7 +281,12 @@ const rowCountDisplay = computed(() => {
   return { total, shown };
 });
 
-const useVirtual = ref(false);
+const useVirtual = computed<boolean>({
+  get: () => persisted.value.useVirtual,
+  set: (v) => {
+    persisted.value = { ...persisted.value, useVirtual: v };
+  }
+});
 
 const pagedRows = computed<any[]>(() => table.getPaginationRowModel().rows.map((r) => r.original as any));
 
@@ -219,11 +302,12 @@ const nextPageSmart = async () => {
   const nextUiPageIndex = table.getState().pagination.pageIndex + 1;
   const neededRows = (nextUiPageIndex + 1) * table.getState().pagination.pageSize;
   while (!loading.value && txs.value.length < neededRows) {
+    const before = txs.value.length;
     await loadMore();
-    // If the backend can't provide more, avoid infinite loop.
-    if (txs.value.length >= neededRows) break;
-    // Heuristic: if loadMore didn't add anything, stop.
-    if (!table.getCanNextPage() && txs.value.length < neededRows) break;
+    const after = txs.value.length;
+
+    // If loadMore didn't append anything, stop to avoid infinite loops.
+    if (after <= before) break;
   }
 
   if (table.getCanNextPage()) table.nextPage();
@@ -238,9 +322,7 @@ const refresh = async () => {
   await searchRecent(BACKEND_PAGE_SIZE, 0);
 };
 
-watch([statusFilter, messageFilter, limit, hashQuery], () => {
-  safeWrite({ status: statusFilter.value, msg: messageFilter.value, limit: limit.value, q: hashQuery.value });
-});
+// state persistence handled by VueUse `useStorage` bindings above
 
 const prettyMessageType = (type: string) => {
   if (!type) return "Unknown";
@@ -315,22 +397,7 @@ const burnValueDisplay = (burns?: { amount: string; denom: string }[]) => {
   return formatCoins(burns, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
 };
 
-const burnedTotalsDisplay = computed(() => {
-  const totals = new Map<string, bigint>();
-  txs.value.forEach((t) => {
-    const burns = Array.isArray(t.burns) ? t.burns : [];
-    burns.forEach((b) => {
-      if (!b?.amount || !b?.denom) return;
-      try {
-        const amt = BigInt(b.amount);
-        totals.set(b.denom, (totals.get(b.denom) ?? 0n) + amt);
-      } catch {}
-    });
-  });
-  if (!totals.size) return "—";
-  const list = Array.from(totals.entries()).map(([denom, amount]) => ({ denom, amount: amount.toString() }));
-  return formatCoins(list, { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true });
-});
+// burnedTotalsDisplay is computed as part of `txStats` above
 
 const gasPriceDisplay = (fees?: { amount: string; denom: string }[], gasUsed?: string | number | null) => {
   const primary = Array.isArray(fees) && fees.length ? fees[0] : null;
@@ -561,8 +628,8 @@ onMounted(async () => {
           <td class="font-mono text-[11px]">
             <div class="flex flex-col gap-1">
               <div class="flex items-center gap-2">
-                <span>{{ t.hash.slice(0, 18) }}...</span>
-                <button class="btn text-[10px]" @click.stop="copy(t.hash)">Copy</button>
+                <span v-tooltip="t.hash">{{ t.hash.slice(0, 18) }}...</span>
+                <button class="btn text-[10px]" v-tooltip="'Copy hash'" @click.stop="copy(t.hash)">Copy</button>
               </div>
               <span
                 class="badge text-[10px]"
@@ -659,8 +726,8 @@ onMounted(async () => {
           <div class="font-mono text-[11px]">
             <div class="flex flex-col gap-1">
               <div class="flex items-center gap-2">
-                <span>{{ t.hash.slice(0, 18) }}...</span>
-                <button class="btn text-[10px]" @click.stop="copy(t.hash)">Copy</button>
+                <span v-tooltip="t.hash">{{ t.hash.slice(0, 18) }}...</span>
+                <button class="btn text-[10px]" v-tooltip="'Copy hash'" @click.stop="copy(t.hash)">Copy</button>
               </div>
               <span
                 class="badge text-[10px]"
