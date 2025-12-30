@@ -691,8 +691,15 @@ const refreshClaimed = async () => {
       Object.entries(res.quests as Record<string, any>).forEach(([k, v]) => (map[k] = Boolean(v)));
     }
     claimedByQuest.value = map;
-  } catch {
-    // If query isn't implemented yet, leave claims unknown.
+  } catch (e: any) {
+    const status = e?.response?.status;
+    const url = e?.config?.url;
+    const msg = e?.message || "Failed to load claimed quests";
+    console.warn("BattlePoints refreshClaimed failed", { status, url, err: e });
+
+    // Surface a compact hint so this doesn't look like "nothing happens".
+    // Common causes: LCD (/api) down/misproxied, contract query not implemented.
+    toast.showError(status ? `${msg} (HTTP ${status})` : msg);
   }
 };
 
