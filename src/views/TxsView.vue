@@ -1,5 +1,6 @@
 <script setup lang="ts">
 import { onMounted, ref, computed, watch } from "vue";
+import { useDebounce } from "@vueuse/core";
 import { useTxs } from "@/composables/useTxs";
 import { useBlocks } from "@/composables/useBlocks";
 import { useRouter } from "vue-router";
@@ -61,6 +62,7 @@ const messageFilter = ref<string>(typeof stored?.msg === "string" ? stored!.msg 
 // The UI can show 10/20/50/100 per page, while we keep appending records in fixed chunks.
 const limit = ref(typeof stored?.limit === "number" && stored.limit > 0 ? stored.limit : 100);
 const hashQuery = ref<string>(typeof stored?.q === "string" ? stored!.q : "");
+const debouncedHashQuery = useDebounce(hashQuery, 200);
 
 const totalTxs = computed(() => txs.value.length);
 const successCount = computed(() => txs.value.filter((t) => (t.code ?? 0) === 0).length);
@@ -113,7 +115,7 @@ const filteredTxs = computed(() =>
 );
 
 const hashFilteredTxs = computed(() => {
-  const q = hashQuery.value.trim().toLowerCase();
+  const q = debouncedHashQuery.value.trim().toLowerCase();
   if (!q) return filteredTxs.value;
   return filteredTxs.value.filter((t: any) => String(t?.hash || "").toLowerCase().includes(q));
 });
@@ -196,6 +198,10 @@ const rowCountDisplay = computed(() => {
   const shown = table.getPaginationRowModel().rows.length;
   return { total, shown };
 });
+
+const useVirtual = ref(false);
+
+const pagedRows = computed<any[]>(() => table.getPaginationRowModel().rows.map((r) => r.original as any));
 
 const nextPageSmart = async () => {
   if (table.getCanNextPage()) {
@@ -464,6 +470,10 @@ onMounted(async () => {
         Page {{ table.getState().pagination.pageIndex + 1 }} / {{ table.getPageCount() || 1 }}
       </div>
       <div class="flex items-center gap-2">
+        <label class="flex items-center gap-2 text-[11px] text-slate-400 select-none">
+          <input type="checkbox" v-model="useVirtual" />
+          Virtualize
+        </label>
         <input
           v-model="hashQuery"
           placeholder="Search hash…"
@@ -484,7 +494,7 @@ onMounted(async () => {
       </div>
     </div>
 
-    <table class="table">
+    <table v-if="!useVirtual" class="table">
       <thead>
         <tr>
           <th colspan="5" class="p-0">
@@ -529,7 +539,7 @@ onMounted(async () => {
       </thead>
       <tbody>
         <tr
-          v-for="t in table.getPaginationRowModel().rows.map(r => r.original as any)"
+          v-for="t in pagedRows"
           :key="t.hash"
           class="cursor-pointer hover:bg-white/5 transition-colors"
           @click="router.push({ name: 'tx-detail', params: { hash: t.hash } })"
@@ -584,5 +594,107 @@ onMounted(async () => {
         </tr>
       </tbody>
     </table>
+
+    <div v-else class="border border-slate-800 rounded-lg overflow-hidden">
+      <div class="bg-slate-900/60 border-b border-slate-800">
+        <RcTableToolbar label="Tx feed">
+          <button class="btn text-[10px]" @click.stop="sharePage()">Share</button>
+          <button class="btn text-[10px]" @click.stop="refresh()" :disabled="loading">
+            {{ loading ? 'Loading…' : 'Refresh' }}
+          </button>
+          <button class="btn text-[10px]" @click.stop="nextPageSmart()" :disabled="loading">Next</button>
+        </RcTableToolbar>
+        <div class="grid grid-cols-[minmax(220px,2fr)_140px_minmax(220px,1.2fr)_minmax(240px,1.6fr)_170px] text-xs text-slate-300 px-3 py-2 gap-3">
+          <div>Hash &amp; Status</div>
+          <button
+            class="inline-flex items-center gap-1 hover:text-slate-100 text-left"
+            @click.stop="table.getColumn('height')?.toggleSorting()"
+            type="button"
+          >
+            Height
+            <span class="text-[10px] text-slate-500">
+              {{ table.getColumn('height')?.getIsSorted() === 'asc' ? '↑' : table.getColumn('height')?.getIsSorted() === 'desc' ? '↓' : '' }}
+            </span>
+          </button>
+          <div>Messages</div>
+          <div>Gas / Fee / Assets</div>
+          <button
+            class="inline-flex items-center gap-1 hover:text-slate-100 text-left"
+            @click.stop="table.getColumn('timestamp')?.toggleSorting()"
+            type="button"
+          >
+            Time
+            <span class="text-[10px] text-slate-500">
+              {{ table.getColumn('timestamp')?.getIsSorted() === 'asc' ? '↑' : table.getColumn('timestamp')?.getIsSorted() === 'desc' ? '↓' : '' }}
+            </span>
+          </button>
+        </div>
+      </div>
+
+      <RecycleScroller
+        :items="pagedRows"
+        :item-size="92"
+        key-field="hash"
+        class="h-[70vh]"
+        v-slot="{ item: t }"
+      >
+        <div
+          class="grid grid-cols-[minmax(220px,2fr)_140px_minmax(220px,1.2fr)_minmax(240px,1.6fr)_170px] px-3 py-2 gap-3 border-b border-slate-800/70 hover:bg-white/5 cursor-pointer"
+          @click="router.push({ name: 'tx-detail', params: { hash: t.hash } })"
+        >
+          <div class="font-mono text-[11px]">
+            <div class="flex flex-col gap-1">
+              <div class="flex items-center gap-2">
+                <span>{{ t.hash.slice(0, 18) }}...</span>
+                <button class="btn text-[10px]" @click.stop="copy(t.hash)">Copy</button>
+              </div>
+              <span
+                class="badge text-[10px]"
+                :class="(t.code ?? 0) === 0 ? 'border-emerald-400/60 text-emerald-200' : 'border-rose-400/60 text-rose-200'"
+              >
+                {{ (t.code ?? 0) === 0 ? 'Success' : `Failed · code ${(t.code ?? 0)}` }}
+              </span>
+            </div>
+          </div>
+
+          <div class="font-mono text-[11px] text-slate-300">{{ t.height }}</div>
+
+          <div class="text-xs text-slate-300">
+            <div v-if="t.messageTypes?.length" class="flex flex-wrap gap-1">
+              <span v-if="isIbcTx(t)" class="badge text-[10px] border-emerald-400/60 text-emerald-200">IBC</span>
+              <span
+                v-for="(msg, idx) in t.messageTypes.slice(0, 3)"
+                :key="`${msg}-${idx}`"
+                class="badge text-[10px] border-indigo-400/40 text-indigo-100"
+              >
+                {{ prettyMessageType(msg) }}
+              </span>
+              <span v-if="t.messageTypes.length > 3" class="text-[10px] text-slate-500">
+                +{{ t.messageTypes.length - 3 }} more
+              </span>
+            </div>
+            <span v-else class="text-[11px] text-slate-500">—</span>
+          </div>
+
+          <div class="text-[11px] text-slate-300">
+            {{ formatGas(t.gasUsed) }} / {{ formatGas(t.gasWanted) }}
+            <div class="text-[10px] text-slate-500 mt-0.5">{{ formatFee(t.fees as any) }}</div>
+            <div v-if="feeUsdValue(t.fees as any) !== null" class="text-[10px] text-emerald-300">≈ {{ formatUsd(feeUsdValue(t.fees as any)) }}</div>
+            <div v-if="gasPriceDisplay(t.fees as any, t.gasUsed)" class="text-[10px] text-cyan-300">Gas price: {{ gasPriceDisplay(t.fees as any, t.gasUsed) }}</div>
+            <div v-if="transferValueDisplay(t.valueTransfers as any)" class="text-[10px] text-slate-400 mt-1">Moved: {{ transferValueDisplay(t.valueTransfers as any) }}</div>
+            <div v-if="transferUsdValue(t.valueTransfers as any) !== null" class="text-[10px] text-emerald-300">≈ {{ formatUsd(transferUsdValue(t.valueTransfers as any)) }}</div>
+            <div v-if="burnValueDisplay(t.burns as any)" class="text-[10px] text-rose-300 mt-1">Burned: {{ burnValueDisplay(t.burns as any) }}</div>
+          </div>
+
+          <div class="text-[11px] text-slate-300">
+            <span v-if="t.timestamp" class="flex flex-col">
+              <span>{{ dayjs(t.timestamp).format('YYYY-MM-DD HH:mm:ss') }}</span>
+              <span class="text-[10px] text-slate-500">{{ relativeTime(t.timestamp) }}</span>
+            </span>
+            <span v-else>-</span>
+          </div>
+        </div>
+      </RecycleScroller>
+    </div>
   </div>
 </template>

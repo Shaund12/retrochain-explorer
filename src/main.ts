@@ -5,6 +5,8 @@ import "./assets/main.css";
 import dayjs from "dayjs";
 import relativeTime from "dayjs/plugin/relativeTime";
 import { VueQueryPlugin, QueryClient } from "@tanstack/vue-query";
+import VueVirtualScroller from "vue-virtual-scroller";
+import "vue-virtual-scroller/dist/vue-virtual-scroller.css";
 
 // Enable dayjs relative time plugin globally
 dayjs.extend(relativeTime);
@@ -24,5 +26,6 @@ const queryClient = new QueryClient({
 });
 
 app.use(VueQueryPlugin, { queryClient });
+app.use(VueVirtualScroller);
 
 app.mount("#app");
