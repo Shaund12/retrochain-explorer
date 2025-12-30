@@ -1,6 +1,8 @@
 import { ref } from "vue";
 import { useApi } from "./useApi";
 import { getTokenMeta, type TokenMeta } from "@/constants/tokens";
+import { smartQueryContract as smartQueryGet } from "@/utils/wasmSmartQuery";
+import { isIgnorableSmartQueryError } from "@/utils/isIgnorableSmartQueryError";
 
 export interface BankToken {
   denom: string;
@@ -87,77 +89,7 @@ export function useAssets() {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
-  const bytesToBase64 = (bytes: Uint8Array) => {
-    if (typeof btoa === "function") {
-      let binary = "";
-      bytes.forEach((b) => {
-        binary += String.fromCharCode(b);
-      });
-      return btoa(binary);
-    }
-    const nodeBuffer = (globalThis as any)?.Buffer;
-    if (nodeBuffer) {
-      return nodeBuffer.from(bytes).toString("base64");
-    }
-    throw new Error("Base64 encoding not supported in this environment.");
-  };
-
-  const base64ToBytes = (value: string) => {
-    if (typeof atob === "function") {
-      const binary = atob(value);
-      const len = binary.length;
-      const bytes = new Uint8Array(len);
-      for (let i = 0; i < len; i += 1) {
-        bytes[i] = binary.charCodeAt(i);
-      }
-      return bytes;
-    }
-    const nodeBuffer = (globalThis as any)?.Buffer;
-    if (nodeBuffer) {
-      const buf = nodeBuffer.from(value, "base64");
-      return new Uint8Array(buf.buffer, buf.byteOffset, buf.byteLength);
-    }
-    throw new Error("Base64 decoding not supported in this environment.");
-  };
-
-  const encodeJsonToBase64 = (payload: Record<string, any>) => {
-    const json = JSON.stringify(payload);
-    if (typeof TextEncoder !== "undefined") {
-      const encoder = new TextEncoder();
-      return bytesToBase64(encoder.encode(json));
-    }
-    const nodeBuffer = (globalThis as any)?.Buffer;
-    if (nodeBuffer) {
-      return nodeBuffer.from(json, "utf-8").toString("base64");
-    }
-    throw new Error("TextEncoder is unavailable in this environment.");
-  };
-
-
-  const decodeBase64Json = (value?: any) => {
-    if (value === null || value === undefined) return null;
-    if (typeof value !== "string") {
-      return value;
-    }
-    const bytes = base64ToBytes(value);
-    if (typeof TextDecoder !== "undefined") {
-      const decoder = new TextDecoder();
-      const asString = decoder.decode(bytes);
-      try {
-        return JSON.parse(asString);
-      } catch {
-        return asString;
-      }
-    }
-    try {
-      const asString = Array.from(bytes)
-        .map((b) => String.fromCharCode(b))
-        .join("");
-      return JSON.parse(asString);
-    } catch {
-      return null;
-    }
-  };
+  // Smart-query base64 encoding/decoding is centralized in `src/utils/wasmSmartQuery.ts`.
 
   const fetchPaginated = async <T>(path: string, dataKey: string, limit = 200): Promise<PaginatedResponse<T>> => {
     const items: T[] = [];
@@ -220,26 +152,11 @@ const fetchContractsForCode = async (codeId: string, limit = 50) => {
     }
   };
 
-  const isIgnorableContractError = (err: any) => {
-    const status = err?.response?.status;
-    if (status === 400 || status === 422) return true;
-    const msg: string | undefined = err?.response?.data?.message || err?.message;
-    if (typeof msg === "string") {
-      const lowered = msg.toLowerCase();
-      return lowered.includes("unknown variant") || lowered.includes("unknown field") || lowered.includes("error parsing");
-    }
-    return false;
-  };
-
   const queryContractSmart = async (address: string, payload: Record<string, any>) => {
-    const encoded = encodeJsonToBase64(payload);
-    const encodedPath = encodeURIComponent(encoded);
     try {
-      const res = await api.get(`/cosmwasm/wasm/v1/contract/${address}/smart/${encodedPath}`);
-      const data = res.data?.data ?? res.data?.smart_response?.data;
-      return data !== undefined ? decodeBase64Json(data) : null;
+      return await smartQueryGet(api as any, address, payload);
     } catch (err: any) {
-      if (isIgnorableContractError(err)) {
+      if (isIgnorableSmartQueryError(err)) {
         return null;
       }
       console.warn(`Smart query failed for ${address}`, err);

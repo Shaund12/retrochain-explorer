@@ -1,6 +1,7 @@
 import { ref } from "vue";
 import { useApi } from "./useApi";
 import { smartQueryContract as smartQuery } from "@/utils/wasmSmartQuery";
+import { isIgnorableSmartQueryError } from "@/utils/isIgnorableSmartQueryError";
 
 export interface NftClassDetail {
   id: string;
@@ -132,21 +133,9 @@ export function useNfts() {
       return await smartQuery(api, address, payload);
     } catch (err: any) {
       const status = err?.response?.status;
-      const msg: string | undefined = err?.response?.data?.message || err?.message;
-
       // Treat schema mismatch / bad query as "not supported" so we can fall back.
-      if (status === 400 || status === 404 || status === 422) return null;
-      if (typeof msg === "string") {
-        const lowered = msg.toLowerCase();
-        if (
-          lowered.includes("unknown variant") ||
-          lowered.includes("unknown field") ||
-          lowered.includes("error parsing") ||
-          lowered.includes("invalid request")
-        ) {
-          return null;
-        }
-      }
+      if (status === 404) return null;
+      if (isIgnorableSmartQueryError(err)) return null;
       throw err;
     }
   };

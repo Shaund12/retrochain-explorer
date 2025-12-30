@@ -1,5 +1,6 @@
 import { ref } from "vue";
 import { useApi } from "./useApi";
+import { smartQueryContract as smartQueryGet } from "@/utils/wasmSmartQuery";
 import { smartQueryContract as smartQueryContractShared } from "@/utils/wasmSmartQuery";
 
 export interface WasmCodeInfo {

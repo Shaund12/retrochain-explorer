@@ -7,6 +7,7 @@ import type { ContractExecutionRecord } from "@/composables/useContracts";
 import { useKeplr } from "@/composables/useKeplr";
 import { useToast } from "@/composables/useToast";
 import { useNetwork } from "@/composables/useNetwork";
+import { normalizeSmartQueryInput } from "@/utils/normalizeSmartQueryInput";
 
 const route = useRoute();
 const router = useRouter();
@@ -154,21 +155,10 @@ const loadPersistedInputs = () => {
   const savedFunds = localStorage.getItem(storageKey("execFunds"));
   const savedMemo = localStorage.getItem(storageKey("execMemo"));
   if (savedQuery) {
-    // Migrate legacy saved inputs that wrapped the query in {query_msg: ...}
-    // so contracts like BattlePoints (no query_msg variant) won't error repeatedly.
     try {
-      const parsed = JSON.parse(savedQuery);
-      if (parsed && typeof parsed === "object" && "query_msg" in parsed) {
-        const inner = (parsed as any).query_msg;
-        if (inner && typeof inner === "object") {
-          smartQueryInput.value = JSON.stringify(inner, null, 2);
-          localStorage.setItem(storageKey("smartQuery"), smartQueryInput.value);
-        } else {
-          smartQueryInput.value = savedQuery;
-        }
-      } else {
-        smartQueryInput.value = savedQuery;
-      }
+      const normalized = normalizeSmartQueryInput(savedQuery);
+      smartQueryInput.value = normalized.migratedText || savedQuery;
+      localStorage.setItem(storageKey("smartQuery"), smartQueryInput.value);
     } catch {
       smartQueryInput.value = savedQuery;
     }
@@ -246,44 +236,12 @@ const runSmartQuery = async () => {
   smartQueryResult.value = null;
   smartQueryBusy.value = true;
   try {
-    let parsed: Record<string, any>;
-    try {
-      parsed = JSON.parse(smartQueryInput.value);
-    } catch (jsonErr: any) {
-      throw new Error(jsonErr?.message || "Invalid JSON payload");
+    const normalized = normalizeSmartQueryInput(smartQueryInput.value);
+    if (normalized.migratedText && normalized.migratedText !== smartQueryInput.value) {
+      smartQueryInput.value = normalized.migratedText;
     }
 
-    // Users sometimes paste REST wrapper payloads:
-    //  - {"query_msg": { ... }}
-    //  - {"query_msg": "<base64>"}
-    // The explorer expects the raw contract QueryMsg object here.
-    const unwrapQueryMsg = (input: any): any => {
-      let current = input;
-      // unwrap up to a few layers to avoid infinite loops
-      for (let i = 0; i < 4; i += 1) {
-        if (!current || typeof current !== "object" || !("query_msg" in current)) return current;
-        const inner = (current as any).query_msg;
-        if (typeof inner === "string" && inner.trim()) {
-          const candidate = inner.trim();
-          try {
-            const decoded = typeof atob === "function"
-              ? atob(candidate)
-              : (globalThis as any)?.Buffer?.from(candidate, "base64")?.toString("utf-8");
-            // If base64 decode produced something parseable, use it; otherwise try parsing as raw JSON string.
-            current = decoded ? JSON.parse(decoded) : JSON.parse(candidate);
-          } catch {
-            // Can't parse further; return the string.
-            return candidate;
-          }
-        } else {
-          current = inner;
-        }
-      }
-      return current;
-    };
-
-    parsed = unwrapQueryMsg(parsed);
-    const result = await smartQueryContract(contractAddress.value, parsed);
+    const result = await smartQueryContract(contractAddress.value, normalized.message as any);
     smartQueryResult.value = JSON.stringify(result, null, 2);
     if (hasStorage) {
       localStorage.setItem(storageKey("smartQuery"), smartQueryInput.value);
