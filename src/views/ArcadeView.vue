@@ -200,12 +200,21 @@ const completionRate = computed(() => {
 
 const mostPlayedGame = computed(() => {
   if (!sessionsList.value.length) return null;
-  const counts = sessionsList.value.reduce((acc: Record<string, number>, s: any) => {
-    const key = s.game_id || "unknown";
-    acc[key] = (acc[key] || 0) + 1;
-    return acc;
-  }, {} as Record<string, number>);
-  const [id, count] = Object.entries(counts).sort((a, b) => b[1] - a[1])[0];
+  const counts: Record<string, number> = {};
+  sessionsList.value.forEach((s: any) => {
+    const key = (s?.game_id || "unknown").toString();
+    counts[key] = (counts[key] || 0) + 1;
+  });
+
+  let id = "unknown";
+  let count = 0;
+  (Object.keys(counts) as string[]).forEach((k) => {
+    const v = Number((counts as any)[k] || 0);
+    if (v > count) {
+      id = k;
+      count = v;
+    }
+  });
   return { gameId: id, count } as { gameId: string; count: number };
 });
 
@@ -479,6 +488,38 @@ const endOfPeriod = (p: BattlePeriod) => {
   return dayjs().endOf("month");
 };
 
+type BattleGame = "all" | "retrovaders" | "retronoid";
+
+type BattleWindow = { start_ts: number; end_ts: number };
+const computeBattleWindowUtc = (p: BattlePeriod): BattleWindow => {
+  const now = new Date();
+
+  const startOfUtcDay = (d: Date) => Date.UTC(d.getUTCFullYear(), d.getUTCMonth(), d.getUTCDate(), 0, 0, 0);
+
+  if (p === "daily") {
+    const start = startOfUtcDay(now);
+    const end = start + 24 * 60 * 60 * 1000;
+    return { start_ts: Math.floor(start / 1000), end_ts: Math.floor(end / 1000) };
+  }
+
+  if (p === "weekly") {
+    // Weeks start on Monday (UTC): 0=Sun..6=Sat
+    const day = now.getUTCDay();
+    const daysSinceMonday = (day + 6) % 7;
+    const start = startOfUtcDay(now) - daysSinceMonday * 24 * 60 * 60 * 1000;
+    const end = start + 7 * 24 * 60 * 60 * 1000;
+    return { start_ts: Math.floor(start / 1000), end_ts: Math.floor(end / 1000) };
+  }
+
+  // monthly
+  const start = Date.UTC(now.getUTCFullYear(), now.getUTCMonth(), 1, 0, 0, 0);
+  const end = Date.UTC(now.getUTCFullYear(), now.getUTCMonth() + 1, 1, 0, 0, 0);
+  return { start_ts: Math.floor(start / 1000), end_ts: Math.floor(end / 1000) };
+};
+
+const battleGameFilter = computed<BattleGame>(() => battleGame.value);
+const battleWindowUtc = computed(() => computeBattleWindowUtc(battlePeriod.value));
+
 const nowTick = ref(0);
 const battleEndsIn = computed(() => {
   void nowTick.value;
@@ -675,12 +716,92 @@ const battleClaimComingSoonText =
 const claimLoadingByQuest = ref<Record<string, boolean>>({});
 const claimedByQuest = ref<Record<string, boolean>>({});
 
+type OnchainBattleStats = {
+  runs?: number;
+  best_score?: number;
+  burned_uretro?: string;
+};
+const onchainStats = ref<OnchainBattleStats | null>(null);
+const onchainStatsLoading = ref(false);
+
+const claimedByQuestWindowed = ref<Record<string, boolean>>({});
+const claimStatusLoading = ref<Record<string, boolean>>({});
+
+const parseU128 = (v: any) => {
+  if (typeof v === "string" && v.trim()) {
+    const n = Number(v);
+    return Number.isFinite(n) ? n : 0;
+  }
+  if (typeof v === "number" && Number.isFinite(v)) return v;
+  return 0;
+};
+
+const refreshOnchainStats = async () => {
+  if (!myWalletAddr.value || !battlePointsContract || battleClaimsOnchainSoon) {
+    onchainStats.value = null;
+    return;
+  }
+  onchainStatsLoading.value = true;
+  try {
+    const res: any = await smartQueryContract(battlePointsContract, {
+      stats: {
+        player: myWalletAddr.value,
+        period: battlePeriod.value,
+        game_filter: battleGameFilter.value,
+        window: battleWindowUtc.value
+      }
+    });
+    const stats = (res?.stats ?? res) as any;
+    onchainStats.value = {
+      runs: Number(stats?.runs ?? 0),
+      best_score: Number(stats?.best_score ?? 0),
+      burned_uretro: typeof stats?.burned_uretro === "string" ? stats.burned_uretro : stats?.burned_uretro != null ? String(stats.burned_uretro) : "0"
+    };
+  } catch (e: any) {
+    // StatsNotFound is expected until feeder writes.
+    onchainStats.value = null;
+  } finally {
+    onchainStatsLoading.value = false;
+  }
+};
+
+const refreshClaimStatusForQuest = async (questId: string) => {
+  if (!questId) return;
+  if (!myWalletAddr.value || !battlePointsContract || battleClaimsOnchainSoon) {
+    claimedByQuestWindowed.value = {};
+    return;
+  }
+  claimStatusLoading.value = { ...claimStatusLoading.value, [questId]: true };
+  try {
+    const res: any = await smartQueryContract(battlePointsContract, {
+      claim_status: {
+        player: myWalletAddr.value,
+        period: battlePeriod.value,
+        game_filter: battleGameFilter.value,
+        window: battleWindowUtc.value,
+        quest_id: questId
+      }
+    });
+    const claimed = Boolean(res?.claimed ?? res?.is_claimed ?? res);
+    claimedByQuestWindowed.value = { ...claimedByQuestWindowed.value, [questId]: claimed };
+  } catch {
+    // treat unknown as not claimed; contract errors should not brick the UI
+    claimedByQuestWindowed.value = { ...claimedByQuestWindowed.value, [questId]: false };
+  } finally {
+    claimStatusLoading.value = { ...claimStatusLoading.value, [questId]: false };
+  }
+};
+
 const refreshClaimed = async () => {
   if (!myWalletAddr.value) {
     claimedByQuest.value = {};
     return;
   }
   if (!battlePointsContract) {
+    return;
+  }
+  if (battleClaimsOnchainSoon) {
+    claimedByQuest.value = {};
     return;
   }
   try {
@@ -723,6 +844,10 @@ const refreshClaimed = async () => {
 
 const claimQuest = async (questId: string) => {
   if (!questId) return;
+  if (battleClaimsOnchainSoon) {
+    toast.showError(battleClaimComingSoonText);
+    return;
+  }
   if (!battlePointsContract) {
     toast.showError("BattlePoints contract not configured.");
     return;
@@ -740,7 +865,16 @@ const claimQuest = async (questId: string) => {
       value: {
         sender: keplrAddress.value,
         contract: battlePointsContract,
-        msg: new TextEncoder().encode(JSON.stringify({ claim_quest: { quest_id: questId } })),
+        msg: new TextEncoder().encode(
+          JSON.stringify({
+            claim_quest: {
+              period: battlePeriod.value,
+              game_filter: battleGameFilter.value,
+              window: battleWindowUtc.value,
+              quest_id: questId
+            }
+          })
+        ),
         funds: []
       }
     };
@@ -753,6 +887,8 @@ const claimQuest = async (questId: string) => {
 
     toast.showSuccess("Quest claimed.");
     await refreshClaimed();
+    void refreshOnchainStats();
+    void refreshClaimStatusForQuest(questId);
   } catch (e: any) {
     toast.showError(e?.message || "Claim failed.");
   } finally {
@@ -762,12 +898,20 @@ const claimQuest = async (questId: string) => {
 
 onMounted(() => {
   refreshClaimed();
+  void refreshOnchainStats();
 });
 
 // Refresh claim map whenever the wallet changes.
 // (computed myWalletAddr depends on keplrAddress)
 watch(myWalletAddr, () => {
   refreshClaimed();
+  void refreshOnchainStats();
+});
+
+watch([battlePeriod, battleGame], () => {
+  void refreshOnchainStats();
+  // claim status is per-quest+window; clear windowed map when filters change
+  claimedByQuestWindowed.value = {};
 });
 
 const mySessionsInBattle = computed(() => {
@@ -805,13 +949,18 @@ type Quest = {
 
 const quests = computed((): Quest[] => {
   const hasWallet = Boolean(myWalletAddr.value);
+
+  const chainRuns = Number(onchainStats.value?.runs ?? 0);
+  const chainBest = Number(onchainStats.value?.best_score ?? 0);
+  const chainBurned = parseU128(onchainStats.value?.burned_uretro);
+
   const q = [
     {
       id: "q_runs_3",
       title: "Warm Up",
       detail: "Play 3 runs in this battle window.",
       metricLabel: "runs",
-      current: myBattleRuns.value,
+      current: onchainStats.value ? chainRuns : myBattleRuns.value,
       target: 3
     },
     {
@@ -819,7 +968,7 @@ const quests = computed((): Quest[] => {
       title: "Score Hunter",
       detail: "Hit 5,000+ best score in this battle window.",
       metricLabel: "best score",
-      current: myBattleBestScore.value,
+      current: onchainStats.value ? chainBest : myBattleBestScore.value,
       target: 5000
     },
     {
@@ -827,14 +976,22 @@ const quests = computed((): Quest[] => {
       title: "Insert Coin",
       detail: "Burn 1.00 RETRO via Insert Coin in this battle window.",
       metricLabel: "RETRO burned",
-      current: Math.round((myBattleBurned.value / 1_000_000) * 100) / 100,
+      current: onchainStats.value
+        ? Math.round(((chainBurned / 1_000_000) * 100)) / 100
+        : Math.round((myBattleBurned.value / 1_000_000) * 100) / 100,
       target: 1
     }
   ];
 
   return q.map((qq) => {
     const ready = hasWallet && qq.current >= qq.target;
-    const claimed = Boolean(claimedByQuest.value?.[qq.id]);
+    const claimed = Boolean(claimedByQuestWindowed.value?.[qq.id] ?? claimedByQuest.value?.[qq.id]);
+    if (hasWallet && !battleClaimsOnchainSoon && myWalletAddr.value && battlePointsContract) {
+      // lazy-load claim status per quest (per window)
+      if (claimedByQuestWindowed.value?.[qq.id] === undefined && !claimStatusLoading.value?.[qq.id]) {
+        void refreshClaimStatusForQuest(qq.id);
+      }
+    }
     return {
       ...qq,
       ready,
