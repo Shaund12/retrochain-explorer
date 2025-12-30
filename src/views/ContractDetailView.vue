@@ -238,25 +238,32 @@ const runSmartQuery = async () => {
     //  - {"query_msg": { ... }}
     //  - {"query_msg": "<base64>"}
     // The explorer expects the raw contract QueryMsg object here.
-    if (parsed && typeof parsed === "object" && "query_msg" in parsed) {
-      const inner = (parsed as any).query_msg;
-      if (typeof inner === "string" && inner.trim()) {
-        try {
-          const b64 = inner.trim();
-          const decoded = typeof atob === "function" ? atob(b64) : (globalThis as any)?.Buffer?.from(b64, "base64")?.toString("utf-8");
-          if (decoded) {
-            parsed = JSON.parse(decoded);
-          } else {
-            parsed = JSON.parse(inner);
+    const unwrapQueryMsg = (input: any): any => {
+      let current = input;
+      // unwrap up to a few layers to avoid infinite loops
+      for (let i = 0; i < 4; i += 1) {
+        if (!current || typeof current !== "object" || !("query_msg" in current)) return current;
+        const inner = (current as any).query_msg;
+        if (typeof inner === "string" && inner.trim()) {
+          const candidate = inner.trim();
+          try {
+            const decoded = typeof atob === "function"
+              ? atob(candidate)
+              : (globalThis as any)?.Buffer?.from(candidate, "base64")?.toString("utf-8");
+            // If base64 decode produced something parseable, use it; otherwise try parsing as raw JSON string.
+            current = decoded ? JSON.parse(decoded) : JSON.parse(candidate);
+          } catch {
+            // Can't parse further; return the string.
+            return candidate;
           }
-        } catch {
-          // If decoding/parsing fails, fall back to using inner directly.
-          parsed = inner as any;
+        } else {
+          current = inner;
         }
-      } else {
-        parsed = inner;
       }
-    }
+      return current;
+    };
+
+    parsed = unwrapQueryMsg(parsed);
     const result = await smartQueryContract(contractAddress.value, parsed);
     smartQueryResult.value = JSON.stringify(result, null, 2);
     if (hasStorage) {
