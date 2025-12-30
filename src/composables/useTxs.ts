@@ -162,7 +162,9 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
   const searchRecent = async (limit = 20, page = 0) => {
     loading.value = true;
     error.value = null;
-    txs.value = []; // Clear previous data
+    if (page === 0) {
+      txs.value = []; // Clear only on first page
+    }
     
     try {
       const base = api.defaults.baseURL || "";
@@ -190,10 +192,11 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
         const collected: TxSummary[] = [];
         let nextKey: string | undefined;
 
-        const offset = page * limit;
-        let fetched = 0;
-        while (collected.length < limit) {
-          const pageLimit = Math.min(50, limit - collected.length);
+         const batchSize = Math.min(100, Math.max(1, limit));
+         const offset = page * batchSize;
+         let fetched = 0;
+         while (collected.length < batchSize) {
+           const pageLimit = Math.min(100, batchSize - collected.length);
 
           const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
             params: {
@@ -223,19 +226,26 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
               burns: aggregateBurnTotals(resp)
             });
 
-            if (collected.length >= limit) {
+             if (collected.length >= batchSize) {
               break;
             }
           }
 
           nextKey = res.data?.pagination?.next_key || undefined;
-          if (!nextKey && !offset) break;
+           if (!nextKey && !offset) break;
           fetched += responses.length;
           if (!nextKey && offset) break;
         }
 
         if (collected.length) {
-          txs.value = collected;
+           if (page === 0) {
+             txs.value = collected;
+           } else {
+             const existing = Array.isArray(txs.value) ? txs.value : [];
+             const seen = new Set(existing.map((t) => t.hash));
+             const merged = existing.concat(collected.filter((t) => !seen.has(t.hash)));
+             txs.value = merged;
+           }
           error.value = null;
           return;
         }

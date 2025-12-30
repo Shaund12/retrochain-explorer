@@ -177,6 +177,7 @@ const table = useVueTable({
 
 watch([statusFilter, messageFilter, hashQuery], () => {
   pagination.value = { ...pagination.value, pageIndex: 0 };
+  page.value = 0;
 });
 
 const rowCountDisplay = computed(() => {
@@ -190,15 +191,21 @@ const nextPageSmart = async () => {
     table.nextPage();
     return;
   }
-  if (!loading.value && txs.value.length >= limit.value) {
-    await loadMore();
-    // after loading more, try to go next if rows exist
-    if (table.getCanNextPage()) table.nextPage();
-  }
+  if (loading.value) return;
+  // We've reached the end of the currently loaded dataset.
+  // Fetch additional pages from the chain and then advance if possible.
+  await loadMore();
+  if (table.getCanNextPage()) table.nextPage();
 };
 
 const copy = async (text: string) => copyToClipboard(text, "Copied");
 const sharePage = async () => shareLink();
+
+const refresh = async () => {
+  page.value = 0;
+  pagination.value = { ...pagination.value, pageIndex: 0 };
+  await searchRecent(limit.value, page.value);
+};
 
 watch([statusFilter, messageFilter, limit, hashQuery], () => {
   safeWrite({ status: statusFilter.value, msg: messageFilter.value, limit: limit.value, q: hashQuery.value });
@@ -311,14 +318,17 @@ const isIbcTx = (tx: any) => {
   return types.some((t) => typeof t === "string" && t.toLowerCase().includes("ibc"));
 };
 
+const page = ref(0);
+
 const loadMore = async () => {
-  limit.value += 20;
-  await searchRecent(limit.value);
+  page.value += 1;
+  await searchRecent(limit.value, page.value);
 };
 
 onMounted(async () => {
   fetchLatest(8);
-  await searchRecent(limit.value);
+  page.value = 0;
+  await searchRecent(limit.value, page.value);
 });
 </script>
 
@@ -413,16 +423,11 @@ onMounted(async () => {
         </div>
       </div>
       <div class="flex gap-2">
-        <button class="btn text-xs" @click="searchRecent(limit)" :disabled="loading">
+        <button class="btn text-xs" @click="refresh()" :disabled="loading">
           {{ loading ? 'Loading...' : 'Refresh' }}
         </button>
-        <button 
-          v-if="txs.length >= limit" 
-          class="btn text-xs" 
-          @click="loadMore"
-          :disabled="loading"
-        >
-          Load More
+        <button class="btn text-xs" @click="nextPageSmart()" :disabled="loading">
+          {{ loading ? 'Loading...' : 'Next' }}
         </button>
       </div>
     </div>
@@ -474,17 +479,10 @@ onMounted(async () => {
           <th colspan="5" class="p-0">
             <RcTableToolbar label="Tx feed">
               <button class="btn text-[10px]" @click.stop="sharePage()">Share</button>
-              <button class="btn text-[10px]" @click.stop="searchRecent(limit)" :disabled="loading">
+              <button class="btn text-[10px]" @click.stop="refresh()" :disabled="loading">
                 {{ loading ? 'Loading…' : 'Refresh' }}
               </button>
-              <button
-                v-if="txs.length >= limit"
-                class="btn text-[10px]"
-                @click.stop="loadMore"
-                :disabled="loading"
-              >
-                Load more
-              </button>
+              <button class="btn text-[10px]" @click.stop="nextPageSmart()" :disabled="loading">Next</button>
             </RcTableToolbar>
           </th>
         </tr>
