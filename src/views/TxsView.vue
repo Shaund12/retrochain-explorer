@@ -8,6 +8,16 @@ import { formatCoins } from "@/utils/format";
 import { getTokenMeta } from "@/constants/tokens";
 import { useToast } from "@/composables/useToast";
 import RcTableToolbar from "@/components/RcTableToolbar.vue";
+import {
+  useVueTable,
+  getCoreRowModel,
+  getSortedRowModel,
+  getPaginationRowModel,
+  getFilteredRowModel,
+  type SortingState,
+  type ColumnDef,
+  type PaginationState
+} from "@tanstack/vue-table";
 
 const { txs, loading, error, searchRecent } = useTxs();
 const { blocks, loading: blocksLoading, fetchLatest } = useBlocks();
@@ -37,7 +47,7 @@ const stored = (() => {
   const raw = safeRead();
   if (!raw) return null;
   try {
-    return JSON.parse(raw) as { status?: string; msg?: string; limit?: number };
+    return JSON.parse(raw) as { status?: string; msg?: string; limit?: number; q?: string };
   } catch {
     return null;
   }
@@ -48,6 +58,7 @@ const statusFilter = ref<"all" | "success" | "failed">(
 );
 const messageFilter = ref<string>(typeof stored?.msg === "string" ? stored!.msg : "all");
 const limit = ref(typeof stored?.limit === "number" && stored.limit > 0 ? stored.limit : 20);
+const hashQuery = ref<string>(typeof stored?.q === "string" ? stored!.q : "");
 
 const totalTxs = computed(() => txs.value.length);
 const successCount = computed(() => txs.value.filter((t) => (t.code ?? 0) === 0).length);
@@ -99,11 +110,98 @@ const filteredTxs = computed(() =>
   })
 );
 
+const hashFilteredTxs = computed(() => {
+  const q = hashQuery.value.trim().toLowerCase();
+  if (!q) return filteredTxs.value;
+  return filteredTxs.value.filter((t: any) => String(t?.hash || "").toLowerCase().includes(q));
+});
+
+type TxRow = (typeof filteredTxs.value)[number];
+
+const sorting = ref<SortingState>([{ id: "timestamp", desc: true }]);
+const pagination = ref<PaginationState>({ pageIndex: 0, pageSize: 20 });
+
+const columns = computed<ColumnDef<TxRow>[]>(() => [
+  {
+    id: "hash",
+    header: "Hash",
+    accessorFn: (row) => (row as any)?.hash ?? "",
+    cell: (info) => String(info.getValue() ?? "")
+  },
+  {
+    id: "timestamp",
+    header: "Time",
+    accessorFn: (row) => (row as any)?.timestamp ?? (row as any)?.time ?? "",
+    cell: (info) => String(info.getValue() ?? "")
+  },
+  {
+    id: "height",
+    header: "Height",
+    accessorFn: (row) => (row as any)?.height ?? "",
+    cell: (info) => String(info.getValue() ?? "")
+  },
+  {
+    id: "code",
+    header: "Code",
+    accessorFn: (row) => (row as any)?.code ?? 0,
+    cell: (info) => String(info.getValue() ?? "")
+  }
+]);
+
+const table = useVueTable({
+  get data() {
+    return hashFilteredTxs.value as TxRow[];
+  },
+  get columns() {
+    return columns.value;
+  },
+  state: {
+    get sorting() {
+      return sorting.value;
+    },
+    get pagination() {
+      return pagination.value;
+    }
+  },
+  onSortingChange: (updater) => {
+    sorting.value = typeof updater === "function" ? updater(sorting.value) : updater;
+  },
+  onPaginationChange: (updater) => {
+    pagination.value = typeof updater === "function" ? updater(pagination.value) : updater;
+  },
+  getCoreRowModel: getCoreRowModel(),
+  getFilteredRowModel: getFilteredRowModel(),
+  getSortedRowModel: getSortedRowModel(),
+  getPaginationRowModel: getPaginationRowModel()
+});
+
+watch([statusFilter, messageFilter, hashQuery], () => {
+  pagination.value = { ...pagination.value, pageIndex: 0 };
+});
+
+const rowCountDisplay = computed(() => {
+  const total = table.getFilteredRowModel().rows.length;
+  const shown = table.getPaginationRowModel().rows.length;
+  return { total, shown };
+});
+
+const nextPageSmart = async () => {
+  if (table.getCanNextPage()) {
+    table.nextPage();
+    return;
+  }
+  if (!loading.value && txs.value.length >= limit.value) {
+    await loadMore();
+    // after loading more, try to go next if rows exist
+    if (table.getCanNextPage()) table.nextPage();
+  }
+};
+
 const copy = async (text: string) => copyToClipboard(text, "Copied");
 const sharePage = async () => shareLink();
 
-watch([statusFilter, messageFilter, limit], () => {
-  safeWrite({ status: statusFilter.value, msg: messageFilter.value, limit: limit.value });
+watch([statusFilter, messageFilter, limit, hashQuery], () => {
+  safeWrite({ status: statusFilter.value, msg: messageFilter.value, limit: limit.value, q: hashQuery.value });
 });
 
 const prettyMessageType = (type: string) => {
@@ -285,7 +383,9 @@ onMounted(async () => {
           <button class="btn text-[10px]" :class="statusFilter==='all' ? 'border-indigo-400/70 bg-indigo-500/10' : ''" @click="statusFilter='all'">All</button>
           <button class="btn text-[10px]" :class="statusFilter==='success' ? 'border-emerald-400/70 bg-emerald-500/10' : ''" @click="statusFilter='success'">Success</button>
           <button class="btn text-[10px]" :class="statusFilter==='failed' ? 'border-rose-400/70 bg-rose-500/10' : ''" @click="statusFilter='failed'">Failed</button>
-          <span class="badge text-[10px] border-slate-700 text-slate-300 ml-1">Showing {{ filteredTxs.length }} / {{ totalTxs }}</span>
+          <span class="badge text-[10px] border-slate-700 text-slate-300 ml-1">
+            Showing {{ rowCountDisplay.shown }} / {{ rowCountDisplay.total }}
+          </span>
         </div>
         <div class="flex flex-wrap items-center gap-2 mt-2 text-[11px] text-slate-400">
           <span class="uppercase tracking-[0.2em]">Message Type</span>
@@ -343,6 +443,31 @@ onMounted(async () => {
       {{ error }}
     </div>
 
+    <div class="flex flex-wrap items-center justify-between gap-2 mb-2">
+      <div class="text-[11px] text-slate-400">
+        Page {{ table.getState().pagination.pageIndex + 1 }} / {{ table.getPageCount() || 1 }}
+      </div>
+      <div class="flex items-center gap-2">
+        <input
+          v-model="hashQuery"
+          placeholder="Search hash…"
+          class="bg-slate-900/60 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200 w-44 sm:w-56"
+        />
+        <select
+          class="bg-slate-900/60 border border-slate-700 rounded px-2 py-1 text-xs text-slate-200"
+          :value="table.getState().pagination.pageSize"
+          @change="table.setPageSize(Number(($event.target as HTMLSelectElement).value))"
+        >
+          <option :value="10">10</option>
+          <option :value="20">20</option>
+          <option :value="50">50</option>
+          <option :value="100">100</option>
+        </select>
+        <button class="btn text-xs" @click="table.previousPage()" :disabled="!table.getCanPreviousPage()">Prev</button>
+        <button class="btn text-xs" @click="nextPageSmart()" :disabled="loading">Next</button>
+      </div>
+    </div>
+
     <table class="table">
       <thead>
         <tr>
@@ -365,15 +490,37 @@ onMounted(async () => {
         </tr>
         <tr class="text-xs text-slate-300">
           <th>Hash &amp; Status</th>
-          <th>Height</th>
+           <th>
+             <button
+               class="inline-flex items-center gap-1 hover:text-slate-100"
+               @click.stop="table.getColumn('height')?.toggleSorting()"
+               type="button"
+             >
+               Height
+               <span class="text-[10px] text-slate-500">
+                 {{ table.getColumn('height')?.getIsSorted() === 'asc' ? '↑' : table.getColumn('height')?.getIsSorted() === 'desc' ? '↓' : '' }}
+               </span>
+             </button>
+           </th>
           <th>Messages</th>
           <th>Gas / Fee / Assets</th>
-          <th>Time</th>
+           <th>
+             <button
+               class="inline-flex items-center gap-1 hover:text-slate-100"
+               @click.stop="table.getColumn('timestamp')?.toggleSorting()"
+               type="button"
+             >
+               Time
+               <span class="text-[10px] text-slate-500">
+                 {{ table.getColumn('timestamp')?.getIsSorted() === 'asc' ? '↑' : table.getColumn('timestamp')?.getIsSorted() === 'desc' ? '↓' : '' }}
+               </span>
+             </button>
+           </th>
         </tr>
       </thead>
       <tbody>
         <tr
-          v-for="t in filteredTxs"
+          v-for="t in table.getPaginationRowModel().rows.map(r => r.original as any)"
           :key="t.hash"
           class="cursor-pointer hover:bg-white/5 transition-colors"
           @click="router.push({ name: 'tx-detail', params: { hash: t.hash } })"

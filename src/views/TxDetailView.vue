@@ -2,18 +2,22 @@
 import { ref, computed } from "vue";
 import { useRoute, RouterLink } from "vue-router";
 import { useTxs } from "@/composables/useTxs";
+import { useCoingeckoUsdPrices } from "@/composables/usePrices";
+import { useToast } from "@/composables/useToast";
 import { getTokenMeta } from "@/constants/tokens";
 import dayjs from "dayjs";
 import { formatCoins } from "@/utils/format";
 import { useQuery } from "@tanstack/vue-query";
 import { shortenMiddle } from "@/utils/stringFormat";
+import { attributesToMap } from "@/utils/txEvents";
 
 const { getTx } = useTxs();
 const route = useRoute();
 const hash = String(route.params.hash);
 
-const tx = ref<any | null>(null);
 const viewMode = ref<"pretty" | "raw">("pretty");
+
+const { copyToClipboard, shareLink } = useToast();
 
 const { data, isPending, error } = useQuery({
   queryKey: ["tx", hash],
@@ -24,11 +28,7 @@ const { data, isPending, error } = useQuery({
 
 const loading = computed(() => isPending.value);
 
-// Keep existing code working by mirroring query data into local `tx` ref
-computed(() => {
-  tx.value = data.value ?? null;
-  return tx.value;
-});
+const tx = computed<any | null>(() => data.value ?? null);
 
 const messages = computed(() => {
   return tx.value?.tx?.body?.messages || [];
@@ -44,27 +44,11 @@ const priceLookup = computed(() => {
   return { ...hints, ...priceOverrides.value };
 });
 
-const fetchLivePrices = async () => {
-  try {
-    const res = await fetch(
-      "https://api.coingecko.com/api/v3/simple/price?ids=osmosis,cosmos,usd-coin,wrapped-bitcoin&vs_currencies=usd",
-      { cache: "no-store" }
-    );
-    const data = await res.json();
-    const overrides: Record<string, number> = {};
-    const osmo = Number(data?.osmosis?.usd);
-    if (Number.isFinite(osmo) && osmo > 0) overrides.OSMO = osmo;
-    const atom = Number(data?.cosmos?.usd);
-    if (Number.isFinite(atom) && atom > 0) overrides.ATOM = atom;
-    const usdc = Number(data?.["usd-coin"]?.usd);
-    if (Number.isFinite(usdc) && usdc > 0) overrides.USDC = usdc;
-    const wbtc = Number(data?.["wrapped-bitcoin"]?.usd);
-    if (Number.isFinite(wbtc) && wbtc > 0) overrides.WBTC = wbtc;
-    priceOverrides.value = overrides;
-  } catch (err) {
-    console.warn("Failed to fetch live prices", err);
-  }
-};
+const { overrides: coingeckoOverrides } = useCoingeckoUsdPrices();
+
+const derivedPriceOverrides = computed<Record<string, number>>(() => ({
+  ...(coingeckoOverrides.value || {})
+}));
 
 const getMessageType = (msg: any) => {
   const type = msg["@type"] || msg.type || "";
@@ -84,6 +68,11 @@ const formatAmount = (amount: any) => {
 const isSuccess = computed(() => {
   return tx.value?.tx_response?.code === 0;
 });
+
+const effectivePriceOverrides = computed<Record<string, number>>(() => ({
+  ...derivedPriceOverrides.value,
+  ...priceOverrides.value
+}));
 
 const feeString = computed(() => formatCoins(tx.value?.tx?.auth_info?.fee?.amount || [], { minDecimals: 2, maxDecimals: 6, showZerosForIntegers: true }));
 
@@ -323,10 +312,7 @@ const transferEvents = computed(() => {
     evs.forEach((ev: any) => {
       if (ev?.type !== "transfer") return;
       const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
-      const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
-        if (curr?.key) acc[curr.key] = curr.value;
-        return acc;
-      }, {} as Record<string, string>);
+      const map = attributesToMap(attrs);
       const parsed = parseAmountDenom(map.amount);
       if (!parsed) return;
       pushTransfer(parsed.amount, parsed.denom, map.sender, map.recipient || map.receiver);
@@ -336,10 +322,7 @@ const transferEvents = computed(() => {
   const responseEvents = Array.isArray(txResponse.value?.events) ? txResponse.value?.events : [];
   responseEvents.forEach((ev: any) => {
     const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
-    const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
-      if (curr?.key) acc[curr.key] = curr.value;
-      return acc;
-    }, {} as Record<string, string>);
+    const map = attributesToMap(attrs);
 
     if (ev?.type === "transfer") {
       const parsed = parseAmountDenom(map.amount);
@@ -402,10 +385,7 @@ const burnEvents = computed(() => {
 
   responseEvents.forEach((ev: any) => {
     const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
-    const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
-      if (curr?.key) acc[curr.key] = curr.value;
-      return acc;
-    }, {} as Record<string, string>);
+    const map = attributesToMap(attrs);
 
     if (ev?.type === "burn") {
       const parsed = parseAmountDenom(map.amount);
@@ -456,10 +436,7 @@ const ibcPackets = computed(() => {
   responseEvents.forEach((ev: any) => {
     if (ev?.type !== "recv_packet" && ev?.type !== "write_acknowledgement" && ev?.type !== "fungible_token_packet") return;
     const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
-    const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
-      if (curr?.key) acc[curr.key] = curr.value;
-      return acc;
-    }, {} as Record<string, string>);
+    const map = attributesToMap(attrs);
 
     const decoded = decodeBase64Json(map.packet_data_base64);
     const jsonFromHex = (() => {
@@ -502,7 +479,7 @@ const ibcPackets = computed(() => {
   return packets;
 });
 
-const copyToClipboard = async (text: string) => toastCopy(text, "Copied");
+const copyTxToClipboard = async (text: string) => copyToClipboard(text, "Copied");
 
 const downloadJson = (obj: any, filename = "tx.json") => {
   const blob = new Blob([JSON.stringify(obj, null, 2)], { type: "application/json" });
@@ -514,7 +491,6 @@ const downloadJson = (obj: any, filename = "tx.json") => {
   URL.revokeObjectURL(url);
 };
 
-fetchLivePrices();
 </script>
 
 <template>
@@ -623,7 +599,7 @@ fetchLivePrices();
         <div class="mb-3 flex items-center gap-2">
           <button class="btn text-xs sm:text-[12px]" :class="viewMode==='pretty' ? 'border-emerald-400/70 bg-emerald-500/10' : ''" @click="viewMode='pretty'">Pretty</button>
           <button class="btn text-xs sm:text-[12px]" :class="viewMode==='raw' ? 'border-indigo-400/70 bg-indigo-500/10' : ''" @click="viewMode='raw'">Raw JSON</button>
-          <button class="btn text-xs sm:text-[12px]" @click="copyToClipboard(JSON.stringify(tx, null, 2))">Copy JSON</button>
+          <button class="btn text-xs sm:text-[12px]" @click="copyTxToClipboard(JSON.stringify(tx, null, 2))">Copy JSON</button>
           <button class="btn text-xs sm:text-[12px]" @click="downloadJson(tx)">Download</button>
         </div>
 
@@ -642,7 +618,7 @@ fetchLivePrices();
               </div>
               <div class="flex items-center gap-2 whitespace-nowrap">
                 <code class="text-[11px] break-words sm:break-all text-slate-200 truncate max-w-[240px] sm:max-w-none">{{ hash }}</code>
-                <button class="btn text-[10px] sm:text-[11px]" @click="copyToClipboard(hash)">Copy</button>
+                <button class="btn text-[10px] sm:text-[11px]" @click="copyTxToClipboard(hash)">Copy</button>
                 <button class="btn text-[10px] sm:text-[11px]" @click="shareLink()">Share</button>
               </div>
             </div>
@@ -703,7 +679,7 @@ fetchLivePrices();
                     </span>
                     <span class="text-[11px] text-slate-500">Message #{{ idx + 1 }}</span>
                   </div>
-                  <button class="btn text-[10px] sm:text-[11px]" @click="copyToClipboard(JSON.stringify(msg, null, 2))">Copy JSON</button>
+                  <button class="btn text-[10px] sm:text-[11px]" @click="copyTxToClipboard(JSON.stringify(msg, null, 2))">Copy JSON</button>
                 </div>
                 <p v-if="getMessageSummary(msg)" class="text-xs text-slate-400 mb-2">
                   {{ getMessageSummary(msg) }}

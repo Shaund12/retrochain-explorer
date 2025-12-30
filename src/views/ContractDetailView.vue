@@ -10,6 +10,13 @@ import { useNetwork } from "@/composables/useNetwork";
 import { normalizeSmartQueryInput } from "@/utils/normalizeSmartQueryInput";
 import { compareHashes, formatHash, normalizeHex } from "@/utils/hashFormat";
 import { shortenMiddle } from "@/utils/stringFormat";
+import { Codemirror } from "vue-codemirror";
+import { json as jsonLang } from "@codemirror/lang-json";
+import type { Extension } from "@codemirror/state";
+import { linter, type Diagnostic } from "@codemirror/lint";
+import { keymap } from "@codemirror/view";
+import { searchKeymap } from "@codemirror/search";
+import { autocompletion, type Completion } from "@codemirror/autocomplete";
 
 const route = useRoute();
 const router = useRouter();
@@ -32,6 +39,15 @@ const smartQueryResult = ref<string | null>(null);
 const smartQueryError = ref<string | null>(null);
 const smartQueryBusy = ref(false);
 
+const smartQueryParseError = computed(() => {
+  try {
+    JSON.parse(smartQueryInput.value);
+    return null;
+  } catch (e: any) {
+    return e?.message ? String(e.message) : "Invalid JSON";
+  }
+});
+
 const executeMsgInput = ref('{\n  "transfer": {\n    "recipient": "",\n    "amount": "1"\n  }\n}');
 const executeFunds = ref("");
 const executeMemo = ref("");
@@ -39,6 +55,99 @@ const executeBusy = ref(false);
 const executeError = ref<string | null>(null);
 const lastTxHash = ref<string | null>(null);
 const executionHistory = ref<ContractExecutionRecord[]>([]);
+
+const executeMsgParseError = computed(() => {
+  try {
+    JSON.parse(executeMsgInput.value);
+    return null;
+  } catch (e: any) {
+    return e?.message ? String(e.message) : "Invalid JSON";
+  }
+});
+
+const jsonLinter = linter((view): Diagnostic[] => {
+  const text = view.state.doc.toString();
+  try {
+    JSON.parse(text);
+    return [];
+  } catch (e: any) {
+    const message = e?.message ? String(e.message) : "Invalid JSON";
+    // Best-effort near-end marker; JSON.parse doesn't give precise offsets.
+    const pos = Math.max(0, Math.min(text.length, text.length - 1));
+    return [
+      {
+        from: pos,
+        to: Math.min(text.length, pos + 1),
+        severity: "error",
+        message
+      }
+    ];
+  }
+});
+
+const buildTopLevelObjectCompletions = (keys: string[]): Completion[] =>
+  keys
+    .filter(Boolean)
+    .map((k) => ({ label: k, type: "property" as const, apply: `"${k}": ` }));
+
+const queryCompletions = computed<Completion[]>(() => {
+  const keys = queryTemplates.value.map((t) => {
+    try {
+      const parsed = JSON.parse(t.payload);
+      if (parsed && typeof parsed === "object" && !Array.isArray(parsed)) return Object.keys(parsed)[0];
+    } catch {
+      // ignore
+    }
+    return null;
+  });
+  return buildTopLevelObjectCompletions(keys.filter((k): k is string => Boolean(k)));
+});
+
+const executeCompletions = computed<Completion[]>(() => {
+  const keys: string[] = [];
+  if (contractFlavor.value === "cw20") {
+    keys.push("transfer", "send", "burn", "mint", "increase_allowance", "decrease_allowance", "transfer_from", "send_from");
+  } else if (contractFlavor.value === "cw721") {
+    keys.push("transfer_nft", "send_nft", "approve", "revoke", "approve_all", "revoke_all", "mint", "burn");
+  }
+  // Also suggest any observed function names
+  keys.push(...detectedExecuteFunctions.value);
+  return buildTopLevelObjectCompletions(Array.from(new Set(keys)).sort());
+});
+
+const completionExtension = computed<Extension>(() =>
+  autocompletion({ override: [() => queryCompletions.value.concat(executeCompletions.value)] })
+);
+
+const jsonExtensions = computed<Extension[]>(() => [
+  jsonLang(),
+  jsonLinter,
+  completionExtension.value,
+  keymap.of(searchKeymap)
+]);
+
+const formatJson = (src: string) => {
+  const parsed = JSON.parse(src);
+  return JSON.stringify(parsed, null, 2);
+};
+
+const formatSmartQuery = () => {
+  try {
+    smartQueryInput.value = formatJson(smartQueryInput.value);
+    toast.showSuccess("Formatted JSON", "Smart query");
+  } catch (e: any) {
+    toast.showError(e?.message ? String(e.message) : "Invalid JSON", "Smart query");
+  }
+};
+
+const formatExecuteMsg = () => {
+  try {
+    executeMsgInput.value = formatJson(executeMsgInput.value);
+    toast.showSuccess("Formatted JSON", "Execute message");
+  } catch (e: any) {
+    toast.showError(e?.message ? String(e.message) : "Invalid JSON", "Execute message");
+  }
+};
 
 const hasStorage = typeof localStorage !== "undefined";
 const storageKey = (suffix: string) => `rc-contract-${contractAddress.value || "unknown"}-${suffix}`;
@@ -528,13 +637,21 @@ onMounted(() => {
                 </button>
               </div>
             </div>
-            <textarea
+            <Codemirror
               v-model="smartQueryInput"
-              class="w-full min-h-[160px] rounded-lg bg-slate-900/70 border border-slate-800 text-xs font-mono p-3"
-            ></textarea>
-            <button class="btn btn-primary w-full" :disabled="smartQueryBusy" @click="runSmartQuery">
+              :extensions="jsonExtensions"
+              :autofocus="false"
+              :indent-with-tab="true"
+              :tab-size="2"
+              class="w-full min-h-[160px] rounded-lg bg-slate-900/70 border border-slate-800 text-xs font-mono"
+            />
+            <p v-if="smartQueryParseError" class="text-[11px] text-rose-300">{{ smartQueryParseError }}</p>
+            <div class="flex gap-2">
+              <button class="btn text-xs" type="button" @click="formatSmartQuery">Format JSON</button>
+              <button class="btn btn-primary text-xs flex-1" :disabled="smartQueryBusy || !!smartQueryParseError" @click="runSmartQuery">
               {{ smartQueryBusy ? 'Querying' : 'Run query' }}
-            </button>
+              </button>
+            </div>
             <p v-if="smartQueryError" class="text-xs text-rose-300">{{ smartQueryError }}</p>
             <div v-if="smartQueryResult" class="text-xs">
               <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Result</div>
@@ -569,10 +686,15 @@ onMounted(() => {
                 </button>
               </div>
             </div>
-            <textarea
+            <Codemirror
               v-model="executeMsgInput"
-              class="w-full min-h-[160px] rounded-lg bg-slate-900/70 border border-slate-800 text-xs font-mono p-3"
-            ></textarea>
+              :extensions="jsonExtensions"
+              :autofocus="false"
+              :indent-with-tab="true"
+              :tab-size="2"
+              class="w-full min-h-[160px] rounded-lg bg-slate-900/70 border border-slate-800 text-xs font-mono"
+            />
+            <p v-if="executeMsgParseError" class="text-[11px] text-rose-300">{{ executeMsgParseError }}</p>
             <div class="grid gap-2 sm:grid-cols-2">
               <div>
                 <label class="text-[11px] uppercase tracking-wider text-slate-500">Funds (optional)</label>
