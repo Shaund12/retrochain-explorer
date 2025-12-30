@@ -37,8 +37,11 @@ const decodeBase64 = (value: string) => {
 
 const normalizeImageUri = (value?: string): string | undefined => {
   if (!value || typeof value !== "string") return undefined;
-  const v = value.trim();
+  const v = value.trim().replace(/\s+/g, " ");
   const lower = v.toLowerCase();
+
+  // Never treat JSON data URIs as images.
+  if (lower.startsWith("data:application/json")) return undefined;
 
   // If contract already provides base64 SVG data URI, keep as-is.
   if (lower.startsWith("data:image/svg+xml;base64,")) return v;
