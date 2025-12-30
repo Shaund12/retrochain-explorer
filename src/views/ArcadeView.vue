@@ -682,9 +682,25 @@ const refreshClaimed = async () => {
     return;
   }
   try {
-    const res: any = await smartQueryContract(battlePointsContract, { claimed: { player: myWalletAddr.value } });
-    // supports either { claimed: [ids...] } or { quests: { [id]: bool } }
-    const ids = Array.isArray(res?.claimed) ? (res.claimed as string[]) : [];
+    // BattlePoints contract QueryMsg uses `ClaimsForPlayer` (snake_case on the wire).
+    const res: any = await smartQueryContract(battlePointsContract, {
+      claims_for_player: {
+        player: myWalletAddr.value,
+        period: null,
+        game_filter: null,
+        window: null
+      }
+    });
+
+    // Contract implementations typically return one of:
+    // - { claims: [{ quest_id, ... }] }
+    // - { claimed: [quest_id...] }
+    // - { quests: { [quest_id]: bool } }
+    const ids = Array.isArray(res?.claimed)
+      ? (res.claimed as string[])
+      : Array.isArray(res?.claims)
+        ? (res.claims.map((c: any) => c?.quest_id).filter(Boolean) as string[])
+        : [];
     const map: Record<string, boolean> = {};
     ids.forEach((id) => (map[id] = true));
     if (res?.quests && typeof res.quests === "object") {
@@ -816,7 +832,7 @@ const quests = computed((): Quest[] => {
 
   return q.map((qq) => {
     const ready = hasWallet && qq.current >= qq.target;
-    const claimed = false;
+    const claimed = Boolean(claimedByQuest.value?.[qq.id]);
     return {
       ...qq,
       ready,
