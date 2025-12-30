@@ -40,12 +40,27 @@ const executionHistory = ref<ContractExecutionRecord[]>([]);
 const hasStorage = typeof localStorage !== "undefined";
 const storageKey = (suffix: string) => `rc-contract-${contractAddress.value || "unknown"}-${suffix}`;
 
-const queryTemplates = [
+const CW20_TEMPLATES = [
   { label: "General · Contract info", payload: '{ "contract_info": {} }' },
   { label: "CW20 · Token info", payload: '{ "token_info": {} }' },
   { label: "CW20 · Balance", payload: '{ "balance": { "address": "" } }' },
   { label: "CW20 · Allowance", payload: '{ "allowance": { "owner": "", "spender": "" } }' }
 ];
+
+const CW721_TEMPLATES = [
+  { label: "General · Contract info", payload: '{ "contract_info": {} }' },
+  { label: "CW721 · Num tokens", payload: '{ "num_tokens": {} }' },
+  { label: "CW721 · All tokens", payload: '{ "all_tokens": { "limit": 10 } }' },
+  { label: "CW721 · NFT info", payload: '{ "nft_info": { "token_id": "" } }' },
+  { label: "CW721 · Owner of", payload: '{ "owner_of": { "token_id": "" } }' }
+];
+
+const contractFlavor = ref<"unknown" | "cw20" | "cw721">("unknown");
+
+const queryTemplates = computed(() => {
+  if (contractFlavor.value === "cw721") return CW721_TEMPLATES;
+  return CW20_TEMPLATES;
+});
 
 const chainId = computed(() => (network.value === "mainnet" ? "retrochain-mainnet" : "retrochain-devnet-1"));
 const feeDenom = computed(() => (network.value === "mainnet" ? "uretro" : "udretro"));
@@ -304,6 +319,21 @@ const loadDetails = async () => {
     const info = await getContractInfo(addr);
     contractInfo.value = info;
 
+    // Best-effort contract flavor detection for smart-query templates.
+    // CW721 supports contract_info but NOT token_info.
+    // CW20 supports token_info.
+    contractFlavor.value = "unknown";
+    try {
+      const cw20Probe = await smartQueryContract(addr, { token_info: {} });
+      if (cw20Probe) contractFlavor.value = "cw20";
+    } catch (probeErr: any) {
+      const msg = probeErr?.response?.data?.message || probeErr?.message || "";
+      const lowered = String(msg).toLowerCase();
+      if (lowered.includes("unknown variant") && lowered.includes("token_info")) {
+        contractFlavor.value = "cw721";
+      }
+    }
+
     const [hash, executions, codeDetails] = await Promise.all([
       getContractCodeHash(addr),
       getContractExecutions(addr, 40),
@@ -499,7 +529,7 @@ onMounted(() => {
               </div>
               <div class="flex flex-wrap gap-2">
                 <button
-                  v-for="template in queryTemplates"
+                  v-for="template in queryTemplates.value"
                   :key="template.label"
                   class="btn text-[10px]"
                   @click="applyTemplate(template.payload)"
