@@ -54,6 +54,9 @@ export function useTxs() {
   const loading = ref(false);
   const error = ref<string | null>(null);
 
+  // Cursor paging for the recent tx feed. Offset paging is not reliably supported across nodes.
+  let recentNextKey: string | null = null;
+
   const scanBlocksForAddress = async (address: string, limit: number): Promise<TxSummary[]> => {
     const latestRes = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/latest`);
     const latestBlock = latestRes.data?.block;
@@ -164,6 +167,7 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
     error.value = null;
     if (page === 0) {
       txs.value = []; // Clear only on first page
+      recentNextKey = null;
     }
     
     try {
@@ -188,23 +192,23 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
       }
 
       // Fallback #1: use gRPC-gateway /cosmos/tx endpoint with pagination.
-      // Important: do NOT mix "pagination.key" and "pagination.offset"; many SDK nodes will
-      // ignore/override one of them and you'll keep getting the same page.
+      // Important: pagination via "offset" is unreliable on many Cosmos REST endpoints.
+      // Use cursor paging (next_key) to fetch additional pages.
       try {
         const collected: TxSummary[] = [];
         const batchSize = Math.min(100, Math.max(1, limit));
-        const offset = Math.max(0, page) * batchSize;
-
+        const key = page === 0 ? undefined : recentNextKey || undefined;
         const res = await api.get(`/cosmos/tx/v1beta1/txs`, {
           params: {
             events: "tx.height>0",
             order_by: "ORDER_BY_DESC",
             "pagination.limit": String(batchSize),
-            ...(offset ? { "pagination.offset": String(offset) } : {})
+            ...(key ? { "pagination.key": key } : {})
           },
           paramsSerializer: defaultParamsSerializer
         });
           const responses: any[] = res.data?.tx_responses ?? [];
+        recentNextKey = res.data?.pagination?.next_key || null;
         if (responses.length) {
           for (const resp of responses) {
             collected.push({
