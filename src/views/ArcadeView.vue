@@ -667,8 +667,10 @@ function tierClasses(t: Tier) {
 const { smartQueryContract } = useContracts();
 
 const battlePointsContract = (import.meta.env.VITE_BATTLEPOINTS_CONTRACT || "").trim();
-const battleClaimsOnchainSoon = false;
-const battleClaimComingSoonText = "";
+const battleClaimsOnchainSoon = String(import.meta.env.VITE_BATTLEPOINTS_CLAIMS_DISABLED || "true").toLowerCase() === "true";
+const battleClaimComingSoonText =
+  (import.meta.env.VITE_BATTLEPOINTS_CLAIMS_DISABLED_MESSAGE as string | undefined) ||
+  "On-chain BattlePoints claiming is temporarily disabled (coming soon).";
 
 const claimLoadingByQuest = ref<Record<string, boolean>>({});
 const claimedByQuest = ref<Record<string, boolean>>({});
@@ -1147,10 +1149,20 @@ const myStreakRank = computed(() => {
                   v-if="myWalletAddr"
                   class="btn btn-xs"
                   :class="q.claimed ? '' : q.ready ? 'btn-primary' : ''"
-                  :disabled="q.claimed || !q.ready || claimLoadingByQuest[q.id]"
-                  @click="claimQuest(q.id)"
+                  :disabled="battleClaimsOnchainSoon || q.claimed || !q.ready || claimLoadingByQuest[q.id]"
+                  @click="battleClaimsOnchainSoon ? null : claimQuest(q.id)"
                 >
-                  {{ q.claimed ? 'Claimed' : claimLoadingByQuest[q.id] ? 'Claiming…' : q.ready ? 'Claim' : 'Locked' }}
+                  {{
+                    battleClaimsOnchainSoon
+                      ? 'Coming soon'
+                      : q.claimed
+                        ? 'Claimed'
+                        : claimLoadingByQuest[q.id]
+                          ? 'Claiming…'
+                          : q.ready
+                            ? 'Claim'
+                            : 'Locked'
+                  }}
                 </button>
               </div>
               <div class="mt-2">

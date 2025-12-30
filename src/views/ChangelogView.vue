@@ -132,6 +132,12 @@ const releases: Release[] = [
         title: "Follow-up: period-scoped claim status (not finished)",
         description:
           "Arcade quests currently load claim state via `claims_for_player` without period/game/window scoping. If the contract expects per-window isolation, switch to `claim_status` with period/game_filter/window per quest."
+      },
+      {
+        type: "ops",
+        title: "Temporarily disabled on-chain claiming (coming soon)",
+        description:
+          "The Arcade Battle Quests claim button is temporarily disabled and marked as Coming soon while BattlePoints claim routing is finalized."
       }
     ]
   },
