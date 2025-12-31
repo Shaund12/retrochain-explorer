@@ -10,6 +10,8 @@ export const isIgnorableSmartQueryError = (err: any) => {
     lowered.includes("unknown variant") ||
     lowered.includes("unknown field") ||
     lowered.includes("error parsing") ||
-    lowered.includes("failed to parse")
+    lowered.includes("failed to parse") ||
+    // BattlePoints contracts on some networks may not include the new stats endpoints yet.
+    lowered.includes("battlestats not found")
   );
 };
