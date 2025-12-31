@@ -381,8 +381,8 @@ const genesisAllocations = [
     amount: 6_000_000
   },
   {
-    id: "shaun_profit",
-    label: "shaun_profit",
+    id: "dev_profit",
+    label: "dev_profit",
     address: "cosmos1us0jjdd5dj0v499g959jatpnh6xuamwhwdrrgq",
     amount: 5_000_000
   },
@@ -398,7 +398,7 @@ const treasuryTransfers = [
   { height: 110, from: "foundation_validator", to: "community_fund", amount: 20_000_000 },
   { height: 141, from: "foundation_validator", to: "liquidity_fund", amount: 5_000_000 },
   { height: 142, from: "foundation_validator", to: "dev_fund", amount: 4_000_000 },
-  { height: 146, from: "shaun_profit", to: "foundation_validator", amount: 2_000_000 }
+  { height: 146, from: "dev_profit", to: "foundation_validator", amount: 2_000_000 }
 ];
 
 const retroMythos = [

@@ -1,4 +1,4 @@
-# ?? TRANSACTION SIGNING COMPLETE - REWARDS READY TO CLAIM!
+# TRANSACTION SIGNING COMPLETE - REWARDS READY TO CLAIM!
 
 ## Final Fix: Fee Amount
 
@@ -24,7 +24,7 @@ npm run build
 sudo cp -r dist/* /var/www/html/
 ```
 
-Then **CLAIM YOUR 10M RETRO REWARDS!** ????
+Then **CLAIM YOUR 10M RETRO REWARDS!**
 
 ## What Was Fixed (Complete Timeline)
 
