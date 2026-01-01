@@ -98,14 +98,57 @@ export function useNfts() {
   const fetchTokensFromNftModule = async (classId: string): Promise<NftTokenMeta[]> => {
     try {
       const res = await fetchPaginatedLocal<any>(`/cosmos/nft/v1beta1/nfts/${encodeURIComponent(classId)}`, "nfts", 100);
-      return res.items.map((nft: any) => ({
-        id: nft?.id || nft?.token_id || "",
-        name: nft?.name || nft?.id || nft?.token_id,
-        description: nft?.description,
-        uri: nft?.uri,
-        image: (nft?.data && (nft.data.image || nft.data.image_url)) || nft?.uri,
-        data: nft?.data ?? null
-      }));
+      const items = Array.isArray(res.items) ? res.items : [];
+      const hydrated = await Promise.all(
+        items.map(async (nft: any) => {
+          const id = nft?.id || nft?.token_id || "";
+          const uri = typeof nft?.uri === "string" ? nft.uri : undefined;
+          const onchainData = nft?.data ?? null;
+
+          let name: string | undefined = nft?.name || nft?.id || nft?.token_id;
+          let description: string | undefined = nft?.description;
+          let image: string | undefined =
+            (onchainData && (onchainData.image || onchainData.image_url)) ||
+            (typeof onchainData?.uri === "string" ? onchainData.uri : undefined);
+
+          // x/nft often stores token metadata JSON in `uri` (including data:application/json;base64,...)
+          if (uri) {
+            const meta = await parseTokenUriMetadata(uri);
+            if (meta) {
+              name = meta.name || name;
+              description = meta.description || description;
+              image = normalizeNftImageUri(meta.image) || image;
+            }
+          }
+
+          // Final fallback: only treat token `uri` as an image if it actually is an image URI.
+          if (!image && uri) {
+            const lower = uri.toLowerCase();
+            if (
+              lower.startsWith("data:image/") ||
+              lower.endsWith(".png") ||
+              lower.endsWith(".jpg") ||
+              lower.endsWith(".jpeg") ||
+              lower.endsWith(".gif") ||
+              lower.endsWith(".webp") ||
+              lower.endsWith(".svg")
+            ) {
+              image = normalizeNftImageUri(uri);
+            }
+          }
+
+          return {
+            id,
+            name,
+            description,
+            uri,
+            image,
+            data: onchainData
+          } as NftTokenMeta;
+        })
+      );
+
+      return hydrated;
     } catch {
       return [];
     }

@@ -78,6 +78,83 @@ export function useAssets() {
   const fetchContractsForCode = async (codeId: string, limit = 50) =>
     fetchWasmContractsForCode(api as any, codeId, { limit, reverse: true, paramsSerializer });
 
+  const scanRecentMintedNftClasses = async (maxBlocks = 300): Promise<NftClassMeta[]> => {
+    // Fallback for chains where `/cosmos/nft/v1beta1/classes` is incomplete or lags.
+    // We scan recent txs for `cosmos.nft.v1beta1.EventMint` and then fetch the class details.
+    try {
+      const latestRes = await api.get("/cosmos/base/tendermint/v1beta1/blocks/latest");
+      const latest = Number(latestRes.data?.block?.header?.height ?? 0);
+      if (!Number.isFinite(latest) || latest <= 0) return [];
+
+      const found = new Set<string>();
+      const out: NftClassMeta[] = [];
+
+      for (let h = latest; h > 0 && h >= latest - maxBlocks; h--) {
+        let block: any;
+        try {
+          const b = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/${h}`);
+          block = b.data?.block;
+        } catch {
+          continue;
+        }
+
+        const txs: string[] = block?.data?.txs || [];
+        if (!txs.length) continue;
+
+        // Query tx results for this block and extract EventMint class_ids.
+        // Note: This endpoint is standard on Cosmos SDK LCD.
+        let results: any[] = [];
+        try {
+          const r = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/${h}/results`);
+          results = r.data?.txs_results || [];
+        } catch {
+          results = [];
+        }
+
+        for (const txr of results) {
+          const events = txr?.events || [];
+          for (const ev of events) {
+            if (ev?.type !== "cosmos.nft.v1beta1.EventMint") continue;
+            const attrs = ev?.attributes || [];
+            const classAttr = attrs.find((a: any) => a?.key === "class_id");
+            const rawVal = String(classAttr?.value ?? "");
+            const classId = rawVal.replace(/^"|"$/g, "");
+            if (!classId) continue;
+            const key = classId.toLowerCase();
+            if (found.has(key)) continue;
+            found.add(key);
+          }
+        }
+      }
+
+      // Fetch details for each discovered class id.
+      for (const classId of found) {
+        try {
+          const res = await api.get(`/cosmos/nft/v1beta1/classes/${encodeURIComponent(classId)}`);
+          const cls = res.data?.class;
+          if (!cls) continue;
+          out.push({
+            id: cls?.id || cls?.class_id || classId,
+            name: cls?.name || cls?.description || cls?.id || classId,
+            symbol: cls?.symbol,
+            description: cls?.description,
+            uri: cls?.uri,
+            data: cls?.data ?? null,
+            source: "nft-module"
+          });
+        } catch {
+          // If class lookup fails, still keep a stub so it shows up in the UI.
+          out.push({ id: classId, name: classId, source: "nft-module" });
+        }
+      }
+
+      return out;
+    } catch (err) {
+      console.warn("Recent NFT mint scan failed", err);
+      return [];
+    }
+  };
+
   const fetchDenomTrace = async (hash: string) => {
     if (!denomTraceEndpointSupported) return null;
     try {
@@ -164,7 +241,9 @@ export function useAssets() {
 
   const fetchNftModuleClasses = async (): Promise<NftClassMeta[]> => {
     try {
-      const nftRes = await fetchPaginated<any>("/cosmos/nft/v1beta1/classes", "classes");
+      // Fully paginate all x/nft classes. Newly created classes may not appear
+      // if we only fetch the first page.
+      const nftRes = await fetchPaginatedLocal<any>("/cosmos/nft/v1beta1/classes", "classes", 500);
       return nftRes.items.map((cls: any) => ({
         id: cls?.id || cls?.class_id || "?",
         name: cls?.name || cls?.description || cls?.id || "Untitled",
@@ -422,7 +501,10 @@ export function useAssets() {
       const ics721Classes = await fetchIcs721Classes();
       const cw721Collections = await fetchCw721Collections();
 
-      const combined = [...nftModuleClasses, ...tokenFactoryNftClasses, ...ics721Classes, ...cw721Collections];
+      // Fallback: capture newly minted classes from recent tx events.
+      const recentMintedNftClasses = await scanRecentMintedNftClasses(300);
+
+      const combined = [...nftModuleClasses, ...recentMintedNftClasses, ...tokenFactoryNftClasses, ...ics721Classes, ...cw721Collections];
       const mergedMap = new Map<string, NftClassMeta>();
       combined.forEach((cls) => {
         const key = String(cls?.id || "").toLowerCase();
