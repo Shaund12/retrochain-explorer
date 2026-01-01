@@ -78,10 +78,14 @@ export function useAssets() {
   const fetchContractsForCode = async (codeId: string, limit = 50) =>
     fetchWasmContractsForCode(api as any, codeId, { limit, reverse: true, paramsSerializer });
 
+  let tendermintBlockResultsSupported = true;
+
   const scanRecentMintedNftClasses = async (maxBlocks = 300): Promise<NftClassMeta[]> => {
     // Fallback for chains where `/cosmos/nft/v1beta1/classes` is incomplete or lags.
     // We scan recent txs for `cosmos.nft.v1beta1.EventMint` and then fetch the class details.
     try {
+      if (!tendermintBlockResultsSupported) return [];
+
       const latestRes = await api.get("/cosmos/base/tendermint/v1beta1/blocks/latest");
       const latest = Number(latestRes.data?.block?.header?.height ?? 0);
       if (!Number.isFinite(latest) || latest <= 0) return [];
@@ -107,7 +111,12 @@ export function useAssets() {
         try {
           const r = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/${h}/results`);
           results = r.data?.txs_results || [];
-        } catch {
+        } catch (err: any) {
+          const status = err?.response?.status;
+          if (status === 404 || status === 501) {
+            tendermintBlockResultsSupported = false;
+            return [];
+          }
           results = [];
         }
 
@@ -177,6 +186,10 @@ export function useAssets() {
       if (isIgnorableSmartQueryError(err)) {
         return null;
       }
+      const status = err?.response?.status;
+      if (status === 404 || status === 501) return null;
+      // Some LCDs return 500 when CosmWasm REST routes are disabled.
+      if (status === 500) return null;
       console.warn(`Smart query failed for ${address}`, err);
       return null;
     }

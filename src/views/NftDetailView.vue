@@ -207,6 +207,70 @@ const goBack = () => router.push({ name: "tokens" });
           </article>
         </div>
       </div>
+
+      <!-- NFT Detail Modal -->
+      <div
+        v-if="showTokenModal && selectedToken"
+        class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+        @click.self="closeTokenModal"
+      >
+        <div class="card w-full max-w-3xl" @click.stop>
+          <div class="flex items-start justify-between gap-3 mb-4">
+            <div class="min-w-0">
+              <p class="text-[11px] uppercase tracking-widest text-slate-500">NFT Details</p>
+              <h2 class="text-xl font-bold text-white truncate">
+                {{ selectedToken.name || selectedToken.id }}
+              </h2>
+              <p class="text-xs text-slate-400 break-all">Token ID: <code class="font-mono">{{ selectedToken.id }}</code></p>
+            </div>
+            <button class="btn text-xs" @click="closeTokenModal">✖ Close</button>
+          </div>
+
+          <div class="grid gap-4 md:grid-cols-2">
+            <div class="rounded-2xl border border-white/10 bg-white/5 p-3">
+              <div class="aspect-square w-full rounded-xl overflow-hidden bg-black/30 flex items-center justify-center">
+                <img
+                  v-if="selectedToken.image"
+                  :src="selectedToken.image"
+                  :alt="selectedToken.name || selectedToken.id"
+                  class="h-full w-full object-contain"
+                />
+                <span v-else class="text-slate-500 text-xs">No image</span>
+              </div>
+            </div>
+
+            <div class="space-y-3">
+              <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-700">
+                <div class="text-[11px] uppercase tracking-widest text-slate-500 mb-1">Collection</div>
+                <div class="text-xs text-slate-200 break-all">
+                  <code class="font-mono">{{ classDetail?.id || route.params.id }}</code>
+                </div>
+              </div>
+
+              <div class="p-3 rounded-xl bg-slate-900/60 border border-slate-700">
+                <div class="text-[11px] uppercase tracking-widest text-slate-500 mb-1">Description</div>
+                <div class="text-sm text-slate-200 whitespace-pre-wrap">
+                  {{ selectedToken.description || 'No description provided.' }}
+                </div>
+              </div>
+
+              <div v-if="selectedToken.uri" class="p-3 rounded-xl bg-slate-900/60 border border-slate-700">
+                <div class="text-[11px] uppercase tracking-widest text-slate-500 mb-1">Token URI</div>
+                <div class="flex items-center gap-2">
+                  <a :href="selectedToken.uri" target="_blank" class="btn text-[10px]">Open</a>
+                  <button class="btn text-[10px]" @click="copy(selectedToken.uri)">Copy</button>
+                </div>
+                <div class="text-[11px] text-slate-300 break-all mt-2">{{ selectedToken.uri }}</div>
+              </div>
+            </div>
+          </div>
+
+          <div class="mt-4 p-3 rounded-xl bg-slate-900/60 border border-slate-700 text-xs text-slate-300">
+            <div class="text-[11px] uppercase tracking-widest text-slate-500 mb-1">Raw JSON</div>
+            <pre class="whitespace-pre-wrap break-words max-h-72 overflow-auto">{{ JSON.stringify(selectedToken, null, 2) }}</pre>
+          </div>
+        </div>
+      </div>
     </template>
   </div>
 </template>
