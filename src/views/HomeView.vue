@@ -135,9 +135,14 @@ const moveCard = (id: string, delta: number) => {
   ordered[index].order = ordered[targetIndex].order;
   ordered[targetIndex].order = temp;
 
-  ordered.forEach((c, idx) => {
-    cardState.value[c.id] = { order: idx, collapsed: cardState.value[c.id]?.collapsed ?? false };
-  });
+  // IMPORTANT: update storage state immutably so Vue reactivity triggers.
+  const next: CardState = { ...cardState.value };
+  ordered
+    .sort((a: any, b: any) => a.order - b.order)
+    .forEach((c, idx) => {
+      next[c.id] = { order: idx, collapsed: cardState.value[c.id]?.collapsed ?? false };
+    });
+  cardState.value = next;
 };
 
 const orderedCards = computed(() => {
