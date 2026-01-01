@@ -337,7 +337,7 @@ export function useAssets() {
 
   const fetchIcs721Classes = async (): Promise<NftClassMeta[]> => {
     try {
-      const traceRes = await fetchPaginated<any>("/ibc/apps/nft_transfer/v1/class_traces", "class_traces");
+      const traceRes = await fetchPaginated<any>(api, "/ibc/apps/nft_transfer/v1/class_traces", "class_traces");
       return traceRes.items.map((trace: any) => ({
         id: trace?.class_id || trace?.hash || trace?.base_class_id || "?",
         name: trace?.base_class_id || trace?.class_id || "IBC NFT Class",

@@ -67,7 +67,11 @@ export async function deriveConsensusAddressFromPubkey(pubkey: any): Promise<str
     const subtle = getSubtleCrypto();
     let hashBytes: Uint8Array;
     if (subtle) {
-      const hashBuffer = await subtle.digest("SHA-256", bytes);
+      const input: ArrayBuffer =
+        bytes.buffer instanceof ArrayBuffer
+          ? bytes.buffer.slice(bytes.byteOffset, bytes.byteOffset + bytes.byteLength)
+          : new Uint8Array(bytes).buffer;
+      const hashBuffer = await subtle.digest("SHA-256", input);
       hashBytes = new Uint8Array(hashBuffer);
     } else {
       hashBytes = sha256(bytes);

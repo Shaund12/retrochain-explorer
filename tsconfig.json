@@ -13,7 +13,10 @@
     "lib": ["ESNext", "DOM"],
     "skipLibCheck": true,
     "types": ["vite/client"],
-    "baseUrl": "."
+    "baseUrl": ".",
+    "paths": {
+      "@/*": ["src/*"]
+    }
   },
   "include": ["src/**/*.ts", "src/**/*.d.ts", "src/**/*.tsx", "src/**/*.vue"]
 }
