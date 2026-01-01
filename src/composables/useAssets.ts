@@ -180,6 +180,69 @@ export function useAssets() {
     }
   };
 
+  const fetchTokenFactoryNftClasses = async (): Promise<NftClassMeta[]> => {
+    // RetroChain tokenfactory-minted NFTs may register as x/nft classes but not be surfaced in some UIs.
+    // Attempt to discover them via denom metadata (factory denoms sometimes include class refs) and by
+    // scanning the class list for factory-style IDs.
+    try {
+      const [nftRes, metadataRes] = await Promise.all([
+        fetchPaginatedLocal<any>("/cosmos/nft/v1beta1/classes", "classes"),
+        fetchPaginatedLocal<any>("/cosmos/bank/v1beta1/denoms_metadata", "metadatas")
+      ]);
+
+      const out: NftClassMeta[] = [];
+      const seen = new Set<string>();
+
+      const maybeAdd = (cls: any, sourceHint: string) => {
+        const id = String(cls?.id || cls?.class_id || "").trim();
+        if (!id) return;
+        const key = id.toLowerCase();
+        if (seen.has(key)) return;
+        seen.add(key);
+        out.push({
+          id,
+          name: cls?.name || cls?.description || id,
+          symbol: cls?.symbol,
+          description: cls?.description,
+          uri: cls?.uri,
+          data: cls?.data ?? null,
+          source: sourceHint
+        });
+      };
+
+      // Heuristic: some chains use `factory/...`-like identifiers in class ids or descriptions.
+      nftRes.items.forEach((cls: any) => {
+        const id = String(cls?.id || cls?.class_id || "");
+        const desc = String(cls?.description || "");
+        if (id.startsWith("factory/") || desc.toLowerCase().includes("factory/")) {
+          maybeAdd(cls, "tokenfactory-nft");
+        }
+      });
+
+      // Heuristic: denom metadata may contain references to NFT classes.
+      metadataRes.items.forEach((meta: any) => {
+        const raw = JSON.stringify(meta || {});
+        if (!raw.includes("class")) return;
+        const candidate = meta?.base || meta?.display || "";
+        if (typeof candidate === "string" && candidate.startsWith("factory/")) {
+          // If a factory denom exists, it suggests tokenfactory usage; keep as breadcrumb.
+          out.push({
+            id: candidate,
+            name: candidate,
+            description: "Factory denom observed (may back an NFT collection)",
+            data: meta,
+            source: "tokenfactory"
+          });
+        }
+      });
+
+      return out;
+    } catch (err) {
+      console.warn("Tokenfactory NFT class discovery failed", err);
+      return [];
+    }
+  };
+
   const fetchIcs721Classes = async (): Promise<NftClassMeta[]> => {
     try {
       const traceRes = await fetchPaginated<any>("/ibc/apps/nft_transfer/v1/class_traces", "class_traces");
@@ -355,10 +418,11 @@ export function useAssets() {
       }
 
       const nftModuleClasses = await fetchNftModuleClasses();
+      const tokenFactoryNftClasses = await fetchTokenFactoryNftClasses();
       const ics721Classes = await fetchIcs721Classes();
       const cw721Collections = await fetchCw721Collections();
 
-      const combined = [...nftModuleClasses, ...ics721Classes, ...cw721Collections];
+      const combined = [...nftModuleClasses, ...tokenFactoryNftClasses, ...ics721Classes, ...cw721Collections];
       const mergedMap = new Map<string, NftClassMeta>();
       combined.forEach((cls) => {
         const key = String(cls?.id || "").toLowerCase();
