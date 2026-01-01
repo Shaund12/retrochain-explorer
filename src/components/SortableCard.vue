@@ -10,9 +10,9 @@ const { attributes, listeners, setNodeRef, transform, transition, isDragging } =
 });
 
 const style = computed<StyleValue>(() => ({
-  transform: CSS.Transform.toString(transform.value),
-  transition: transition.value,
-  opacity: isDragging.value ? 0.6 : 1
+  transform: transform ? CSS.Transform.toString(transform) : undefined,
+  transition: transition ?? undefined,
+  opacity: isDragging ? 0.6 : 1
 }));
 </script>
 

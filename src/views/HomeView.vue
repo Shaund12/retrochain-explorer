@@ -3,21 +3,6 @@ import { onMounted, computed, ref } from "vue";
 import { useStorage } from "@vueuse/core";
 import { useAutoAnimate } from "@formkit/auto-animate/vue";
 import {
-  DndContext,
-  type DragEndEvent,
-  closestCenter,
-  PointerSensor,
-  KeyboardSensor,
-  useSensor,
-  useSensors
-} from "@dnd-kit/core";
-import {
-  SortableContext,
-  verticalListSortingStrategy,
-  arrayMove,
-  sortableKeyboardCoordinates
-} from "@dnd-kit/sortable";
-import {
   ArrowUp,
   ArrowDown,
   ChevronDown,
@@ -40,7 +25,6 @@ import { useRouter } from "vue-router";
 import dayjs from "dayjs";
 import { useNetwork } from "@/composables/useNetwork";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
-import SortableCard from "@/components/SortableCard.vue";
 
 const router = useRouter();
 const { info, loading: loadingInfo, refresh } = useChainInfo();
@@ -212,32 +196,6 @@ const orderedCards = computed(() => {
     .map((c) => ({ ...c, order: getOrder(c.id) }))
     .sort((a, b) => a.order - b.order);
 });
-
-const orderedCardIds = computed(() => orderedCards.value.map((c) => c.id));
-
-const sensors = useSensors(
-  useSensor(PointerSensor, { activationConstraint: { distance: 6 } }),
-  useSensor(KeyboardSensor, { coordinateGetter: sortableKeyboardCoordinates })
-);
-
-const onDragEnd = (event: DragEndEvent) => {
-  const { active, over } = event;
-  if (!over) return;
-  const activeId = String(active.id);
-  const overId = String(over.id);
-  if (activeId === overId) return;
-
-  const oldIndex = orderedCardIds.value.indexOf(activeId);
-  const newIndex = orderedCardIds.value.indexOf(overId);
-  if (oldIndex < 0 || newIndex < 0) return;
-
-  const nextIds = arrayMove(orderedCardIds.value, oldIndex, newIndex);
-  const next: CardState = { ...cardState.value };
-  nextIds.forEach((id, idx) => {
-    next[id] = { order: idx, collapsed: cardState.value[id]?.collapsed ?? false };
-  });
-  cardState.value = next;
-};
 
 const [cardsEl] = useAutoAnimate({ duration: 160 });
 
@@ -629,7 +587,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
     >
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex items-start gap-3">
-          <div class="text-3xl sm:text-4xl">🚨👾🧱</div>
+           <div class="text-3xl sm:text-4xl">Arcade</div>
           <div>
             <div class="text-xs uppercase tracking-[0.2em] text-emerald-200">Arcade Alert</div>
             <div class="text-sm font-semibold text-emerald-100">RetroVaders & RetroNoid are LIVE</div>
@@ -669,7 +627,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
     <div v-if="network === 'mainnet'" class="card-soft border-emerald-500/40">
       <div class="flex items-center justify-between">
         <div class="text-sm">
-          <span class="text-emerald-300 font-semibold">Mainnet is live</span> — welcome to RetroChain! 🚀
+           <span class="text-emerald-300 font-semibold">Mainnet is live</span> — welcome to RetroChain!
         </div>
         <div class="flex items-center gap-2">
           <a href="/api/cosmos/base/tendermint/v1beta1/node_info" class="btn text-xs">Node Info</a>
@@ -750,79 +708,88 @@ function sparkPath(data: number[], width = 160, height = 40) {
       </div>
 
       <div class="flex flex-col gap-4" ref="cardsEl">
-        <DndContext :sensors="sensors" :collisionDetection="closestCenter" @dragEnd="onDragEnd">
-          <SortableContext :items="orderedCardIds" :strategy="verticalListSortingStrategy">
-            <SortableCard v-for="card in orderedCards" :key="card.id" :id="card.id" v-slot="{ listeners }">
-              <div class="card" :class="cardSizeClass(card.id)">
-                <div class="flex items-center justify-between mb-3">
-                  <div class="flex items-center gap-2 min-w-0">
-                    <button class="btn text-[10px] cursor-grab active:cursor-grabbing" v-tooltip="'Drag to reorder'" v-on="listeners" @click.stop>
-                      <ChevronRight class="w-3.5 h-3.5" />
-                    </button>
-                    <h2 class="text-sm font-semibold text-slate-100 truncate">{{ card.title }}</h2>
-                    <span class="badge text-[10px] text-slate-300 border-white/10">{{ cardSizeLabel(card.id) }}</span>
-                  </div>
+        <div v-for="card in orderedCards" :key="card.id" class="card" :class="cardSizeClass(card.id)">
+          <div class="flex items-center justify-between mb-3">
+            <div class="flex items-center gap-2 min-w-0">
+              <h2 class="text-sm font-semibold text-slate-100 truncate">{{ card.title }}</h2>
+              <span class="badge text-[10px] text-slate-300 border-white/10">{{ cardSizeLabel(card.id) }}</span>
+            </div>
 
-                  <div class="flex items-center gap-1 flex-wrap justify-end">
-                    <button class="btn text-[10px]" v-tooltip="'Size: Small'" :class="cardSizeBtnClass(card.id, 'sm')" @click="setSize(card.id, 'sm')">S</button>
-                    <button class="btn text-[10px]" v-tooltip="'Size: Medium'" :class="cardSizeBtnClass(card.id, 'md')" @click="setSize(card.id, 'md')">M</button>
-                    <button class="btn text-[10px]" v-tooltip="'Size: Large'" :class="cardSizeBtnClass(card.id, 'lg')" @click="setSize(card.id, 'lg')">L</button>
+            <div class="flex items-center gap-1 flex-wrap justify-end">
+              <button class="btn text-[10px]" v-tooltip="'Size: Small'" :class="cardSizeBtnClass(card.id, 'sm')" @click="setSize(card.id, 'sm')">S</button>
+              <button class="btn text-[10px]" v-tooltip="'Size: Medium'" :class="cardSizeBtnClass(card.id, 'md')" @click="setSize(card.id, 'md')">M</button>
+              <button class="btn text-[10px]" v-tooltip="'Size: Large'" :class="cardSizeBtnClass(card.id, 'lg')" @click="setSize(card.id, 'lg')">L</button>
 
-                    <button class="btn text-[10px]" v-tooltip="'Move up'" @click="moveCard(card.id, -1)"><ArrowUp class="w-3.5 h-3.5" /></button>
-                    <button class="btn text-[10px]" v-tooltip="'Move down'" @click="moveCard(card.id, 1)"><ArrowDown class="w-3.5 h-3.5" /></button>
-                    <button class="btn text-[10px]" @click="toggleCollapse(card.id)">
-                      <span class="inline-flex items-center gap-1">
-                        <component :is="isCollapsed(card.id) ? ChevronDown : ChevronUp" class="w-3.5 h-3.5" />
-                        <span>{{ isCollapsed(card.id) ? 'Expand' : 'Collapse' }}</span>
-                      </span>
-                    </button>
-                  </div>
+              <button class="btn text-[10px]" v-tooltip="'Move up'" @click="moveCard(card.id, -1)"><ArrowUp class="w-3.5 h-3.5" /></button>
+              <button class="btn text-[10px]" v-tooltip="'Move down'" @click="moveCard(card.id, 1)"><ArrowDown class="w-3.5 h-3.5" /></button>
+              <button class="btn text-[10px]" @click="toggleCollapse(card.id)">
+                <span class="inline-flex items-center gap-1">
+                  <component :is="isCollapsed(card.id) ? ChevronDown : ChevronUp" class="w-3.5 h-3.5" />
+                  <span>{{ isCollapsed(card.id) ? 'Expand' : 'Collapse' }}</span>
+                </span>
+              </button>
+            </div>
+          </div>
+
+          <div v-show="!isCollapsed(card.id)">
+            <div v-if="card.id === 'network'" class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
+              <RcStatCard label="Status" :loading="loadingInfo">
+                <div class="flex items-center gap-2">
+                  <span class="inline-block w-2 h-2 rounded-full" :class="networkStatus.indicator"></span>
+                  <div class="text-sm font-semibold" :class="networkStatus.textClass">{{ networkStatus.label }}</div>
                 </div>
+                <div class="text-xs text-slate-400 mt-1">{{ networkStatus.subtext }}</div>
+              </RcStatCard>
 
-                <div v-show="!isCollapsed(card.id)">
-                  <!-- Existing per-card templates continue below unchanged -->
-                  <template v-if="card.id === 'network'">
-                    <div class="grid gap-3 sm:grid-cols-2 xl:grid-cols-4">
-                      <!-- ...existing network card content... -->
-                    </div>
-                  </template>
+              <RcStatCard label="Latest Height" :loading="loadingInfo">
+                <div class="text-lg font-bold text-white">{{ latestBlockHeightDisplay }}</div>
+              </RcStatCard>
 
-                  <template v-else-if="card.id === 'arcade-burn'">
-                    <div class="grid gap-3 md:grid-cols-3">
-                      <article class="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4">
-                        <div class="text-xs uppercase tracking-wider text-emerald-200 flex items-center justify-between">
-                          <span>Insert Coin Burn (events)</span>
-                          <span class="text-[10px] text-emerald-200/80">Auto-refresh</span>
-                        </div>
-                        <div class="text-3xl font-bold text-emerald-100 mt-2">{{ arcadeBurnDisplay }}</div>
-                        <p class="text-[11px] text-emerald-200/80 mt-1">
-                          RETRO burned from Insert Coin purchases (tokens_burned in arcade.credits_inserted events). Default split is 80% burn / 20% to the game developer; if the game is unregistered or lacks a developer wallet, 100% is burned.
-                        </p>
-                        <div class="text-xs text-emerald-200 flex items-center gap-2 mt-3 flex-wrap">
-                          <RouterLink class="underline underline-offset-2" to="/tokenomics">View burn telemetry</RouterLink>
-                          <span class="text-emerald-300/60">·</span>
-                          <RouterLink class="underline underline-offset-2" to="/arcade">Play &amp; burn</RouterLink>
-                          <span class="text-emerald-300/60">·</span>
-                          <span>{{ arcadeBurnLoading ? 'Syncing…' : 'Live sample' }}</span>
-                        </div>
-                      </article>
+              <RcStatCard label="Total Txs" :loading="loadingInfo">
+                <div class="text-lg font-bold text-white">{{ totalTxsDisplay }}</div>
+              </RcStatCard>
 
-                      <article class="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 md:col-span-2">
-                        <div class="text-xs uppercase tracking-wider text-amber-200">Why it matters</div>
-                        <p class="text-sm text-slate-100 font-semibold mt-1">Insert Coin is a native burn sink.</p>
-                        <p class="text-xs text-amber-100/80 mt-2 leading-relaxed">
-                          Every Insert Coin purchase consumes uretro on-chain instead of recycling it. Arcade credits are minted, but the
-                          RETRO you spend is permanently removed at the burn sink above—no treasury accrual, just deflationary pressure tied to player activity.
-                        </p>
-                        <p class="text-[11px] text-amber-100/70 mt-2">
-                          Watch the running balance in real time and compare with the Tokenomics burn telemetry to see arcade-driven burns.
-                        </p>
-                      </article>
-                    </div>
-                  </template>
+              <RcStatCard label="Endpoints" :loading="false">
+                <div class="text-[11px] text-slate-300 space-y-1">
+                  <div>REST: <code class="font-mono">{{ REST_DISPLAY }}</code></div>
+                  <div>RPC: <code class="font-mono">{{ RPC_DISPLAY }}</code></div>
+                </div>
+              </RcStatCard>
+            </div>
 
-            <template v-else-if="card.id === 'health'">
-              <div class="grid gap-3 xl:grid-cols-3">
+            <div v-else-if="card.id === 'arcade-burn'" class="grid gap-3 md:grid-cols-3">
+              <article class="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4">
+                <div class="text-xs uppercase tracking-wider text-emerald-200 flex items-center justify-between">
+                  <span>Insert Coin Burn (events)</span>
+                  <span class="text-[10px] text-emerald-200/80">Auto-refresh</span>
+                </div>
+                <div class="text-3xl font-bold text-emerald-100 mt-2">{{ arcadeBurnDisplay }}</div>
+                <p class="text-[11px] text-emerald-200/80 mt-1">
+                  RETRO burned from Insert Coin purchases (tokens_burned in arcade.credits_inserted events). Default split is 80% burn / 20% to the game developer; if the game is unregistered or lacks a developer wallet, 100% is burned.
+                </p>
+                <div class="text-xs text-emerald-200 flex items-center gap-2 mt-3 flex-wrap">
+                  <RouterLink class="underline underline-offset-2" to="/tokenomics">View burn telemetry</RouterLink>
+                  <span class="text-emerald-300/60">·</span>
+                  <RouterLink class="underline underline-offset-2" to="/arcade">Play &amp; burn</RouterLink>
+                  <span class="text-emerald-300/60">·</span>
+                  <span>{{ arcadeBurnLoading ? 'Syncing…' : 'Live sample' }}</span>
+                </div>
+              </article>
+
+              <article class="rounded-2xl border border-amber-500/40 bg-amber-500/10 p-4 md:col-span-2">
+                <div class="text-xs uppercase tracking-wider text-amber-200">Why it matters</div>
+                <p class="text-sm text-slate-100 font-semibold mt-1">Insert Coin is a native burn sink.</p>
+                <p class="text-xs text-amber-100/80 mt-2 leading-relaxed">
+                  Every Insert Coin purchase consumes uretro on-chain instead of recycling it. Arcade credits are minted, but the
+                  RETRO you spend is permanently removed at the burn sink above—no treasury accrual, just deflationary pressure tied to player activity.
+                </p>
+                <p class="text-[11px] text-amber-100/70 mt-2">
+                  Watch the running balance in real time and compare with the Tokenomics burn telemetry to see arcade-driven burns.
+                </p>
+              </article>
+            </div>
+
+            <div v-else-if="card.id === 'health'" class="grid gap-3 xl:grid-cols-3">
                 <article class="border border-emerald-500/30 bg-emerald-500/5 rounded-2xl p-4">
                   <div class="flex items-center justify-between mb-2">
                     <h2 class="text-sm font-semibold text-emerald-100">Chain Health</h2>
@@ -876,10 +843,9 @@ function sparkPath(data: number[], width = 160, height = 40) {
                   </div>
                 </article>
               </div>
-            </template>
+            </div>
 
-            <template v-else-if="card.id === 'block-stats'">
-              <div class="grid gap-4 xl:grid-cols-4">
+            <div v-else-if="card.id === 'block-stats'" class="grid gap-4 xl:grid-cols-4">
                 <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-slate-900/80 to-slate-800/40 p-5 shadow-xl shadow-black/30 flex flex-col gap-4 xl:col-span-2">
                   <div class="flex items-center justify-between text-[11px] uppercase tracking-[0.35em] text-emerald-200">
                     <span>Latest Block</span>
@@ -966,10 +932,9 @@ function sparkPath(data: number[], width = 160, height = 40) {
                   </div>
                 </article>
               </div>
-            </template>
+            </div>
 
-            <template v-else-if="card.id === 'blocks'">
-              <div class="grid gap-3 xl:grid-cols-2 min-w-0">
+            <div v-else-if="card.id === 'blocks'" class="grid gap-3 xl:grid-cols-2 min-w-0">
                 <div class="min-w-0 overflow-hidden">
                   <div class="flex items-center justify-between mb-2">
                     <h2 class="text-sm font-semibold text-slate-100">Latest blocks</h2>
@@ -979,7 +944,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                         :class="autoRefreshEnabled ? 'border-emerald-400/70 bg-emerald-500/10' : ''"
                         @click="toggleAutoRefresh"
                       >
-                        {{ autoRefreshEnabled ? `Auto (${countdown}s)` : "Paused" }}
+                        {{ autoRefreshEnabled ? "Auto (" + countdown + "s)" : "Paused" }}
                       </button>
                       <div class="flex items-center gap-1">
                         <button class="btn text-[10px]" :disabled="blockPage === 0" @click="prevBlocksPage">Prev</button>
@@ -1103,10 +1068,10 @@ function sparkPath(data: number[], width = 160, height = 40) {
                   </div>
                 </div>
               </div>
-            </template>
+            </div>
 
 
-            <template v-else-if="card.id === 'features'">
+            <div v-else-if="card.id === 'features'">
               <div class="flex items-center justify-between mb-4">
                 <h2 class="text-lg font-bold text-white flex items-center gap-2">
                   <span>✨</span>
@@ -1127,9 +1092,9 @@ function sparkPath(data: number[], width = 160, height = 40) {
                   </div>
                 </article>
               </div>
-            </template>
+            </div>
 
-            <template v-else-if="card.id === 'howto'">
+            <div v-else-if="card.id === 'howto'">
               <div class="text-xs text-slate-300 leading-relaxed">
                 <h3 class="text-sm font-semibold mb-1 text-slate-100 flex items-center gap-2">
                   <span>ℹ️</span>
@@ -1154,12 +1119,11 @@ function sparkPath(data: number[], width = 160, height = 40) {
                   </li>
                 </ol>
               </div>
-            </template>
-                </div>
-              </div>
-            </SortableCard>
-          </SortableContext>
-        </DndContext>
+            </div>
+
+            <div v-else class="text-xs text-slate-400">Not available.</div>
+          </div>
+        </div>
       </div>
 
     </section>
