@@ -1123,10 +1123,10 @@ function sparkPath(data: number[], width = 160, height = 40) {
 
             <div v-else class="text-xs text-slate-400">Not available.</div>
           </div>
-		</div>
-		</div>
-	</div>
+        </div>
+      </div>
+    </div>
 
-    </section>
-  </div>
+  </section>
+</div>
 </template>
