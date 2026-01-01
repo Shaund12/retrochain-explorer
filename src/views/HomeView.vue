@@ -1126,7 +1126,6 @@ function sparkPath(data: number[], width = 160, height = 40) {
         </div>
       </div>
     </div>
-
   </section>
 </div>
 </template>
