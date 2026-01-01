@@ -214,7 +214,7 @@ const goBack = () => router.push({ name: "tokens" });
         class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
         @click.self="closeTokenModal"
       >
-        <div class="card w-full max-w-3xl" @click.stop>
+        <div class="card w-full max-w-3xl max-h-[90vh] overflow-hidden flex flex-col" @click.stop>
           <div class="flex items-start justify-between gap-3 mb-4">
             <div class="min-w-0">
               <p class="text-[11px] uppercase tracking-widest text-slate-500">NFT Details</p>
@@ -226,7 +226,7 @@ const goBack = () => router.push({ name: "tokens" });
             <button class="btn text-xs" @click="closeTokenModal">✖ Close</button>
           </div>
 
-          <div class="grid gap-4 md:grid-cols-2">
+          <div class="grid gap-4 md:grid-cols-2 overflow-auto pr-1">
             <div class="rounded-2xl border border-white/10 bg-white/5 p-3">
               <div class="aspect-square w-full rounded-xl overflow-hidden bg-black/30 flex items-center justify-center">
                 <img
@@ -265,9 +265,9 @@ const goBack = () => router.push({ name: "tokens" });
             </div>
           </div>
 
-          <div class="mt-4 p-3 rounded-xl bg-slate-900/60 border border-slate-700 text-xs text-slate-300">
+          <div class="mt-4 p-3 rounded-xl bg-slate-900/60 border border-slate-700 text-xs text-slate-300 overflow-auto">
             <div class="text-[11px] uppercase tracking-widest text-slate-500 mb-1">Raw JSON</div>
-            <pre class="whitespace-pre-wrap break-words max-h-72 overflow-auto">{{ JSON.stringify(selectedToken, null, 2) }}</pre>
+            <pre class="whitespace-pre-wrap break-words text-[11px] leading-5">{{ JSON.stringify(selectedToken, null, 2) }}</pre>
           </div>
         </div>
       </div>
