@@ -1102,6 +1102,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                     </table>
                   </div>
                 </div>
+              </div>
             </template>
 
 
@@ -1154,11 +1155,9 @@ function sparkPath(data: number[], width = 160, height = 40) {
                 </ol>
               </div>
             </template>
-          </div>
-        </div>
-            </div>
-          </div>
-        </SortableCard>
+                </div>
+              </div>
+            </SortableCard>
           </SortableContext>
         </DndContext>
       </div>
