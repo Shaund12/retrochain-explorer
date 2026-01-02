@@ -18,6 +18,7 @@ import { useValidators } from "@/composables/useValidators";
 import { useArcade } from "@/composables/useArcade";
 import { useAutoRefresh } from "@/composables/useAutoRefresh";
 import { useApi } from "@/composables/useApi";
+import { useGasTracker } from "@/composables/useGasTracker";
 import RcStatCard from "@/components/RcStatCard.vue";
 import RcSearchBar from "@/components/RcSearchBar.vue";
 import RcArcadeGameCard from "@/components/RcArcadeGameCard.vue";
@@ -76,6 +77,7 @@ const txPageSize = 10;
 const CARD_STORAGE_KEY = "rc_home_cards_v1";
 const dashboardCards = [
   { id: "network", title: "Network Pulse", show: () => true },
+  { id: "gas-tracker", title: "Gas Price Tracker", show: () => true },
   { id: "health", title: "Chain Health & Fees", show: () => true },
   { id: "block-stats", title: "Block & Gas Stats", show: () => true },
   { id: "arcade-burn", title: "Arcade Insert Coin Burn", show: () => true },
@@ -161,7 +163,8 @@ const refreshAll = async () => {
     searchRecent(txPageSize, txPage.value),
     refreshMempool(),
     fetchValidators(),
-    loadArcadeBurnTotals()
+    loadArcadeBurnTotals(),
+    loadGasStats()
   ]);
 };
 
@@ -245,6 +248,26 @@ const arcadeBurnDisplay = computed(() => {
   return `${retro.toLocaleString(undefined, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
 });
 
+// Gas Tracker initialization
+const {
+  currentStats,
+  recommendations,
+  fetchCurrentStats,
+  formatGasPrice,
+  getGasPriceLabel,
+  getGasPriceColor,
+  efficiencyStatus,
+  congestionLevel
+} = useGasTracker();
+
+const loadGasStats = async () => {
+  try {
+    await fetchCurrentStats(100);
+  } catch (err) {
+    console.warn("Failed to load gas stats", err);
+  }
+};
+
 onMounted(async () => {
   try {
     const stored = localStorage.getItem(spaceInvadersNoticeKey);
@@ -258,6 +281,7 @@ onMounted(async () => {
   }
 
   await refreshAll();
+  await loadGasStats();
 });
 
 const formatTime = (value?: string | null) =>
@@ -713,10 +737,111 @@ function sparkPath(data: number[], width = 160, height = 40) {
                   <div class="text-2xl font-semibold text-white">{{ totalTxsDisplay }}</div>
                   <div class="text-[11px] text-slate-500">Rolling counter</div>
                 </article>
-              </div>
-            </template>
+                </div>
+              </template>
 
-            <template v-else-if="card.id === 'arcade-burn'">
+              <template v-else-if="card.id === 'gas-tracker'">
+                <div class="grid gap-3 lg:grid-cols-2">
+                  <!-- Current Gas Stats -->
+                  <article class="rounded-2xl border border-cyan-500/30 bg-cyan-500/5 p-4">
+                    <div class="flex items-center justify-between mb-3">
+                      <h2 class="text-sm font-semibold text-cyan-100 flex items-center gap-2">
+                        <span>⛽</span>
+                        <span>Gas Price Monitor</span>
+                      </h2>
+                      <span class="text-[11px] text-slate-400">Live</span>
+                    </div>
+                    <div v-if="currentStats" class="space-y-3">
+                      <div class="grid grid-cols-2 gap-2">
+                        <div>
+                          <div class="text-[11px] uppercase tracking-wider text-slate-400">Average Price</div>
+                          <div class="text-lg font-semibold text-white">
+                            {{ formatGasPrice(currentStats.avgPrice) }}
+                          </div>
+                        </div>
+                        <div>
+                          <div class="text-[11px] uppercase tracking-wider text-slate-400">Network Status</div>
+                          <div class="text-sm font-semibold" :class="congestionLevel === 'Low' ? 'text-emerald-300' : congestionLevel === 'Moderate' ? 'text-amber-300' : 'text-rose-300'">
+                            {{ congestionLevel }}
+                          </div>
+                        </div>
+                      </div>
+                      <div class="grid grid-cols-3 gap-2 text-xs">
+                        <div>
+                          <div class="text-[10px] uppercase tracking-wider text-slate-500">Min</div>
+                          <div class="font-mono text-slate-200">{{ formatGasPrice(currentStats.minPrice) }}</div>
+                        </div>
+                        <div>
+                          <div class="text-[10px] uppercase tracking-wider text-slate-500">Median</div>
+                          <div class="font-mono text-slate-200">{{ formatGasPrice(currentStats.medianPrice) }}</div>
+                        </div>
+                        <div>
+                          <div class="text-[10px] uppercase tracking-wider text-slate-500">Max</div>
+                          <div class="font-mono text-slate-200">{{ formatGasPrice(currentStats.maxPrice) }}</div>
+                        </div>
+                      </div>
+                      <div class="pt-2 border-t border-cyan-500/20">
+                        <div class="text-[11px] uppercase tracking-wider text-slate-400 mb-1">Gas Efficiency</div>
+                        <div class="flex items-center gap-2">
+                          <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
+                            <div 
+                              class="h-full transition-all"
+                              :class="currentStats.avgEfficiency >= 80 ? 'bg-emerald-500' : currentStats.avgEfficiency >= 60 ? 'bg-cyan-500' : currentStats.avgEfficiency >= 40 ? 'bg-amber-500' : 'bg-rose-500'"
+                              :style="{ width: `${Math.min(100, currentStats.avgEfficiency)}%` }"
+                            ></div>
+                          </div>
+                          <span class="text-xs font-semibold text-white">{{ currentStats.avgEfficiency.toFixed(1) }}%</span>
+                        </div>
+                        <div class="text-[10px] text-slate-400 mt-1">{{ efficiencyStatus }}</div>
+                      </div>
+                    </div>
+                    <div v-else class="text-xs text-slate-400">Loading gas data...</div>
+                  </article>
+
+                  <!-- Gas Price Recommendations -->
+                  <article class="rounded-2xl border border-purple-500/30 bg-purple-500/5 p-4">
+                    <div class="flex items-center justify-between mb-3">
+                      <h2 class="text-sm font-semibold text-purple-100 flex items-center gap-2">
+                        <span>🎯</span>
+                        <span>Price Recommendations</span>
+                      </h2>
+                      <span class="text-[11px] text-slate-400">Based on recent 100 txs</span>
+                    </div>
+                    <div v-if="recommendations" class="space-y-2">
+                      <div 
+                        v-for="tier in ['slow', 'average', 'fast', 'instant']" 
+                        :key="tier"
+                        class="flex items-center justify-between p-2 rounded-lg border"
+                        :class="getGasPriceColor(recommendations[tier as keyof typeof recommendations]) + '-border'"
+                      >
+                        <div class="flex items-center gap-2">
+                          <span 
+                            class="w-2 h-2 rounded-full"
+                            :class="tier === 'slow' ? 'bg-emerald-400' : tier === 'average' ? 'bg-cyan-400' : tier === 'fast' ? 'bg-amber-400' : 'bg-rose-400'"
+                          ></span>
+                          <div>
+                            <div class="text-xs font-semibold text-white capitalize">{{ tier }}</div>
+                            <div class="text-[10px] text-slate-400">
+                              {{ tier === 'slow' ? '25th percentile' : tier === 'average' ? '50th percentile' : tier === 'fast' ? '75th percentile' : '95th percentile' }}
+                            </div>
+                          </div>
+                        </div>
+                        <div class="text-right">
+                          <div class="text-sm font-mono font-semibold text-white">
+                            {{ formatGasPrice(recommendations[tier as keyof typeof recommendations]) }}
+                          </div>
+                          <div class="text-[10px] text-slate-400">
+                            {{ getGasPriceLabel(recommendations[tier as keyof typeof recommendations]) }}
+                          </div>
+                        </div>
+                      </div>
+                    </div>
+                    <div v-else class="text-xs text-slate-400">Loading recommendations...</div>
+                  </article>
+                </div>
+              </template>
+
+              <template v-else-if="card.id === 'arcade-burn'">
               <div class="grid gap-3 md:grid-cols-3">
                 <article class="rounded-2xl border border-emerald-500/40 bg-emerald-500/10 p-4">
                   <div class="text-xs uppercase tracking-wider text-emerald-200 flex items-center justify-between">
