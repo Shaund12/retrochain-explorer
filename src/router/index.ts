@@ -56,7 +56,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/accounts/ecosystem", name: "ecosystem-accounts", component: EcosystemWalletsView },
   { path: "/ibc", name: "ibc", component: IbcView },
   { path: "/docs", name: "docs", component: DocsHubView },
-  { path: "/api", name: "api", component: SwaggerDocsView },
+  { path: "/api/", name: "api", component: SwaggerDocsView },
   { path: "/validators", name: "validators", component: ValidatorsView },
   { path: "/governance", name: "governance", component: GovernanceView },
   { path: "/staking", name: "staking", component: StakingView },
