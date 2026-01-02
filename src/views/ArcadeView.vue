@@ -89,6 +89,10 @@ const refreshing = ref(false);
 const showSpaceInvadersNotice = ref(true);
 const spaceInvadersNoticeKey = "space-invaders-beta-dismissed";
 
+const enableRetroVaders = import.meta.env.VITE_ARCADE_GAME_RETROVADERS_ENABLED !== 'false';
+const enableRetroNoid = import.meta.env.VITE_ARCADE_GAME_RETRONOID_ENABLED !== 'false';
+const enableRetroMan = import.meta.env.VITE_ARCADE_GAME_RETROMAN_ENABLED !== 'false';
+
 // Hide placeholder/test entries and legacy/renamed games.
 // Note: "space-invaders" is deprecated and has been renamed to RetroVaders.
 const visibleGames = computed(() =>
@@ -471,7 +475,7 @@ const achievementIcon = (a: any) => {
 type BattlePeriod = "daily" | "weekly" | "monthly";
 const battlePeriod = ref<BattlePeriod>("daily");
 
-type BattleGame = "all" | "retrovaders" | "retronoid";
+type BattleGame = "all" | "retrovaders" | "retronoid" | "retroman";
 const battleGame = ref<BattleGame>("all");
 
 const normalizeGameId = (gid: any) => String(gid || "").toLowerCase().trim();
@@ -1133,7 +1137,7 @@ const myStreakRank = computed(() => {
 <template>
   <div class="space-y-4">
     <div v-if="showSpaceInvadersNotice" class="space-y-3">
-      <div class="card border border-emerald-400/70 bg-gradient-to-r from-emerald-500/15 via-cyan-500/15 to-indigo-600/15 shadow-lg shadow-emerald-500/20">
+      <div v-if="enableRetroVaders" class="card border border-emerald-400/70 bg-gradient-to-r from-emerald-500/15 via-cyan-500/15 to-indigo-600/15 shadow-lg shadow-emerald-500/20">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex items-start gap-3">
             <div class="text-3xl sm:text-4xl">🚨👾🛸</div>
@@ -1152,7 +1156,7 @@ const myStreakRank = computed(() => {
         </div>
       </div>
 
-      <div class="card border border-amber-400/70 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-rose-500/15 shadow-lg shadow-amber-400/20">
+      <div v-if="enableRetroNoid" class="card border border-amber-400/70 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-rose-500/15 shadow-lg shadow-amber-400/20">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex items-start gap-3">
             <div class="text-3xl sm:text-4xl">🧱✨🎯</div>
@@ -1171,7 +1175,7 @@ const myStreakRank = computed(() => {
         </div>
       </div>
 
-        <div class="card border border-purple-400/70 bg-gradient-to-r from-purple-500/15 via-fuchsia-500/15 to-indigo-500/15 shadow-lg shadow-purple-400/20">
+        <div v-if="enableRetroMan" class="card border border-purple-400/70 bg-gradient-to-r from-purple-500/15 via-fuchsia-500/15 to-indigo-500/15 shadow-lg shadow-purple-400/20">
           <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
             <div class="flex items-start gap-3">
               <div class="text-3xl sm:text-4xl">👻🌀🍒</div>
@@ -1355,8 +1359,9 @@ const myStreakRank = computed(() => {
 
       <div class="mt-2 flex gap-2 flex-wrap">
         <button class="btn btn-xs" :class="battleGame === 'all' ? 'btn-primary' : ''" @click="battleGame = 'all'">All games</button>
-        <button class="btn btn-xs" :class="battleGame === 'retrovaders' ? 'btn-primary' : ''" @click="battleGame = 'retrovaders'">RetroVaders</button>
-        <button class="btn btn-xs" :class="battleGame === 'retronoid' ? 'btn-primary' : ''" @click="battleGame = 'retronoid'">RetroNoid</button>
+        <button v-if="enableRetroVaders" class="btn btn-xs" :class="battleGame === 'retrovaders' ? 'btn-primary' : ''" @click="battleGame = 'retrovaders'">RetroVaders</button>
+        <button v-if="enableRetroNoid" class="btn btn-xs" :class="battleGame === 'retronoid' ? 'btn-primary' : ''" @click="battleGame = 'retronoid'">RetroNoid</button>
+        <button v-if="enableRetroMan" class="btn btn-xs" :class="battleGame === 'retroman' ? 'btn-primary' : ''" @click="battleGame = 'retroman'">RetroMan</button>
         <span class="text-[11px] text-slate-400 self-center" v-if="battleGame !== 'all'">Showing: {{ battleGame }}</span>
       </div>
 
@@ -1414,22 +1419,26 @@ const myStreakRank = computed(() => {
 
         <div class="p-3 rounded-xl bg-slate-900/60 border border-emerald-400/20">
           <div class="text-[11px] uppercase tracking-wider text-emerald-200">🆚 Team Battle (this window)</div>
-          <div class="mt-2 grid grid-cols-3 gap-2">
-            <div class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
+          <div class="mt-2 grid gap-2" :class="{
+            'grid-cols-3': enableRetroVaders && enableRetroNoid && enableRetroMan,
+            'grid-cols-2': (enableRetroVaders && enableRetroNoid && !enableRetroMan) || (enableRetroVaders && !enableRetroNoid && enableRetroMan) || (!enableRetroVaders && enableRetroNoid && enableRetroMan),
+            'grid-cols-1': (!enableRetroVaders && !enableRetroNoid && enableRetroMan) || (!enableRetroVaders && enableRetroNoid && !enableRetroMan) || (enableRetroVaders && !enableRetroNoid && !enableRetroMan)
+          }">
+            <div v-if="enableRetroVaders" class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
               <div class="text-xs font-semibold text-emerald-100">RetroVaders</div>
               <div class="text-[11px] text-slate-300">Players: {{ teamBattle.retrovaders.players }}</div>
               <div class="text-[11px] text-slate-300">Runs: {{ teamBattle.retrovaders.runs }}</div>
               <div class="text-[11px] text-slate-300">Best score: {{ Number(teamBattle.retrovaders.bestScore || 0).toLocaleString() }}</div>
               <div class="text-[11px] text-slate-300">Burned: {{ formatRetroAmount(teamBattle.retrovaders.burned) }}</div>
             </div>
-            <div class="p-2 rounded-lg bg-amber-500/10 border border-amber-400/20">
+            <div v-if="enableRetroNoid" class="p-2 rounded-lg bg-amber-500/10 border border-amber-400/20">
               <div class="text-xs font-semibold text-amber-100">RetroNoid</div>
               <div class="text-[11px] text-slate-300">Players: {{ teamBattle.retronoid.players }}</div>
               <div class="text-[11px] text-slate-300">Runs: {{ teamBattle.retronoid.runs }}</div>
               <div class="text-[11px] text-slate-300">Best score: {{ Number(teamBattle.retronoid.bestScore || 0).toLocaleString() }}</div>
               <div class="text-[11px] text-slate-300">Burned: {{ formatRetroAmount(teamBattle.retronoid.burned) }}</div>
             </div>
-            <div class="p-2 rounded-lg bg-purple-500/10 border border-purple-400/20">
+            <div v-if="enableRetroMan" class="p-2 rounded-lg bg-purple-500/10 border border-purple-400/20">
               <div class="text-xs font-semibold text-purple-100">RetroMan</div>
               <div class="text-[11px] text-slate-300">Players: {{ teamBattle.retroman.players }}</div>
               <div class="text-[11px] text-slate-300">Runs: {{ teamBattle.retroman.runs }}</div>
