@@ -128,6 +128,11 @@
           class="flex items-center gap-3 px-3 sm:px-4 py-2 rounded-2xl bg-gradient-to-r from-emerald-500/10 to-cyan-500/10 border border-white/10 hover:border-emerald-300/40 hover:from-emerald-500/20 hover:to-cyan-500/20 text-white transition-all shadow-lg shadow-emerald-500/10"
           @click="disconnect"
         >
+          <img
+            src="/RCTokenICO1.png"
+            alt="RETRO"
+            class="h-8 w-8 rounded-lg shadow-md object-contain"
+          />
           <div class="hidden sm:flex flex-col text-left">
             <span class="text-[10px] uppercase tracking-[0.25em] text-emerald-200/80">RETRO Balance</span>
             <span class="text-sm font-semibold text-white">
