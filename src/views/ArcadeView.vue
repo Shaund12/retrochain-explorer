@@ -1171,25 +1171,44 @@ const myStreakRank = computed(() => {
         </div>
       </div>
 
-      <div class="card border border-purple-400/70 bg-gradient-to-r from-purple-500/15 via-fuchsia-500/15 to-indigo-500/15 shadow-lg shadow-purple-400/20">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex items-start gap-3">
-            <div class="text-3xl sm:text-4xl">👻🌀🍒</div>
-            <div>
-              <div class="text-sm font-semibold text-purple-200 uppercase tracking-[0.18em]">RetroMan Hunt</div>
-              <p class="text-xs sm:text-sm text-slate-200 mt-1">
-                Maze madness unleashed! Chase pellets, dodge ghosts, hunt power-ups, and rack up points in classic RetroMan style.
-              </p>
-              <p class="text-[11px] text-purple-200/80 mt-1">Maze mode · Power-up rush · Beta rewards</p>
+        <div class="card border border-purple-400/70 bg-gradient-to-r from-purple-500/15 via-fuchsia-500/15 to-indigo-500/15 shadow-lg shadow-purple-400/20">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-start gap-3">
+              <div class="text-3xl sm:text-4xl">👻🌀🍒</div>
+              <div>
+                <div class="text-sm font-semibold text-purple-200 uppercase tracking-[0.18em]">RetroMan Hunt</div>
+                <p class="text-xs sm:text-sm text-slate-200 mt-1">
+                  Maze madness unleashed! Chase pellets, dodge ghosts, hunt power-ups, and rack up points in classic RetroMan style.
+                </p>
+                <p class="text-[11px] text-purple-200/80 mt-1">Maze mode · Power-up rush · Beta rewards</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <a class="btn text-xs" href="/retroman/retroman/" target="_blank" rel="noopener">Play RetroMan</a>
+              <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
             </div>
           </div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <a class="btn text-xs" href="/retroman/" target="_blank" rel="noopener">Play RetroMan</a>
-            <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
+        </div>
+
+        <div class="card border border-cyan-400/70 bg-gradient-to-r from-cyan-500/15 via-blue-500/15 to-indigo-500/15 shadow-lg shadow-cyan-400/20">
+          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+            <div class="flex items-start gap-3">
+              <div class="text-3xl sm:text-4xl">🎮✨🕹️</div>
+              <div>
+                <div class="text-sm font-semibold text-cyan-200 uppercase tracking-[0.18em]">Xbox Controller Support</div>
+                <p class="text-xs sm:text-sm text-slate-200 mt-1">
+                  Plug in and dominate! Xbox controllers now supported across all arcade games. Experience true retro gaming with modern precision.
+                </p>
+                <p class="text-[11px] text-cyan-200/80 mt-1">Plug & play · Full button mapping · Rumble support</p>
+              </div>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <a class="btn btn-primary text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">Try it now 🎮</a>
+              <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
+            </div>
           </div>
         </div>
       </div>
-    </div>
 
     <div class="card-soft flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div>
