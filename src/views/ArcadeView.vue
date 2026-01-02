@@ -48,6 +48,7 @@ const resolveGameLaunchUrl = (game: any) => {
   // Known built-in hosted games
   if (gid === "retrovaders") return "/arcade/arcade/";
   if (gid === "retronoid") return "/retronoid/retronoid/";
+  if (gid === "retroman") return "/retroman/";
 
   // API-provided launch URL (if present)
   const direct = (game?.launch_url || game?.play_url || game?.url) as string | undefined;
@@ -999,14 +1000,15 @@ const quests = computed((): Quest[] => {
 });
 
 const teamBattle = computed(() => {
-  const byGame: Record<"retrovaders" | "retronoid", { runs: number; players: Set<string>; bestScore: number; burned: number }> = {
+  const byGame: Record<"retrovaders" | "retronoid" | "retroman", { runs: number; players: Set<string>; bestScore: number; burned: number }> = {
     retrovaders: { runs: 0, players: new Set<string>(), bestScore: 0, burned: 0 },
-    retronoid: { runs: 0, players: new Set<string>(), bestScore: 0, burned: 0 }
+    retronoid: { runs: 0, players: new Set<string>(), bestScore: 0, burned: 0 },
+    retroman: { runs: 0, players: new Set<string>(), bestScore: 0, burned: 0 }
   };
 
   sessionsInBattleWindow.value.forEach((s: any) => {
     const gid = normalizeGameId(s?.game_id || s?.gameId);
-    if (gid !== "retrovaders" && gid !== "retronoid") return;
+    if (gid !== "retrovaders" && gid !== "retronoid" && gid !== "retroman") return;
     byGame[gid].runs += 1;
     const p = (s?.player || s?.creator || "").toString();
     if (p) byGame[gid].players.add(p);
@@ -1016,28 +1018,64 @@ const teamBattle = computed(() => {
 
   burnsInBattleWindow.value.forEach((b) => {
     const gid = normalizeGameId(b?.gameId);
-    if (gid !== "retrovaders" && gid !== "retronoid") return;
+    if (gid !== "retrovaders" && gid !== "retronoid" && gid !== "retroman") return;
     const amt = Number(b?.amount ?? 0);
     if (Number.isFinite(amt)) byGame[gid].burned += amt;
   });
 
   const rvPlayers = byGame.retrovaders.players.size;
   const rnPlayers = byGame.retronoid.players.size;
+  const rmPlayers = byGame.retroman.players.size;
   const rvScore = byGame.retrovaders.bestScore;
   const rnScore = byGame.retronoid.bestScore;
+  const rmScore = byGame.retroman.bestScore;
   const rvRuns = byGame.retrovaders.runs;
   const rnRuns = byGame.retronoid.runs;
+  const rmRuns = byGame.retroman.runs;
   const rvBurn = byGame.retrovaders.burned;
   const rnBurn = byGame.retronoid.burned;
+  const rmBurn = byGame.retroman.burned;
 
-  const scoreWinner = rvScore === rnScore ? "tie" : rvScore > rnScore ? "retrovaders" : "retronoid";
-  const runsWinner = rvRuns === rnRuns ? "tie" : rvRuns > rnRuns ? "retrovaders" : "retronoid";
-  const burnWinner = rvBurn === rnBurn ? "tie" : rvBurn > rnBurn ? "retrovaders" : "retronoid";
-  const playerWinner = rvPlayers === rnPlayers ? "tie" : rvPlayers > rnPlayers ? "retrovaders" : "retronoid";
+  const maxScore = Math.max(rvScore, rnScore, rmScore);
+  const scoreWinner = maxScore === 0 ? "tie" : 
+    (rvScore === maxScore && rnScore === maxScore && rmScore === maxScore) ? "tie" :
+    (rvScore === maxScore && rnScore === maxScore) ? "tie" :
+    (rvScore === maxScore && rmScore === maxScore) ? "tie" :
+    (rnScore === maxScore && rmScore === maxScore) ? "tie" :
+    rvScore === maxScore ? "retrovaders" : 
+    rnScore === maxScore ? "retronoid" : "retroman";
+
+  const maxRuns = Math.max(rvRuns, rnRuns, rmRuns);
+  const runsWinner = maxRuns === 0 ? "tie" :
+    (rvRuns === maxRuns && rnRuns === maxRuns && rmRuns === maxRuns) ? "tie" :
+    (rvRuns === maxRuns && rnRuns === maxRuns) ? "tie" :
+    (rvRuns === maxRuns && rmRuns === maxRuns) ? "tie" :
+    (rnRuns === maxRuns && rmRuns === maxRuns) ? "tie" :
+    rvRuns === maxRuns ? "retrovaders" :
+    rnRuns === maxRuns ? "retronoid" : "retroman";
+
+  const maxBurn = Math.max(rvBurn, rnBurn, rmBurn);
+  const burnWinner = maxBurn === 0 ? "tie" :
+    (rvBurn === maxBurn && rnBurn === maxBurn && rmBurn === maxBurn) ? "tie" :
+    (rvBurn === maxBurn && rnBurn === maxBurn) ? "tie" :
+    (rvBurn === maxBurn && rmBurn === maxBurn) ? "tie" :
+    (rnBurn === maxBurn && rmBurn === maxBurn) ? "tie" :
+    rvBurn === maxBurn ? "retrovaders" :
+    rnBurn === maxBurn ? "retronoid" : "retroman";
+
+  const maxPlayers = Math.max(rvPlayers, rnPlayers, rmPlayers);
+  const playerWinner = maxPlayers === 0 ? "tie" :
+    (rvPlayers === maxPlayers && rnPlayers === maxPlayers && rmPlayers === maxPlayers) ? "tie" :
+    (rvPlayers === maxPlayers && rnPlayers === maxPlayers) ? "tie" :
+    (rvPlayers === maxPlayers && rmPlayers === maxPlayers) ? "tie" :
+    (rnPlayers === maxPlayers && rmPlayers === maxPlayers) ? "tie" :
+    rvPlayers === maxPlayers ? "retrovaders" :
+    rnPlayers === maxPlayers ? "retronoid" : "retroman";
 
   return {
     retrovaders: { players: rvPlayers, runs: rvRuns, bestScore: rvScore, burned: rvBurn },
     retronoid: { players: rnPlayers, runs: rnRuns, bestScore: rnScore, burned: rnBurn },
+    retroman: { players: rmPlayers, runs: rmRuns, bestScore: rmScore, burned: rmBurn },
     winners: { players: playerWinner, runs: runsWinner, score: scoreWinner, burn: burnWinner }
   };
 });
@@ -1128,6 +1166,25 @@ const myStreakRank = computed(() => {
           </div>
           <div class="flex items-center gap-2 flex-wrap">
             <a class="btn text-xs" href="/retronoid/retronoid/" target="_blank" rel="noopener">Play RetroNoid</a>
+            <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
+          </div>
+        </div>
+      </div>
+
+      <div class="card border border-purple-400/70 bg-gradient-to-r from-purple-500/15 via-fuchsia-500/15 to-indigo-500/15 shadow-lg shadow-purple-400/20">
+        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+          <div class="flex items-start gap-3">
+            <div class="text-3xl sm:text-4xl">👻🌀🍒</div>
+            <div>
+              <div class="text-sm font-semibold text-purple-200 uppercase tracking-[0.18em]">RetroMan Hunt</div>
+              <p class="text-xs sm:text-sm text-slate-200 mt-1">
+                Maze madness unleashed! Chase pellets, dodge ghosts, hunt power-ups, and rack up points in classic RetroMan style.
+              </p>
+              <p class="text-[11px] text-purple-200/80 mt-1">Maze mode · Power-up rush · Beta rewards</p>
+            </div>
+          </div>
+          <div class="flex items-center gap-2 flex-wrap">
+            <a class="btn text-xs" href="/retroman/" target="_blank" rel="noopener">Play RetroMan</a>
             <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
           </div>
         </div>
@@ -1338,7 +1395,7 @@ const myStreakRank = computed(() => {
 
         <div class="p-3 rounded-xl bg-slate-900/60 border border-emerald-400/20">
           <div class="text-[11px] uppercase tracking-wider text-emerald-200">🆚 Team Battle (this window)</div>
-          <div class="mt-2 grid grid-cols-2 gap-2">
+          <div class="mt-2 grid grid-cols-3 gap-2">
             <div class="p-2 rounded-lg bg-emerald-500/10 border border-emerald-400/20">
               <div class="text-xs font-semibold text-emerald-100">RetroVaders</div>
               <div class="text-[11px] text-slate-300">Players: {{ teamBattle.retrovaders.players }}</div>
@@ -1352,6 +1409,13 @@ const myStreakRank = computed(() => {
               <div class="text-[11px] text-slate-300">Runs: {{ teamBattle.retronoid.runs }}</div>
               <div class="text-[11px] text-slate-300">Best score: {{ Number(teamBattle.retronoid.bestScore || 0).toLocaleString() }}</div>
               <div class="text-[11px] text-slate-300">Burned: {{ formatRetroAmount(teamBattle.retronoid.burned) }}</div>
+            </div>
+            <div class="p-2 rounded-lg bg-purple-500/10 border border-purple-400/20">
+              <div class="text-xs font-semibold text-purple-100">RetroMan</div>
+              <div class="text-[11px] text-slate-300">Players: {{ teamBattle.retroman.players }}</div>
+              <div class="text-[11px] text-slate-300">Runs: {{ teamBattle.retroman.runs }}</div>
+              <div class="text-[11px] text-slate-300">Best score: {{ Number(teamBattle.retroman.bestScore || 0).toLocaleString() }}</div>
+              <div class="text-[11px] text-slate-300">Burned: {{ formatRetroAmount(teamBattle.retroman.burned) }}</div>
             </div>
           </div>
           <div class="mt-2 text-[11px] text-slate-400">
