@@ -35,7 +35,7 @@ export interface GasHistoryPoint {
  */
 export function useGasTracker() {
   const api = useApi();
-  const { searchRecent } = useTxs();
+  const { txs, searchRecent } = useTxs();
 
   const loading = ref(false);
   const error = ref<string | null>(null);
@@ -47,20 +47,27 @@ export function useGasTracker() {
    * Parse gas price from transaction
    */
   const parseGasPrice = (tx: any): number | null => {
+    // Prefer summarized fields if present
+    const summaryFee = Array.isArray(tx?.fees) ? tx.fees : undefined;
+    const summaryGasLimit = Number(tx?.gasWanted ?? tx?.gas_wanted ?? 0);
+    if (summaryFee && summaryFee.length && summaryGasLimit > 0) {
+      const amt = Number(summaryFee[0]?.amount ?? 0);
+      if (Number.isFinite(amt) && amt > 0) return amt / summaryGasLimit;
+    }
+
+    // Fallback to full tx body
     const fee = tx?.tx?.auth_info?.fee;
     const gasLimit = Number(fee?.gas_limit ?? 0);
     const feeAmounts = fee?.amount ?? [];
 
     if (!gasLimit || gasLimit === 0 || !feeAmounts.length) return null;
 
-    // Get primary fee amount (usually first in array)
     const primaryFee = feeAmounts[0];
     if (!primaryFee || !primaryFee.amount) return null;
 
     const feeAmount = Number(primaryFee.amount);
     if (!Number.isFinite(feeAmount) || feeAmount <= 0) return null;
 
-    // Calculate gas price (fee amount / gas limit)
     return feeAmount / gasLimit;
   };
 
@@ -68,6 +75,12 @@ export function useGasTracker() {
    * Parse gas used from transaction
    */
   const parseGasUsed = (tx: any): { wanted: number; used: number } | null => {
+    const wantedSummary = Number(tx?.gasWanted ?? tx?.gas_wanted ?? 0);
+    const usedSummary = Number(tx?.gasUsed ?? tx?.gas_used ?? 0);
+    if (Number.isFinite(wantedSummary) && Number.isFinite(usedSummary) && (wantedSummary || usedSummary)) {
+      return { wanted: wantedSummary, used: usedSummary };
+    }
+
     const wanted = Number(tx?.tx_response?.gas_wanted ?? 0);
     const used = Number(tx?.tx_response?.gas_used ?? 0);
 
@@ -170,14 +183,15 @@ export function useGasTracker() {
     error.value = null;
 
     try {
-      const txs = await searchRecent(limit);
+      await searchRecent(limit);
+      const recent = Array.isArray(txs.value) ? txs.value.slice(0, limit) : [];
 
-      if (!txs || txs.length === 0) {
+      if (!recent.length) {
         throw new Error("No recent transactions available");
       }
 
-      currentStats.value = calculateStats(txs);
-      recommendations.value = calculateRecommendations(txs);
+      currentStats.value = calculateStats(recent);
+      recommendations.value = calculateRecommendations(recent);
     } catch (err: any) {
       error.value = err?.message || "Failed to fetch gas statistics";
       console.error("Gas tracker error:", err);
