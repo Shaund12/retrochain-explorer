@@ -756,28 +756,28 @@ function sparkPath(data: number[], width = 160, height = 40) {
                         <div>
                           <div class="text-[11px] uppercase tracking-wider text-slate-400">Average Price</div>
                           <div class="text-lg font-semibold text-white">
-                            {{ formatGasPrice(currentStats.avgPrice) }}
+                            {{ formatGasPrice(currentStats.averageGasPrice) }}
                           </div>
                         </div>
                         <div>
                           <div class="text-[11px] uppercase tracking-wider text-slate-400">Network Status</div>
-                          <div class="text-sm font-semibold" :class="congestionLevel === 'Low' ? 'text-emerald-300' : congestionLevel === 'Moderate' ? 'text-amber-300' : 'text-rose-300'">
-                            {{ congestionLevel }}
+                          <div class="text-sm font-semibold" :class="congestionLevel?.color ? `text-${congestionLevel.color}-300` : 'text-slate-300'">
+                            {{ congestionLevel?.label || '—' }}
                           </div>
                         </div>
                       </div>
                       <div class="grid grid-cols-3 gap-2 text-xs">
                         <div>
                           <div class="text-[10px] uppercase tracking-wider text-slate-500">Min</div>
-                          <div class="font-mono text-slate-200">{{ formatGasPrice(currentStats.minPrice) }}</div>
+                          <div class="font-mono text-slate-200">{{ formatGasPrice(currentStats.minGasPrice) }}</div>
                         </div>
                         <div>
                           <div class="text-[10px] uppercase tracking-wider text-slate-500">Median</div>
-                          <div class="font-mono text-slate-200">{{ formatGasPrice(currentStats.medianPrice) }}</div>
+                          <div class="font-mono text-slate-200">{{ formatGasPrice(currentStats.medianGasPrice) }}</div>
                         </div>
                         <div>
                           <div class="text-[10px] uppercase tracking-wider text-slate-500">Max</div>
-                          <div class="font-mono text-slate-200">{{ formatGasPrice(currentStats.maxPrice) }}</div>
+                          <div class="font-mono text-slate-200">{{ formatGasPrice(currentStats.maxGasPrice) }}</div>
                         </div>
                       </div>
                       <div class="pt-2 border-t border-cyan-500/20">
@@ -786,13 +786,13 @@ function sparkPath(data: number[], width = 160, height = 40) {
                           <div class="flex-1 h-2 bg-slate-800 rounded-full overflow-hidden">
                             <div 
                               class="h-full transition-all"
-                              :class="currentStats.avgEfficiency >= 80 ? 'bg-emerald-500' : currentStats.avgEfficiency >= 60 ? 'bg-cyan-500' : currentStats.avgEfficiency >= 40 ? 'bg-amber-500' : 'bg-rose-500'"
-                              :style="{ width: `${Math.min(100, currentStats.avgEfficiency)}%` }"
+                              :class="currentStats.gasEfficiency >= 80 ? 'bg-emerald-500' : currentStats.gasEfficiency >= 60 ? 'bg-cyan-500' : currentStats.gasEfficiency >= 40 ? 'bg-amber-500' : 'bg-rose-500'"
+                              :style="{ width: `${Math.min(100, currentStats.gasEfficiency)}%` }"
                             ></div>
                           </div>
-                          <span class="text-xs font-semibold text-white">{{ currentStats.avgEfficiency.toFixed(1) }}%</span>
+                          <span class="text-xs font-semibold text-white">{{ currentStats.gasEfficiency.toFixed(1) }}%</span>
                         </div>
-                        <div class="text-[10px] text-slate-400 mt-1">{{ efficiencyStatus }}</div>
+                        <div class="text-[10px] text-slate-400 mt-1">{{ efficiencyStatus?.label || '—' }}</div>
                       </div>
                     </div>
                     <div v-else class="text-xs text-slate-400">Loading gas data...</div>
@@ -812,7 +812,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                         v-for="tier in ['slow', 'average', 'fast', 'instant']" 
                         :key="tier"
                         class="flex items-center justify-between p-2 rounded-lg border"
-                        :class="getGasPriceColor(recommendations[tier as keyof typeof recommendations]) + '-border'"
+                        :class="`border-${getGasPriceColor(recommendations[tier as keyof typeof recommendations])}-500/40 bg-${getGasPriceColor(recommendations[tier as keyof typeof recommendations])}-500/5 text-${getGasPriceColor(recommendations[tier as keyof typeof recommendations])}-100`"
                       >
                         <div class="flex items-center gap-2">
                           <span 

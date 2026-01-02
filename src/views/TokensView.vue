@@ -1,15 +1,19 @@
 <script setup lang="ts">
 import { computed, onMounted, ref } from "vue";
+import ApexChart from "vue3-apexcharts";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import { useAssets, type BankToken, type Cw20Token } from "@/composables/useAssets";
+import { useTxs, type TxSummary } from "@/composables/useTxs";
 import type { TokenAccent } from "@/constants/tokens";
 
 const { bankTokens, ibcTokens, cw20Tokens, nftClasses, loading, error, fetchAssets } = useAssets();
+const { txs: transferTxsRaw, searchRecent: fetchRecentTxs } = useTxs();
 
 onMounted(() => {
   fetchAssets();
   fetchLivePrices();
+  loadTransferActivity();
 });
 
 const USD_PRICE_HINTS: Record<string, number | undefined> = {
@@ -19,8 +23,25 @@ const USD_PRICE_HINTS: Record<string, number | undefined> = {
   WBTC: Number(import.meta.env.VITE_PRICE_WBTC_USD ?? "0") || 40000
 };
 
+const loadTransferActivity = async () => {
+  transferLoading.value = true;
+  transferError.value = null;
+  try {
+    await fetchRecentTxs(120, 0);
+    transferTxs.value = transferTxsRaw.value.slice(0, 120);
+  } catch (err: any) {
+    transferError.value = err?.message || "Failed to load transfer activity";
+  } finally {
+    transferLoading.value = false;
+  }
+};
+
 const priceOverrides = ref<Record<string, number>>({});
 const priceLookup = computed(() => ({ ...USD_PRICE_HINTS, ...priceOverrides.value }));
+
+const transferLoading = ref(false);
+const transferError = ref<string | null>(null);
+const transferTxs = ref<TxSummary[]>([]);
 
 // UI filters
 const tokenSearch = ref("");
@@ -134,6 +155,73 @@ const stats = computed(() => ({
   cw20: cw20Tokens.value.length,
   nft: nftClasses.value.length
 }));
+
+const tokenMixSeries = computed(() => [stats.value.native, stats.value.factory, stats.value.ibc, stats.value.cw20]);
+const tokenMixLabels = ["Native", "Factory", "IBC", "CW20"];
+
+const tokenMixOptions = computed(() => ({
+  chart: { type: "donut", background: "transparent", foreColor: "#cbd5e1", toolbar: { show: false } },
+  theme: { mode: "dark" },
+  labels: tokenMixLabels,
+  dataLabels: { enabled: false },
+  legend: { labels: { colors: "#e2e8f0" } },
+  colors: ["#34d399", "#22d3ee", "#a855f7", "#f59e0b"],
+  stroke: { colors: ["#0b1224"] },
+  plotOptions: {
+    pie: {
+      donut: {
+        size: "60%",
+        labels: { show: true, name: { show: true }, value: { show: true, formatter: (val: string) => Number(val).toLocaleString() } }
+      }
+    }
+  }
+}));
+
+const getDenomMeta = (denom: string) => bankTokens.value.find((t) => t.denom === denom) || ibcTokens.value.find((t) => t.denom === denom);
+
+const formatTransferAmount = (denom: string, rawAmount: number) => {
+  const meta = getDenomMeta(denom);
+  const decimals = meta?.decimals ?? 6;
+  const symbol = meta ? friendlySymbol(meta) : denom.toUpperCase();
+  const display = rawAmount / Math.pow(10, Math.max(decimals, 0));
+  return { value: Number(display.toFixed(2)), symbol };
+};
+
+const topTransferTokens = computed(() => {
+  const totals = new Map<string, number>();
+  transferTxs.value.forEach((tx) => {
+    const coins = (tx.valueTransfers || []) as Array<{ amount: string; denom: string }>;
+    coins.forEach((c) => {
+      const amt = Number(c.amount);
+      if (!Number.isFinite(amt)) return;
+      totals.set(c.denom, (totals.get(c.denom) || 0) + amt);
+    });
+  });
+  return Array.from(totals.entries())
+    .map(([denom, total]) => {
+      const formatted = formatTransferAmount(denom, total);
+      return { denom, total, label: formatted.symbol, display: formatted.value };
+    })
+    .filter((t) => Number.isFinite(t.display) && t.display > 0)
+    .sort((a, b) => b.display - a.display)
+    .slice(0, 6);
+});
+
+const transferVolumeOptions = computed(() => ({
+  chart: { type: "bar", background: "transparent", foreColor: "#cbd5e1", toolbar: { show: false } },
+  theme: { mode: "dark" },
+  grid: { borderColor: "rgba(148,163,184,0.25)", strokeDashArray: 3 },
+  plotOptions: { bar: { horizontal: true, borderRadius: 6, columnWidth: "50%" } },
+  dataLabels: { enabled: false },
+  xaxis: {
+    categories: topTransferTokens.value.map((t) => t.label),
+    labels: { style: { colors: topTransferTokens.value.map(() => "#94a3b8") } }
+  },
+  yaxis: { labels: { style: { colors: ["#94a3b8"] } } },
+  colors: ["#38bdf8"]
+}));
+
+const transferVolumeSeries = computed(() => [{ name: "Recent Transfer Volume", data: topTransferTokens.value.map((t) => t.display) }]);
 
 const tokenTypeLabel = (token: { isFactory: boolean }) => (token.isFactory ? "Factory" : "Native");
 
@@ -316,6 +404,72 @@ const nftSourceLabel = (cls: { source?: string }) => {
         classes without metadata may not appear until they exist on-chain.
       </p>
     </RcDisclaimer>
+
+    <div class="card">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-base font-semibold text-white flex items-center gap-2">
+          <span>📊</span>
+          <span>Token Analytics</span>
+        </h2>
+        <button class="btn text-xs" :disabled="transferLoading" @click="loadTransferActivity">{{ transferLoading ? 'Syncing…' : 'Refresh' }}</button>
+      </div>
+      <div class="grid gap-4 lg:grid-cols-2">
+        <div class="rounded-2xl border border-emerald-500/30 bg-emerald-500/5 p-4">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <p class="text-xs uppercase tracking-wider text-emerald-200">Holder Distribution</p>
+              <p class="text-sm text-slate-300">Mix of on-chain token types</p>
+            </div>
+            <div class="text-[11px] text-slate-400">Native / Factory / IBC / CW20</div>
+          </div>
+          <div class="grid grid-cols-1 md:grid-cols-2 gap-3 items-center">
+            <ApexChart type="donut" height="220" :options="tokenMixOptions" :series="tokenMixSeries" />
+            <div class="text-xs space-y-2 text-slate-200">
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-emerald-400"></span>Native</span>
+                <span class="font-semibold">{{ stats.native }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-cyan-400"></span>Factory</span>
+                <span class="font-semibold">{{ stats.factory }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-purple-400"></span>IBC</span>
+                <span class="font-semibold">{{ stats.ibc }}</span>
+              </div>
+              <div class="flex items-center justify-between">
+                <span class="flex items-center gap-2"><span class="w-2 h-2 rounded-full bg-amber-400"></span>CW20</span>
+                <span class="font-semibold">{{ stats.cw20 }}</span>
+              </div>
+            </div>
+          </div>
+        </div>
+
+        <div class="rounded-2xl border border-cyan-500/30 bg-cyan-500/5 p-4">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <p class="text-xs uppercase tracking-wider text-cyan-200">Transfer Activity</p>
+              <p class="text-sm text-slate-300">Top tokens by recent transfer volume</p>
+            </div>
+            <div class="text-[11px] text-slate-400">Last ~120 txs</div>
+          </div>
+          <div v-if="transferError" class="text-xs text-rose-300">{{ transferError }}</div>
+          <div v-else>
+            <div v-if="transferLoading" class="text-xs text-slate-400">Syncing transfer activity…</div>
+            <div v-else-if="!topTransferTokens.length" class="text-xs text-slate-400">No transfer data available yet.</div>
+            <div v-else class="space-y-3">
+              <ApexChart type="bar" height="260" :options="transferVolumeOptions" :series="transferVolumeSeries" />
+              <div class="grid grid-cols-2 gap-2 text-xs text-slate-200">
+                <div v-for="token in topTransferTokens" :key="token.denom" class="p-2 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
+                  <div class="font-semibold">{{ token.label }}</div>
+                  <div class="font-mono text-[11px] text-emerald-200">{{ token.display.toLocaleString() }}</div>
+                </div>
+              </div>
+            </div>
+          </div>
+        </div>
+      </div>
+    </div>
 
     <div v-if="error" class="card border border-rose-500/30 bg-rose-500/5 text-rose-200 text-sm">
       {{ error }}
