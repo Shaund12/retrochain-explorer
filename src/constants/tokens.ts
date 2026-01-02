@@ -26,7 +26,7 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     decimals: 6,
     accent: "emerald",
     description: "Primary staking and gas token for RetroChain.",
-    logo: "/RCICOIMAGE.png"
+    logo: "/RCTokenICO1.png"
   },
   udretro: {
     denom: "udretro",
@@ -37,7 +37,7 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     decimals: 6,
     accent: "sky",
     description: "Testnet variant of RETRO for dev deployments.",
-    logo: "/RCICOIMAGE.png"
+    logo: "/RCTokenICO1.png"
   },
   uatom: {
     denom: "uatom",
