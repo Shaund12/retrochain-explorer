@@ -48,7 +48,7 @@ const resolveGameLaunchUrl = (game: any) => {
   // Known built-in hosted games
   if (gid === "retrovaders") return "/arcade/arcade/";
   if (gid === "retronoid") return "/retronoid/retronoid/";
-  if (gid === "retroman") return "/retroman/";
+  if (gid === "retroman") return "/retroman/retroman/";
 
   // API-provided launch URL (if present)
   const direct = (game?.launch_url || game?.play_url || game?.url) as string | undefined;
