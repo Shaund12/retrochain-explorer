@@ -214,22 +214,20 @@ const leaderboardMetrics: PlayerMetric[] = ["spins", "wins", "profit", "max_payo
 const playerLeaderboards = ref<Record<PlayerMetric, PlayerLeaderboardEntry[]>>({} as Record<PlayerMetric, PlayerLeaderboardEntry[]>);
 
 const fetchPlayerLeaderboards = async () => {
-  try {
-    const results = await Promise.all(
-      leaderboardMetrics.map(async (metric) => {
-        const res = await api.get(`/retrochain/slots/v1/leaderboards/${metric}`, { params: { limit: 20 } });
-        const entries = (res.data?.leaderboard || res.data?.entries || []) as PlayerLeaderboardEntry[];
-        return { metric, entries };
-      })
-    );
-    const mapped: Record<PlayerMetric, PlayerLeaderboardEntry[]> = {} as Record<PlayerMetric, PlayerLeaderboardEntry[]>;
-    results.forEach(({ metric, entries }) => {
-      mapped[metric as PlayerMetric] = entries || [];
-    });
-    playerLeaderboards.value = mapped;
-  } catch (err) {
-    partialError.value = true;
+  const mapped: Record<PlayerMetric, PlayerLeaderboardEntry[]> = {} as Record<PlayerMetric, PlayerLeaderboardEntry[]>;
+  for (const metric of leaderboardMetrics) {
+    try {
+      const res = await api.get(`/retrochain/slots/v1/leaderboards/${metric}`, {
+        params: { "pagination.limit": 50 }
+      });
+      const entries = (res.data?.leaderboard || res.data?.entries || []) as PlayerLeaderboardEntry[];
+      mapped[metric] = entries || [];
+    } catch (err) {
+      mapped[metric] = [];
+      partialError.value = true;
+    }
   }
+  playerLeaderboards.value = mapped;
 };
 
 const leaderboardValue = (entry: PlayerLeaderboardEntry, metric: PlayerMetric) => {
