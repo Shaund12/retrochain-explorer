@@ -213,7 +213,7 @@ const formatBps = (value?: string | number | null) => {
             <p class="text-xs uppercase tracking-[0.35em] text-emerald-200">Slots & Randomness</p>
             <h1 class="text-3xl font-bold text-white mt-1 flex items-center gap-3">
               <span>Slots</span>
-              <span class="text-2xl">🎰</span>
+              <span class="text-2xl">&#127920;</span>
             </h1>
             <p class="text-sm text-slate-300 mt-2 max-w-3xl">On-chain dashboard (x/slots)</p>
             <p class="text-[11px] text-slate-400 mt-1">{{ dataAsOf }}</p>
@@ -226,7 +226,7 @@ const formatBps = (value?: string | number | null) => {
               class="btn text-sm flex items-center gap-2 border-emerald-400/60 bg-emerald-500/10 text-emerald-100"
             >
               <span>Play RetroSlots</span>
-              <span class="text-lg">🚀</span>
+              <span class="text-lg">&#128640;</span>
             </a>
           </div>
         </div>
@@ -339,7 +339,7 @@ const formatBps = (value?: string | number | null) => {
             </div>
             <div class="flex items-center justify-between">
               <span class="text-slate-400 text-[11px] uppercase tracking-wider">House address</span>
-              <span class="font-mono text-xs text-emerald-200 break-all">{{ params?.house_address || '�' }}</span>
+              <span class="font-mono text-xs text-emerald-200 break-all">{{ params?.house_address || '—' }}</span>
             </div>
           </div>
         </div>
@@ -378,7 +378,7 @@ const formatBps = (value?: string | number | null) => {
                     {{ row.machine.enabled ? 'Yes' : 'No' }}
                   </span>
                 </td>
-                <td class="font-mono text-xs text-slate-300 break-all">{{ row.machine.developer_address || '�' }}</td>
+                <td class="font-mono text-xs text-slate-300 break-all">{{ row.machine.developer_address || '—' }}</td>
                 <td class="text-slate-100">{{ tokensPerCredit(row.machine) }}</td>
                 <td class="text-slate-100">{{ machinePoolAmount(row) }}</td>
                 <td class="text-slate-100">{{ formatInt(row.stats?.inserts) }}</td>
