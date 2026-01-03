@@ -31,7 +31,7 @@ interface MachineRow {
 const machines = ref<MachineRow[]>([]);
 
 const formatRetro = (input?: string | number | null): string => {
-  if (input === undefined || input === null) return "—";
+  if (input === undefined || input === null) return "â€”";
   try {
     const raw = typeof input === "number" ? BigInt(Math.trunc(input)) : BigInt(input);
     const whole = raw / URETRO_PER_RETRO;
@@ -42,26 +42,26 @@ const formatRetro = (input?: string | number | null): string => {
     fracStr = fracStr.replace(/0+$/, "");
     return `${wholeStr}.${fracStr} RETRO`;
   } catch {
-    return "—";
+    return "â€”";
   }
 };
 
 const formatInt = (value?: string | number | null) => {
-  if (value === undefined || value === null) return "—";
+  if (value === undefined || value === null) return "â€”";
   const num = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(num)) return "—";
+  if (!Number.isFinite(num)) return "â€”";
   return num.toLocaleString();
 };
 
 const formatTime = (value?: string | null) => {
-  if (!value) return "—";
+  if (!value) return "â€”";
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return value;
   return d.toLocaleString();
 };
 
 const dataAsOf = computed(() => {
-  if (!snapshotHeight.value || !snapshotTime.value) return "—";
+  if (!snapshotHeight.value || !snapshotTime.value) return "â€”";
   return `Data as of height ${snapshotHeight.value} (${formatTime(snapshotTime.value)})`;
 });
 
@@ -196,9 +196,9 @@ const tokensPerCredit = (machine: any) => formatRetro(machine?.tokens_per_credit
 const poolAccountBalanceDisplay = computed(() => formatRetro(poolAccountBalance.value));
 
 const formatBps = (value?: string | number | null) => {
-  if (value === undefined || value === null) return "—";
+  if (value === undefined || value === null) return "â€”";
   const num = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(num)) return "—";
+  if (!Number.isFinite(num)) return "â€”";
   return `${num} bps`;
 };
 </script>
@@ -213,7 +213,7 @@ const formatBps = (value?: string | number | null) => {
             <p class="text-xs uppercase tracking-[0.35em] text-emerald-200">Slots & Randomness</p>
             <h1 class="text-3xl font-bold text-white mt-1 flex items-center gap-3">
               <span>Slots</span>
-              <span class="text-2xl">??</span>
+              <span class="text-2xl">ðŸŽ°</span>
             </h1>
             <p class="text-sm text-slate-300 mt-2 max-w-3xl">On-chain dashboard (x/slots)</p>
             <p class="text-[11px] text-slate-400 mt-1">{{ dataAsOf }}</p>
@@ -226,7 +226,7 @@ const formatBps = (value?: string | number | null) => {
               class="btn text-sm flex items-center gap-2 border-emerald-400/60 bg-emerald-500/10 text-emerald-100"
             >
               <span>Play RetroSlots</span>
-              <span class="text-lg">??</span>
+              <span class="text-lg">ðŸš€</span>
             </a>
           </div>
         </div>
@@ -238,7 +238,7 @@ const formatBps = (value?: string | number | null) => {
     </RcDisclaimer>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Syncing slots data…" />
+      <RcLoadingSpinner size="md" text="Syncing slots dataâ€¦" />
     </div>
 
     <template v-else>
@@ -339,7 +339,7 @@ const formatBps = (value?: string | number | null) => {
             </div>
             <div class="flex items-center justify-between">
               <span class="text-slate-400 text-[11px] uppercase tracking-wider">House address</span>
-              <span class="font-mono text-xs text-emerald-200 break-all">{{ params?.house_address || '—' }}</span>
+              <span class="font-mono text-xs text-emerald-200 break-all">{{ params?.house_address || 'ï¿½' }}</span>
             </div>
           </div>
         </div>
@@ -347,7 +347,7 @@ const formatBps = (value?: string | number | null) => {
 
       <div class="card">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-base font-semibold text-white flex items-center gap-2"><span>??</span><span>Slots Machines</span></h2>
+          <h2 class="text-base font-semibold text-white flex items-center gap-2"><span>ðŸŽ°</span><span>Slots Machines</span></h2>
           <span class="text-[11px] text-slate-400">Randomness-backed machines</span>
         </div>
 
@@ -378,7 +378,7 @@ const formatBps = (value?: string | number | null) => {
                     {{ row.machine.enabled ? 'Yes' : 'No' }}
                   </span>
                 </td>
-                <td class="font-mono text-xs text-slate-300 break-all">{{ row.machine.developer_address || '—' }}</td>
+                <td class="font-mono text-xs text-slate-300 break-all">{{ row.machine.developer_address || 'ï¿½' }}</td>
                 <td class="text-slate-100">{{ tokensPerCredit(row.machine) }}</td>
                 <td class="text-slate-100">{{ machinePoolAmount(row) }}</td>
                 <td class="text-slate-100">{{ formatInt(row.stats?.inserts) }}</td>
