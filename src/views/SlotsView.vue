@@ -1,22 +1,206 @@
 <script setup lang="ts">
-import { ref } from "vue";
+import { computed, onMounted, ref } from "vue";
+import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
+import RcDisclaimer from "@/components/RcDisclaimer.vue";
+import { useApi } from "@/composables/useApi";
 
 const retroSlotsUrl = "https://retrochain.ddns.net/slots/slots/";
+const poolAccount = "cosmos18drc5z3lce2al80s2fegsy59rd4j9h05umhvk2";
+const DECIMALS = 6n;
+const URETRO_PER_RETRO = 1_000_000n;
 
-// Live data should come from the on-chain slots/randomness module.
-// Until wired, show only the real RetroSlots entry and empty states.
-const stats = ref<{ totalSpins?: number; totalPayout?: number; rtp?: number; jackpotPool?: number } | null>(null);
-const recentWins = ref<any[]>([]);
-const leaderboard = ref<any[]>([]);
-const machines = ref([
-  {
-    id: "retroslots",
-    name: "RetroSlots (Official)",
-    theme: "Arcade Classic",
-    status: "Live",
-    link: retroSlotsUrl
+const api = useApi();
+
+const loading = ref(true);
+const partialError = ref(false);
+
+const snapshotHeight = ref<string | null>(null);
+const snapshotTime = ref<string | null>(null);
+
+const globalStats = ref<any | null>(null);
+const globalPool = ref<any | null>(null);
+const params = ref<any | null>(null);
+const poolAccountBalance = ref<string | null>(null);
+
+interface MachineRow {
+  machine: any;
+  stats: any | null;
+  pool: any | null;
+}
+
+const machines = ref<MachineRow[]>([]);
+
+const formatRetro = (input?: string | number | null): string => {
+  if (input === undefined || input === null) return "—";
+  try {
+    const raw = typeof input === "number" ? BigInt(Math.trunc(input)) : BigInt(input);
+    const whole = raw / URETRO_PER_RETRO;
+    const frac = raw % URETRO_PER_RETRO;
+    const wholeStr = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    if (frac === 0n) return `${wholeStr} RETRO`;
+    let fracStr = frac.toString().padStart(Number(DECIMALS), "0");
+    fracStr = fracStr.replace(/0+$/, "");
+    return `${wholeStr}.${fracStr} RETRO`;
+  } catch {
+    return "—";
   }
-]);
+};
+
+const formatInt = (value?: string | number | null) => {
+  if (value === undefined || value === null) return "—";
+  const num = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(num)) return "—";
+  return num.toLocaleString();
+};
+
+const formatTime = (value?: string | null) => {
+  if (!value) return "—";
+  const d = new Date(value);
+  if (Number.isNaN(d.getTime())) return value;
+  return d.toLocaleString();
+};
+
+const dataAsOf = computed(() => {
+  if (!snapshotHeight.value || !snapshotTime.value) return "—";
+  return `Data as of height ${snapshotHeight.value} (${formatTime(snapshotTime.value)})`;
+});
+
+const fetchLatestBlock = async () => {
+  try {
+    const res = await api.get(`/cosmos/base/tendermint/v1beta1/blocks/latest`);
+    snapshotHeight.value = res.data?.block?.header?.height ?? null;
+    snapshotTime.value = res.data?.block?.header?.time ?? null;
+  } catch (err) {
+    partialError.value = true;
+  }
+};
+
+const fetchGlobal = async () => {
+  try {
+    const [statsRes, poolRes, paramsRes] = await Promise.all([
+      api.get(`/retrochain/slots/v1/stats`),
+      api.get(`/retrochain/slots/v1/pool`),
+      api.get(`/retrochain/slots/v1/params`).catch(() => null)
+    ]);
+    globalStats.value = statsRes.data?.stats ?? null;
+    globalPool.value = poolRes.data?.pool ?? null;
+    params.value = paramsRes ? paramsRes.data?.params ?? null : null;
+  } catch (err) {
+    partialError.value = true;
+  }
+};
+
+const fetchPoolAccountBalance = async () => {
+  try {
+    const res = await api.get(`/cosmos/bank/v1beta1/balances/${poolAccount}`, {
+      params: { "pagination.limit": "200" }
+    });
+    const balances: Array<{ denom: string; amount: string }> = res.data?.balances ?? [];
+    const retro = balances.find((b) => b.denom === "uretro")?.amount;
+    poolAccountBalance.value = retro ?? "0";
+  } catch (err) {
+    partialError.value = true;
+  }
+};
+
+const fetchMachinesPaged = async (): Promise<any[]> => {
+  const all: any[] = [];
+  let startAfter: string | undefined;
+  try {
+    do {
+      const res = await api.get(`/retrochain/slots/v1/machines`, {
+        params: {
+          enabled_only: true,
+          limit: 200,
+          ...(startAfter ? { start_after: startAfter } : {})
+        }
+      });
+      const machinesPage = res.data?.machines ?? [];
+      if (Array.isArray(machinesPage) && machinesPage.length) {
+        all.push(...machinesPage);
+      }
+      startAfter = res.data?.next_start_after || undefined;
+    } while (startAfter);
+  } catch (err) {
+    partialError.value = true;
+  }
+  return all;
+};
+
+const withLimit = async <T, R>(items: T[], limit: number, worker: (item: T, index: number) => Promise<R>): Promise<R[]> => {
+  const results: R[] = new Array(items.length);
+  let idx = 0;
+
+  const run = async () => {
+    while (true) {
+      const current = idx++;
+      if (current >= items.length) break;
+      try {
+        results[current] = await worker(items[current], current);
+      } catch (err) {
+        partialError.value = true;
+        results[current] = await Promise.resolve(null as unknown as R);
+      }
+    }
+  };
+
+  const workers = Array.from({ length: Math.min(limit, items.length) }, run);
+  await Promise.all(workers);
+  return results;
+};
+
+const fetchMachineDetails = async (machine: any): Promise<MachineRow> => {
+  try {
+    const [statsRes, poolRes] = await Promise.all([
+      api.get(`/retrochain/slots/v1/machines/${machine.machine_id}/stats`).catch(() => ({ data: null })),
+      api.get(`/retrochain/slots/v1/machines/${machine.machine_id}/pool`).catch(() => ({ data: null }))
+    ]);
+    return {
+      machine,
+      stats: statsRes.data?.stats ?? null,
+      pool: poolRes.data?.pool ?? null
+    };
+  } catch (err) {
+    partialError.value = true;
+    return { machine, stats: null, pool: null };
+  }
+};
+
+const loadMachines = async () => {
+  const list = await fetchMachinesPaged();
+  if (!list.length) {
+    machines.value = [];
+    return;
+  }
+  const detailed = await withLimit(list, 10, fetchMachineDetails);
+  machines.value = detailed;
+};
+
+const loadAll = async () => {
+  loading.value = true;
+  partialError.value = false;
+  try {
+    await Promise.all([fetchLatestBlock(), fetchGlobal(), fetchPoolAccountBalance(), loadMachines()]);
+  } finally {
+    loading.value = false;
+  }
+};
+
+onMounted(() => {
+  loadAll();
+});
+
+const machinePoolAmount = (row: MachineRow) => formatRetro(row.pool?.balance?.amount);
+const globalPoolAmount = computed(() => formatRetro(globalPool.value?.balance?.amount));
+const tokensPerCredit = (machine: any) => formatRetro(machine?.tokens_per_credit);
+const poolAccountBalanceDisplay = computed(() => formatRetro(poolAccountBalance.value));
+
+const formatBps = (value?: string | number | null) => {
+  if (value === undefined || value === null) return "—";
+  const num = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(num)) return "—";
+  return `${num} bps`;
+};
 </script>
 
 <template>
@@ -28,17 +212,11 @@ const machines = ref([
           <div>
             <p class="text-xs uppercase tracking-[0.35em] text-emerald-200">Slots & Randomness</p>
             <h1 class="text-3xl font-bold text-white mt-1 flex items-center gap-3">
-              <span>RetroChain Slots Dash</span>
+              <span>Slots</span>
               <span class="text-2xl">??</span>
             </h1>
-            <p class="text-sm text-slate-300 mt-2 max-w-3xl">
-              Live view of the slots and randomness module. Track spins, payouts, RTP, and leaderboard rankings across all slots machines.
-            </p>
-            <div class="flex flex-wrap gap-2 mt-3 text-[11px]">
-              <span class="badge border-emerald-500/40 text-emerald-200 bg-emerald-500/10">?? Chain randomness</span>
-              <span class="badge border-purple-500/40 text-purple-200 bg-purple-500/10">?? RetroSlots ready</span>
-              <span class="badge border-cyan-500/40 text-cyan-200 bg-cyan-500/10">?? Leaderboards</span>
-            </div>
+            <p class="text-sm text-slate-300 mt-2 max-w-3xl">On-chain dashboard (x/slots)</p>
+            <p class="text-[11px] text-slate-400 mt-1">{{ dataAsOf }}</p>
           </div>
           <div class="flex items-center gap-2">
             <a
@@ -55,80 +233,166 @@ const machines = ref([
       </div>
     </div>
 
-    <div class="grid gap-3 md:grid-cols-3">
-      <div class="card border border-emerald-500/40 bg-emerald-500/5">
-        <p class="text-xs uppercase tracking-wider text-emerald-200">On-chain feed</p>
-        <p class="text-3xl font-bold text-white mt-1">Pending</p>
-        <p class="text-[11px] text-emerald-200/70">Slots module metrics will appear once wired</p>
-      </div>
-      <div class="card border border-amber-500/40 bg-amber-500/5">
-        <p class="text-xs uppercase tracking-wider text-amber-200">Payouts</p>
-        <p class="text-3xl font-bold text-white mt-1">—</p>
-        <p class="text-[11px] text-amber-200/70">Pulls directly from chain data</p>
-      </div>
-      <div class="card border border-cyan-500/40 bg-cyan-500/5">
-        <p class="text-xs uppercase tracking-wider text-cyan-200">RTP / Randomness</p>
-        <p class="text-3xl font-bold text-white mt-1">—</p>
-        <p class="text-[11px] text-cyan-200/70">Displayed when randomness feed is live</p>
-      </div>
+    <RcDisclaimer v-if="partialError" type="warning" title="Some data unavailable">
+      <p>One or more slots endpoints could not be loaded. Displaying available data.</p>
+    </RcDisclaimer>
+
+    <div v-if="loading" class="card">
+      <RcLoadingSpinner size="md" text="Syncing slots data…" />
     </div>
 
-    <div class="grid gap-3 lg:grid-cols-3">
-      <div class="card lg:col-span-2">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-base font-semibold text-white flex items-center gap-2"><span>??</span><span>Leaderboard</span></h2>
-          <span class="text-[11px] text-slate-400">Awaiting on-chain feed</span>
+    <template v-else>
+      <div class="grid gap-3 md:grid-cols-3">
+        <div class="card border border-emerald-500/40 bg-emerald-500/5">
+          <p class="text-xs uppercase tracking-wider text-emerald-200">Global Pool</p>
+          <p class="text-2xl font-bold text-white mt-1">{{ globalPoolAmount }}</p>
+          <p class="text-[11px] text-emerald-200/70">Balance (RETRO)</p>
         </div>
-        <div class="text-sm text-slate-400">Leaderboard will populate from the slots module once connected.</div>
+        <div class="card border border-indigo-500/40 bg-indigo-500/5">
+          <p class="text-xs uppercase tracking-wider text-indigo-200">Pool Account</p>
+          <p class="text-2xl font-bold text-white mt-1">{{ poolAccountBalanceDisplay }}</p>
+          <p class="text-[11px] text-indigo-200/70 truncate">{{ poolAccount }}</p>
+        </div>
+        <div class="card border border-cyan-500/40 bg-cyan-500/5">
+          <p class="text-xs uppercase tracking-wider text-cyan-200">Spins / Wins</p>
+          <p class="text-2xl font-bold text-white mt-1">{{ formatInt(globalStats?.spins) }} / {{ formatInt(globalStats?.wins) }}</p>
+          <p class="text-[11px] text-cyan-200/70">Total spins / wins</p>
+        </div>
+        <div class="card border border-amber-500/40 bg-amber-500/5">
+          <p class="text-xs uppercase tracking-wider text-amber-200">Inserts / Credits</p>
+          <p class="text-2xl font-bold text-white mt-1">{{ formatInt(globalStats?.inserts) }} / {{ formatInt(globalStats?.total_credits_purchased) }}</p>
+          <p class="text-[11px] text-amber-200/70">Inserts and credits purchased</p>
+        </div>
+      </div>
+
+      <div class="grid gap-3 md:grid-cols-2">
+        <div class="card">
+          <h2 class="text-base font-semibold text-white mb-2">Global Summary</h2>
+          <div class="grid grid-cols-2 gap-2 text-sm text-slate-200">
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Total Bet</div>
+              <div class="font-semibold">{{ formatRetro(globalStats?.total_bet_uretro) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Total Payout</div>
+              <div class="font-semibold">{{ formatRetro(globalStats?.total_payout_uretro) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Total Tokens Spent</div>
+              <div class="font-semibold">{{ formatRetro(globalStats?.total_tokens_spent_uretro) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Total Pool Added</div>
+              <div class="font-semibold">{{ formatRetro(globalStats?.total_pool_added_uretro) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Total House Sent</div>
+              <div class="font-semibold">{{ formatRetro(globalStats?.total_house_sent_uretro) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Total Burned</div>
+              <div class="font-semibold">{{ formatRetro(globalStats?.total_burned_uretro) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Total Bet Credits</div>
+              <div class="font-semibold">{{ formatInt(globalStats?.total_bet_credits) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Total Lines Played</div>
+              <div class="font-semibold">{{ formatInt(globalStats?.total_lines_played) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Last Insert Height</div>
+              <div class="font-semibold">{{ formatInt(globalStats?.last_insert_height) }}</div>
+            </div>
+            <div>
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Last Spin Height</div>
+              <div class="font-semibold">{{ formatInt(globalStats?.last_spin_height) }}</div>
+            </div>
+          </div>
+        </div>
+
+        <div class="card">
+          <h2 class="text-base font-semibold text-white mb-2">Params</h2>
+          <div class="text-sm text-slate-200 space-y-1">
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px] uppercase tracking-wider">Base credits cost</span>
+              <span class="font-semibold">{{ formatRetro(params?.base_credits_cost) }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px] uppercase tracking-wider">Pool share</span>
+              <span class="font-semibold">{{ formatBps(params?.pool_share_bps) }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px] uppercase tracking-wider">House share</span>
+              <span class="font-semibold">{{ formatBps(params?.house_share_bps) }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px] uppercase tracking-wider">Burn share</span>
+              <span class="font-semibold">{{ formatBps(params?.burn_share_bps) }}</span>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px] uppercase tracking-wider">Pool account</span>
+              <RouterLink :to="{ name: 'account', params: { address: poolAccount } }" class="font-mono text-xs text-emerald-200 break-all hover:underline">
+                {{ poolAccount }}
+              </RouterLink>
+            </div>
+            <div class="flex items-center justify-between">
+              <span class="text-slate-400 text-[11px] uppercase tracking-wider">House address</span>
+              <span class="font-mono text-xs text-emerald-200 break-all">{{ params?.house_address || '—' }}</span>
+            </div>
+          </div>
+        </div>
       </div>
 
       <div class="card">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-base font-semibold text-white flex items-center gap-2"><span>??</span><span>Recent Wins</span></h2>
-          <span class="text-[11px] text-slate-400">Awaiting live feed</span>
+          <h2 class="text-base font-semibold text-white flex items-center gap-2"><span>??</span><span>Slots Machines</span></h2>
+          <span class="text-[11px] text-slate-400">Randomness-backed machines</span>
         </div>
-        <div class="text-sm text-slate-400">Recent wins will appear here once the randomness/slots module feed is wired.</div>
-      </div>
-    </div>
 
-    <div class="card">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-base font-semibold text-white flex items-center gap-2"><span>??</span><span>Slots Machines</span></h2>
-        <span class="text-[11px] text-slate-400">Randomness-backed machines</span>
-      </div>
-      <div class="grid gap-3 md:grid-cols-3">
-        <div
-          v-for="machine in machines"
-          :key="machine.id"
-          class="p-4 rounded-2xl border border-white/10 bg-white/5 flex flex-col gap-2"
-        >
-          <div class="flex items-center justify-between">
-            <div>
-              <p class="text-sm font-semibold text-white">{{ machine.name }}</p>
-              <p class="text-[11px] text-slate-400">{{ machine.theme }}</p>
-            </div>
-            <span
-              class="badge text-[11px]"
-              :class="machine.status === 'Live' ? 'border-emerald-400/60 text-emerald-200' : 'border-amber-400/60 text-amber-200'"
-            >
-              {{ machine.status }}
-            </span>
-          </div>
-          <div class="text-xs text-slate-300 flex items-center justify-between">
-            <span>Live data will display once connected</span>
-          </div>
-          <div class="flex items-center justify-between mt-2">
-            <span class="text-[11px] text-slate-400">Chain-secured randomness</span>
-            <a
-              v-if="machine.link"
-              :href="machine.link"
-              target="_blank"
-              rel="noopener noreferrer"
-              class="btn text-xs"
-            >Play</a>
-          </div>
+        <div v-if="!machines.length" class="text-sm text-slate-400">No machines registered.</div>
+        <div v-else class="overflow-x-auto">
+          <table class="table">
+            <thead>
+              <tr class="text-xs text-slate-400">
+                <th>Machine ID</th>
+                <th>Enabled</th>
+                <th>Developer</th>
+                <th>Tokens / Credit</th>
+                <th>Pool</th>
+                <th>Inserts</th>
+                <th>Spins</th>
+                <th>Wins</th>
+                <th>Total Bet</th>
+                <th>Total Payout</th>
+                <th>Last Insert</th>
+                <th>Last Spin</th>
+              </tr>
+            </thead>
+            <tbody>
+              <tr v-for="row in machines" :key="row.machine.machine_id" class="text-sm">
+                <td class="font-mono text-xs text-slate-200">{{ row.machine.machine_id }}</td>
+                <td>
+                  <span class="badge text-[11px]" :class="row.machine.enabled ? 'border-emerald-400/60 text-emerald-200' : 'border-rose-400/60 text-rose-200'">
+                    {{ row.machine.enabled ? 'Yes' : 'No' }}
+                  </span>
+                </td>
+                <td class="font-mono text-xs text-slate-300 break-all">{{ row.machine.developer_address || '—' }}</td>
+                <td class="text-slate-100">{{ tokensPerCredit(row.machine) }}</td>
+                <td class="text-slate-100">{{ machinePoolAmount(row) }}</td>
+                <td class="text-slate-100">{{ formatInt(row.stats?.inserts) }}</td>
+                <td class="text-slate-100">{{ formatInt(row.stats?.spins) }}</td>
+                <td class="text-slate-100">{{ formatInt(row.stats?.wins) }}</td>
+                <td class="text-slate-100">{{ formatRetro(row.stats?.total_bet_uretro) }}</td>
+                <td class="text-slate-100">{{ formatRetro(row.stats?.total_payout_uretro) }}</td>
+                <td class="text-slate-100">{{ formatInt(row.stats?.last_insert_height) }}</td>
+                <td class="text-slate-100">{{ formatInt(row.stats?.last_spin_height) }}</td>
+              </tr>
+            </tbody>
+          </table>
         </div>
       </div>
-    </div>
+    </template>
   </div>
 </template>
