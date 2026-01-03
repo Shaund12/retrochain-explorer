@@ -194,6 +194,68 @@ const machinePoolAmount = (row: MachineRow) => formatRetro(row.pool?.balance?.am
 const globalPoolAmount = computed(() => formatRetro(globalPool.value?.balance?.amount));
 const tokensPerCredit = (machine: any) => formatRetro(machine?.tokens_per_credit);
 const poolAccountBalanceDisplay = computed(() => formatRetro(poolAccountBalance.value));
+const machineLeaderboard = computed(() => {
+  return machines.value
+    .filter((m) => m.stats)
+    .map((m) => ({
+      id: m.machine?.machine_id,
+      spins: Number(m.stats?.spins ?? 0),
+      wins: Number(m.stats?.wins ?? 0),
+      bet: m.stats?.total_bet_uretro,
+      payout: m.stats?.total_payout_uretro
+    }))
+    .sort((a, b) => b.spins - a.spins)
+    .slice(0, 10);
+});
+
+const sumBigInt = (values: Array<string | number | null | undefined>) => {
+  return values.reduce((acc, v) => {
+    if (v === null || v === undefined) return acc;
+    try {
+      const b = typeof v === "number" ? BigInt(Math.trunc(v)) : BigInt(v);
+      return acc + b;
+    } catch {
+      return acc;
+    }
+  }, 0n);
+};
+
+const machineCount = computed(() => machines.value.length);
+const enabledMachineCount = computed(() => machines.value.filter((m) => m.machine?.enabled).length);
+const totalMachinePool = computed(() => {
+  const sum = sumBigInt(machines.value.map((m) => m.pool?.balance?.amount));
+  return formatRetro(sum.toString());
+});
+const totalMachineBet = computed(() => {
+  const sum = sumBigInt(machines.value.map((m) => m.stats?.total_bet_uretro));
+  return formatRetro(sum.toString());
+});
+const totalMachinePayout = computed(() => {
+  const sum = sumBigInt(machines.value.map((m) => m.stats?.total_payout_uretro));
+  return formatRetro(sum.toString());
+});
+
+const bestMachine = computed(() => machineLeaderboard.value[0]);
+const machineSpotlight = computed(() => {
+  if (!bestMachine.value) return null;
+  const row = machines.value.find((m) => m.machine?.machine_id === bestMachine.value?.id);
+  return row || null;
+});
+
+const topPayoutMachines = computed(() => {
+  return machines.value
+    .filter((m) => m.stats)
+    .map((m) => ({
+      id: m.machine?.machine_id,
+      payout: m.stats?.total_payout_uretro ?? "0",
+      bet: m.stats?.total_bet_uretro ?? "0",
+      spins: Number(m.stats?.spins ?? 0)
+    }))
+    .sort((a, b) => Number(b.payout || 0) - Number(a.payout || 0))
+    .slice(0, 3);
+});
+
+const headToHead = computed(() => machineLeaderboard.value.slice(0, 2));
 
 const formatBps = (value?: string | number | null) => {
   if (value === undefined || value === null) return "—";
@@ -262,6 +324,140 @@ const formatBps = (value?: string | number | null) => {
           <p class="text-xs uppercase tracking-wider text-amber-200">Inserts / Credits</p>
           <p class="text-2xl font-bold text-white mt-1">{{ formatInt(globalStats?.inserts) }} / {{ formatInt(globalStats?.total_credits_purchased) }}</p>
           <p class="text-[11px] text-amber-200/70">Inserts and credits purchased</p>
+        </div>
+      </div>
+
+      <div class="grid gap-3 md:grid-cols-4">
+        <div class="card border border-emerald-400/40 bg-emerald-500/5">
+          <p class="text-[11px] uppercase tracking-wider text-emerald-200">Machines</p>
+          <p class="text-2xl font-bold text-white">{{ machineCount }}</p>
+          <p class="text-[11px] text-emerald-200/70">Enabled: {{ enabledMachineCount }}</p>
+        </div>
+        <div class="card border border-indigo-400/40 bg-indigo-500/5">
+          <p class="text-[11px] uppercase tracking-wider text-indigo-200">Total Machine Pool</p>
+          <p class="text-xl font-bold text-white">{{ totalMachinePool }}</p>
+          <p class="text-[11px] text-indigo-200/70">Sum of machine pools</p>
+        </div>
+        <div class="card border border-cyan-400/40 bg-cyan-500/5">
+          <p class="text-[11px] uppercase tracking-wider text-cyan-200">Total Bet</p>
+          <p class="text-xl font-bold text-white">{{ totalMachineBet }}</p>
+          <p class="text-[11px] text-cyan-200/70">All machines combined</p>
+        </div>
+        <div class="card border border-amber-400/40 bg-amber-500/5">
+          <p class="text-[11px] uppercase tracking-wider text-amber-200">Total Payout</p>
+          <p class="text-xl font-bold text-white">{{ totalMachinePayout }}</p>
+          <p class="text-[11px] text-amber-200/70">All machines combined</p>
+        </div>
+      </div>
+
+      <div class="card" v-if="machineSpotlight">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-base font-semibold text-white">Top Machine Spotlight</h2>
+          <span class="text-[11px] text-slate-400">Most spins</span>
+        </div>
+        <div class="flex flex-col gap-2 text-sm text-slate-200">
+          <div class="flex items-center justify-between">
+            <div class="font-mono text-xs text-emerald-200 truncate">{{ machineSpotlight.machine?.machine_id }}</div>
+            <span class="badge text-[11px]" :class="machineSpotlight.machine?.enabled ? 'border-emerald-400/60 text-emerald-200' : 'border-rose-400/60 text-rose-200'">
+              {{ machineSpotlight.machine?.enabled ? 'Enabled' : 'Disabled' }}
+            </span>
+          </div>
+          <div class="grid grid-cols-2 md:grid-cols-4 gap-2 text-[11px]">
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="text-slate-400">Spins</div>
+              <div class="text-white font-semibold">{{ formatInt(machineSpotlight.stats?.spins) }}</div>
+            </div>
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="text-slate-400">Wins</div>
+              <div class="text-white font-semibold">{{ formatInt(machineSpotlight.stats?.wins) }}</div>
+            </div>
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="text-slate-400">Bet</div>
+              <div class="text-white font-semibold">{{ formatRetro(machineSpotlight.stats?.total_bet_uretro) }}</div>
+            </div>
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+              <div class="text-slate-400">Payout</div>
+              <div class="text-white font-semibold">{{ formatRetro(machineSpotlight.stats?.total_payout_uretro) }}</div>
+            </div>
+          </div>
+        </div>
+      </div>
+
+      <div class="grid gap-3 md:grid-cols-2">
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-base font-semibold text-white">Slots Leaderboard</h2>
+            <span class="text-[11px] text-slate-400">Top by spins</span>
+          </div>
+          <div v-if="!machineLeaderboard.length" class="text-xs text-slate-400">No leaderboard data yet.</div>
+          <div v-else class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr class="text-xs text-slate-400">
+                  <th>#</th>
+                  <th>Machine</th>
+                  <th>Spins</th>
+                  <th>Wins</th>
+                  <th>Total Bet</th>
+                  <th>Total Payout</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(entry, idx) in machineLeaderboard" :key="entry.id" class="text-sm">
+                  <td class="font-mono text-xs text-slate-300">{{ idx + 1 }}</td>
+                  <td class="font-mono text-xs text-slate-200">{{ entry.id || '—' }}</td>
+                  <td class="text-slate-100">{{ formatInt(entry.spins) }}</td>
+                  <td class="text-slate-100">{{ formatInt(entry.wins) }}</td>
+                  <td class="text-slate-100">{{ formatRetro(entry.bet) }}</td>
+                  <td class="text-slate-100">{{ formatRetro(entry.payout) }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-base font-semibold text-white">Battles</h2>
+            <span class="text-[11px] text-slate-400">Head-to-head top 2</span>
+          </div>
+          <div v-if="headToHead.length < 2" class="text-xs text-slate-400">Need at least two machines with stats.</div>
+          <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div
+              v-for="entry in headToHead"
+              :key="entry.id"
+              class="p-3 rounded-lg bg-slate-900/60 border border-white/10"
+            >
+              <div class="flex items-center justify-between">
+                <div class="text-sm font-semibold text-white">{{ entry.id || '—' }}</div>
+                <span class="badge text-[11px] border-emerald-400/60 text-emerald-200">{{ formatInt(entry.spins) }} spins</span>
+              </div>
+              <div class="text-[11px] text-slate-400">Wins: {{ formatInt(entry.wins) }}</div>
+              <div class="text-[11px] text-emerald-200">Payout: {{ formatRetro(entry.payout) }}</div>
+              <div class="text-[11px] text-cyan-200">Bet: {{ formatRetro(entry.bet) }}</div>
+            </div>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-500">Ranked by spins; compare top machines head-to-head.</div>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-base font-semibold text-white">Top Payout Machines</h2>
+          <span class="text-[11px] text-slate-400">Top 3 by total payout</span>
+        </div>
+        <div v-if="!topPayoutMachines.length" class="text-xs text-slate-400">No payout data yet.</div>
+        <div v-else class="grid gap-2 md:grid-cols-3">
+          <div
+            v-for="entry in topPayoutMachines"
+            :key="entry.id"
+            class="p-3 rounded-lg bg-white/5 border border-white/10"
+          >
+            <div class="text-sm font-semibold text-white truncate">{{ entry.id || '—' }}</div>
+            <div class="text-[11px] text-emerald-200">Payout: {{ formatRetro(entry.payout) }}</div>
+            <div class="text-[11px] text-cyan-200">Bet: {{ formatRetro(entry.bet) }}</div>
+            <div class="text-[11px] text-slate-400">Spins: {{ formatInt(entry.spins) }}</div>
+          </div>
         </div>
       </div>
 
