@@ -208,6 +208,51 @@ const machineLeaderboard = computed(() => {
     .slice(0, 10);
 });
 
+type PlayerMetric = "spins" | "wins" | "profit" | "max_payout" | "pool_funded";
+type PlayerLeaderboardEntry = Record<string, any> & { player?: string; rank?: number };
+const leaderboardMetrics: PlayerMetric[] = ["spins", "wins", "profit", "max_payout", "pool_funded"];
+const playerLeaderboards = ref<Record<PlayerMetric, PlayerLeaderboardEntry[]>>({} as Record<PlayerMetric, PlayerLeaderboardEntry[]>);
+
+const fetchPlayerLeaderboards = async () => {
+  try {
+    const results = await Promise.all(
+      leaderboardMetrics.map(async (metric) => {
+        const res = await api.get(`/retrochain/slots/v1/leaderboards/${metric}`, { params: { limit: 20 } });
+        const entries = (res.data?.leaderboard || res.data?.entries || []) as PlayerLeaderboardEntry[];
+        return { metric, entries };
+      })
+    );
+    const mapped: Record<PlayerMetric, PlayerLeaderboardEntry[]> = {} as Record<PlayerMetric, PlayerLeaderboardEntry[]>;
+    results.forEach(({ metric, entries }) => {
+      mapped[metric as PlayerMetric] = entries || [];
+    });
+    playerLeaderboards.value = mapped;
+  } catch (err) {
+    partialError.value = true;
+  }
+};
+
+const leaderboardValue = (entry: PlayerLeaderboardEntry, metric: PlayerMetric) => {
+  const value = entry?.[metric] ?? entry?.value ?? entry?.amount ?? null;
+  if (value === null || value === undefined) return "—";
+  if (["profit", "max_payout", "pool_funded"].includes(metric)) {
+    return formatRetro(value as any);
+  }
+  return formatInt(value as any);
+};
+
+const spinsLeaderboard = computed(() => playerLeaderboards.value.spins || []);
+const winsLeaderboard = computed(() => playerLeaderboards.value.wins || []);
+const profitLeaderboard = computed(() => playerLeaderboards.value.profit || []);
+const playerBattles = computed(() => spinsLeaderboard.value.slice(0, 2));
+
+const shortAddr = (addr?: string, size = 14) => {
+  if (!addr) return "—";
+  if (addr.length <= size) return addr;
+  const half = Math.max(3, Math.floor((size - 3) / 2));
+  return `${addr.slice(0, half)}...${addr.slice(-half)}`;
+};
+
 const sumBigInt = (values: Array<string | number | null | undefined>) => {
   return values.reduce((acc, v) => {
     if (v === null || v === undefined) return acc;
@@ -458,6 +503,62 @@ const formatBps = (value?: string | number | null) => {
             <div class="text-[11px] text-cyan-200">Bet: {{ formatRetro(entry.bet) }}</div>
             <div class="text-[11px] text-slate-400">Spins: {{ formatInt(entry.spins) }}</div>
           </div>
+        </div>
+      </div>
+
+      <div class="grid gap-3 md:grid-cols-2">
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-base font-semibold text-white">Player Leaderboard</h2>
+            <span class="text-[11px] text-slate-400">Top spins</span>
+          </div>
+          <div v-if="!spinsLeaderboard.length" class="text-xs text-slate-400">No player leaderboard data.</div>
+          <div v-else class="overflow-x-auto">
+            <table class="table">
+              <thead>
+                <tr class="text-xs text-slate-400">
+                  <th>#</th>
+                  <th>Player</th>
+                  <th>Spins</th>
+                  <th>Wins</th>
+                  <th>Profit</th>
+                </tr>
+              </thead>
+              <tbody>
+                <tr v-for="(entry, idx) in spinsLeaderboard" :key="entry.player || idx" class="text-sm">
+                  <td class="font-mono text-xs text-slate-300">{{ entry.rank ?? idx + 1 }}</td>
+                  <td class="font-mono text-xs text-emerald-200 break-all">{{ shortAddr(entry.player) }}</td>
+                  <td class="text-slate-100">{{ leaderboardValue(entry, 'spins') }}</td>
+                  <td class="text-slate-100">{{ entry.wins !== undefined ? formatInt(entry.wins) : leaderboardValue(entry, 'wins') }}</td>
+                  <td class="text-emerald-200">{{ leaderboardValue(entry, 'profit') }}</td>
+                </tr>
+              </tbody>
+            </table>
+          </div>
+        </div>
+
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-base font-semibold text-white">Player Battles</h2>
+            <span class="text-[11px] text-slate-400">Top 2 by spins</span>
+          </div>
+          <div v-if="playerBattles.length < 2" class="text-xs text-slate-400">Need at least two players.</div>
+          <div v-else class="grid grid-cols-1 sm:grid-cols-2 gap-2">
+            <div
+              v-for="entry in playerBattles"
+              :key="entry.player"
+              class="p-3 rounded-lg bg-slate-900/60 border border-white/10"
+            >
+              <div class="flex items-center justify-between">
+                <div class="text-sm font-semibold text-white">{{ shortAddr(entry.player) }}</div>
+                <span class="badge text-[11px] border-emerald-400/60 text-emerald-200">{{ leaderboardValue(entry, 'spins') }} spins</span>
+              </div>
+              <div class="text-[11px] text-slate-400">Wins: {{ leaderboardValue(entry, 'wins') }}</div>
+              <div class="text-[11px] text-emerald-200">Profit: {{ leaderboardValue(entry, 'profit') }}</div>
+              <div class="text-[11px] text-cyan-200">Max payout: {{ leaderboardValue(entry, 'max_payout') }}</div>
+            </div>
+          </div>
+          <div class="mt-2 text-[11px] text-slate-500">Powered by /leaderboards/{spins,wins,profit,max_payout,pool_funded}.</div>
         </div>
       </div>
 
