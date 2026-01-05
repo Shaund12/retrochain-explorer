@@ -609,7 +609,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
           <span class="text-emerald-300 font-semibold">Mainnet is live</span> — welcome to RetroChain! 🚀
         </div>
         <div class="flex items-center gap-2">
-          <a href="/api/cosmos/base/tendermint/v1beta1/node_info" class="btn text-xs">Node Info</a>
+          <button class="btn text-xs" @click="router.push({ name: 'node-info' })">Node Info</button>
         </div>
       </div>
     </div>

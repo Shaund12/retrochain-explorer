@@ -1,5 +1,6 @@
 import { createRouter, createWebHistory, RouteRecordRaw } from "vue-router";
 import HomeView from "@/views/HomeView.vue";
+import NodeInfoView from "@/views/NodeInfoView.vue";
 import BlocksView from "@/views/BlocksView.vue";
 import BlockDetailView from "@/views/BlockDetailView.vue";
 import TxsView from "@/views/TxsView.vue";
@@ -54,6 +55,7 @@ const slotsEnabled = import.meta.env.VITE_ENABLE_SLOTS === "true";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", name: "home", component: HomeView, meta: { title: "Home" } },
+  { path: "/node-info", name: "node-info", component: NodeInfoView, meta: { title: "Node Info" } },
   { path: "/blocks", name: "blocks", component: BlocksView, meta: { title: "Blocks" } },
   { path: "/blocks/:height", name: "block-detail", component: BlockDetailView, props: true, meta: { title: "Block" } },
   { path: "/txs", name: "txs", component: TxsView, meta: { title: "Transactions" } },
