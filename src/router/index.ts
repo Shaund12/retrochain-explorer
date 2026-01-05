@@ -50,6 +50,7 @@ import LauncherDetailView from "@/views/LauncherDetailView.vue";
 import LauncherCreateView from "@/views/LauncherCreateView.vue";
 
 const launcherEnabled = import.meta.env.VITE_ENABLE_LAUNCHER === "true";
+const slotsEnabled = import.meta.env.VITE_ENABLE_SLOTS === "true";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", name: "home", component: HomeView, meta: { title: "Home" } },
@@ -71,7 +72,6 @@ const routes: RouteRecordRaw[] = [
   { path: "/ibc-info", name: "ibc-info", component: IbcInfoView },
   { path: "/arcadedash", name: "arcade", component: ArcadeView },
   { path: "/arcade", redirect: { name: "arcade" } },
-  { path: "/slots", name: "slots", component: SlotsView, meta: { title: "Slots Dash" } },
   { path: "/battlepoints", name: "battlepoints", component: BattlePointsView, meta: { title: "Battle Points" } },
   { path: "/battlepoints/tracker", name: "battlepoints-tracker", component: BattlePointsTrackerView, meta: { title: "Battle Points Tracker" } },
   { path: "/tokens", name: "tokens", component: TokensView },
@@ -100,6 +100,12 @@ const routes: RouteRecordRaw[] = [
   { path: "/api-test", name: "api-test", component: ApiTestView },
   { path: "/:pathMatch(.*)*", name: "not-found", component: NotFoundView, meta: { title: "Not Found" } }
 ];
+
+if (slotsEnabled) {
+  routes.splice(routes.length - 1, 0,
+    { path: "/slots", name: "slots", component: SlotsView, meta: { title: "Slots Dash" } }
+  );
+}
 
 if (launcherEnabled) {
   routes.splice(routes.length - 1, 0,

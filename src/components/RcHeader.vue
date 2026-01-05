@@ -417,6 +417,7 @@ interface NavGroup {
 type NavItem = NavLink | NavGroup;
 
 const launcherEnabled = import.meta.env.VITE_ENABLE_LAUNCHER === "true";
+const slotsEnabled = import.meta.env.VITE_ENABLE_SLOTS === "true";
 
 const navItems: NavItem[] = [
   { label: "Overview", to: { name: "home" } },
@@ -424,7 +425,7 @@ const navItems: NavItem[] = [
     label: "Arcade",
     items: [
       { label: "Arcade Dashboard", to: { name: "arcade" } },
-      { label: "Slots Dash", to: { name: "slots" } },
+      ...(slotsEnabled ? [{ label: "Slots Dash", to: { name: "slots" } }] : []),
       ...(launcherEnabled ? [{ label: "Launcher", to: { name: "launcher" } }] : []),
       { label: "Battle Points Tracker", to: { name: "battlepoints-tracker" } },
       { label: "Battle Points Store", to: { name: "battlepoints" } }
