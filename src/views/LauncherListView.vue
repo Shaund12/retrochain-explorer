@@ -109,8 +109,9 @@ const gotoDetail = (denom?: string) => {
               Browse RetroChain token launches (x/launcher). Newest first, live prices from on-chain reserves.
             </p>
           </div>
-          <div class="text-[11px] text-slate-400">
-            Powered by /retrochain/launcher/v1/launches
+          <div class="flex items-center gap-3 text-[11px] text-slate-400">
+            <button class="btn text-xs" @click="router.push({ name: 'launcher-create' })">Create Launch</button>
+            <span>Powered by /retrochain/launcher/v1/launches</span>
           </div>
         </div>
       </div>

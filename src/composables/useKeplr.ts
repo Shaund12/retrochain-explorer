@@ -544,6 +544,62 @@ const retroDexTypes: ReadonlyArray<[string, GeneratedType]> = [
   ["/retrochain.dex.v1.MsgPlaceLimitOrder", MsgPlaceLimitOrderType]
 ];
 
+// --- Launcher message types ---
+interface MsgCreateLaunch {
+  creator: string;
+  subdenom: string;
+  maxSupply?: string;
+  graduationReserveUretro?: string;
+}
+
+const MsgCreateLaunchType: GeneratedType = {
+  encode(message: MsgCreateLaunch, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.creator) writer.uint32(10).string(message.creator);
+    if (message.subdenom) writer.uint32(18).string(message.subdenom);
+    if (message.maxSupply) writer.uint32(26).string(message.maxSupply);
+    if (message.graduationReserveUretro) writer.uint32(34).string(message.graduationReserveUretro);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgCreateLaunch {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgCreateLaunch = { creator: "", subdenom: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.creator = reader.string();
+          break;
+        case 2:
+          message.subdenom = reader.string();
+          break;
+        case 3:
+          message.maxSupply = reader.string();
+          break;
+        case 4:
+          message.graduationReserveUretro = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgCreateLaunch>): MsgCreateLaunch {
+    return {
+      creator: object.creator ?? "",
+      subdenom: object.subdenom ?? "",
+      maxSupply: object.maxSupply ?? undefined,
+      graduationReserveUretro: object.graduationReserveUretro ?? undefined
+    };
+  }
+};
+
+const retroLauncherTypes: ReadonlyArray<[string, GeneratedType]> = [
+  ["/retrochain.launcher.v1.MsgCreateLaunch", MsgCreateLaunchType]
+];
+
 function buildChainInfo() {
   // Build absolute URLs - Keplr requires full URIs
   const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
@@ -708,7 +764,7 @@ export function useKeplr() {
       const signerAddress = accounts[0].address;
       const signerPubkey = accounts[0].pubkey;
 
-      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes, ...retroDexTypes]);
+      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes, ...retroDexTypes, ...retroLauncherTypes]);
       const anyMsgs = msgs.map((msg) => registry.encodeAsAny(msg));
       const txBody = TxBody.fromPartial({ messages: anyMsgs, memo: memo || "" });
       const txBodyBytes = TxBody.encode(txBody).finish();
