@@ -180,7 +180,7 @@ const loadAll = async () => {
   loading.value = true;
   partialError.value = false;
   try {
-    await Promise.all([fetchLatestBlock(), fetchGlobal(), fetchPoolAccountBalance(), loadMachines()]);
+    await Promise.all([fetchLatestBlock(), fetchGlobal(), fetchPoolAccountBalance(), loadMachines(), fetchPlayerLeaderboards()]);
   } finally {
     loading.value = false;
   }

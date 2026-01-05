@@ -423,6 +423,7 @@ const navItems: NavItem[] = [
     items: [
       { label: "Arcade Dashboard", to: { name: "arcade" } },
       { label: "Slots Dash", to: { name: "slots" } },
+      { label: "Launcher", to: { name: "launcher" } },
       { label: "Battle Points Tracker", to: { name: "battlepoints-tracker" } },
       { label: "Battle Points Store", to: { name: "battlepoints" } }
     ]

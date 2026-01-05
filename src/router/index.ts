@@ -45,6 +45,8 @@ import SwaggerDocsView from "@/views/SwaggerDocsView.vue";
 import BattlePointsView from "@/views/BattlePointsView.vue";
 import BattlePointsTrackerView from "@/views/BattlePointsTrackerView.vue";
 import SlotsView from "@/views/SlotsView.vue";
+import LauncherListView from "@/views/LauncherListView.vue";
+import LauncherDetailView from "@/views/LauncherDetailView.vue";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", name: "home", component: HomeView, meta: { title: "Home" } },
@@ -67,6 +69,8 @@ const routes: RouteRecordRaw[] = [
   { path: "/arcadedash", name: "arcade", component: ArcadeView },
   { path: "/arcade", redirect: { name: "arcade" } },
   { path: "/slots", name: "slots", component: SlotsView, meta: { title: "Slots Dash" } },
+  { path: "/launcher", name: "launcher", component: LauncherListView, meta: { title: "Launcher" } },
+  { path: "/launcher/:denom", name: "launcher-detail", component: LauncherDetailView, props: true, meta: { title: "Launcher" } },
   { path: "/battlepoints", name: "battlepoints", component: BattlePointsView, meta: { title: "Battle Points" } },
   { path: "/battlepoints/tracker", name: "battlepoints-tracker", component: BattlePointsTrackerView, meta: { title: "Battle Points Tracker" } },
   { path: "/tokens", name: "tokens", component: TokensView },
