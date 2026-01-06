@@ -27,8 +27,8 @@ body {
 
 .card-soft {
   border-radius: 0.75rem;
-  border: 1px solid rgba(99, 102, 241, 0.2);
-  background: linear-gradient(to bottom right, rgba(99, 102, 241, 0.05), rgba(139, 92, 246, 0.05));
+  border: 1px solid rgba(14, 165, 233, 0.25);
+  background: linear-gradient(to bottom right, rgba(14, 165, 233, 0.08), rgba(16, 185, 129, 0.08));
   backdrop-filter: blur(8px);
   padding: 1.5rem;
 }
@@ -64,15 +64,15 @@ body {
 }
 
 .btn-primary {
-  background: linear-gradient(to right, #4f46e5, #7c3aed);
+  background: linear-gradient(to right, #0ea5e9, #10b981);
   border: 0;
   color: white;
-  box-shadow: 0 4px 15px rgba(99, 102, 241, 0.3);
+  box-shadow: 0 4px 15px rgba(14, 165, 233, 0.3);
 }
 
 .btn-primary:hover:not(:disabled) {
-  background: linear-gradient(to right, #6366f1, #8b5cf6);
-  box-shadow: 0 6px 20px rgba(99, 102, 241, 0.4);
+  background: linear-gradient(to right, #22d3ee, #34d399);
+  box-shadow: 0 6px 20px rgba(34, 211, 238, 0.4);
 }
 
 /* Badges */
@@ -198,6 +198,45 @@ body {
   width: 10px;
   height: 10px;
 }
+
+/* Override legacy purple accents to teal/cyan/emerald palette to remove purple sitewide */
+.text-purple-100 { color: #ccfbf1 !important; }
+.text-purple-200 { color: #99f6e4 !important; }
+.text-purple-300 { color: #67e8f9 !important; }
+.text-purple-400 { color: #22d3ee !important; }
+.text-purple-500 { color: #06b6d4 !important; }
+.text-purple-600 { color: #0891b2 !important; }
+
+.border-purple-100 { border-color: rgba(204, 251, 241, 0.7) !important; }
+.border-purple-200 { border-color: rgba(153, 246, 228, 0.7) !important; }
+.border-purple-300 { border-color: rgba(103, 232, 249, 0.7) !important; }
+.border-purple-400 { border-color: rgba(34, 211, 238, 0.7) !important; }
+.border-purple-500 { border-color: rgba(6, 182, 212, 0.7) !important; }
+.border-purple-600 { border-color: rgba(8, 145, 178, 0.7) !important; }
+
+.bg-purple-500\/5 { background-color: rgba(6, 182, 212, 0.05) !important; }
+.bg-purple-500\/10 { background-color: rgba(6, 182, 212, 0.10) !important; }
+.bg-purple-500\/15 { background-color: rgba(6, 182, 212, 0.15) !important; }
+.bg-purple-500\/20 { background-color: rgba(6, 182, 212, 0.20) !important; }
+
+.border-purple-400\/70 { border-color: rgba(34, 211, 238, 0.7) !important; }
+.border-purple-400\/40 { border-color: rgba(34, 211, 238, 0.4) !important; }
+.border-purple-400\/20 { border-color: rgba(34, 211, 238, 0.2) !important; }
+.border-purple-500\/70 { border-color: rgba(6, 182, 212, 0.7) !important; }
+.border-purple-500\/40 { border-color: rgba(6, 182, 212, 0.4) !important; }
+.border-purple-500\/20 { border-color: rgba(6, 182, 212, 0.2) !important; }
+
+.from-purple-500\/15 { --tw-gradient-from: rgba(6, 182, 212, 0.15) !important; --tw-gradient-to: rgba(6, 182, 212, 0); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.via-purple-500\/15 { --tw-gradient-stops: var(--tw-gradient-from), rgba(6, 182, 212, 0.15), var(--tw-gradient-to) !important; }
+.to-purple-500\/15 { --tw-gradient-to: rgba(6, 182, 212, 0.15) !important; }
+
+.from-purple-500\/10 { --tw-gradient-from: rgba(6, 182, 212, 0.10) !important; --tw-gradient-to: rgba(6, 182, 212, 0); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.via-purple-500\/10 { --tw-gradient-stops: var(--tw-gradient-from), rgba(6, 182, 212, 0.10), var(--tw-gradient-to) !important; }
+.to-purple-500\/10 { --tw-gradient-to: rgba(6, 182, 212, 0.10) !important; }
+
+.from-purple-500\/5 { --tw-gradient-from: rgba(6, 182, 212, 0.05) !important; --tw-gradient-to: rgba(6, 182, 212, 0); --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.via-purple-500\/5 { --tw-gradient-stops: var(--tw-gradient-from), rgba(6, 182, 212, 0.05), var(--tw-gradient-to) !important; }
+.to-purple-500\/5 { --tw-gradient-to: rgba(6, 182, 212, 0.05) !important; }
 
 ::-webkit-scrollbar-track {
   background: rgba(15, 23, 42, 0.5);
