@@ -61,11 +61,6 @@ const resolveGameLaunchUrl = (game: any) => {
 const playSelectedGame = () => {
   const url = resolveGameLaunchUrl(selectedGame.value);
   if (!url) return;
-  // Use router only for internal paths
-  if (url.startsWith("/")) {
-    window.location.href = url;
-    return;
-  }
   window.open(url, "_blank", "noopener");
 };
 
@@ -89,6 +84,7 @@ const achievementsList = computed(() => (Array.isArray(achievements.value) ? ach
 const refreshing = ref(false);
 const showSpaceInvadersNotice = ref(true);
 const spaceInvadersNoticeKey = "space-invaders-beta-dismissed";
+const gamesSection = ref<HTMLElement | null>(null);
 
 const enableRetroVaders = import.meta.env.VITE_ARCADE_GAME_RETROVADERS_ENABLED !== 'false';
 const enableRetroNoid = import.meta.env.VITE_ARCADE_GAME_RETRONOID_ENABLED !== 'false';
@@ -460,6 +456,13 @@ const dismissSpaceInvadersNotice = () => {
   try {
     localStorage.setItem(spaceInvadersNoticeKey, "true");
   } catch {}
+};
+
+const scrollToGames = () => {
+  const el = gamesSection.value;
+  if (el?.scrollIntoView) {
+    el.scrollIntoView({ behavior: "smooth", block: "start" });
+  }
 };
 
 const shortAddr = (addr?: string, size = 12) => {
@@ -1154,10 +1157,14 @@ const myStreakRank = computed(() => {
                 All four RetroChain arcade titles are live. Blast aliens, smash bricks, chase ghosts, or duel in RetroWar—leaderboards are hot.
               </p>
               <p class="text-[11px] text-emerald-200/80 mt-1">Early access · Rewards flowing · Controller & keyboard friendly</p>
+                <div class="mt-2 flex flex-wrap gap-2 text-[11px]">
+                  <span class="badge border-cyan-400/60 text-cyan-100">🎮 Controller support</span>
+                  <span class="badge border-purple-400/60 text-purple-100">Rumble ready</span>
+                </div>
             </div>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <button class="btn btn-primary text-xs" @click="router.push({ name: 'arcade' })">🎮 View Game List</button>
+            <button class="btn btn-primary text-xs" @click="scrollToGames">🎮 View Game List</button>
             <button class="btn text-xs" @click="router.push({ name: 'tokenomics' })">🔥 Burn Telemetry</button>
             <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
           </div>
@@ -1880,7 +1887,7 @@ const myStreakRank = computed(() => {
       </div>
     </div>
 
-    <div class="card">
+    <div class="card" ref="gamesSection">
       <div class="flex items-center justify-between mb-2">
         <h2 class="text-sm font-semibold text-slate-100">Arcade Games</h2>
         <span class="text-[11px] text-slate-400">{{ visibleGames.length }} listed</span>
