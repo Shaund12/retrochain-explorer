@@ -238,6 +238,34 @@ body {
 .via-purple-500\/5 { --tw-gradient-stops: var(--tw-gradient-from), rgba(6, 182, 212, 0.05), var(--tw-gradient-to) !important; }
 .to-purple-500\/5 { --tw-gradient-to: rgba(6, 182, 212, 0.05) !important; }
 
+/* Map indigo hues to cyan/emerald */
+.text-indigo-100 { color: #ccfbf1 !important; }
+.text-indigo-200 { color: #a5f3fc !important; }
+.text-indigo-300 { color: #67e8f9 !important; }
+.text-indigo-400 { color: #22d3ee !important; }
+.text-indigo-500 { color: #0ea5e9 !important; }
+.text-indigo-600 { color: #0284c7 !important; }
+
+.border-indigo-100 { border-color: rgba(204, 251, 241, 0.7) !important; }
+.border-indigo-200 { border-color: rgba(165, 243, 252, 0.7) !important; }
+.border-indigo-300 { border-color: rgba(103, 232, 249, 0.7) !important; }
+.border-indigo-400 { border-color: rgba(34, 211, 238, 0.7) !important; }
+.border-indigo-500 { border-color: rgba(14, 165, 233, 0.7) !important; }
+.border-indigo-500\/20 { border-color: rgba(14, 165, 233, 0.2) !important; }
+.border-indigo-500\/40 { border-color: rgba(14, 165, 233, 0.4) !important; }
+.border-indigo-500\/60 { border-color: rgba(14, 165, 233, 0.6) !important; }
+
+.from-indigo-500 { --tw-gradient-from: #0ea5e9 !important; --tw-gradient-to: rgba(14,165,233,0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.to-indigo-500 { --tw-gradient-to: #0ea5e9 !important; }
+.via-indigo-500 { --tw-gradient-stops: var(--tw-gradient-from), #0ea5e9, var(--tw-gradient-to) !important; }
+
+/* Map pink/magenta to amber for remaining gradients */
+.from-pink-500 { --tw-gradient-from: #fbbf24 !important; --tw-gradient-to: rgba(251,191,36,0) !important; --tw-gradient-stops: var(--tw-gradient-from), var(--tw-gradient-to); }
+.to-pink-500 { --tw-gradient-to: #fbbf24 !important; }
+.via-pink-500 { --tw-gradient-stops: var(--tw-gradient-from), #fbbf24, var(--tw-gradient-to) !important; }
+.text-pink-500 { color: #fbbf24 !important; }
+.border-pink-500 { border-color: rgba(251, 191, 36, 0.7) !important; }
+
 ::-webkit-scrollbar-track {
   background: rgba(15, 23, 42, 0.5);
   border-radius: 10px;

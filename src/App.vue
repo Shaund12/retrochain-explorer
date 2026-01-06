@@ -468,7 +468,7 @@ onMounted(() => {
 
 .halloween-bg {
   background: radial-gradient(circle at 20% 20%, rgba(249, 115, 22, 0.12), transparent 35%),
-              radial-gradient(circle at 80% 10%, rgba(217, 70, 239, 0.12), transparent 35%),
+              radial-gradient(circle at 80% 10%, rgba(14, 165, 233, 0.12), transparent 35%),
               #0b0a13;
 }
 
@@ -501,7 +501,7 @@ onMounted(() => {
 
 .fall-bg {
   background: radial-gradient(circle at 30% 20%, rgba(245, 158, 11, 0.14), transparent 40%),
-              radial-gradient(circle at 70% 30%, rgba(249, 115, 22, 0.12), transparent 40%),
+              radial-gradient(circle at 70% 30%, rgba(34, 211, 238, 0.10), transparent 40%),
               #0b0a13;
 }
 
@@ -512,7 +512,7 @@ onMounted(() => {
   background-image:
     radial-gradient(3px 3px at 20% 10%, rgba(251, 146, 60, 0.6), transparent),
     radial-gradient(3px 3px at 60% 30%, rgba(234, 179, 8, 0.6), transparent),
-    radial-gradient(4px 4px at 80% 15%, rgba(244, 63, 94, 0.5), transparent);
+    radial-gradient(4px 4px at 80% 15%, rgba(14, 165, 233, 0.45), transparent);
   animation: leaves 12s linear infinite;
   z-index: 4;
 }
@@ -534,7 +534,7 @@ onMounted(() => {
 
 .easter-bg {
   background: radial-gradient(circle at 20% 30%, rgba(94, 234, 212, 0.12), transparent 35%),
-              radial-gradient(circle at 70% 20%, rgba(244, 114, 182, 0.12), transparent 35%),
+              radial-gradient(circle at 70% 20%, rgba(251, 191, 36, 0.12), transparent 35%),
               #0b0a13;
 }
 
@@ -544,8 +544,8 @@ onMounted(() => {
   pointer-events: none;
   background-image:
     radial-gradient(8px 10px at 15% 20%, rgba(94, 234, 212, 0.5), transparent),
-    radial-gradient(8px 10px at 45% 25%, rgba(244, 114, 182, 0.5), transparent),
-    radial-gradient(8px 10px at 75% 30%, rgba(129, 140, 248, 0.5), transparent);
+    radial-gradient(8px 10px at 45% 25%, rgba(251, 191, 36, 0.45), transparent),
+    radial-gradient(8px 10px at 75% 30%, rgba(14, 165, 233, 0.45), transparent);
   animation: eggs 9s ease-in-out infinite;
   z-index: 4;
 }
@@ -592,7 +592,7 @@ onMounted(() => {
 
 .festive-bg .holiday-banner { border-color: rgba(16, 185, 129, 0.4); box-shadow: 0 10px 30px rgba(16,185,129,0.25); }
 .halloween-bg .holiday-banner { border-color: rgba(249, 115, 22, 0.4); box-shadow: 0 10px 30px rgba(249,115,22,0.25); }
-.fall-bg .holiday-banner { border-color: rgba(244, 114, 182, 0.35); box-shadow: 0 10px 30px rgba(244,114,182,0.2); }
+.fall-bg .holiday-banner { border-color: rgba(251, 191, 36, 0.35); box-shadow: 0 10px 30px rgba(251,191,36,0.2); }
 .easter-bg .holiday-banner { border-color: rgba(94, 234, 212, 0.35); box-shadow: 0 10px 30px rgba(94,234,212,0.2); }
 
 .footer-aurora::before,

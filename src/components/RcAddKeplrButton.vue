@@ -201,7 +201,7 @@ onBeforeUnmount(() => {
             <div class="max-w-3xl w-full rounded-3xl border border-white/10 bg-[rgba(7,10,24,0.98)] shadow-2xl shadow-black/60 max-h-[90vh] overflow-y-auto">
             <div class="flex items-start justify-between gap-4 border-b border-white/5 px-6 py-5">
               <div>
-                <p class="text-[11px] uppercase tracking-[0.35em] text-indigo-300">Wallet Center</p>
+                <p class="text-[11px] uppercase tracking-[0.35em] text-cyan-300">Wallet Center</p>
                 <h2 class="mt-1 text-2xl font-semibold text-white">Connect to RetroChain</h2>
                 <p class="text-sm text-slate-400">Securely connect Keplr (or any compatible wallet) to manage assets, stake, and bridge.</p>
               </div>
@@ -249,7 +249,7 @@ onBeforeUnmount(() => {
                   </div>
                   <div class="rounded-xl border border-white/5 bg-black/30 px-3 py-2">
                     <dt class="text-[11px] uppercase tracking-widest text-slate-400">RPC</dt>
-                    <dd class="font-mono text-xs text-indigo-200">{{ rpcDisplay }}</dd>
+                    <dd class="font-mono text-xs text-cyan-200">{{ rpcDisplay }}</dd>
                   </div>
                 </dl>
                 <div v-if="address" class="mt-3 rounded-xl border border-emerald-400/30 bg-emerald-500/10 px-3 py-3 space-y-2">
@@ -285,7 +285,7 @@ onBeforeUnmount(() => {
               <div class="mt-5 flex flex-wrap gap-3">
                 <button
                   type="button"
-                  class="flex-1 min-w-[200px] rounded-2xl bg-gradient-to-r from-indigo-500 to-purple-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-indigo-500/40 transition hover:from-indigo-400 hover:to-purple-400 disabled:cursor-not-allowed disabled:opacity-60"
+                  class="flex-1 min-w-[200px] rounded-2xl bg-gradient-to-r from-cyan-500 to-emerald-500 px-5 py-3 text-sm font-semibold text-white shadow-lg shadow-cyan-500/40 transition hover:from-cyan-400 hover:to-emerald-400 disabled:cursor-not-allowed disabled:opacity-60"
                   :disabled="connecting"
                   @click="handleConnect"
                 >
