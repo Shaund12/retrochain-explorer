@@ -609,7 +609,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
           <span class="text-emerald-300 font-semibold">Mainnet is live</span> — welcome to RetroChain! 🚀
         </div>
         <div class="flex items-center gap-2">
-          <button class="btn text-xs" @click="router.push({ name: 'node-info' })">Node Info</button>
+          <RouterLink class="btn text-xs" :to="{ name: 'node-info' }">Node Info</RouterLink>
         </div>
       </div>
     </div>
