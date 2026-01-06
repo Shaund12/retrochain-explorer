@@ -81,13 +81,28 @@ export function useArcade() {
       const dataGames = Array.isArray(response.data?.games) ? response.data.games : [];
 
       // Normalize/alias known titles without mutating server data
-      games.value = dataGames.map((g: any) => {
+      const normalized = dataGames.map((g: any) => {
         const mapped = { ...g } as Game;
-        if ((g?.game_id || "").toLowerCase() === "space-invaders") {
+        const gid = (g?.game_id || "").toLowerCase();
+        if (gid === "space-invaders") {
           mapped.name = "RetroVaders";
         }
         return mapped;
       });
+
+      // Ensure RetroWar appears even if not yet registered on-chain
+      const hasRetroWar = normalized.some((g: any) => (g?.game_id || "").toLowerCase() === "retrowar");
+      if (!hasRetroWar) {
+        normalized.push({
+          game_id: "retrowar",
+          name: "RetroWar",
+          description: "Tribute to Spacewar! with RetroChain flavor",
+          active: true,
+          genre: "shooter"
+        });
+      }
+
+      games.value = normalized;
     } catch (err: any) {
       error.value = err.message || "Failed to fetch games";
       console.warn("Arcade games endpoint not available:", err.message);

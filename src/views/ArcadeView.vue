@@ -49,6 +49,7 @@ const resolveGameLaunchUrl = (game: any) => {
   if (gid === "retrovaders") return "/arcade/arcade/";
   if (gid === "retronoid") return "/retronoid/retronoid/";
   if (gid === "retroman") return "/retroman/retroman/";
+  if (gid === "retrowar") return "/retrowar/retrowar/";
 
   // API-provided launch URL (if present)
   const direct = (game?.launch_url || game?.play_url || game?.url) as string | undefined;
@@ -92,6 +93,7 @@ const spaceInvadersNoticeKey = "space-invaders-beta-dismissed";
 const enableRetroVaders = import.meta.env.VITE_ARCADE_GAME_RETROVADERS_ENABLED !== 'false';
 const enableRetroNoid = import.meta.env.VITE_ARCADE_GAME_RETRONOID_ENABLED !== 'false';
 const enableRetroMan = import.meta.env.VITE_ARCADE_GAME_RETROMAN_ENABLED !== 'false';
+const enableRetroWar = true;
 
 // Hide placeholder/test entries and legacy/renamed games.
 // Note: "space-invaders" is deprecated and has been renamed to RetroVaders.
@@ -109,6 +111,10 @@ const visibleGames = computed(() =>
       name === "spaceinvaders"
     )
       return false;
+    if (!enableRetroVaders && gid === "retrovaders") return false;
+    if (!enableRetroNoid && gid === "retronoid") return false;
+    if (!enableRetroMan && gid === "retroman") return false;
+    if (!enableRetroWar && gid === "retrowar") return false;
     return true;
   })
 );
@@ -475,7 +481,7 @@ const achievementIcon = (a: any) => {
 type BattlePeriod = "daily" | "weekly" | "monthly";
 const battlePeriod = ref<BattlePeriod>("daily");
 
-type BattleGame = "all" | "retrovaders" | "retronoid" | "retroman";
+type BattleGame = "all" | "retrovaders" | "retronoid" | "retroman" | "retrowar";
 const battleGame = ref<BattleGame>("all");
 
 const normalizeGameId = (gid: any) => String(gid || "").toLowerCase().trim();
@@ -1362,6 +1368,7 @@ const myStreakRank = computed(() => {
         <button v-if="enableRetroVaders" class="btn btn-xs" :class="battleGame === 'retrovaders' ? 'btn-primary' : ''" @click="battleGame = 'retrovaders'">RetroVaders</button>
         <button v-if="enableRetroNoid" class="btn btn-xs" :class="battleGame === 'retronoid' ? 'btn-primary' : ''" @click="battleGame = 'retronoid'">RetroNoid</button>
         <button v-if="enableRetroMan" class="btn btn-xs" :class="battleGame === 'retroman' ? 'btn-primary' : ''" @click="battleGame = 'retroman'">RetroMan</button>
+          <button v-if="enableRetroWar" class="btn btn-xs" :class="battleGame === 'retrowar' ? 'btn-primary' : ''" @click="battleGame = 'retrowar'">RetroWar</button>
         <span class="text-[11px] text-slate-400 self-center" v-if="battleGame !== 'all'">Showing: {{ battleGame }}</span>
       </div>
 
