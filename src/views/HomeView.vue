@@ -561,7 +561,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
   <div class="flex flex-col gap-4">
     <div
       v-if="showSpaceInvadersNotice"
-      class="card border border-emerald-400/70 bg-gradient-to-r from-emerald-500/15 via-purple-500/15 to-amber-500/15 shadow-lg shadow-emerald-500/20"
+      class="card border border-emerald-400/70 bg-gradient-to-r from-emerald-500/15 via-cyan-500/15 to-amber-500/15 shadow-lg shadow-emerald-500/20"
     >
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex items-start gap-3">

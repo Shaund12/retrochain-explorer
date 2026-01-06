@@ -131,7 +131,7 @@ onMounted(() => {
 </script>
 
 <template>
-<div class="min-h-screen flex flex-col" :class="themeClass">
+<div class="min-h-screen flex flex-col base-bg" :class="themeClass">
   <!-- Toaster -->
    <Toaster
     position="top-right"
@@ -178,11 +178,11 @@ onMounted(() => {
   <main class="flex-1 max-w-7xl mx-auto w-full px-4 sm:px-6 lg:px-8 py-8 relative z-10">
     <RouterView />
   </main>
-    <footer class="border-t border-indigo-500/20 relative z-10 backdrop-blur-sm bg-[rgba(10,14,39,0.6)] footer-aurora overflow-hidden">
+    <footer class="border-t border-cyan-500/20 relative z-10 backdrop-blur-sm bg-[rgba(4,8,18,0.78)] footer-aurora overflow-hidden">
       <div class="max-w-7xl mx-auto px-4 py-8">
         <div class="footer-cta card-like mb-8">
           <div>
-            <div class="text-xs uppercase tracking-[0.3em] text-indigo-200">Stay connected</div>
+            <div class="text-xs uppercase tracking-[0.3em] text-cyan-200">Stay connected</div>
             <h3 class="text-lg font-semibold text-white mt-1">RetroChain community updates & tooling drops</h3>
             <p class="text-sm text-slate-300/90 mt-1">Join the builders, validators, and IBC explorers keeping RetroChain vibrant.</p>
           </div>
@@ -201,7 +201,7 @@ onMounted(() => {
                 <img src="@/assets/RCIcon.svg" alt="RetroChain" class="w-full h-full object-cover" />
               </div>
               <div>
-                <div class="font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent flex items-center gap-2">
+                <div class="font-bold bg-gradient-to-r from-cyan-300 via-emerald-300 to-amber-300 bg-clip-text text-transparent flex items-center gap-2">
                   <span v-if="activeHoliday !== 'off'">🎀</span>
                   <span>RetroChain</span>
                   <span v-if="activeHoliday !== 'off'">🎀</span>
@@ -221,12 +221,12 @@ onMounted(() => {
             <h3 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wider">Explorer</h3>
             <ul class="space-y-2 text-sm">
               <li>
-                <a href="/" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                <a href="/" class="text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-2">
                   <span></span> Dashboard
                 </a>
               </li>
               <li>
-                <a href="/blocks" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                <a href="/blocks" class="text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-2">
                   <span></span> Blocks
                 </a>
               </li>
@@ -278,7 +278,7 @@ onMounted(() => {
                 </a>
               </li>
               <li>
-                <a href="/legal" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                <a href="/legal" class="text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-2">
                   <span></span> Terms &amp; Conditions
                 </a>
               </li>
@@ -290,27 +290,27 @@ onMounted(() => {
             <h3 class="text-sm font-semibold text-slate-300 mb-4 uppercase tracking-wider">Community</h3>
             <ul class="space-y-2 text-sm mb-4">
               <li>
-                <a href="https://discord.gg/h89FnjjnrD" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                <a href="https://discord.gg/h89FnjjnrD" target="_blank" class="text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-2">
                   <span>💬</span> Discord
                 </a>
               </li>
               <li>
-                <a href="https://github.com/Shaund12/RetroChain" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                <a href="https://github.com/Shaund12/RetroChain" target="_blank" class="text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-2">
                   <span>💻</span> GitHub
                 </a>
               </li>
               <li>
-                <a href="https://x.com/RetroChainInfo" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                <a href="https://x.com/RetroChainInfo" target="_blank" class="text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-2">
                   <span>🐦</span> Twitter / X
                 </a>
               </li>
               <li>
-                <a href="https://www.instagram.com/retrochaininfo/" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                <a href="https://www.instagram.com/retrochaininfo/" target="_blank" class="text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-2">
                   <span>📸</span> Instagram
                 </a>
               </li>
               <li>
-                <a href="mailto:retrochaininfo@gmail.com" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                <a href="mailto:retrochaininfo@gmail.com" class="text-slate-400 hover:text-cyan-300 transition-colors flex items-center gap-2">
                   <span>✉️</span> Contact
                 </a>
               </li>
@@ -627,5 +627,12 @@ onMounted(() => {
   gap: 1rem;
   align-items: center;
   box-shadow: 0 12px 40px rgba(0, 0, 0, 0.35);
+}
+
+.base-bg {
+  background: radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.08), transparent 35%),
+              radial-gradient(circle at 80% 10%, rgba(251, 191, 36, 0.06), transparent 35%),
+              radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.08), transparent 40%),
+              #030712;
 }
 </style>
