@@ -561,47 +561,24 @@ function sparkPath(data: number[], width = 160, height = 40) {
   <div class="flex flex-col gap-4">
     <div
       v-if="showSpaceInvadersNotice"
-      class="card border border-emerald-400/70 bg-gradient-to-r from-emerald-500/15 via-cyan-500/15 to-indigo-600/15 shadow-lg shadow-emerald-500/20"
+      class="card border border-emerald-400/70 bg-gradient-to-r from-emerald-500/15 via-purple-500/15 to-amber-500/15 shadow-lg shadow-emerald-500/20"
     >
       <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
         <div class="flex items-start gap-3">
-          <div class="text-3xl sm:text-4xl">🚨👾🧱👻</div>
+          <div class="text-3xl sm:text-4xl">🚨👾🧱👻🚀</div>
           <div>
             <div class="text-xs uppercase tracking-[0.2em] text-emerald-200">Arcade Alert</div>
-            <div class="text-sm font-semibold text-emerald-100">RetroVaders, RetroNoid & RetroMan are LIVE</div>
+            <div class="text-sm font-semibold text-emerald-100">RetroVaders · RetroNoid · RetroMan · RetroWar</div>
             <p class="text-xs sm:text-sm text-slate-200 mt-1">
-              Jump in, drop coins, blast aliens, smash bricks, and chase ghosts! Leaderboards are on—stack combos and climb fast.
+              All four RetroChain arcade titles are live. Blast aliens, smash bricks, chase ghosts, or duel in space war—leaderboards are hot.
             </p>
-            <p class="text-[11px] text-emerald-200/80 mt-1">Beta mode · Rewards flowing · Report bugs in Discord</p>
+            <p class="text-[11px] text-emerald-200/80 mt-1">Early access · Rewards flowing · Controller & keyboard friendly</p>
           </div>
         </div>
         <div class="flex items-center gap-2 flex-wrap">
-          <a class="btn btn-primary text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">👾 RetroVaders</a>
-          <a class="btn text-xs" href="/retronoid/retronoid/" target="_blank" rel="noopener">🧱 RetroNoid</a>
-          <a class="btn text-xs" href="/retroman/" target="_blank" rel="noopener">👻 RetroMan</a>
-          <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="card border border-purple-400/70 bg-gradient-to-r from-purple-500/15 via-indigo-500/15 to-amber-500/15 shadow-lg shadow-purple-500/20">
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex items-start gap-3">
-          <div class="text-3xl sm:text-4xl">🚀🕹️🌌</div>
-          <div>
-            <div class="text-xs uppercase tracking-[0.2em] text-purple-200">RetroWar Tribute</div>
-            <div class="text-sm font-semibold text-purple-100">Spacewar! vibes with a RetroChain twist</div>
-            <p class="text-xs sm:text-sm text-slate-200 mt-1">
-              Dodge, spin, and blast through the void in RetroWar — our homage to the OG 1960s Spacewar arcade classic.
-              Leaderboards are live; bring your best maneuvers.
-            </p>
-            <p class="text-[11px] text-purple-200/80 mt-1">Early access · Feedback welcome · Play with a controller or keyboard</p>
-          </div>
-        </div>
-        <div class="flex items-center gap-2 flex-wrap">
-          <a class="btn btn-primary text-xs" href="/retrowar/retrowar/" target="_blank" rel="noopener">🚀 Play RetroWar</a>
-          <button class="btn text-xs" @click="router.push({ name: 'arcade' })">🎮 Arcade Dashboard</button>
+          <button class="btn btn-primary text-xs" @click="router.push({ name: 'arcade' })">🎮 View Game List</button>
           <button class="btn text-xs" @click="router.push({ name: 'tokenomics' })">🔥 Burn Telemetry</button>
+          <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
         </div>
       </div>
     </div>

@@ -1143,82 +1143,27 @@ const myStreakRank = computed(() => {
 <template>
   <div class="space-y-4">
     <div v-if="showSpaceInvadersNotice" class="space-y-3">
-      <div v-if="enableRetroVaders" class="card border border-emerald-400/70 bg-gradient-to-r from-emerald-500/15 via-cyan-500/15 to-indigo-600/15 shadow-lg shadow-emerald-500/20">
+      <div class="card border border-emerald-400/70 bg-gradient-to-r from-emerald-500/15 via-purple-500/15 to-amber-500/15 shadow-lg shadow-emerald-500/20">
         <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
           <div class="flex items-start gap-3">
-            <div class="text-3xl sm:text-4xl">🚨👾🛸</div>
+            <div class="text-3xl sm:text-4xl">🚨👾🧱👻🚀</div>
             <div>
-            <div class="text-sm font-semibold text-emerald-200 uppercase tracking-[0.18em]">RetroVaders Alert</div>
+              <div class="text-xs uppercase tracking-[0.2em] text-emerald-200">Arcade Alert</div>
+              <div class="text-sm font-semibold text-emerald-100">RetroVaders · RetroNoid · RetroMan · RetroWar</div>
               <p class="text-xs sm:text-sm text-slate-200 mt-1">
-                Aliens on the radar! Drop coins, blast waves, and race up the leaderboard. Suit up and defend RetroChain HQ.
+                All four RetroChain arcade titles are live. Blast aliens, smash bricks, chase ghosts, or duel in RetroWar—leaderboards are hot.
               </p>
-              <p class="text-[11px] text-emerald-200/80 mt-1">Live event · Beta mode · Rewards flowing</p>
+              <p class="text-[11px] text-emerald-200/80 mt-1">Early access · Rewards flowing · Controller & keyboard friendly</p>
             </div>
           </div>
           <div class="flex items-center gap-2 flex-wrap">
-            <a class="btn btn-primary text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">Play RetroVaders</a>
+            <button class="btn btn-primary text-xs" @click="router.push({ name: 'arcade' })">🎮 View Game List</button>
+            <button class="btn text-xs" @click="router.push({ name: 'tokenomics' })">🔥 Burn Telemetry</button>
             <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
           </div>
         </div>
       </div>
-
-      <div v-if="enableRetroNoid" class="card border border-amber-400/70 bg-gradient-to-r from-amber-500/15 via-orange-500/15 to-rose-500/15 shadow-lg shadow-amber-400/20">
-        <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-          <div class="flex items-start gap-3">
-            <div class="text-3xl sm:text-4xl">🧱✨🎯</div>
-            <div>
-              <div class="text-sm font-semibold text-amber-200 uppercase tracking-[0.18em]">RetroNoid Rally</div>
-              <p class="text-xs sm:text-sm text-slate-200 mt-1">
-                Brick-busting chaos is live! Curve the paddle, stack combos, and chase perfect clears in the RetroNoid beta.
-              </p>
-              <p class="text-[11px] text-amber-200/80 mt-1">Precision mode · Combo fever · Beta rewards</p>
-            </div>
-          </div>
-          <div class="flex items-center gap-2 flex-wrap">
-            <a class="btn text-xs" href="/retronoid/retronoid/" target="_blank" rel="noopener">Play RetroNoid</a>
-            <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
-          </div>
-        </div>
-      </div>
-
-        <div v-if="enableRetroMan" class="card border border-purple-400/70 bg-gradient-to-r from-purple-500/15 via-fuchsia-500/15 to-indigo-500/15 shadow-lg shadow-purple-400/20">
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex items-start gap-3">
-              <div class="text-3xl sm:text-4xl">👻🌀🍒</div>
-              <div>
-                <div class="text-sm font-semibold text-purple-200 uppercase tracking-[0.18em]">RetroMan Hunt</div>
-                <p class="text-xs sm:text-sm text-slate-200 mt-1">
-                  Maze madness unleashed! Chase pellets, dodge ghosts, hunt power-ups, and rack up points in classic RetroMan style.
-                </p>
-                <p class="text-[11px] text-purple-200/80 mt-1">Maze mode · Power-up rush · Beta rewards</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <a class="btn text-xs" href="/retroman/retroman/" target="_blank" rel="noopener">Play RetroMan</a>
-              <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
-            </div>
-          </div>
-        </div>
-
-        <div class="card border border-cyan-400/70 bg-gradient-to-r from-cyan-500/15 via-blue-500/15 to-indigo-500/15 shadow-lg shadow-cyan-400/20">
-          <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-            <div class="flex items-start gap-3">
-              <div class="text-3xl sm:text-4xl">🎮✨🕹️</div>
-              <div>
-                <div class="text-sm font-semibold text-cyan-200 uppercase tracking-[0.18em]">Xbox Controller Support</div>
-                <p class="text-xs sm:text-sm text-slate-200 mt-1">
-                  Plug in and dominate! Xbox controllers now supported across all arcade games. Experience true retro gaming with modern precision.
-                </p>
-                <p class="text-[11px] text-cyan-200/80 mt-1">Plug & play · Full button mapping · Rumble support</p>
-              </div>
-            </div>
-            <div class="flex items-center gap-2 flex-wrap">
-              <a class="btn btn-primary text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">Try it now 🎮</a>
-              <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
-            </div>
-          </div>
-        </div>
-      </div>
+    </div>
 
     <div class="card-soft flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
       <div>
