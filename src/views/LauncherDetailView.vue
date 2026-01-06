@@ -21,7 +21,7 @@ const loading = ref(false);
 const error = ref<string | null>(null);
 
 const formatRetro = (value?: string | number | null) => {
-  if (value === undefined || value === null) return "—";
+  if (value === undefined || value === null) return "â€”";
   try {
     const raw = typeof value === "number" ? BigInt(Math.trunc(value)) : BigInt(value);
     const whole = raw / 1_000_000n;
@@ -32,26 +32,26 @@ const formatRetro = (value?: string | number | null) => {
     fracStr = fracStr.replace(/0+$/, "");
     return `${wholeStr}.${fracStr} RETRO`;
   } catch {
-    return "—";
+    return "â€”";
   }
 };
 
 const formatInt = (value?: string | number | null) => {
-  if (value === undefined || value === null) return "—";
+  if (value === undefined || value === null) return "â€”";
   const num = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(num)) return "—";
+  if (!Number.isFinite(num)) return "â€”";
   return num.toLocaleString();
 };
 
 const formatPercent = (value?: number | string | null) => {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return "â€”";
   const num = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(num)) return "—";
+  if (!Number.isFinite(num)) return "â€”";
   return `${(num * 100).toFixed(2)}%`;
 };
 
 const shortAddr = (addr?: string, size = 14) => {
-  if (!addr) return "—";
+  if (!addr) return "â€”";
   if (addr.length <= size) return addr;
   const half = Math.max(3, Math.floor((size - 3) / 2));
   return `${addr.slice(0, half)}...${addr.slice(-half)}`;
@@ -109,7 +109,7 @@ const tokensRemaining = computed(() => formatInt(launch.value?.computed?.tokens_
     </RcDisclaimer>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading launch…" />
+      <RcLoadingSpinner size="md" text="Loading launchâ€¦" />
     </div>
 
     <template v-else-if="launch">
@@ -127,26 +127,26 @@ const tokensRemaining = computed(() => formatInt(launch.value?.computed?.tokens_
         <div class="card border border-amber-400/40 bg-amber-500/5">
           <p class="text-[11px] uppercase tracking-wider text-amber-200">Graduated</p>
           <p class="text-2xl font-bold text-white">{{ launch.launch?.graduated ? 'Yes' : 'No' }}</p>
-          <p class="text-[11px] text-amber-200/70">DEX Pool: {{ launch.launch?.dex_pool_id || '—' }}</p>
+          <p class="text-[11px] text-amber-200/70">DEX Pool: {{ launch.launch?.dex_pool_id || 'â€”' }}</p>
         </div>
       </div>
 
       <div class="card">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-base font-semibold text-white">Launch</h2>
-          <span class="text-[11px] text-slate-400">ID: {{ launch.launch?.id ?? '—' }}</span>
+          <span class="text-[11px] text-slate-400">ID: {{ launch.launch?.id ?? 'â€”' }}</span>
         </div>
         <div class="grid gap-2 md:grid-cols-2 text-sm text-slate-200">
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">Denom</div>
-            <div class="font-mono text-xs text-emerald-200 break-all">{{ launch.launch?.denom || '—' }}</div>
+            <div class="font-mono text-xs text-emerald-200 break-all">{{ launch.launch?.denom || 'â€”' }}</div>
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">Creator</div>
             <RouterLink v-if="launch.launch?.creator" :to="{ name: 'account', params: { address: launch.launch.creator } }" class="font-mono text-xs text-emerald-200 break-all hover:underline">
               {{ shortAddr(launch.launch?.creator) }}
             </RouterLink>
-            <div v-else class="font-mono text-xs text-emerald-200">—</div>
+            <div v-else class="font-mono text-xs text-emerald-200">â€”</div>
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">Max Supply</div>
@@ -170,7 +170,7 @@ const tokensRemaining = computed(() => formatInt(launch.value?.computed?.tokens_
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">DEX LP Denom</div>
-            <div class="font-mono text-xs text-emerald-200 break-all">{{ launch.launch?.dex_lp_denom || '—' }}</div>
+            <div class="font-mono text-xs text-emerald-200 break-all">{{ launch.launch?.dex_lp_denom || 'â€”' }}</div>
           </div>
         </div>
       </div>
@@ -184,7 +184,7 @@ const tokensRemaining = computed(() => formatInt(launch.value?.computed?.tokens_
         <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-slate-200">
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">Trading Fee</div>
-            <div class="font-semibold">{{ params.fee_bps ?? '—' }} bps</div>
+            <div class="font-semibold">{{ params.fee_bps ?? 'â€”' }} bps</div>
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">Create Launch Fee</div>
@@ -192,7 +192,7 @@ const tokensRemaining = computed(() => formatInt(launch.value?.computed?.tokens_
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">Fee Recipient</div>
-            <div class="font-mono text-xs text-emerald-200 break-all">{{ params.fee_recipient || '—' }}</div>
+            <div class="font-mono text-xs text-emerald-200 break-all">{{ params.fee_recipient || 'â€”' }}</div>
           </div>
         </div>
       </div>

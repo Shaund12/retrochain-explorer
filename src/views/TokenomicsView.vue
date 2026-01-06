@@ -702,10 +702,10 @@ const loadArcadeBurns = async () => {
             <p class="text-2xl font-bold text-emerald-100">{{ burnLastBlockDisplay }}</p>
             <p class="text-[11px] text-emerald-200/70">Positive values = supply destroyed</p>
           </div>
-          <div class="rounded-xl border border-indigo-500/30 bg-indigo-500/5 p-4">
-            <p class="text-xs text-indigo-200 uppercase tracking-wider">Rolling window</p>
-            <p class="text-2xl font-bold text-indigo-100">{{ burnRollingWindowDisplay }}</p>
-            <p class="text-[11px] text-indigo-200/70">{{ burnHistoryLabel }}</p>
+          <div class="rounded-xl border border-cyan-500/30 bg-cyan-500/5 p-4">
+            <p class="text-xs text-cyan-200 uppercase tracking-wider">Rolling window</p>
+            <p class="text-2xl font-bold text-cyan-100">{{ burnRollingWindowDisplay }}</p>
+            <p class="text-[11px] text-cyan-200/70">{{ burnHistoryLabel }}</p>
           </div>
         </div>
         <div class="grid gap-3 md:grid-cols-3 text-sm text-slate-300">

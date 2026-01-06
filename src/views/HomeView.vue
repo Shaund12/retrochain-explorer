@@ -983,8 +983,8 @@ function sparkPath(data: number[], width = 160, height = 40) {
                   </svg>
                 </article>
 
-                <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-indigo-500/10 to-purple-500/10 p-5 shadow-lg flex flex-col gap-3">
-                  <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-indigo-200">
+                <article class="rounded-2xl border border-white/10 bg-gradient-to-br from-cyan-500/10 to-emerald-500/10 p-5 shadow-lg flex flex-col gap-3">
+                  <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-cyan-200">
                     <span>Tx Throughput</span>
                     <span class="text-[10px] text-slate-500 font-normal tracking-normal">20-block window</span>
                   </div>
@@ -995,7 +995,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                     Latest block: <span class="text-slate-100">{{ latestBlockSummary?.txs ?? 0 }}</span> txs · Window total: <span class="text-slate-100">{{ totalTxsWindowDisplay }}</span>
                   </div>
                   <svg :width="240" :height="60" class="-mx-2">
-                    <path :d="sparkPath(txsPerBlock, 240, 60)" stroke="rgb(99 102 241)" fill="none" stroke-width="2" stroke-linecap="round" />
+                    <path :d="sparkPath(txsPerBlock, 240, 60)" stroke="rgb(14 165 233)" fill="none" stroke-width="2" stroke-linecap="round" />
                   </svg>
                 </article>
 
