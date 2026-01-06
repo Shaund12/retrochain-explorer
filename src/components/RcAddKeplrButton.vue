@@ -178,7 +178,7 @@ onBeforeUnmount(() => {
       @click="openModal"
       :disabled="connecting"
       :class="[
-        'w-full rounded-2xl border border-white/10 bg-gradient-to-r from-indigo-600/80 to-purple-600/80 px-4 py-2 text-left text-white shadow-lg shadow-indigo-500/30 transition hover:from-indigo-500 hover:to-purple-500 disabled:cursor-wait',
+        'w-full rounded-2xl border border-white/10 bg-gradient-to-r from-cyan-600/80 to-emerald-600/80 px-4 py-2 text-left text-white shadow-lg shadow-cyan-500/30 transition hover:from-cyan-500 hover:to-emerald-500 disabled:cursor-wait',
         externalClass
       ]"
     >
