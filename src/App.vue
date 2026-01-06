@@ -334,7 +334,7 @@ onMounted(() => {
         </div>
 
         <!-- Bottom Bar -->
-        <div class="pt-6 border-t border-indigo-500/20">
+        <div class="pt-6 border-t border-cyan-500/20">
           <div class="flex flex-col md:flex-row items-center justify-between gap-4">
             <div class="text-xs text-slate-500 text-center md:text-left">
               <div class="mb-1">
@@ -342,10 +342,10 @@ onMounted(() => {
               </div>
               <div>
                 (c) 2024 RetroChain Explorer - 
-                <a href="https://github.com/cosmos/cosmos-sdk/blob/main/LICENSE" target="_blank" class="hover:text-indigo-400 transition-colors">
+                <a href="https://github.com/cosmos/cosmos-sdk/blob/main/LICENSE" target="_blank" class="hover:text-cyan-300 transition-colors">
                   Apache 2.0 License
                 </a>
-                · <a href="mailto:retrochaininfo@gmail.com" class="hover:text-indigo-400 transition-colors">retrochaininfo@gmail.com</a>
+                · <a href="mailto:retrochaininfo@gmail.com" class="hover:text-cyan-300 transition-colors">retrochaininfo@gmail.com</a>
               </div>
             </div>
             
@@ -365,9 +365,9 @@ onMounted(() => {
 
 <style scoped>
 .festive-bg {
-  background: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.08), transparent 35%),
-              radial-gradient(circle at 80% 10%, rgba(236, 72, 153, 0.08), transparent 35%),
-              radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.08), transparent 40%),
+  background: radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.10), transparent 35%),
+              radial-gradient(circle at 80% 10%, rgba(251, 191, 36, 0.08), transparent 35%),
+              radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.10), transparent 40%),
               #060818;
 }
 
@@ -560,10 +560,10 @@ onMounted(() => {
   inset: 0;
   pointer-events: none;
   background-image:
-    radial-gradient(2px 2px at 10% 20%, rgba(244, 114, 182, 0.8), transparent),
-    radial-gradient(2px 2px at 40% 40%, rgba(129, 140, 248, 0.8), transparent),
-    radial-gradient(2px 2px at 70% 25%, rgba(52, 211, 153, 0.8), transparent),
-    radial-gradient(3px 3px at 85% 55%, rgba(236, 72, 153, 0.7), transparent);
+    radial-gradient(2px 2px at 10% 20%, rgba(14, 165, 233, 0.8), transparent),
+    radial-gradient(2px 2px at 40% 40%, rgba(52, 211, 153, 0.8), transparent),
+    radial-gradient(2px 2px at 70% 25%, rgba(251, 191, 36, 0.8), transparent),
+    radial-gradient(3px 3px at 85% 55%, rgba(34, 211, 238, 0.7), transparent);
   animation: confetti 7s ease-in-out infinite;
   z-index: 4;
 }
@@ -600,8 +600,8 @@ onMounted(() => {
   content: "";
   position: absolute;
   inset: -40% -10%;
-  background: radial-gradient(circle at 20% 20%, rgba(99, 102, 241, 0.25), transparent 40%),
-              radial-gradient(circle at 80% 0%, rgba(236, 72, 153, 0.2), transparent 35%),
+  background: radial-gradient(circle at 20% 20%, rgba(14, 165, 233, 0.25), transparent 40%),
+              radial-gradient(circle at 80% 0%, rgba(251, 191, 36, 0.18), transparent 35%),
               radial-gradient(circle at 50% 100%, rgba(16, 185, 129, 0.2), transparent 50%);
   filter: blur(60px);
   opacity: 0.4;

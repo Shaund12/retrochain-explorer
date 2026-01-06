@@ -1,16 +1,16 @@
 <template>
-  <header class="border-b border-white/5 backdrop-blur-xl bg-[rgba(10,14,39,0.95)] sticky top-0 z-50 shadow-lg shadow-black/20">
+  <header class="border-b border-white/5 backdrop-blur-xl bg-[rgba(6,10,26,0.95)] sticky top-0 z-50 shadow-lg shadow-black/20">
     <div class="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8 h-16 flex items-center justify-between">
       <!-- Logo -->
       <button
         class="flex items-center gap-3 group transition-all"
         @click="router.push({ name: 'home' })"
       >
-        <img
-          src="/RCIcon.svg"
-          alt="RetroChain"
-          class="h-10 w-10 rounded-lg shadow-lg shadow-indigo-500/40 group-hover:shadow-indigo-500/70 group-hover:scale-105 transition-all object-contain"
-        />
+          <img
+            src="/RCIcon.svg"
+            alt="RetroChain"
+            class="h-10 w-10 rounded-lg shadow-lg shadow-cyan-500/40 group-hover:shadow-emerald-400/70 group-hover:scale-105 transition-all object-contain"
+          />
         <div class="flex items-center gap-2">
           <div class="font-bold text-base bg-gradient-to-r from-white to-slate-300 bg-clip-text text-transparent">
             RetroChain
@@ -31,10 +31,10 @@
             :class="isLinkActive(item) ? 'text-white' : 'text-slate-400 hover:text-white'"
           >
             {{ item.label }}
-            <div
-              v-if="isLinkActive(item)"
-              class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-indigo-500 via-purple-500 to-pink-500"
-            ></div>
+              <div
+                v-if="isLinkActive(item)"
+                class="absolute bottom-0 left-0 right-0 h-0.5 bg-gradient-to-r from-cyan-400 via-emerald-400 to-amber-300"
+              ></div>
           </a>
 
           <div

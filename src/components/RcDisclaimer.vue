@@ -21,10 +21,10 @@ const colorClasses = computed(() => {
   switch (props.type) {
     case "info":
       return {
-        container: "from-blue-500/10 to-indigo-500/10 border-blue-500/30",
+        container: "from-cyan-500/10 to-emerald-500/10 border-cyan-500/30",
         icon: "ℹ️",
-        title: "text-blue-300",
-        text: "text-blue-200/80"
+        title: "text-cyan-300",
+        text: "text-cyan-200/80"
       };
     case "danger":
       return {
@@ -51,12 +51,12 @@ const colorClasses = computed(() => {
   >
     <!-- Animated background pattern -->
     <div class="absolute inset-0 opacity-5">
-      <div class="absolute w-32 h-32 -top-4 -left-4 rounded-full blur-2xl animate-pulse" 
-           :class="type === 'danger' ? 'bg-rose-500' : type === 'info' ? 'bg-blue-500' : 'bg-amber-500'">
+       <div class="absolute w-32 h-32 -top-4 -left-4 rounded-full blur-2xl animate-pulse" 
+            :class="type === 'danger' ? 'bg-rose-500' : type === 'info' ? 'bg-cyan-500' : 'bg-amber-500'">
       </div>
       <div class="absolute w-32 h-32 -bottom-4 -right-4 rounded-full blur-2xl animate-pulse" 
            style="animation-delay: 1s"
-           :class="type === 'danger' ? 'bg-red-500' : type === 'info' ? 'bg-indigo-500' : 'bg-orange-500'">
+            :class="type === 'danger' ? 'bg-red-500' : type === 'info' ? 'bg-emerald-500' : 'bg-orange-500'">
       </div>
     </div>
 

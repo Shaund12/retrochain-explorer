@@ -244,13 +244,13 @@ body {
 }
 
 ::-webkit-scrollbar-thumb {
-  background: linear-gradient(135deg, #6366f1, #8b5cf6);
+  background: linear-gradient(135deg, #0ea5e9, #10b981);
   border-radius: 10px;
   border: 2px solid rgba(15, 23, 42, 0.5);
 }
 
 ::-webkit-scrollbar-thumb:hover {
-  background: linear-gradient(135deg, #7c3aed, #a855f7);
+  background: linear-gradient(135deg, #22d3ee, #34d399);
 }
 
 /* ==== Vue Toastification Custom Styles ==== */
@@ -260,9 +260,9 @@ body {
 
 .custom-toast {
   background: linear-gradient(135deg, rgba(15, 20, 41, 0.98) 0%, rgba(10, 14, 39, 0.98) 100%);
-  border: 1px solid rgba(99, 102, 241, 0.3);
+  border: 1px solid rgba(34, 211, 238, 0.3);
   border-radius: 1rem;
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(99, 102, 241, 0.2);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(34, 211, 238, 0.2);
   backdrop-filter: blur(10px);
   padding: 1rem 1.25rem;
   min-height: 64px;
@@ -291,12 +291,12 @@ body {
 }
 
 .Vue-Toastification__toast--info .custom-toast {
-  border-color: rgba(139, 92, 246, 0.4);
-  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(139, 92, 246, 0.2);
+  border-color: rgba(34, 211, 238, 0.4);
+  box-shadow: 0 10px 40px rgba(0, 0, 0, 0.5), 0 0 20px rgba(34, 211, 238, 0.2);
 }
 
 .Vue-Toastification__progress-bar {
-  background: linear-gradient(90deg, rgba(99, 102, 241, 0.8) 0%, rgba(139, 92, 246, 0.8) 100%);
+  background: linear-gradient(90deg, rgba(14, 165, 233, 0.8) 0%, rgba(16, 185, 129, 0.8) 100%);
 }
 
 .Vue-Toastification__toast--success .Vue-Toastification__progress-bar {
