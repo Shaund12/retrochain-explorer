@@ -425,6 +425,7 @@ const navItems: NavItem[] = [
     label: "Arcade",
     items: [
       { label: "Arcade Dashboard", to: { name: "arcade" } },
+      { label: "Arcade Games", to: { name: "arcade-games" } },
       ...(slotsEnabled ? [{ label: "Slots Dash", to: { name: "slots" } }] : []),
       ...(launcherEnabled ? [{ label: "Launcher", to: { name: "launcher" } }] : []),
       { label: "Battle Points Tracker", to: { name: "battlepoints-tracker" } },

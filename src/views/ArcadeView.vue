@@ -115,6 +115,43 @@ const visibleGames = computed(() =>
   })
 );
 
+const gameStats = computed(() => {
+  const map: Record<string, { runs: number; players: Set<string>; bestScore: number; lastPlayed?: string }> = {};
+  sessionsList.value.forEach((s: any) => {
+    const gid = (s?.game_id || "").toString().toLowerCase();
+    if (!gid) return;
+    if (!map[gid]) map[gid] = { runs: 0, players: new Set<string>(), bestScore: 0 };
+    map[gid].runs += 1;
+    const player = (s?.player || s?.creator || "").toString();
+    if (player) map[gid].players.add(player);
+    const score = Number(s?.score ?? 0);
+    if (Number.isFinite(score)) map[gid].bestScore = Math.max(map[gid].bestScore, score);
+    const ts = s?.started_at;
+    const dt = ts ? dayjs(ts) : null;
+    if (dt?.isValid()) {
+      if (!map[gid].lastPlayed || dayjs(map[gid].lastPlayed).isBefore(dt)) {
+        map[gid].lastPlayed = dt.toISOString();
+      }
+    }
+  });
+
+  return Object.entries(map).reduce<Record<string, { runs: number; players: number; bestScore: number; lastPlayed?: string }>>((acc, [gid, val]) => {
+    acc[gid] = {
+      runs: val.runs,
+      players: val.players.size,
+      bestScore: val.bestScore,
+      lastPlayed: val.lastPlayed
+    };
+    return acc;
+  }, {});
+});
+
+const selectedGameStats = computed(() => {
+  const gid = (selectedGame.value?.game_id || "").toString().toLowerCase();
+  if (!gid) return null;
+  return gameStats.value[gid] || null;
+});
+
 const blockedGameIds = ["test", "test-game", "testgame"];
 const blockedPlayersFromTestGames = computed(() => {
   const set = new Set<string>();
@@ -1889,8 +1926,13 @@ const myStreakRank = computed(() => {
 
     <div class="card" ref="gamesSection">
       <div class="flex items-center justify-between mb-2">
-        <h2 class="text-sm font-semibold text-slate-100">Arcade Games</h2>
-        <span class="text-[11px] text-slate-400">{{ visibleGames.length }} listed</span>
+        <div>
+          <h2 class="text-sm font-semibold text-slate-100">Arcade Games</h2>
+          <div class="text-[11px] text-slate-400">{{ visibleGames.length }} listed</div>
+        </div>
+        <div class="flex items-center gap-2">
+          <button class="btn text-[11px]" @click="router.push({ name: 'arcade-games' })">Open Full Games Page</button>
+        </div>
       </div>
       <div v-if="visibleGames.length === 0" class="text-xs text-slate-400">No games registered yet.</div>
       <div v-else class="grid grid-cols-1 sm:grid-cols-2 lg:grid-cols-3 gap-3">
@@ -1937,6 +1979,24 @@ const myStreakRank = computed(() => {
             <div class="p-3 rounded-xl border border-white/10 bg-white/5">
               <div class="text-[11px] uppercase tracking-wider text-slate-400">Status</div>
               <div class="text-sm font-semibold text-white">{{ selectedGame.active ? 'Active' : 'Inactive' }}</div>
+            </div>
+            <div class="p-3 rounded-xl border border-white/10 bg-white/5">
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Runs Recorded</div>
+              <div class="text-sm font-semibold text-white">{{ selectedGameStats?.runs ?? '—' }}</div>
+            </div>
+            <div class="p-3 rounded-xl border border-white/10 bg-white/5">
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Players</div>
+              <div class="text-sm font-semibold text-white">{{ selectedGameStats?.players ?? '—' }}</div>
+            </div>
+            <div class="p-3 rounded-xl border border-white/10 bg-white/5">
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Best Score</div>
+              <div class="text-sm font-semibold text-white">{{ selectedGameStats?.bestScore?.toLocaleString?.() ?? '—' }}</div>
+            </div>
+            <div class="p-3 rounded-xl border border-white/10 bg-white/5">
+              <div class="text-[11px] uppercase tracking-wider text-slate-400">Last Played</div>
+              <div class="text-sm font-semibold text-white">
+                {{ selectedGameStats?.lastPlayed ? dayjs(selectedGameStats.lastPlayed).fromNow() : '—' }}
+              </div>
             </div>
           </div>
 
