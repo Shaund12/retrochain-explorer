@@ -16,7 +16,7 @@ import dayjs from "dayjs";
 const route = useRoute();
 const router = useRouter();
 const { balances, bech32Address, accountInfo, delegations, rewards, unbondings, loading, error, load } = useAccount();
-const { txs, searchByAddress } = useTxs();
+const { txs, allTxs, searchByAddress } = useTxs();
 const { notify } = useToast();
 const { address: keplrAddress } = useKeplr();
 const { base: faucetBase, loading: faucetLoading, error: faucetError, requestTokens } = useFaucet();
@@ -192,7 +192,7 @@ const delegationDistribution = computed(() => {
 const transferFlows = computed(() => {
   const nativeDenoms = ["uretro", "udretro"];
   const map = new Map<string, { incoming: number; outgoing: number; denom: string }>();
-  txs.value.forEach((tx) => {
+  allTxs.value.forEach((tx) => {
     const date = (tx.timestamp || "").slice(0, 10);
     if (!date) return;
     const bucket = map.get(date) || { incoming: 0, outgoing: 0, denom: nativeDenoms[0] };
@@ -212,7 +212,7 @@ const transferFlows = computed(() => {
 
 const activityByType = computed(() => {
   const counts: Record<string, { count: number; lastHeight: number }> = {};
-  txs.value.forEach((tx) => {
+  allTxs.value.forEach((tx) => {
     (tx.messageTypes || []).forEach((type) => {
       if (!counts[type]) counts[type] = { count: 0, lastHeight: 0 };
       counts[type].count += 1;

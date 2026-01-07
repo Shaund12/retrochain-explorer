@@ -51,6 +51,7 @@ const MAX_BLOCK_SCAN_MULTIPLIER = 8; // scan up to limit * multiplier blocks bef
 export function useTxs() {
   const api = useApi();
   const txs = ref<TxSummary[]>([]);
+  const allTxs = ref<TxSummary[]>([]);
   const loading = ref(false);
   const error = ref<string | null>(null);
 
@@ -177,9 +178,10 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
       if (proxyAvailable && page === 0) {
         // Try fast aggregator first only for first page
         const fast = await api.get(`/recent-txs`, { params: { limit } });
-        const hydrated = await hydrateFastTxs(fast.data?.txs ?? [], limit);
+          const hydrated = await hydrateFastTxs(fast.data?.txs ?? [], limit);
         if (hydrated.length) {
           txs.value = hydrated;
+          allTxs.value = hydrated;
           return;
         }
         throw new Error("fallback-scan");
@@ -367,6 +369,7 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
       }
 
       collected.sort((a, b) => b.height - a.height || b.timestamp?.localeCompare?.(a.timestamp || "") || 0);
+      allTxs.value = collected;
       const start = pageIndex * pageSize;
       const end = start + pageSize + 1;
       txs.value = collected.slice(start, end);
@@ -374,6 +377,7 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
       const err: any = e as any;
       error.value = err?.message ?? String(e);
       txs.value = [];
+      allTxs.value = [];
     } finally {
       loading.value = false;
     }
