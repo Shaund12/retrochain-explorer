@@ -67,7 +67,14 @@ const fetchLaunches = async (key?: string | null) => {
     const next = res.data?.pagination?.next_key || null;
     nextKey.value = next;
   } catch (err: any) {
-    error.value = err?.message || "Failed to load launches";
+    const status = err?.response?.status;
+    if (status === 501) {
+      error.value = "Launcher module not available on this node (HTTP 501).";
+    } else {
+      error.value = err?.message || "Failed to load launches";
+    }
+    launches.value = [];
+    nextKey.value = null;
   } finally {
     loading.value = false;
   }

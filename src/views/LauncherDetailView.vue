@@ -59,6 +59,15 @@ const shortAddr = (addr?: string, size = 14) => {
 
 const spotPrice = computed(() => formatRetro(launch.value?.computed?.spot_price_uretro_per_token));
 const progress = computed(() => formatPercent(launch.value?.computed?.graduation_progress));
+const graduated = computed(() => Boolean(launch.value?.launch?.graduated));
+const dexPoolId = computed(() => launch.value?.launch?.dex_pool_id || null);
+const tokensSoldPercent = computed(() => {
+  const sold = Number(launch.value?.computed?.tokens_sold ?? 0);
+  const max = Number(launch.value?.launch?.max_supply ?? 0);
+  if (!Number.isFinite(sold) || !Number.isFinite(max) || max <= 0) return "—";
+  return `${Math.min(100, (sold / max) * 100).toFixed(2)}%`;
+});
+const tradingFeeBps = computed(() => (params.value?.fee_bps ?? params.value?.trading_fee_bps ?? null));
 
 const fetchDetail = async () => {
   if (!denom.value) return;
@@ -72,8 +81,14 @@ const fetchDetail = async () => {
     launch.value = launchRes.data?.launch || launchRes.data?.launch_with_computed || launchRes.data || null;
     params.value = paramsRes ? paramsRes.data?.params ?? paramsRes.data ?? null : null;
   } catch (err: any) {
-    error.value = err?.message || "Failed to load launch";
+    const status = err?.response?.status;
+    if (status === 501) {
+      error.value = "Launcher module not available on this node (HTTP 501).";
+    } else {
+      error.value = err?.message || "Failed to load launch";
+    }
     launch.value = null;
+    params.value = null;
   } finally {
     loading.value = false;
   }
@@ -99,6 +114,10 @@ const tokensRemaining = computed(() => formatInt(launch.value?.computed?.tokens_
         <h1 class="text-3xl font-bold text-white flex items-center gap-3">
           <span>Launch Detail</span>
           <span class="text-xs px-2 py-1 rounded-full border border-white/10 bg-white/5 font-mono">{{ denom }}</span>
+          <span class="text-[11px] px-2 py-1 rounded-full border" :class="graduated ? 'border-emerald-400/60 text-emerald-200 bg-emerald-500/10' : 'border-sky-400/60 text-sky-200 bg-sky-500/10'">
+            {{ graduated ? 'Graduated' : 'Live' }}
+          </span>
+          <span v-if="dexPoolId" class="text-[11px] px-2 py-1 rounded-full border border-amber-400/60 text-amber-200 bg-amber-500/10">DEX Pool {{ dexPoolId }}</span>
         </h1>
         <p class="text-sm text-slate-300">On-chain data from /retrochain/launcher/v1/launch/{denom}</p>
       </div>
@@ -128,6 +147,35 @@ const tokensRemaining = computed(() => formatInt(launch.value?.computed?.tokens_
           <p class="text-[11px] uppercase tracking-wider text-amber-200">Graduated</p>
           <p class="text-2xl font-bold text-white">{{ launch.launch?.graduated ? 'Yes' : 'No' }}</p>
           <p class="text-[11px] text-amber-200/70">DEX Pool: {{ launch.launch?.dex_pool_id || '—' }}</p>
+        </div>
+      </div>
+
+      <div class="card">
+        <div class="flex items-center justify-between mb-2">
+          <h2 class="text-base font-semibold text-white">Launch Pulse</h2>
+          <span class="text-[11px] text-slate-400">Live KPIs</span>
+        </div>
+        <div class="grid gap-3 md:grid-cols-4">
+          <div class="p-3 rounded-xl bg-white/5 border border-emerald-400/30">
+            <div class="text-[11px] uppercase tracking-wider text-emerald-200">Tokens Sold</div>
+            <div class="text-xl font-bold text-white">{{ tokensSold }}</div>
+            <div class="text-[11px] text-emerald-100">{{ tokensSoldPercent }} of supply</div>
+          </div>
+          <div class="p-3 rounded-xl bg-white/5 border border-cyan-400/30">
+            <div class="text-[11px] uppercase tracking-wider text-cyan-200">Tokens Remaining</div>
+            <div class="text-xl font-bold text-white">{{ tokensRemaining }}</div>
+            <div class="text-[11px] text-cyan-100">to graduation</div>
+          </div>
+          <div class="p-3 rounded-xl bg-white/5 border border-amber-400/30">
+            <div class="text-[11px] uppercase tracking-wider text-amber-200">Reserve (Real)</div>
+            <div class="text-xl font-bold text-white">{{ formatRetro(launch.launch?.reserve_real_uretro) }}</div>
+            <div class="text-[11px] text-amber-100">Backing in RETRO</div>
+          </div>
+          <div class="p-3 rounded-xl bg-white/5 border border-indigo-400/30">
+            <div class="text-[11px] uppercase tracking-wider text-indigo-200">Reserve (Virtual)</div>
+            <div class="text-xl font-bold text-white">{{ formatRetro(launch.launch?.virtual_reserve_uretro) }}</div>
+            <div class="text-[11px] text-indigo-100">AMM liquidity helper</div>
+          </div>
         </div>
       </div>
 
@@ -184,7 +232,7 @@ const tokensRemaining = computed(() => formatInt(launch.value?.computed?.tokens_
         <div v-else class="grid grid-cols-1 md:grid-cols-3 gap-2 text-sm text-slate-200">
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">Trading Fee</div>
-            <div class="font-semibold">{{ params.fee_bps ?? '—' }} bps</div>
+            <div class="font-semibold">{{ tradingFeeBps ?? '—' }} bps</div>
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">Create Launch Fee</div>

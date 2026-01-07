@@ -24,7 +24,7 @@ const error = ref<string | null>(null);
 const params = ref<any | null>(null);
 
 const formatRetro = (value?: string | number | null) => {
-  if (value === undefined || value === null || value === "") return "—";
+  if (value === undefined || value === null || value === "") return "â€”";
   try {
     const raw = typeof value === "number" ? BigInt(Math.trunc(value)) : BigInt(value);
     const whole = raw / 1_000_000n;
@@ -35,7 +35,7 @@ const formatRetro = (value?: string | number | null) => {
     fracStr = fracStr.replace(/0+$/, "");
     return `${wholeStr}.${fracStr} RETRO`;
   } catch {
-    return "—";
+    return "â€”";
   }
 };
 
@@ -51,6 +51,8 @@ const loadParams = async () => {
 loadParams();
 
 const createFeeDisplay = computed(() => formatRetro(params.value?.create_launch_fee));
+const tradingFeeBps = computed(() => params.value?.fee_bps ?? params.value?.trading_fee_bps ?? "â€”");
+const feeRecipient = computed(() => params.value?.fee_recipient || "â€”");
 
 const submit = async () => {
   if (!subdenom.value.trim()) {
@@ -84,7 +86,7 @@ const submit = async () => {
     if (res?.code) {
       throw new Error(res?.rawLog || res?.raw_log || `Broadcast failed with code ${res.code}`);
     }
-    toast.showSuccess("Launch created! Refreshing…");
+    toast.showSuccess("Launch created! Redirectingâ€¦");
     router.push({ name: "launcher" });
   } catch (err: any) {
     error.value = err?.message || "Failed to create launch";
@@ -135,15 +137,37 @@ const submit = async () => {
             <span class="font-semibold">{{ createFeeDisplay }}</span>
           </div>
           <div class="text-[11px] text-slate-500 mt-1">Plus network gas fee in uretro.</div>
+          <div class="text-[11px] text-slate-500 mt-1">Trading fee: {{ tradingFeeBps }} bps Â· Recipient: {{ feeRecipient }}</div>
         </div>
       </div>
       <div class="flex items-center gap-3">
-        <button class="btn" :disabled="loading" @click="submit">{{ loading ? 'Submitting…' : 'Create Launch' }}</button>
+        <button class="btn" :disabled="loading" @click="submit">{{ loading ? 'Submittingâ€¦' : 'Create Launch' }}</button>
         <button class="btn-secondary" :disabled="loading" @click="router.push({ name: 'launcher' })">Cancel</button>
       </div>
       <div v-if="loading" class="flex items-center gap-2 text-sm text-slate-400">
         <RcLoadingSpinner size="sm" />
-        <span>Broadcasting transaction…</span>
+        <span>Broadcasting transactionâ€¦</span>
+      </div>
+    </div>
+
+    <div class="grid gap-3 md:grid-cols-2">
+      <div class="card border border-emerald-400/40 bg-emerald-500/5">
+        <h2 class="text-sm font-semibold text-white mb-1">Launch Checklist</h2>
+        <ul class="text-sm text-slate-200 space-y-1 list-disc list-inside">
+          <li>Pick a short subdenom (e.g., MYCOIN).</li>
+          <li>Optional: set max supply and graduation reserve in uretro.</li>
+          <li>Fees shown above come from on-chain params.</li>
+          <li>Wallet signs <code class="font-mono">MsgCreateLaunch</code> on {{ chainId }}.</li>
+        </ul>
+      </div>
+      <div class="card border border-cyan-400/40 bg-cyan-500/5">
+        <h2 class="text-sm font-semibold text-white mb-1">Pump-style Tips</h2>
+        <ul class="text-sm text-slate-200 space-y-1 list-disc list-inside">
+          <li>Share your denom immediately so traders can find it.</li>
+          <li>Track spot price and progress on the Launches list.</li>
+          <li>Graduation requires reserves + sold supply to hit targets.</li>
+          <li>Keep some RETRO ready for fees and liquidity.</li>
+        </ul>
       </div>
     </div>
   </div>
