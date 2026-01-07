@@ -383,5 +383,5 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
     }
   };
 
-  return { txs, loading, error, searchRecent, getTx, searchByAddress };
+  return { txs, allTxs, loading, error, searchRecent, getTx, searchByAddress };
 }
