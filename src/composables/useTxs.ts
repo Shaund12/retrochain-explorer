@@ -351,7 +351,7 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
               gasUsed: resp.gas_used,
               timestamp: resp.timestamp,
               messageTypes: extractMessageTypes(resp),
-              transfers: parseTransfers(resp?.logs, address),
+              transfers: parseTransfers(resp, address),
               valueTransfers: aggregateTransferTotals(resp?.logs),
               fees: resp?.tx?.auth_info?.fee?.amount || [],
               burns: aggregateBurnTotals(resp)

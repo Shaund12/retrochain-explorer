@@ -98,8 +98,16 @@ export const parseTransfers = (logsOrEvents: any, address: string): Transfer[] =
   const addr = address.toLowerCase();
   const transfers: Transfer[] = [];
 
+  // Normalize into an array of objects with "events" arrays.
   let logs: any[] = [];
-  if (Array.isArray(logsOrEvents) && logsOrEvents.length && logsOrEvents[0]?.events) {
+
+  // If a full tx_response was passed, prefer its logs, then events fallback.
+  if (logsOrEvents?.txhash && Array.isArray(logsOrEvents.logs)) {
+    logs = logsOrEvents.logs as any[];
+    if ((!logs || !logs.length) && Array.isArray(logsOrEvents.events)) {
+      logs = [{ events: logsOrEvents.events }];
+    }
+  } else if (Array.isArray(logsOrEvents) && logsOrEvents.length && logsOrEvents[0]?.events) {
     logs = logsOrEvents as any[];
   } else if (Array.isArray(logsOrEvents) && logsOrEvents.length && logsOrEvents[0]?.type && logsOrEvents[0]?.attributes) {
     logs = [{ events: logsOrEvents }];

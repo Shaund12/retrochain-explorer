@@ -190,16 +190,14 @@ const delegationDistribution = computed(() => {
 });
 
 const transferFlows = computed(() => {
-  const nativeDenoms = ["uretro", "udretro"];
   const map = new Map<string, { incoming: number; outgoing: number; denom: string }>();
   allTxs.value.forEach((tx) => {
     const date = (tx.timestamp || "").slice(0, 10);
     if (!date) return;
-    const bucket = map.get(date) || { incoming: 0, outgoing: 0, denom: nativeDenoms[0] };
+    const bucket = map.get(date) || { incoming: 0, outgoing: 0, denom: "uretro" };
     (tx.transfers || []).forEach((tr) => {
       const denom = (tr.denom || "").toLowerCase();
-      if (!nativeDenoms.includes(denom)) return;
-      bucket.denom = denom;
+      bucket.denom = denom || bucket.denom;
       if (tr.direction === "in") bucket.incoming += tr.amount;
       if (tr.direction === "out") bucket.outgoing += tr.amount;
     });
@@ -936,7 +934,7 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
       <div class="card" v-if="transferFlows.length">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-sm font-semibold text-slate-100">Net Transfers (last 14 days)</h2>
-          <div class="text-[11px] text-slate-400">Incoming vs Outgoing uretro</div>
+          <div class="text-[11px] text-slate-400">Incoming vs Outgoing (all denoms)</div>
         </div>
         <div class="space-y-2">
           <div
