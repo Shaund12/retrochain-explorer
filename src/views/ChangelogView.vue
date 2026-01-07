@@ -171,6 +171,29 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "2.2.0",
+    codename: "Arcade Polish & Nav",
+    date: "2025-01-20",
+    summary: "Arcade Games page got richer modals, cleaned genre labels, and a fast nav link to the games catalog.",
+    changes: [
+      {
+        type: "improvement",
+        title: "Arcade game modal gets badges and styled stats",
+        description: "Modals now show genre/difficulty/status badges, styled detail tiles, and clearer launch messaging with play icon."
+      },
+      {
+        type: "improvement",
+        title: "Genre prefixes removed in filters and badges",
+        description: "Normalized genres by stripping GENRE_ prefixes so filters, badges, and icons show clean labels."
+      },
+      {
+        type: "feature",
+        title: "Arcade Games link in navigation",
+        description: "Added a direct Arcade Games link to the Arcade dropdown for one-click access to the full catalog."
+      }
+    ]
+  },
+  {
     version: "2025.01.05",
     codename: "Palette Refresh + Arcade UX",
     date: "2025-01-05",

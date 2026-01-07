@@ -1,5 +1,19 @@
 # ?? RetroChain Explorer - Changelog
 
+## Version 2.2.0 - "Arcade Polish & Nav"
+
+### ? Improvements
+
+#### ?? Arcade Experience
+- Arcade Games modal now shows richer details with genre/difficulty/status badges, styled stat tiles, and a clearer launch state.
+- Added genre normalization (drops `GENRE_` prefixes) for filters, badges, and icons.
+- Play button gains a launch icon and disables when no launch URL exists.
+
+#### ?? Navigation
+- Added a direct "Arcade Games" link to the Arcade dropdown for faster access.
+
+---
+
 ## Version 2.1.0 - "Keplr Auto-Connect Update" ??
 
 ### ?? New Features
