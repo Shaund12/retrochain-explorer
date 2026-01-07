@@ -99,6 +99,15 @@ const stats = computed(() => {
   return { total, active, genres, maxScore };
 });
 
+const selectedGameStatus = computed(() => (selectedGame.value?.active ? "🟢 Active" : "⏸️ Inactive"));
+const selectedGameDifficulty = computed(() => (selectedGame.value?.difficulty ? selectedGame.value.difficulty.toString() : "Casual"));
+const selectedGameCreator = computed(() => (selectedGame.value?.creator || "—"));
+const selectedGameMaxScore = computed(() => {
+  const n = Number(selectedGame.value?.max_score ?? 0);
+  return Number.isFinite(n) && n > 0 ? n.toLocaleString() : "—";
+});
+const selectedGameLaunchable = computed(() => Boolean(resolveGameLaunchUrl(selectedGame.value)));
+
 onMounted(async () => {
   await fetchGames();
 });
@@ -179,7 +188,11 @@ onMounted(async () => {
             <div>
               <div class="text-sm font-semibold text-white">{{ selectedGame.name }}</div>
               <div class="text-[11px] text-slate-400">ID: {{ selectedGame.game_id }}</div>
-              <div class="text-[11px] text-slate-400">Genre: {{ normalizeGenre(selectedGame) }}</div>
+              <div class="mt-1 flex flex-wrap gap-1 text-[11px]">
+                <span class="badge border-emerald-400/40 text-emerald-200">{{ normalizeGenre(selectedGame) }}</span>
+                <span class="badge border-cyan-400/40 text-cyan-200">{{ selectedGameDifficulty }}</span>
+                <span class="badge border-amber-400/40 text-amber-200">{{ selectedGameStatus }}</span>
+              </div>
             </div>
           </div>
           <button class="btn text-xs" @click="closeGameModal">✖ Close</button>
@@ -187,17 +200,31 @@ onMounted(async () => {
         <div class="p-5 space-y-3 text-sm text-slate-200">
           <p class="text-slate-300">{{ selectedGame.description || 'No description provided.' }}</p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
-            <div><span class="text-slate-500">Difficulty:</span> {{ selectedGame.difficulty || '—' }}</div>
-            <div><span class="text-slate-500">Max Score:</span> {{ selectedGame.max_score ?? '—' }}</div>
-            <div><span class="text-slate-500">Creator:</span> {{ selectedGame.creator || '—' }}</div>
-            <div><span class="text-slate-500">Status:</span> {{ selectedGame.active ? 'Active' : 'Inactive' }}</div>
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
+              <span class="text-slate-500">Difficulty</span>
+              <span class="text-slate-200">{{ selectedGameDifficulty }}</span>
+            </div>
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
+              <span class="text-slate-500">Max Score</span>
+              <span class="text-slate-200">{{ selectedGameMaxScore }}</span>
+            </div>
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
+              <span class="text-slate-500">Creator</span>
+              <span class="text-slate-200">{{ selectedGameCreator }}</span>
+            </div>
+            <div class="p-2 rounded-lg bg-white/5 border border-white/10 flex items-center justify-between">
+              <span class="text-slate-500">Status</span>
+              <span class="text-slate-200">{{ selectedGameStatus }}</span>
+            </div>
           </div>
         </div>
         <div class="p-5 border-t border-white/10 flex items-center justify-between gap-3">
-          <div class="text-xs text-slate-400">Launches a hosted game client in a new tab.</div>
+          <div class="text-xs text-slate-400 flex items-center gap-2">
+            <span>{{ selectedGameLaunchable ? 'Launches a hosted game client in a new tab.' : 'Launch URL not configured yet.' }}</span>
+          </div>
           <div class="flex gap-2">
             <button class="btn text-xs" @click="closeGameModal">Cancel</button>
-            <button class="btn btn-primary text-xs" :disabled="!resolveGameLaunchUrl(selectedGame)" @click="playSelectedGame">Play</button>
+            <button class="btn btn-primary text-xs" :disabled="!selectedGameLaunchable" @click="playSelectedGame">▶ Play</button>
           </div>
         </div>
       </div>
