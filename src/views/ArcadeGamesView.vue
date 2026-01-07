@@ -42,6 +42,23 @@ const enableRetroNoid = import.meta.env.VITE_ARCADE_GAME_RETRONOID_ENABLED !== "
 const enableRetroMan = import.meta.env.VITE_ARCADE_GAME_RETROMAN_ENABLED !== "false";
 const enableRetroWar = true;
 
+const normalizeGenre = (g: any) => {
+  const raw = (g?.genre || "Arcade").toString();
+  const cleaned = raw.replace(/^genre[_-]?/i, "");
+  return cleaned || "Arcade";
+};
+
+const selectedGameIcon = computed(() => {
+  const genre = normalizeGenre(selectedGame.value).toLowerCase();
+  if (genre === "shooter") return "🎯";
+  if (genre === "puzzle") return "🧩";
+  if (genre === "racing") return "🏎️";
+  if (genre === "platformer") return "🦘";
+  if (genre === "fighting") return "🥊";
+  if (genre === "rpg") return "🧙‍♂️";
+  return "🎮";
+});
+
 const gamesList = computed(() => (Array.isArray(games.value) ? games.value : []));
 const visibleGames = computed(() =>
   gamesList.value.filter((g) => {
@@ -62,7 +79,7 @@ const selectedGenre = ref<string>("all");
 const genreOptions = computed(() => {
   const set = new Set<string>();
   visibleGames.value.forEach((g) => {
-    const genre = (g.genre || "Arcade").toString();
+    const genre = normalizeGenre(g);
     if (genre) set.add(genre);
   });
   return ["all", ...Array.from(set).sort()];
@@ -71,7 +88,7 @@ const genreOptions = computed(() => {
 const filteredGames = computed(() => {
   if (selectedGenre.value === "all") return visibleGames.value;
   const target = selectedGenre.value.toLowerCase();
-  return visibleGames.value.filter((g) => (g.genre || "").toString().toLowerCase() === target);
+  return visibleGames.value.filter((g) => normalizeGenre(g).toLowerCase() === target);
 });
 
 const stats = computed(() => {
@@ -102,7 +119,7 @@ onMounted(async () => {
         </div>
       </div>
       <div class="flex gap-2 flex-wrap justify-end">
-        <button class="btn text-xs" @click="router.push({ name: 'arcade' })">? Back to Arcade Dash</button>
+        <button class="btn text-xs" @click="router.push({ name: 'arcade' })">← Back to Arcade Dash</button>
         <button class="btn btn-primary text-xs" :disabled="!visibleGames.length" @click="selectedGame = visibleGames[0]; gameModalOpen = true">Play Now</button>
       </div>
     </div>
@@ -110,22 +127,22 @@ onMounted(async () => {
     <div class="grid gap-3 md:grid-cols-4">
       <div class="card border-emerald-400/30 bg-emerald-500/10">
         <div class="text-[11px] uppercase tracking-wider text-emerald-200">Total Games</div>
-        <div class="text-3xl font-bold text-white flex items-center gap-2">?? <span>{{ stats.total }}</span></div>
+        <div class="text-3xl font-bold text-white flex items-center gap-2">🎮 <span>{{ stats.total }}</span></div>
         <div class="text-[11px] text-emerald-100">All listed on-chain arcade titles</div>
       </div>
       <div class="card border-cyan-400/30 bg-cyan-500/10">
         <div class="text-[11px] uppercase tracking-wider text-cyan-200">Active</div>
-        <div class="text-3xl font-bold text-white flex items-center gap-2">?? <span>{{ stats.active }}</span></div>
+        <div class="text-3xl font-bold text-white flex items-center gap-2">🚀 <span>{{ stats.active }}</span></div>
         <div class="text-[11px] text-cyan-100">Currently marked active</div>
       </div>
       <div class="card border-amber-400/30 bg-amber-500/10">
         <div class="text-[11px] uppercase tracking-wider text-amber-200">Genres</div>
-        <div class="text-3xl font-bold text-white flex items-center gap-2">?? <span>{{ stats.genres }}</span></div>
+        <div class="text-3xl font-bold text-white flex items-center gap-2">🎨 <span>{{ stats.genres }}</span></div>
         <div class="text-[11px] text-amber-100">Playable flavors</div>
       </div>
       <div class="card border-indigo-400/30 bg-indigo-500/10">
         <div class="text-[11px] uppercase tracking-wider text-indigo-200">Top Max Score</div>
-        <div class="text-3xl font-bold text-white flex items-center gap-2">?? <span>{{ stats.maxScore.toLocaleString() }}</span></div>
+        <div class="text-3xl font-bold text-white flex items-center gap-2">🏆 <span>{{ stats.maxScore.toLocaleString() }}</span></div>
         <div class="text-[11px] text-indigo-100">Highest published max score</div>
       </div>
     </div>
@@ -158,21 +175,21 @@ onMounted(async () => {
       <div class="relative w-full max-w-2xl rounded-2xl border border-white/10 bg-[rgba(10,14,39,0.98)] shadow-2xl shadow-black/50">
         <div class="p-5 border-b border-white/10 flex items-start justify-between gap-4">
           <div class="flex items-start gap-3">
-            <div class="text-4xl">??</div>
+            <div class="text-4xl">{{ selectedGameIcon }}</div>
             <div>
               <div class="text-sm font-semibold text-white">{{ selectedGame.name }}</div>
               <div class="text-[11px] text-slate-400">ID: {{ selectedGame.game_id }}</div>
-              <div class="text-[11px] text-slate-400">Genre: {{ selectedGame.genre || 'Arcade' }}</div>
+              <div class="text-[11px] text-slate-400">Genre: {{ normalizeGenre(selectedGame) }}</div>
             </div>
           </div>
-          <button class="btn text-xs" @click="closeGameModal">? Close</button>
+          <button class="btn text-xs" @click="closeGameModal">✖ Close</button>
         </div>
         <div class="p-5 space-y-3 text-sm text-slate-200">
           <p class="text-slate-300">{{ selectedGame.description || 'No description provided.' }}</p>
           <div class="grid grid-cols-1 sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
-            <div><span class="text-slate-500">Difficulty:</span> {{ selectedGame.difficulty || '�' }}</div>
-            <div><span class="text-slate-500">Max Score:</span> {{ selectedGame.max_score ?? '�' }}</div>
-            <div><span class="text-slate-500">Creator:</span> {{ selectedGame.creator || '�' }}</div>
+            <div><span class="text-slate-500">Difficulty:</span> {{ selectedGame.difficulty || '—' }}</div>
+            <div><span class="text-slate-500">Max Score:</span> {{ selectedGame.max_score ?? '—' }}</div>
+            <div><span class="text-slate-500">Creator:</span> {{ selectedGame.creator || '—' }}</div>
             <div><span class="text-slate-500">Status:</span> {{ selectedGame.active ? 'Active' : 'Inactive' }}</div>
           </div>
         </div>
