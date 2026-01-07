@@ -438,16 +438,9 @@ const totalTxsDisplay = computed(() => {
   if (typeof info.value.totalTxs === "number" && info.value.totalTxs >= 0) {
     return info.value.totalTxs.toLocaleString();
   }
-  // Fallback: if chain/node doesn't expose total_txs, approximate from recent blocks.
+  // Fallback: show summed tx count across the recent window (no scaling to avoid inflated totals).
   if (recentBlocks.value.length) {
     const windowTxs = recentBlocks.value.reduce((sum, b) => sum + Number(b.txs || 0), 0);
-    // If we have a latest height, scale the window average to an approximate total.
-    const height = info.value.latestBlockHeight || recentBlocks.value[0]?.height;
-    if (height && height > 0) {
-      const avg = windowTxs / Math.max(1, recentBlocks.value.length);
-      const approx = Math.round(avg * height);
-      if (Number.isFinite(approx) && approx >= 0) return `~${approx.toLocaleString()}`;
-    }
     return windowTxs.toLocaleString();
   }
   return "—";
