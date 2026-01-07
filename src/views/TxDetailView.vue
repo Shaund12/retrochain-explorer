@@ -451,7 +451,7 @@ const ibcPackets = computed(() => {
   }[] = [];
 
   responseEvents.forEach((ev: any) => {
-    if (ev?.type !== "recv_packet" && ev?.type !== "write_acknowledgement" && ev?.type !== "fungible_token_packet") return;
+    if (ev?.type !== "recv_packet" && ev?.type !== "write_acknowledgement" && ev?.type !== "fungible_token_packet" && ev?.type !== "send_packet" && ev?.type !== "timeout_packet" && ev?.type !== "timeout") return;
     const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
     const map = attributesToMap(attrs);
 
@@ -494,6 +494,99 @@ const ibcPackets = computed(() => {
   });
 
   return packets;
+});
+
+const ibcTimelines = computed(() => {
+  const responseEvents = Array.isArray(txResponse.value?.events) ? txResponse.value?.events : [];
+  const byKey = new Map<string, any>();
+
+  const getKey = (map: Record<string, string | undefined>) => {
+    const seq = map.packet_sequence || map.sequence || map.packet_seq || "?";
+    const chan = map.packet_src_channel || map.packet_dst_channel || "?";
+    return `${chan}-${seq}`;
+  };
+
+  const upsert = (map: Record<string, string | undefined>, updater: (entry: any) => void) => {
+    const key = getKey(map);
+    const existing = byKey.get(key) || {
+      sequence: map.packet_sequence || map.sequence || "?",
+      source: map.packet_src_channel ? `${map.packet_src_port || "transfer"}/${map.packet_src_channel}` : undefined,
+      dest: map.packet_dst_channel ? `${map.packet_dst_port || "transfer"}/${map.packet_dst_channel}` : undefined,
+      stages: { sent: false, recv: false, ack: false, timeout: false },
+      amount: undefined as string | undefined,
+      denom: undefined as string | undefined,
+      sender: undefined as string | undefined,
+      receiver: undefined as string | undefined,
+      usd: null as number | null,
+      formatted: undefined as string | undefined
+    };
+    updater(existing);
+    byKey.set(key, existing);
+  };
+
+  responseEvents.forEach((ev: any) => {
+    const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
+    const map = attributesToMap(attrs);
+    if (!map.packet_sequence && !map.sequence) return;
+
+    const decoded = decodeBase64Json(map.packet_data_base64);
+    const jsonFromHex = (() => {
+      if (!map.packet_data_hex) return null;
+      try {
+        const bytes = map.packet_data_hex.match(/.{1,2}/g)?.map((b) => parseInt(b, 16)) ?? [];
+        const text = String.fromCharCode(...bytes);
+        return JSON.parse(text);
+      } catch {
+        return null;
+      }
+    })();
+    const decodedData = decoded || jsonFromHex;
+    const amount = decodedData?.amount || map.amount;
+    const denom = decodedData?.denom || map.denom;
+    const sender = decodedData?.sender || map.sender;
+    const receiver = decodedData?.receiver || map.recipient;
+
+    const formatted = amount && denom ? formatTokenAmount(amount, denom) : undefined;
+    const usd = getUsdEstimate(amount, denom);
+
+    if (ev?.type === "send_packet") {
+      upsert(map, (entry) => {
+        entry.stages.sent = true;
+        entry.amount ||= amount;
+        entry.denom ||= denom;
+        entry.sender ||= sender;
+        entry.receiver ||= receiver;
+        entry.formatted ||= formatted;
+        entry.usd = entry.usd ?? usd;
+      });
+    }
+
+    if (ev?.type === "recv_packet") {
+      upsert(map, (entry) => {
+        entry.stages.recv = true;
+        entry.amount ||= amount;
+        entry.denom ||= denom;
+        entry.sender ||= sender;
+        entry.receiver ||= receiver;
+        entry.formatted ||= formatted;
+        entry.usd = entry.usd ?? usd;
+      });
+    }
+
+    if (ev?.type === "write_acknowledgement") {
+      upsert(map, (entry) => {
+        entry.stages.ack = true;
+      });
+    }
+
+    if (ev?.type === "timeout" || ev?.type === "timeout_packet") {
+      upsert(map, (entry) => {
+        entry.stages.timeout = true;
+      });
+    }
+  });
+
+  return Array.from(byKey.values());
 });
 
 const copyTxToClipboard = async (text: string) => copyToClipboard(text, "Copied");
@@ -544,6 +637,43 @@ const downloadJson = (obj: any, filename = "tx.json") => {
         </div>
       </div>
     </div>
+
+        <div v-if="ibcTimelines.length" class="card">
+          <div class="flex items-center justify-between mb-2">
+            <h2 class="text-sm font-semibold text-slate-100">IBC Packet Timeline</h2>
+            <span class="text-[11px] text-slate-500">Per sequence in this transaction</span>
+          </div>
+          <div class="space-y-2 text-xs text-slate-300">
+            <div
+              v-for="pkt in ibcTimelines"
+              :key="`${pkt.sequence}-${pkt.source}-${pkt.dest}`"
+              class="p-3 rounded-lg bg-slate-900/60 border border-white/10"
+            >
+              <div class="flex items-center justify-between mb-1">
+                <div class="flex items-center gap-2">
+                  <span class="text-[11px] px-2 py-0.5 rounded-full border border-cyan-400/50 text-cyan-200">Seq {{ pkt.sequence || '—' }}</span>
+                  <span class="text-[11px] text-slate-500">{{ pkt.source || '—' }} → {{ pkt.dest || '—' }}</span>
+                </div>
+                <div class="flex items-center gap-2 text-[11px]">
+                  <span :class="pkt.stages.sent ? 'text-emerald-300' : 'text-slate-500'">Sent</span>
+                  <span>·</span>
+                  <span :class="pkt.stages.recv ? 'text-emerald-300' : 'text-slate-500'">Recv</span>
+                  <span>·</span>
+                  <span :class="pkt.stages.ack ? 'text-emerald-300' : 'text-slate-500'">Ack</span>
+                  <span>·</span>
+                  <span :class="pkt.stages.timeout ? 'text-rose-300' : 'text-slate-500'">Timeout</span>
+                </div>
+              </div>
+              <div class="grid grid-cols-1 sm:grid-cols-2 gap-1">
+                <div v-if="pkt.formatted" class="text-slate-200">{{ pkt.formatted }}</div>
+                <div v-else-if="pkt.amount && pkt.denom" class="text-slate-200">{{ pkt.amount }} {{ pkt.denom }}</div>
+                <div v-if="pkt.usd !== null && pkt.usd !== undefined" class="text-emerald-300 font-semibold">≈ {{ formatUsd(pkt.usd) }}</div>
+                <div v-if="pkt.sender" class="text-slate-400 break-all">From: {{ pkt.sender }}</div>
+                <div v-if="pkt.receiver" class="text-slate-400 break-all">To: {{ pkt.receiver }}</div>
+              </div>
+            </div>
+          </div>
+        </div>
 
         <div v-if="ibcPackets.length" class="card">
           <h2 class="text-sm font-semibold mb-2 text-slate-100">IBC Packet Data</h2>

@@ -106,6 +106,13 @@ const copy = async (text?: string | null) => {
 onMounted(() => {
   fetchChannels(200);
 });
+
+const pendingDelta = (c: any) => {
+  const send = Number(c?.nextSequenceSend);
+  const recv = Number(c?.nextSequenceRecv);
+  if (!Number.isFinite(send) || !Number.isFinite(recv)) return NaN;
+  return Math.max(0, send - recv);
+};
 </script>
 
 <template>
@@ -270,8 +277,8 @@ onMounted(() => {
         <div class="text-xs text-slate-500">State = OPEN</div>
       </div>
       <div class="card">
-        <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Ordering</div>
-        <div class="text-2xl font-bold text-indigo-400">{{ channels.filter(c => c.ordering === 'ORDER_UNORDERED').length }}</div>
+         <div class="text-xs uppercase tracking-wider text-slate-400 mb-1">Ordering</div>
+         <div class="text-2xl font-bold text-cyan-400">{{ channels.filter(c => c.ordering === 'ORDER_UNORDERED').length }}</div>
         <div class="text-xs text-slate-500">Unordered channels</div>
       </div>
     </div>
@@ -281,10 +288,13 @@ onMounted(() => {
     </div>
 
     <div class="card">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold text-slate-100">IBC Channels</h2>
-        <span v-if="loading" class="text-xs text-slate-400">Loading...</span>
-      </div>
+       <div class="flex items-center justify-between mb-3">
+         <div>
+           <h2 class="text-sm font-semibold text-slate-100">IBC Channels</h2>
+           <p class="text-[11px] text-slate-500">Includes send/recv sequence deltas</p>
+         </div>
+         <span v-if="loading" class="text-xs text-slate-400">Loading...</span>
+       </div>
       <div v-if="!channels.length && !loading" class="text-sm text-slate-400">No channels found</div>
       <div v-else class="overflow-x-auto">
         <table class="table">
@@ -297,6 +307,7 @@ onMounted(() => {
               <th>Connection</th>
               <th class="text-right">Seq Send</th>
               <th class="text-right">Seq Recv</th>
+              <th class="text-right">Pending</th>
             </tr>
           </thead>
           <tbody>
@@ -321,8 +332,11 @@ onMounted(() => {
               <td class="text-[11px] text-slate-400">
                 {{ c.connectionHops.join(', ') || '-' }}
               </td>
-              <td class="text-right font-mono">{{ c.nextSequenceSend ?? '' }}</td>
-              <td class="text-right font-mono">{{ c.nextSequenceRecv ?? '' }}</td>
+              <td class="text-right font-mono">{{ c.nextSequenceSend ?? '—' }}</td>
+              <td class="text-right font-mono">{{ c.nextSequenceRecv ?? '—' }}</td>
+              <td class="text-right font-mono" :class="pendingDelta(c) > 5 ? 'text-amber-300' : 'text-slate-200'">
+                {{ isFinite(pendingDelta(c)) ? pendingDelta(c) : '—' }}
+              </td>
             </tr>
           </tbody>
         </table>

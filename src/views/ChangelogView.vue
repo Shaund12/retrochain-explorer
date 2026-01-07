@@ -6,6 +6,19 @@
       <p class="text-sm text-slate-400">
         A living timeline of every user-facing improvement, so the community can track progress and product teams can audit what changed.
       </p>
+      <div class="flex flex-wrap justify-center gap-3">
+        <button
+          class="btn text-xs"
+          :class="unseenCount > 0 ? 'border-emerald-400/60 text-emerald-200' : ''"
+          @click="showWhatsNew = true"
+        >
+          What's new
+          <span v-if="unseenCount > 0" class="ml-2 px-2 py-0.5 rounded-full text-[10px] bg-emerald-500/20 border border-emerald-400/50 text-emerald-200">
+            {{ unseenCount }}
+          </span>
+        </button>
+        <button class="btn text-xs" @click="selectedDate = ''">Clear date filter</button>
+      </div>
       <div class="flex flex-col sm:flex-row gap-3 justify-center items-center pt-2">
         <label class="text-xs text-slate-400 flex items-center gap-2">
           <span>Filter by date (YYYY-MM-DD)</span>
@@ -15,7 +28,6 @@
             v-model="selectedDate"
           />
         </label>
-        <button class="btn text-xs" @click="selectedDate = ''">Clear</button>
       </div>
     </header>
 
@@ -92,11 +104,54 @@
         <li>When backfilling history, add older releases beneath the current one to preserve chronological order.</li>
       </ul>
     </section>
+
+    <transition name="fade">
+      <div v-if="showWhatsNew" class="fixed inset-0 z-50 bg-black/60 backdrop-blur-sm flex justify-end">
+        <div class="w-full max-w-md h-full bg-[rgba(6,10,26,0.95)] border-l border-white/10 shadow-2xl shadow-black/40 overflow-y-auto">
+          <div class="flex items-center justify-between px-4 py-3 border-b border-white/10">
+            <div>
+              <div class="text-xs uppercase tracking-[0.25em] text-emerald-300">What's New</div>
+              <div class="text-sm text-slate-400">Changes since your last visit</div>
+            </div>
+            <button class="btn text-xs" @click="closeWhatsNew">Close</button>
+          </div>
+          <div v-if="newEntries.length === 0" class="p-4 text-sm text-slate-400">
+            You’re all caught up.
+          </div>
+          <div v-else class="divide-y divide-white/5">
+            <div
+              v-for="release in newEntries"
+              :key="release.version"
+              class="p-4 space-y-2"
+            >
+              <div class="flex items-center justify-between">
+                <div class="text-base font-semibold text-white">{{ release.version }}</div>
+                <div class="text-[11px] text-slate-500">{{ release.date }}</div>
+              </div>
+              <div class="text-sm text-slate-300">{{ release.summary }}</div>
+              <ul class="space-y-2 text-sm text-slate-200">
+                <li v-for="change in release.changes" :key="change.title" class="flex gap-2">
+                  <span :class="['px-2 py-0.5 rounded-full text-[11px] border h-fit', badgeClass(change.type)]">{{ change.type }}</span>
+                  <div>
+                    <div class="font-semibold text-white">{{ change.title }}</div>
+                    <div class="text-slate-400">{{ change.description }}</div>
+                  </div>
+                </li>
+              </ul>
+            </div>
+          </div>
+          <div class="p-4 border-t border-white/10 flex justify-between items-center">
+            <div class="text-xs text-slate-400">Last seen: {{ lastSeenDate || 'never' }}</div>
+            <button class="btn text-xs" @click="markAllSeen">Mark as read</button>
+          </div>
+        </div>
+      </div>
+    </transition>
   </div>
 </template>
 
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, onMounted, ref } from "vue";
 
 type ChangeType = "feature" | "improvement" | "fix" | "ops" | "note";
 
@@ -319,6 +374,26 @@ const releases: Release[] = [
 ];
 
 const selectedDate = ref<string>("");
+const lastSeenDate = ref<string>("");
+const showWhatsNew = ref(false);
+
+const STORAGE_KEY = "retrochain.changelog.lastSeen";
+
+onMounted(() => {
+  try {
+    const stored = localStorage.getItem(STORAGE_KEY);
+    if (stored) lastSeenDate.value = stored;
+  } catch (err) {
+    console.warn("Unable to read changelog lastSeen", err);
+  }
+});
+
+const newEntries = computed(() => {
+  if (!lastSeenDate.value) return releases;
+  return releases.filter((r) => r.date > lastSeenDate.value);
+});
+
+const unseenCount = computed(() => newEntries.value.length);
 
 const filteredReleases = computed(() => {
   if (!selectedDate.value) return releases;
@@ -338,4 +413,20 @@ const badgeStyles: Record<ChangeType, string> = {
 };
 
 const badgeClass = (type: ChangeType) => badgeStyles[type] ?? badgeStyles.note;
+
+const markAllSeen = () => {
+  if (!releases.length) return;
+  const latestDate = releases[0]?.date || new Date().toISOString().slice(0, 10);
+  lastSeenDate.value = latestDate;
+  try {
+    localStorage.setItem(STORAGE_KEY, latestDate);
+  } catch (err) {
+    console.warn("Unable to persist changelog lastSeen", err);
+  }
+  showWhatsNew.value = false;
+};
+
+const closeWhatsNew = () => {
+  showWhatsNew.value = false;
+};
 </script>
