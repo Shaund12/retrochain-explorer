@@ -45,13 +45,13 @@ const latestHeight = computed(() => {
 
 const latestTime = computed(() => latestBlock.value?.header?.time ?? null);
 const chainId = computed(() => nodeInfo.value?.network ?? null);
-const moniker = computed(() => nodeInfo.value?.moniker ?? "—");
-const listenAddr = computed(() => nodeInfo.value?.listen_addr ?? "—");
-const rpcAddr = computed(() => nodeInfo.value?.rpc_address ?? "—");
-const nodeId = computed(() => nodeInfo.value?.default_node_id ?? "—");
+const moniker = computed(() => nodeInfo.value?.moniker ?? "â€”");
+const listenAddr = computed(() => nodeInfo.value?.listen_addr ?? "â€”");
+const rpcAddr = computed(() => nodeInfo.value?.rpc_address ?? "â€”");
+const nodeId = computed(() => nodeInfo.value?.default_node_id ?? "â€”");
 const protocolVersion = computed(() => nodeInfo.value?.protocol_version ?? null);
-const appName = computed(() => appVersion.value?.name ?? "—");
-const appVer = computed(() => appVersion.value?.version ?? "—");
+const appName = computed(() => appVersion.value?.name ?? "â€”");
+const appVer = computed(() => appVersion.value?.version ?? "â€”");
 const git = computed(() => appVersion.value?.build_tags || appVersion.value?.git_commit || "");
 </script>
 
@@ -75,24 +75,24 @@ const git = computed(() => appVersion.value?.build_tags || appVersion.value?.git
     </RcDisclaimer>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading node info…" />
+      <RcLoadingSpinner size="md" text="Loading node infoâ€¦" />
     </div>
 
     <template v-else>
       <div class="grid gap-3 md:grid-cols-3">
         <div class="card border border-emerald-400/40 bg-emerald-500/5">
           <p class="text-[11px] uppercase tracking-wider text-emerald-200">Chain ID</p>
-          <p class="text-xl font-bold text-white">{{ chainId || '—' }}</p>
+          <p class="text-xl font-bold text-white">{{ chainId || 'â€”' }}</p>
           <p class="text-[11px] text-emerald-200/70">Moniker: {{ moniker }}</p>
         </div>
         <div class="card border border-cyan-400/40 bg-cyan-500/5">
           <p class="text-[11px] uppercase tracking-wider text-cyan-200">Latest Block</p>
-          <p class="text-xl font-bold text-white">{{ latestHeight || '—' }}</p>
-          <p class="text-[11px] text-cyan-200/70">{{ latestTime || '—' }}</p>
+          <p class="text-xl font-bold text-white">{{ latestHeight || 'â€”' }}</p>
+          <p class="text-[11px] text-cyan-200/70">{{ latestTime || 'â€”' }}</p>
         </div>
         <div class="card border border-amber-400/40 bg-amber-500/5">
           <p class="text-[11px] uppercase tracking-wider text-amber-200">Syncing</p>
-          <p class="text-xl font-bold text-white">{{ syncing === null ? '—' : (syncing ? 'Yes' : 'No') }}</p>
+          <p class="text-xl font-bold text-white">{{ syncing === null ? 'â€”' : (syncing ? 'Yes' : 'No') }}</p>
           <p class="text-[11px] text-amber-200/70">From /syncing</p>
         </div>
       </div>
@@ -121,7 +121,7 @@ const git = computed(() => appVersion.value?.build_tags || appVersion.value?.git
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">Protocol Version</div>
-            <div class="font-mono text-xs text-slate-200 break-all">{{ protocolVersion ? JSON.stringify(protocolVersion) : '—' }}</div>
+            <div class="font-mono text-xs text-slate-200 break-all">{{ protocolVersion ? JSON.stringify(protocolVersion) : 'â€”' }}</div>
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">App Version</div>
