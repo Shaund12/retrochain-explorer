@@ -6,27 +6,38 @@
       <p class="text-sm text-slate-400">
         A living timeline of every user-facing improvement, so the community can track progress and product teams can audit what changed.
       </p>
+      <div class="flex flex-col sm:flex-row gap-3 justify-center items-center pt-2">
+        <label class="text-xs text-slate-400 flex items-center gap-2">
+          <span>Filter by date (YYYY-MM-DD)</span>
+          <input
+            type="date"
+            class="rounded-lg bg-slate-900/70 border border-slate-700 text-slate-100 text-xs px-2 py-1"
+            v-model="selectedDate"
+          />
+        </label>
+        <button class="btn text-xs" @click="selectedDate = ''">Clear</button>
+      </div>
     </header>
 
     <section class="grid grid-cols-1 sm:grid-cols-3 gap-4">
       <div class="card-soft text-center py-4">
         <p class="text-xs text-slate-400">Latest Release</p>
-        <p class="text-xl font-semibold text-white">{{ releases[0]?.version ?? '' }}</p>
-        <p class="text-xs text-slate-500">{{ releases[0]?.date ?? 'Add the first entry' }}</p>
+        <p class="text-xl font-semibold text-white">{{ latestRelease?.version ?? '—' }}</p>
+        <p class="text-xs text-slate-500">{{ latestRelease?.date ?? 'Add the first entry' }}</p>
       </div>
       <div class="card-soft text-center py-4">
         <p class="text-xs text-slate-400">Entries Logged</p>
         <p class="text-xl font-semibold text-white">{{ totalChanges }}</p>
-        <p class="text-xs text-slate-500">Across {{ releases.length }} release{{ releases.length === 1 ? '' : 's' }}</p>
+        <p class="text-xs text-slate-500">Across {{ filteredReleases.length }} release{{ filteredReleases.length === 1 ? '' : 's' }}</p>
       </div>
       <div class="card-soft text-center py-4">
         <p class="text-xs text-slate-400">Last Updated</p>
-        <p class="text-xl font-semibold text-white">{{ releases[0]?.date ?? '' }}</p>
+        <p class="text-xl font-semibold text-white">{{ latestRelease?.date ?? '—' }}</p>
         <p class="text-xs text-slate-500">Keep this current with every deploy</p>
       </div>
     </section>
 
-    <section v-if="releases.length === 0" class="card border border-slate-700 bg-slate-900/50 text-center py-10">
+    <section v-if="filteredReleases.length === 0" class="card border border-slate-700 bg-slate-900/50 text-center py-10">
       <h2 class="text-xl font-semibold text-white mb-2">Nothing logged yet</h2>
       <p class="text-sm text-slate-400">
         This changelog stays blank until the next deploy. Add real release notes in <code class="font-mono text-xs">ChangelogView.vue</code> whenever you ship.
@@ -35,7 +46,7 @@
 
     <section v-else class="space-y-6">
       <article
-        v-for="release in releases"
+        v-for="release in filteredReleases"
         :key="release.version"
         class="card border border-white/5 bg-slate-900/60"
       >
@@ -43,7 +54,7 @@
           <div>
             <div class="flex items-center gap-3">
               <h2 class="text-xl font-semibold text-white">{{ release.version }}</h2>
-              <span v-if="release.codename" class="px-2 py-0.5 rounded-full text-[11px] border border-indigo-400/40 text-indigo-200">
+              <span v-if="release.codename" class="px-2 py-0.5 rounded-full text-[11px] border border-cyan-400/40 text-cyan-200">
                 {{ release.codename }}
               </span>
             </div>
@@ -85,6 +96,8 @@
 </template>
 
 <script setup lang="ts">
+import { computed, ref } from "vue";
+
 type ChangeType = "feature" | "improvement" | "fix" | "ops" | "note";
 
 interface ChangeItem {
@@ -102,6 +115,45 @@ interface Release {
 }
 
 const releases: Release[] = [
+  {
+    version: "2025.01.05",
+    codename: "Palette Refresh + Arcade UX",
+    date: "2025-01-05",
+    summary:
+      "Refreshed the site-wide palette to cyan/emerald, improved arcade UX with controller messaging and in-page scrolling, ensured game launches open in new tabs, and cleaned UTF-8 placeholders.",
+    changes: [
+      {
+        type: "improvement",
+        title: "Cyan/Emerald palette replaces legacy purple",
+        description:
+          "Re-skinned buttons, badges, headers, footers, gradients, and utility overrides to a cyan/emerald/amber dark theme; removed residual purple from seasonal backgrounds and cards."
+      },
+      {
+        type: "feature",
+        title: "Arcade CTA scroll + controller badges",
+        description:
+          "The Arcade banner now scrolls to the games list in-page and highlights controller support with dedicated badges."
+      },
+      {
+        type: "feature",
+        title: "Game launches open in new tab",
+        description:
+          "Arcade game launch buttons always open in a new tab/window (internal or external) so users stay on the explorer."
+      },
+      {
+        type: "fix",
+        title: "UTF-8 cleanup across views",
+        description:
+          "Replaced broken replacement characters with em-dash or proper ellipses in LauncherDetail, Docs IBC Packets, and other UI text."
+      },
+      {
+        type: "improvement",
+        title: "Tokenomics burn card palette",
+        description:
+          "Updated the rolling burn window card and other charts to match the new cyan/emerald theme."
+      }
+    ]
+  },
   {
     version: "2025.12.30",
     codename: "Arcade BattlePoints Claims",
@@ -266,7 +318,16 @@ const releases: Release[] = [
   }
 ];
 
-const totalChanges = releases.reduce((sum, release) => sum + release.changes.length, 0);
+const selectedDate = ref<string>("");
+
+const filteredReleases = computed(() => {
+  if (!selectedDate.value) return releases;
+  return releases.filter((r) => r.date >= selectedDate.value);
+});
+
+const latestRelease = computed(() => filteredReleases.value[0] ?? releases[0]);
+
+const totalChanges = computed(() => filteredReleases.value.reduce((sum, release) => sum + release.changes.length, 0));
 
 const badgeStyles: Record<ChangeType, string> = {
   feature: "border-emerald-400/50 text-emerald-300 bg-emerald-500/10",
