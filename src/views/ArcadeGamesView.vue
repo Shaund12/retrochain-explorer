@@ -48,16 +48,21 @@ const normalizeGenre = (g: any) => {
   return cleaned || "Arcade";
 };
 
-const selectedGameIcon = computed(() => {
-  const genre = normalizeGenre(selectedGame.value).toLowerCase();
+const genreEmoji = (g: any) => {
+  const genre = normalizeGenre(g).toLowerCase();
   if (genre === "shooter") return "🎯";
   if (genre === "puzzle") return "🧩";
   if (genre === "racing") return "🏎️";
   if (genre === "platformer") return "🦘";
   if (genre === "fighting") return "🥊";
   if (genre === "rpg") return "🧙‍♂️";
+  if (genre === "strategy") return "🧠";
+  if (genre === "sports") return "🏀";
+  if (genre === "music") return "🎵";
   return "🎮";
-});
+};
+
+const selectedGameIcon = computed(() => genreEmoji(selectedGame.value));
 
 const gamesList = computed(() => (Array.isArray(games.value) ? games.value : []));
 const visibleGames = computed(() =>
@@ -121,10 +126,10 @@ onMounted(async () => {
         <h1 class="text-2xl font-bold text-white">On-chain Games</h1>
         <p class="text-sm text-slate-300">Four fully playable titles with live leaderboards and burns.</p>
         <div class="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300">
-          <span class="badge border-emerald-400/60 text-emerald-200">RetroVaders</span>
-          <span class="badge border-cyan-400/60 text-cyan-200">RetroNoid</span>
-          <span class="badge border-amber-400/60 text-amber-200">RetroMan</span>
-          <span class="badge border-indigo-400/60 text-indigo-200">RetroWar</span>
+          <span class="badge border-emerald-400/60 text-emerald-200 bg-emerald-500/10">👾 RetroVaders</span>
+          <span class="badge border-cyan-400/60 text-cyan-200 bg-cyan-500/10">🧱 RetroNoid</span>
+          <span class="badge border-amber-400/60 text-amber-200 bg-amber-500/10">🕹️ RetroMan</span>
+          <span class="badge border-indigo-400/60 text-indigo-200 bg-indigo-500/10">⚔️ RetroWar</span>
         </div>
       </div>
       <div class="flex gap-2 flex-wrap justify-end">
@@ -134,22 +139,22 @@ onMounted(async () => {
     </div>
 
     <div class="grid gap-3 md:grid-cols-4">
-      <div class="card border-emerald-400/30 bg-emerald-500/10">
+      <div class="card border-emerald-400/30 bg-emerald-500/10 shadow-emerald-500/20 shadow-lg">
         <div class="text-[11px] uppercase tracking-wider text-emerald-200">Total Games</div>
         <div class="text-3xl font-bold text-white flex items-center gap-2">🎮 <span>{{ stats.total }}</span></div>
         <div class="text-[11px] text-emerald-100">All listed on-chain arcade titles</div>
       </div>
-      <div class="card border-cyan-400/30 bg-cyan-500/10">
+      <div class="card border-cyan-400/30 bg-cyan-500/10 shadow-cyan-500/20 shadow-lg">
         <div class="text-[11px] uppercase tracking-wider text-cyan-200">Active</div>
         <div class="text-3xl font-bold text-white flex items-center gap-2">🚀 <span>{{ stats.active }}</span></div>
         <div class="text-[11px] text-cyan-100">Currently marked active</div>
       </div>
-      <div class="card border-amber-400/30 bg-amber-500/10">
+      <div class="card border-amber-400/30 bg-amber-500/10 shadow-amber-500/20 shadow-lg">
         <div class="text-[11px] uppercase tracking-wider text-amber-200">Genres</div>
         <div class="text-3xl font-bold text-white flex items-center gap-2">🎨 <span>{{ stats.genres }}</span></div>
         <div class="text-[11px] text-amber-100">Playable flavors</div>
       </div>
-      <div class="card border-indigo-400/30 bg-indigo-500/10">
+      <div class="card border-indigo-400/30 bg-indigo-500/10 shadow-indigo-500/20 shadow-lg">
         <div class="text-[11px] uppercase tracking-wider text-indigo-200">Top Max Score</div>
         <div class="text-3xl font-bold text-white flex items-center gap-2">🏆 <span>{{ stats.maxScore.toLocaleString() }}</span></div>
         <div class="text-[11px] text-indigo-100">Highest published max score</div>
@@ -189,7 +194,7 @@ onMounted(async () => {
               <div class="text-sm font-semibold text-white">{{ selectedGame.name }}</div>
               <div class="text-[11px] text-slate-400">ID: {{ selectedGame.game_id }}</div>
               <div class="mt-1 flex flex-wrap gap-1 text-[11px]">
-                <span class="badge border-emerald-400/40 text-emerald-200">{{ normalizeGenre(selectedGame) }}</span>
+                <span class="badge border-emerald-400/40 text-emerald-200">{{ genreEmoji(selectedGame) }} {{ normalizeGenre(selectedGame) }}</span>
                 <span class="badge border-cyan-400/40 text-cyan-200">{{ selectedGameDifficulty }}</span>
                 <span class="badge border-amber-400/40 text-amber-200">{{ selectedGameStatus }}</span>
               </div>
