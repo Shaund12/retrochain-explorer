@@ -52,8 +52,9 @@ const formatAmount = (amount: string, decimals = 6) => {
   }
 };
 
-const parseRetroToUretro = (input: string): string | null => {
-  const trimmed = input.trim();
+const parseRetroToUretro = (input: string | number | null | undefined): string | null => {
+  if (input === null || input === undefined) return null;
+  const trimmed = input.toString().trim();
   if (!trimmed) return null;
   if (!/^\d+(\.\d{0,6})?$/.test(trimmed)) return null;
   const [whole, frac = ""] = trimmed.split(".");
