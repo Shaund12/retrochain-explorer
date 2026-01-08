@@ -18,7 +18,6 @@ const { cw20Tokens, fetchAssets, loading: assetsLoading } = useAssets();
 const api = useApi();
 const toast = useToast();
 
-const BURN_SINK_ADDRESS = "cosmos1jv65s3grqf6v6jl3dp4t6c9t9rk99cd88lyufl";
 
 const chainId = computed(() => (network.value === "mainnet" ? "retrochain-mainnet" : "retrochain-devnet-1"));
 const refreshing = ref(false);
@@ -35,6 +34,8 @@ const factoryHoldings = computed(() => {
 const nativeBalanceUretro = computed(() => balances.value.find((b) => b.denom === "uretro")?.amount || "0");
 const nativeBalanceDisplay = computed(() => `${formatAmount(nativeBalanceUretro.value, 6)} RETRO`);
 const nativeBurnAmount = ref("0");
+
+// Native RETRO burn now uses tokenfactory MsgBurnNative (no sink address transfer).
 
 const formatAmount = (amount: string, decimals = 6) => {
   try {
@@ -163,20 +164,30 @@ const burnNative = async () => {
   }
 
   const fee = { amount: [{ denom: "uretro", amount: "12000" }], gas: "160000" };
-  const msg = {
-    typeUrl: "/cosmos.bank.v1beta1.MsgSend",
-    value: {
-      fromAddress: address.value,
-      toAddress: BURN_SINK_ADDRESS,
-      amount: [{ denom: "uretro", amount: micro }]
-    }
+  const msgBase = {
+    sender: address.value,
+    amount: `${micro}uretro`,
+    burn_from_address: address.value
   };
 
+  const typeUrls = [
+    "/retrochain.tokenfactory.v1.MsgBurnNative",
+    "/retrochain.tokenfactory.v1beta1.MsgBurnNative"
+  ];
+
   try {
-    await signAndBroadcast(chainId.value, [msg], fee, "Burn native RETRO");
-    toast.showSuccess("Native burn submitted");
-    nativeBurnAmount.value = "0";
-    await refreshHoldings();
+    for (const typeUrl of typeUrls) {
+      try {
+        await signAndBroadcast(chainId.value, [{ typeUrl, value: msgBase }], fee, "Burn native RETRO");
+        toast.showSuccess("Native burn submitted");
+        nativeBurnAmount.value = "0";
+        await refreshHoldings();
+        return;
+      } catch (err) {
+        console.warn(`Native burn attempt failed for ${typeUrl}`, err);
+      }
+    }
+    toast.showError("Native burn failed. MsgBurnNative not accepted on this chain.");
   } catch (err: any) {
     toast.showError(err?.message || "Native burn failed");
   }
@@ -236,7 +247,7 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
         <span class="text-[11px] text-slate-400">Balance: {{ nativeBalanceDisplay }}</span>
       </div>
       <div class="space-y-2 text-sm text-slate-300">
-        <p class="text-xs text-slate-400">Sends RETRO to the burn sink ({{ BURN_SINK_ADDRESS }}). This is irreversible.</p>
+        <p class="text-xs text-slate-400">Burns RETRO via MsgBurnNative on-chain. This is irreversible.</p>
         <div class="flex flex-col sm:flex-row gap-2">
           <input
             v-model="nativeBurnAmount"

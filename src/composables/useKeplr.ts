@@ -572,6 +572,12 @@ interface MsgTokenFactoryBurn {
   burn_from_address?: string;
 }
 
+interface MsgBurnNative {
+  sender: string;
+  amount?: string;
+  burn_from_address?: string;
+}
+
 const MsgCreateLaunchType: GeneratedType = {
   encode(message: MsgCreateLaunch, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.creator) writer.uint32(10).string(message.creator);
@@ -783,6 +789,45 @@ const MsgTokenFactoryBurnType: GeneratedType = {
   }
 };
 
+const MsgBurnNativeType: GeneratedType = {
+  encode(message: MsgBurnNative, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.sender) writer.uint32(10).string(message.sender);
+    if (message.amount) writer.uint32(18).string(message.amount);
+    if (message.burn_from_address) writer.uint32(26).string(message.burn_from_address);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgBurnNative {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgBurnNative = { sender: "", amount: "", burn_from_address: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.sender = reader.string();
+          break;
+        case 2:
+          message.amount = reader.string();
+          break;
+        case 3:
+          message.burn_from_address = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgBurnNative>): MsgBurnNative {
+    return {
+      sender: object.sender ?? "",
+      amount: object.amount ?? "",
+      burn_from_address: object.burn_from_address ?? ""
+    };
+  }
+};
+
 const retroLauncherTypes: ReadonlyArray<[string, GeneratedType]> = [
   ["/retrochain.launcher.v1.MsgCreateLaunch", MsgCreateLaunchType],
   ["/retrochain.launcher.v1.MsgBuy", MsgBuyType],
@@ -793,6 +838,8 @@ const tokenFactoryTypes: ReadonlyArray<[string, GeneratedType]> = [
   ["/retrochain.tokenfactory.v1beta1.MsgBurn", MsgTokenFactoryBurnType],
   ["/retrochain.tokenfactory.v1.MsgBurn", MsgTokenFactoryBurnType],
   ["/retrochain.tokenfactory.MsgBurn", MsgTokenFactoryBurnType],
+  ["/retrochain.tokenfactory.v1.MsgBurnNative", MsgBurnNativeType],
+  ["/retrochain.tokenfactory.v1beta1.MsgBurnNative", MsgBurnNativeType],
   ["/osmosis.tokenfactory.v1beta1.MsgBurn", MsgTokenFactoryBurnType],
   ["/osmosis.tokenfactory.v1.MsgBurn", MsgTokenFactoryBurnType],
   ["/osmosis.tokenfactory.MsgBurn", MsgTokenFactoryBurnType]
