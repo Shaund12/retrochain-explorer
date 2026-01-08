@@ -1073,16 +1073,17 @@ export function useKeplr() {
       const offlineSigner = provider.getOfflineSigner(chainId);
       const accounts = await offlineSigner.getAccounts();
 
-      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes, ...retroDexTypes]);
+      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes, ...retroDexTypes, ...retroLauncherTypes]);
       const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner, { registry });
       return client.signAndBroadcast(accounts[0].address, msgs, feeNormalized, memo);
     };
 
     try {
       return await attemptRpc();
-    } catch (e) {
+    } catch (e: any) {
       console.warn("RPC sign/broadcast failed, evaluating fallback…", e);
-      if (chainId === CHAIN_ID && isUndefinedValueError(e)) {
+      const msgStr = typeof e?.message === "string" ? e.message : "";
+      if (chainId === CHAIN_ID && (isUndefinedValueError(e) || msgStr.includes("Unexpected token '<'"))) {
         return signAndBroadcastWithREST(chainId, msgs, feeNormalized, memo);
       }
       throw e;

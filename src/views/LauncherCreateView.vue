@@ -89,7 +89,14 @@ const submit = async () => {
     toast.showSuccess("Launch created! Redirecting…");
     router.push({ name: "launcher" });
   } catch (err: any) {
-    error.value = err?.message || "Failed to create launch";
+    const status = err?.response?.status;
+    if (status === 501) {
+      error.value = "Launcher module not available on this node (HTTP 501).";
+    } else if (typeof err?.message === "string" && err.message.includes("Unexpected token '<'")) {
+      error.value = "Launcher RPC responded with HTML (module disabled or proxy misconfigured).";
+    } else {
+      error.value = err?.message || "Failed to create launch";
+    }
     toast.showError(error.value);
   } finally {
     loading.value = false;
