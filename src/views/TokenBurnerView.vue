@@ -358,7 +358,7 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
             <p class="text-[11px] text-slate-400">Recent burns linked to this wallet</p>
           </div>
         </div>
-        <span class="text-[11px] text-slate-400">{{ burnHistory.length || 0 }} shown</span>
+        <span class="text-[11px] text-slate-400">{{ burnHistoryPage.length || 0 }} shown</span>
         <div class="flex items-center gap-2 text-[11px] text-slate-400">
           <span>{{ burnHistoryAll.length || 0 }} total</span>
           <div class="flex items-center gap-1">
@@ -375,7 +375,7 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
       <div v-if="burnLoading" class="text-sm text-slate-400 flex items-center gap-2">
         <RcLoadingSpinner size="sm" text="Loading burn history…" />
       </div>
-      <div v-else-if="!burnHistory.length" class="text-sm text-slate-500">No burns found for this wallet.</div>
+      <div v-else-if="!burnHistoryAll.length" class="text-sm text-slate-500">No burns found for this wallet.</div>
       <div v-else class="space-y-2">
         <div v-for="(burn, idx) in burnHistoryPage" :key="burn.hash + idx" class="p-3 rounded-lg border border-white/10 bg-white/5 flex items-center justify-between">
           <div class="space-y-1">
