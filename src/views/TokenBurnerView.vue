@@ -212,7 +212,7 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
       </div>
     </div>
 
-    <div class="card" v-else>
+    <div class="card">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-base font-semibold text-white">Factory tokens you own (minted by this wallet)</h2>
         <span class="text-[11px] text-slate-400">factory/{{ address }}/*</span>
