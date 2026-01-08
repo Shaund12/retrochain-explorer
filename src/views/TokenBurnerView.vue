@@ -219,18 +219,52 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
 </script>
 
 <template>
-  <div class="space-y-4">
-    <div class="card">
-      <div class="flex items-center justify-between">
-        <div>
-          <h1 class="text-2xl font-bold text-white">Token Burner</h1>
-          <p class="text-sm text-slate-400">Detects your factory and CW20 tokens (you minted) and lets you burn your balance.</p>
+  <div class="space-y-5">
+    <div class="card bg-gradient-to-r from-rose-500/10 via-amber-500/5 to-emerald-500/10 border-white/10 shadow-lg shadow-rose-500/20">
+      <div class="flex flex-col gap-3 md:flex-row md:items-center md:justify-between">
+        <div class="space-y-2">
+          <div class="flex items-center gap-2 text-[11px] text-rose-200 uppercase tracking-[0.18em]">
+            <span class="px-2 py-1 rounded-full border border-rose-300/50 bg-rose-500/10">Secure Burn</span>
+            <span class="px-2 py-1 rounded-full border border-amber-300/40 bg-amber-500/10">Irreversible</span>
+          </div>
+          <h1 class="text-2xl font-bold text-white flex items-center gap-2">Token Burner <span class="text-sm text-emerald-200">Mainnet-safe</span></h1>
+          <p class="text-sm text-slate-300 max-w-3xl">Burn native RETRO, factory denoms you minted, or your own CW20s. Gas and fees normalized; messages are signed client-side with Keplr.</p>
+          <div class="flex flex-wrap gap-2 text-[11px] text-slate-200">
+            <span class="badge border-emerald-400/60 text-emerald-200 bg-emerald-500/10">Chain: {{ chainId }}</span>
+            <span class="badge border-cyan-400/60 text-cyan-200 bg-cyan-500/10">Wallet: {{ address || 'Not connected' }}</span>
+            <span class="badge border-amber-400/60 text-amber-200 bg-amber-500/10">Holdings: {{ factoryHoldings.length }} factory • {{ cw20Holdings.length }} CW20</span>
+          </div>
         </div>
-        <button class="btn" @click="refreshHoldings" :disabled="refreshing || accountLoading || assetsLoading">
-          {{ address ? 'Refresh' : 'Connect' }}
-        </button>
+        <div class="flex gap-2 items-center">
+          <button class="btn" @click="refreshHoldings" :disabled="refreshing || accountLoading || assetsLoading">
+            {{ address ? 'Refresh' : 'Connect' }}
+          </button>
+        </div>
       </div>
-      <div class="text-xs text-slate-500 mt-2">Wallet: {{ address || 'Not connected' }}</div>
+    </div>
+
+    <div class="grid gap-3 md:grid-cols-3">
+      <div class="card border-white/10 bg-slate-900/60 shadow-inner">
+        <div class="text-[11px] uppercase tracking-wider text-slate-400">Native RETRO</div>
+        <div class="text-xl font-semibold text-white flex items-center gap-2">
+          <span>🔥</span> <span>{{ nativeBalanceDisplay }}</span>
+        </div>
+        <div class="text-[11px] text-slate-500 mt-1">Balance available to burn</div>
+      </div>
+      <div class="card border-white/10 bg-slate-900/60 shadow-inner">
+        <div class="text-[11px] uppercase tracking-wider text-slate-400">Factory denoms</div>
+        <div class="text-xl font-semibold text-white flex items-center gap-2">
+          <span>🏭</span> <span>{{ factoryHoldings.length }}</span>
+        </div>
+        <div class="text-[11px] text-slate-500 mt-1">Minted by your wallet</div>
+      </div>
+      <div class="card border-white/10 bg-slate-900/60 shadow-inner">
+        <div class="text-[11px] uppercase tracking-wider text-slate-400">CW20 tokens</div>
+        <div class="text-xl font-semibold text-white flex items-center gap-2">
+          <span>🧩</span> <span>{{ cw20Holdings.length }}</span>
+        </div>
+        <div class="text-[11px] text-slate-500 mt-1">You are the minter</div>
+      </div>
     </div>
 
     <RcDisclaimer type="warning" title="Irreversible">
@@ -241,13 +275,21 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
       <RcLoadingSpinner size="md" text="Loading balances and tokens…" />
     </div>
 
-    <div class="card" v-else>
+    <div class="card border-emerald-400/30 bg-emerald-500/5 shadow-lg shadow-emerald-500/20">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-base font-semibold text-white flex items-center gap-2">🔥 Native RETRO burn</h2>
-        <span class="text-[11px] text-slate-400">Balance: {{ nativeBalanceDisplay }}</span>
+        <div class="flex items-center gap-2">
+          <span class="text-lg">🔥</span>
+          <div>
+            <h2 class="text-base font-semibold text-white">Native RETRO burn</h2>
+            <p class="text-[11px] text-emerald-200">Uses MsgBurnNative (tokenfactory)</p>
+          </div>
+        </div>
+        <span class="text-[11px] text-slate-300">Balance: {{ nativeBalanceDisplay }}</span>
       </div>
       <div class="space-y-2 text-sm text-slate-300">
-        <p class="text-xs text-slate-400">Burns RETRO via MsgBurnNative on-chain. This is irreversible.</p>
+        <div class="p-2 rounded-lg border border-emerald-400/30 bg-emerald-500/5 text-[11px] text-emerald-100">
+          Burns RETRO directly on-chain. Denom is fixed to uretro; burn_from_address is locked to your wallet.
+        </div>
         <div class="flex flex-col sm:flex-row gap-2">
           <input
             v-model="nativeBurnAmount"
