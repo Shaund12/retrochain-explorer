@@ -18,6 +18,8 @@ const { cw20Tokens, fetchAssets, loading: assetsLoading } = useAssets();
 const api = useApi();
 const toast = useToast();
 
+const BURN_SINK_ADDRESS = "cosmos1jv65s3grqf6v6jl3dp4t6c9t9rk99cd88lyufl";
+
 const chainId = computed(() => (network.value === "mainnet" ? "retrochain-mainnet" : "retrochain-devnet-1"));
 const refreshing = ref(false);
 const cw20Holdings = ref<Array<{ contract: string; symbol: string; name: string; decimals: number; balance: string }>>([]);
@@ -43,6 +45,20 @@ const formatAmount = (amount: string, decimals = 6) => {
     return `${wholeStr}.${fracStr}`;
   } catch {
     return amount;
+  }
+};
+
+const parseRetroToUretro = (input: string): string | null => {
+  const trimmed = input.trim();
+  if (!trimmed) return null;
+  if (!/^\d+(\.\d{0,6})?$/.test(trimmed)) return null;
+  const [whole, frac = ""] = trimmed.split(".");
+  const fracPadded = (frac + "000000").slice(0, 6);
+  try {
+    const value = BigInt(whole || "0") * 1_000_000n + BigInt(fracPadded);
+    return value.toString();
+  } catch {
+    return null;
   }
 };
 
@@ -170,6 +186,30 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
 
     <div class="card" v-if="accountLoading || assetsLoading || refreshing">
       <RcLoadingSpinner size="md" text="Loading balances and tokens…" />
+    </div>
+
+    <div class="card" v-else>
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-base font-semibold text-white flex items-center gap-2">?? Native RETRO burn</h2>
+        <span class="text-[11px] text-slate-400">Balance: {{ nativeBalanceDisplay }}</span>
+      </div>
+      <div class="space-y-2 text-sm text-slate-300">
+        <p class="text-xs text-slate-400">Sends RETRO to the burn sink ({{ BURN_SINK_ADDRESS }}). This is irreversible.</p>
+        <div class="flex flex-col sm:flex-row gap-2">
+          <input
+            v-model="nativeBurnAmount"
+            class="input flex-1"
+            type="number"
+            min="0"
+            step="0.000001"
+            placeholder="Amount in RETRO"
+          />
+          <div class="flex gap-2">
+            <button class="btn text-xs" @click="nativeBurnAmount = formatAmount(nativeBalanceUretro, 6)">Max</button>
+            <button class="btn btn-primary text-xs" :disabled="!address" @click="burnNative">Burn</button>
+          </div>
+        </div>
+      </div>
     </div>
 
     <div class="card" v-else>
