@@ -19,6 +19,9 @@ const loading = ref(false);
 const error = ref<string | null>(null);
 const nextKey = ref<string | null>(null);
 const prevStack = ref<string[]>([]);
+const searchTerm = ref("");
+const statusFilter = ref<"all" | "live" | "graduated">("all");
+const dexOnly = ref(false);
 
 const pageSize = 20;
 
@@ -54,6 +57,29 @@ const shortAddr = (addr?: string, size = 12) => {
 
 const spotPrice = (entry: LaunchWithComputed) => formatRetro(entry.computed?.spot_price_uretro_per_token);
 const progress = (entry: LaunchWithComputed) => formatPercent(entry.computed?.graduation_progress);
+
+const filteredLaunches = computed(() => {
+  const term = searchTerm.value.trim().toLowerCase();
+  return launches.value.filter((entry) => {
+    const l = entry.launch || {};
+    if (statusFilter.value === "live" && l.graduated) return false;
+    if (statusFilter.value === "graduated" && !l.graduated) return false;
+    if (dexOnly.value && !l.dex_pool_id) return false;
+    if (!term) return true;
+    const denom = (l.denom || "").toString().toLowerCase();
+    const creator = (l.creator || "").toString().toLowerCase();
+    const dex = (l.dex_pool_id || "").toString().toLowerCase();
+    return denom.includes(term) || creator.includes(term) || dex.includes(term);
+  });
+});
+
+const stats = computed(() => {
+  const total = launches.value.length;
+  const graduated = launches.value.filter((l) => l.launch?.graduated).length;
+  const live = total - graduated;
+  const dexPools = launches.value.filter((l) => l.launch?.dex_pool_id).length;
+  return { total, graduated, live, dexPools };
+});
 
 const fetchLaunches = async (key?: string | null) => {
   loading.value = true;
@@ -124,6 +150,29 @@ const gotoDetail = (denom?: string) => {
       </div>
     </div>
 
+    <div class="grid gap-3 md:grid-cols-4">
+      <div class="card-soft border border-emerald-500/30 bg-emerald-500/5">
+        <div class="text-[11px] uppercase tracking-widest text-emerald-200">Total</div>
+        <div class="text-2xl font-semibold text-white">{{ stats.total }}</div>
+        <div class="text-[11px] text-slate-400">Listed launches</div>
+      </div>
+      <div class="card-soft border border-cyan-500/30 bg-cyan-500/5">
+        <div class="text-[11px] uppercase tracking-widest text-cyan-200">Live</div>
+        <div class="text-2xl font-semibold text-white">{{ stats.live }}</div>
+        <div class="text-[11px] text-slate-400">Not graduated</div>
+      </div>
+      <div class="card-soft border border-amber-500/30 bg-amber-500/5">
+        <div class="text-[11px] uppercase tracking-widest text-amber-200">Graduated</div>
+        <div class="text-2xl font-semibold text-white">{{ stats.graduated }}</div>
+        <div class="text-[11px] text-slate-400">Reached DEX pool</div>
+      </div>
+      <div class="card-soft border border-indigo-500/30 bg-indigo-500/5">
+        <div class="text-[11px] uppercase tracking-widest text-indigo-200">DEX Pools</div>
+        <div class="text-2xl font-semibold text-white">{{ stats.dexPools }}</div>
+        <div class="text-[11px] text-slate-400">Launches with pool id</div>
+      </div>
+    </div>
+
     <RcDisclaimer v-if="error" type="warning" title="Launcher data unavailable">
       <p>{{ error }}</p>
     </RcDisclaimer>
@@ -135,13 +184,31 @@ const gotoDetail = (denom?: string) => {
     <template v-else>
       <div class="card">
         <div class="flex items-center justify-between mb-3">
-          <h2 class="text-base font-semibold text-white">Launches</h2>
-          <div class="flex items-center gap-2 text-xs">
-            <button class="btn text-xs" :disabled="!prevStack.length" @click="goPrev">Prev</button>
-            <button class="btn text-xs" :disabled="!nextKey" @click="goNext">Next</button>
+          <div class="flex flex-wrap items-center gap-3">
+            <h2 class="text-base font-semibold text-white">Launches</h2>
+            <div class="flex items-center gap-2 text-xs">
+              <button class="btn text-xs" :disabled="!prevStack.length" @click="goPrev">Prev</button>
+              <button class="btn text-xs" :disabled="!nextKey" @click="goNext">Next</button>
+            </div>
+          </div>
+          <div class="flex flex-wrap items-center gap-2 text-xs">
+            <input
+              v-model="searchTerm"
+              class="input text-xs w-40"
+              placeholder="Search denom/creator"
+            />
+            <select v-model="statusFilter" class="input text-xs w-28">
+              <option value="all">All</option>
+              <option value="live">Live</option>
+              <option value="graduated">Graduated</option>
+            </select>
+            <label class="inline-flex items-center gap-1 text-[11px] text-slate-300">
+              <input type="checkbox" v-model="dexOnly" class="w-4 h-4" />
+              Dex only
+            </label>
           </div>
         </div>
-        <div v-if="!launches.length" class="text-sm text-slate-400">No launches found.</div>
+        <div v-if="!filteredLaunches.length" class="text-sm text-slate-400">No launches match these filters.</div>
         <div v-else class="overflow-x-auto">
           <table class="table">
             <thead>
@@ -156,7 +223,7 @@ const gotoDetail = (denom?: string) => {
               </tr>
             </thead>
             <tbody>
-              <tr v-for="entry in launches" :key="entry.launch?.denom" class="text-sm">
+              <tr v-for="entry in filteredLaunches" :key="entry.launch?.denom" class="text-sm">
                 <td class="font-mono text-xs text-emerald-200 break-all">{{ entry.launch?.denom || '—' }}</td>
                 <td class="font-mono text-xs text-slate-300 break-all">
                   <RouterLink v-if="entry.launch?.creator" :to="{ name: 'account', params: { address: entry.launch.creator } }" class="hover:underline">
