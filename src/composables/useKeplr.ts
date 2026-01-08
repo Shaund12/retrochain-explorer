@@ -552,6 +552,20 @@ interface MsgCreateLaunch {
   graduationReserveUretro?: string;
 }
 
+interface MsgBuy {
+  buyer: string;
+  denom: string;
+  amountInUretro: string;
+  minAmountOut: string;
+}
+
+interface MsgSell {
+  seller: string;
+  denom: string;
+  amountIn: string;
+  minAmountOutUretro: string;
+}
+
 const MsgCreateLaunchType: GeneratedType = {
   encode(message: MsgCreateLaunch, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.creator) writer.uint32(10).string(message.creator);
@@ -596,8 +610,98 @@ const MsgCreateLaunchType: GeneratedType = {
   }
 };
 
+const MsgBuyType: GeneratedType = {
+  encode(message: MsgBuy, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.buyer) writer.uint32(10).string(message.buyer);
+    if (message.denom) writer.uint32(18).string(message.denom);
+    if (message.amountInUretro) writer.uint32(26).string(message.amountInUretro);
+    if (message.minAmountOut) writer.uint32(34).string(message.minAmountOut);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgBuy {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgBuy = { buyer: "", denom: "", amountInUretro: "", minAmountOut: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.buyer = reader.string();
+          break;
+        case 2:
+          message.denom = reader.string();
+          break;
+        case 3:
+          message.amountInUretro = reader.string();
+          break;
+        case 4:
+          message.minAmountOut = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgBuy>): MsgBuy {
+    return {
+      buyer: object.buyer ?? "",
+      denom: object.denom ?? "",
+      amountInUretro: object.amountInUretro ?? "",
+      minAmountOut: object.minAmountOut ?? ""
+    };
+  }
+};
+
+const MsgSellType: GeneratedType = {
+  encode(message: MsgSell, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.seller) writer.uint32(10).string(message.seller);
+    if (message.denom) writer.uint32(18).string(message.denom);
+    if (message.amountIn) writer.uint32(26).string(message.amountIn);
+    if (message.minAmountOutUretro) writer.uint32(34).string(message.minAmountOutUretro);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgSell {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgSell = { seller: "", denom: "", amountIn: "", minAmountOutUretro: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.seller = reader.string();
+          break;
+        case 2:
+          message.denom = reader.string();
+          break;
+        case 3:
+          message.amountIn = reader.string();
+          break;
+        case 4:
+          message.minAmountOutUretro = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgSell>): MsgSell {
+    return {
+      seller: object.seller ?? "",
+      denom: object.denom ?? "",
+      amountIn: object.amountIn ?? "",
+      minAmountOutUretro: object.minAmountOutUretro ?? ""
+    };
+  }
+};
+
 const retroLauncherTypes: ReadonlyArray<[string, GeneratedType]> = [
-  ["/retrochain.launcher.v1.MsgCreateLaunch", MsgCreateLaunchType]
+  ["/retrochain.launcher.v1.MsgCreateLaunch", MsgCreateLaunchType],
+  ["/retrochain.launcher.v1.MsgBuy", MsgBuyType],
+  ["/retrochain.launcher.v1.MsgSell", MsgSellType]
 ];
 
 function buildChainInfo() {
