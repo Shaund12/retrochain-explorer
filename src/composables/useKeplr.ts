@@ -792,8 +792,10 @@ const retroLauncherTypes: ReadonlyArray<[string, GeneratedType]> = [
 const tokenFactoryTypes: ReadonlyArray<[string, GeneratedType]> = [
   ["/retrochain.tokenfactory.v1beta1.MsgBurn", MsgTokenFactoryBurnType],
   ["/retrochain.tokenfactory.v1.MsgBurn", MsgTokenFactoryBurnType],
+  ["/retrochain.tokenfactory.MsgBurn", MsgTokenFactoryBurnType],
   ["/osmosis.tokenfactory.v1beta1.MsgBurn", MsgTokenFactoryBurnType],
-  ["/osmosis.tokenfactory.v1.MsgBurn", MsgTokenFactoryBurnType]
+  ["/osmosis.tokenfactory.v1.MsgBurn", MsgTokenFactoryBurnType],
+  ["/osmosis.tokenfactory.MsgBurn", MsgTokenFactoryBurnType]
 ];
 
 function buildChainInfo() {
@@ -1279,7 +1281,9 @@ export function useKeplr() {
     } catch (e: any) {
       console.warn("RPC sign/broadcast failed, evaluating fallback…", e);
       const msgStr = typeof e?.message === "string" ? e.message : "";
-      if (chainId === CHAIN_ID && (isUndefinedValueError(e) || msgStr.includes("Unexpected token '<'"))) {
+      const parseTypeUrl = msgStr.includes("unable to resolve type URL") || msgStr.includes("tx parse error");
+      const htmlErr = msgStr.includes("Unexpected token '<'");
+      if (chainId === CHAIN_ID && (isUndefinedValueError(e) || htmlErr || parseTypeUrl)) {
         return signAndBroadcastWithREST(chainId, msgs, feeNormalized, memo);
       }
       throw e;

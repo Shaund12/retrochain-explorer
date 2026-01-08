@@ -90,8 +90,10 @@ onMounted(() => {
 const factoryTypeUrls = [
   "/retrochain.tokenfactory.v1beta1.MsgBurn",
   "/retrochain.tokenfactory.v1.MsgBurn",
+  "/retrochain.tokenfactory.MsgBurn",
   "/osmosis.tokenfactory.v1beta1.MsgBurn",
-  "/osmosis.tokenfactory.v1.MsgBurn"
+  "/osmosis.tokenfactory.v1.MsgBurn",
+  "/osmosis.tokenfactory.MsgBurn"
 ];
 
 const burnFactory = async (denom: string, amount: string) => {
