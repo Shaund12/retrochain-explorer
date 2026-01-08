@@ -227,12 +227,12 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
     </RcDisclaimer>
 
     <div class="card" v-if="accountLoading || assetsLoading || refreshing">
-      <RcLoadingSpinner size="md" text="Loading balances and tokens…" />
+      <RcLoadingSpinner size="md" text="Loading balances and tokensâ€¦" />
     </div>
 
     <div class="card" v-else>
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-base font-semibold text-white flex items-center gap-2">?? Native RETRO burn</h2>
+        <h2 class="text-base font-semibold text-white flex items-center gap-2">ðŸ”¥ Native RETRO burn</h2>
         <span class="text-[11px] text-slate-400">Balance: {{ nativeBalanceDisplay }}</span>
       </div>
       <div class="space-y-2 text-sm text-slate-300">
@@ -280,7 +280,7 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
       <div v-else class="space-y-3">
         <div v-for="token in cw20Holdings" :key="token.contract" class="p-3 rounded-xl border border-amber-400/40 bg-amber-500/5 flex items-center justify-between">
           <div>
-            <div class="text-sm font-semibold text-white">{{ token.symbol }} • {{ token.name }}</div>
+            <div class="text-sm font-semibold text-white">{{ token.symbol }} â€¢ {{ token.name }}</div>
             <div class="text-xs text-slate-400">{{ token.contract }}</div>
             <div class="text-xs text-slate-500">Balance: {{ formatAmount(token.balance, token.decimals) }}</div>
           </div>
