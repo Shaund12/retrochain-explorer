@@ -55,6 +55,11 @@ const burnHistoryAll = computed(() => {
   return burns;
 });
 
+const burnTotalUretro = computed(() =>
+  burnHistoryAll.value.reduce((sum, b) => sum + BigInt(b.amount || "0"), 0n)
+);
+const burnTotalRetroDisplay = computed(() => `${formatAmount(burnTotalUretro.value.toString(), 6)} RETRO`);
+
 const totalBurnPages = computed(() => Math.max(1, Math.ceil(burnHistoryAll.value.length / burnsPerPage)));
 const burnHistoryPage = computed(() => {
   const start = burnPage.value * burnsPerPage;
@@ -285,7 +290,14 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
       </div>
     </div>
 
-    <div class="grid gap-3 md:grid-cols-3">
+    <div class="grid gap-3 md:grid-cols-2 lg:grid-cols-4">
+      <div class="card border-rose-400/30 bg-rose-500/5 shadow-inner">
+        <div class="text-[11px] uppercase tracking-wider text-rose-200">Your total burned</div>
+        <div class="text-xl font-semibold text-white flex items-center gap-2">
+          <span>🔥🎉</span> <span>{{ burnTotalRetroDisplay }}</span>
+        </div>
+        <div class="text-[11px] text-rose-200/80 mt-1">Across recent burn history</div>
+      </div>
       <div class="card border-white/10 bg-slate-900/60 shadow-inner">
         <div class="text-[11px] uppercase tracking-wider text-slate-400">Native RETRO</div>
         <div class="text-xl font-semibold text-white flex items-center gap-2">

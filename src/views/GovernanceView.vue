@@ -338,7 +338,7 @@ const stats = computed(() => {
                 {{ getProposalKind(proposal) }}
               </span>
               <span v-if="proposal.votingEndTime" class="text-[11px] text-slate-500">
-                 Ends {{ formatTime(proposal.votingEndTime) }}
+                • Ends {{ formatTime(proposal.votingEndTime) }}
               </span>
             </div>
             
