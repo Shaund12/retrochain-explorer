@@ -568,7 +568,8 @@ interface MsgSell {
 
 interface MsgTokenFactoryBurn {
   sender: string;
-  amount?: { denom: string; amount: string };
+  amount?: string | { denom: string; amount: string };
+  burn_from_address?: string;
 }
 
 const MsgCreateLaunchType: GeneratedType = {
