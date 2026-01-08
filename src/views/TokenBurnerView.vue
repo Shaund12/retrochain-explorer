@@ -36,6 +36,13 @@ const factoryHoldings = computed(() => {
 const nativeBalanceUretro = computed(() => balances.value.find((b) => b.denom === "uretro")?.amount || "0");
 const nativeBalanceDisplay = computed(() => `${formatAmount(nativeBalanceUretro.value, 6)} RETRO`);
 const nativeBurnAmount = ref("0");
+const factoryBurnInputs = ref<Record<string, string>>({});
+const cw20BurnInputs = ref<Record<string, string>>({});
+
+const cw721Contract = ref("");
+const cw721TokenId = ref("");
+const nftModuleClassId = ref("");
+const nftModuleTokenId = ref("");
 
 const burnPage = ref(0);
 const burnsPerPage = 5;
@@ -98,6 +105,21 @@ const parseRetroToUretro = (input: string | number | null | undefined): string |
   const fracPadded = (frac + "000000").slice(0, 6);
   try {
     const value = BigInt(whole || "0") * 1_000_000n + BigInt(fracPadded);
+    return value.toString();
+  } catch {
+    return null;
+  }
+};
+
+const parseAmountWithDecimals = (input: string | number | null | undefined, decimals = 6): string | null => {
+  if (input === null || input === undefined) return null;
+  const trimmed = input.toString().trim();
+  if (!trimmed) return null;
+  if (!/^\d+(\.\d+)?$/.test(trimmed)) return null;
+  const [whole, frac = ""] = trimmed.split(".");
+  const fracPadded = (frac + "0".repeat(decimals)).slice(0, decimals);
+  try {
+    const value = BigInt(whole || "0") * BigInt(10) ** BigInt(decimals) + BigInt(fracPadded || "0");
     return value.toString();
   } catch {
     return null;
@@ -170,6 +192,15 @@ const burnFactory = async (denom: string, amount: string) => {
     await connect();
     if (!address.value) return;
   }
+  const amtStr = (amount || "").toString().trim();
+  if (!/^\d+$/.test(amtStr)) {
+    toast.showError("Enter a valid integer amount to burn.");
+    return;
+  }
+  if (BigInt(amtStr) <= 0n) {
+    toast.showError("Amount must be greater than zero.");
+    return;
+  }
   const fee = { amount: [{ denom: "uretro", amount: "8000" }], gas: "220000" };
 
   // Many tokenfactory modules expect amount as a single "<amt><denom>" string.
@@ -240,19 +271,24 @@ const burnNative = async () => {
   }
 };
 
-const burnCw20 = async (holding: { contract: string; balance: string }) => {
+const burnCw20 = async (holding: { contract: string; balance: string; decimals: number }, amountInput?: string) => {
   if (!address.value) {
     await connect();
     if (!address.value) return;
   }
   try {
     const fee = { amount: [{ denom: "uretro", amount: "9000" }], gas: "260000" };
+    const parsed = amountInput ? parseAmountWithDecimals(amountInput, holding.decimals ?? 6) : holding.balance;
+    if (!parsed || parsed === "0") {
+      toast.showError("Enter a valid amount to burn.");
+      return;
+    }
     const msg = {
       typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
       value: {
         sender: address.value,
         contract: holding.contract,
-        msg: stringToBase64(JSON.stringify({ burn: { amount: holding.balance } })),
+        msg: stringToBase64(JSON.stringify({ burn: { amount: parsed } })),
         funds: []
       }
     };
@@ -261,6 +297,61 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
     await refreshHoldings();
   } catch (err: any) {
     toast.showError(err?.message || "CW20 burn failed");
+  }
+};
+
+const burnCw721 = async () => {
+  if (!address.value) {
+    await connect();
+    if (!address.value) return;
+  }
+  if (!cw721Contract.value.trim() || !cw721TokenId.value.trim()) {
+    toast.showError("Enter CW721 contract and token ID.");
+    return;
+  }
+  try {
+    const fee = { amount: [{ denom: "uretro", amount: "12000" }], gas: "220000" };
+    const msg = {
+      typeUrl: "/cosmwasm.wasm.v1.MsgExecuteContract",
+      value: {
+        sender: address.value,
+        contract: cw721Contract.value.trim(),
+        msg: stringToBase64(JSON.stringify({ burn: { token_id: cw721TokenId.value.trim() } })),
+        funds: []
+      }
+    };
+    await signAndBroadcast(chainId.value, [msg], fee, "Burn CW721 NFT");
+    toast.showSuccess("CW721 burn submitted");
+    cw721TokenId.value = "";
+  } catch (err: any) {
+    toast.showError(err?.message || "CW721 burn failed");
+  }
+};
+
+const burnNftModule = async () => {
+  if (!address.value) {
+    await connect();
+    if (!address.value) return;
+  }
+  if (!nftModuleClassId.value.trim() || !nftModuleTokenId.value.trim()) {
+    toast.showError("Enter NFT class ID and token ID.");
+    return;
+  }
+  try {
+    const fee = { amount: [{ denom: "uretro", amount: "12000" }], gas: "200000" };
+    const msg = {
+      typeUrl: "/cosmos.nft.v1beta1.MsgBurn",
+      value: {
+        sender: address.value,
+        classId: nftModuleClassId.value.trim(),
+        id: nftModuleTokenId.value.trim()
+      }
+    };
+    await signAndBroadcast(chainId.value, [msg], fee, "Burn NFT");
+    toast.showSuccess("NFT burn submitted");
+    nftModuleTokenId.value = "";
+  } catch (err: any) {
+    toast.showError(err?.message || "NFT burn failed");
   }
 };
 </script>
@@ -361,6 +452,106 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
       </div>
     </div>
 
+    <div class="card">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-base font-semibold text-white">Factory tokens you own (minted by this wallet)</h2>
+        <span class="text-[11px] text-slate-400">factory/{{ address }}/*</span>
+      </div>
+      <div v-if="!factoryHoldings.length" class="text-sm text-slate-400">No factory balances detected for this wallet.</div>
+      <div v-else class="space-y-3">
+        <div v-for="token in factoryHoldings" :key="token.denom" class="p-3 rounded-xl border border-rose-400/40 bg-rose-500/5 flex items-center justify-between">
+          <div class="flex-1">
+            <div class="text-sm font-semibold text-white">{{ token.denom }}</div>
+            <div class="text-xs text-slate-400">Balance: {{ token.amount }}</div>
+            <div class="mt-2 flex gap-2 items-center">
+              <input
+                v-model="factoryBurnInputs[token.denom]"
+                class="input text-xs"
+                type="text"
+                :placeholder="token.amount"
+              />
+              <span class="text-[10px] text-slate-500">Base units</span>
+            </div>
+          </div>
+          <div class="flex gap-2 flex-shrink-0">
+            <button class="btn text-xs" @click="burnFactory(token.denom, factoryBurnInputs[token.denom] || token.amount)">Burn amount</button>
+            <button class="btn text-xs" @click="burnFactory(token.denom, token.amount)">Burn all</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card">
+      <div class="flex items-center justify-between mb-3">
+        <h2 class="text-base font-semibold text-white">CW20 tokens you minted (with balance)</h2>
+        <span class="text-[11px] text-slate-400">Minter = your wallet</span>
+      </div>
+      <div v-if="!cw20Holdings.length" class="text-sm text-slate-400">No CW20 balances found where you are the minter.</div>
+      <div v-else class="space-y-3">
+        <div v-for="token in cw20Holdings" :key="token.contract" class="p-3 rounded-xl border border-amber-400/40 bg-amber-500/5 flex items-center justify-between">
+          <div class="flex-1">
+            <div class="text-sm font-semibold text-white">{{ token.symbol }} • {{ token.name }}</div>
+            <div class="text-xs text-slate-400">{{ token.contract }}</div>
+            <div class="text-xs text-slate-500">Balance: {{ formatAmount(token.balance, token.decimals) }}</div>
+            <div class="mt-2 flex gap-2 items-center">
+              <input
+                v-model="cw20BurnInputs[token.contract]"
+                class="input text-xs"
+                type="number"
+                min="0"
+                step="0.000001"
+                :placeholder="`Amount in ${token.symbol}`"
+              />
+              <span class="text-[10px] text-slate-500">Token units</span>
+            </div>
+          </div>
+          <div class="flex gap-2 flex-shrink-0">
+            <button class="btn text-xs" @click="burnCw20(token, cw20BurnInputs[token.contract] || undefined)">Burn amount</button>
+            <button class="btn text-xs" @click="burnCw20(token)">Burn all</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="grid gap-3 md:grid-cols-2">
+      <div class="card border-white/10 bg-slate-900/60 shadow-inner">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🏷️</span>
+            <div>
+              <h2 class="text-base font-semibold text-white">CW721 burn</h2>
+              <p class="text-[11px] text-slate-400">Execute burn(token_id)</p>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-2 text-sm text-slate-300">
+          <input v-model="cw721Contract" class="input text-xs" type="text" placeholder="CW721 contract address" />
+          <div class="flex gap-2">
+            <input v-model="cw721TokenId" class="input text-xs flex-1" type="text" placeholder="Token ID" />
+            <button class="btn text-xs" @click="burnCw721">Burn</button>
+          </div>
+        </div>
+      </div>
+      <div class="card border-white/10 bg-slate-900/60 shadow-inner">
+        <div class="flex items-center justify-between mb-2">
+          <div class="flex items-center gap-2">
+            <span class="text-lg">🎟️</span>
+            <div>
+              <h2 class="text-base font-semibold text-white">NFT module burn</h2>
+              <p class="text-[11px] text-slate-400">MsgBurn (class ID, token ID)</p>
+            </div>
+          </div>
+        </div>
+        <div class="space-y-2 text-sm text-slate-300">
+          <input v-model="nftModuleClassId" class="input text-xs" type="text" placeholder="Class ID" />
+          <div class="flex gap-2">
+            <input v-model="nftModuleTokenId" class="input text-xs flex-1" type="text" placeholder="Token ID" />
+            <button class="btn text-xs" @click="burnNftModule">Burn</button>
+          </div>
+        </div>
+      </div>
+    </div>
+
     <div class="card border-white/10 bg-slate-900/60 shadow-inner">
       <div class="flex items-center justify-between mb-3">
         <div class="flex items-center gap-2">
@@ -401,40 +592,6 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
         </div>
       </div>
     </div>
-
-    <div class="card">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-base font-semibold text-white">Factory tokens you own (minted by this wallet)</h2>
-        <span class="text-[11px] text-slate-400">factory/{{ address }}/*</span>
-      </div>
-      <div v-if="!factoryHoldings.length" class="text-sm text-slate-400">No factory balances detected for this wallet.</div>
-      <div v-else class="space-y-3">
-        <div v-for="token in factoryHoldings" :key="token.denom" class="p-3 rounded-xl border border-rose-400/40 bg-rose-500/5 flex items-center justify-between">
-          <div>
-            <div class="text-sm font-semibold text-white">{{ token.denom }}</div>
-            <div class="text-xs text-slate-400">Balance: {{ token.amount }}</div>
-          </div>
-          <button class="btn" @click="burnFactory(token.denom, token.amount)">Burn all</button>
-        </div>
-      </div>
-    </div>
-
-    <div class="card">
-      <div class="flex items-center justify-between mb-3">
-        <h2 class="text-base font-semibold text-white">CW20 tokens you minted (with balance)</h2>
-        <span class="text-[11px] text-slate-400">Minter = your wallet</span>
-      </div>
-      <div v-if="!cw20Holdings.length" class="text-sm text-slate-400">No CW20 balances found where you are the minter.</div>
-      <div v-else class="space-y-3">
-        <div v-for="token in cw20Holdings" :key="token.contract" class="p-3 rounded-xl border border-amber-400/40 bg-amber-500/5 flex items-center justify-between">
-          <div>
-            <div class="text-sm font-semibold text-white">{{ token.symbol }} • {{ token.name }}</div>
-            <div class="text-xs text-slate-400">{{ token.contract }}</div>
-            <div class="text-xs text-slate-500">Balance: {{ formatAmount(token.balance, token.decimals) }}</div>
-          </div>
-          <button class="btn" @click="burnCw20(token)">Burn all</button>
-        </div>
-      </div>
-    </div>
   </div>
 </template>
+
