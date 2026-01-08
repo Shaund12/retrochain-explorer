@@ -102,10 +102,9 @@ const burnFactory = async (denom: string, amount: string) => {
   const fee = { amount: [{ denom: "uretro", amount: "8000" }], gas: "220000" };
 
   // Many tokenfactory modules expect amount as a single "<amt><denom>" string.
-  const amountString = `${amount}${denom}`;
   const msgBase = {
     sender: address.value,
-    amount: amountString,
+    amount: { denom, amount },
     burn_from_address: address.value
   };
 

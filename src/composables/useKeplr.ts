@@ -568,7 +568,7 @@ interface MsgSell {
 
 interface MsgTokenFactoryBurn {
   sender: string;
-  amount?: string | { denom: string; amount: string };
+  amount?: { denom: string; amount: string } | string;
   burn_from_address?: string;
 }
 
