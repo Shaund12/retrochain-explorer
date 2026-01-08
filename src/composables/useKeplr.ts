@@ -766,9 +766,19 @@ const MsgTokenFactoryBurnType: GeneratedType = {
     return message;
   },
   fromPartial(object: Partial<MsgTokenFactoryBurn>): MsgTokenFactoryBurn {
+    let amt: any = undefined;
+    if (typeof object.amount === "string") {
+      amt = object.amount;
+    } else if (object.amount) {
+      amt = {
+        denom: (object.amount as any).denom ?? "",
+        amount: (object.amount as any).amount ?? ""
+      };
+    }
+
     return {
       sender: object.sender ?? "",
-      amount: object.amount ? { denom: object.amount.denom ?? "", amount: object.amount.amount ?? "" } : undefined
+      amount: amt
     };
   }
 };
