@@ -37,7 +37,10 @@ const nativeBalanceUretro = computed(() => balances.value.find((b) => b.denom ==
 const nativeBalanceDisplay = computed(() => `${formatAmount(nativeBalanceUretro.value, 6)} RETRO`);
 const nativeBurnAmount = ref("0");
 
-const burnHistory = computed(() => {
+const burnPage = ref(0);
+const burnsPerPage = 5;
+
+const burnHistoryAll = computed(() => {
   const list = Array.isArray(addressTxs.value) ? addressTxs.value : [];
   const burns = list.flatMap((tx) =>
     (tx.burns || []).map((b: any) => ({
@@ -49,7 +52,13 @@ const burnHistory = computed(() => {
     }))
   );
   burns.sort((a, b) => (b.height || 0) - (a.height || 0));
-  return burns.slice(0, 10);
+  return burns;
+});
+
+const totalBurnPages = computed(() => Math.max(1, Math.ceil(burnHistoryAll.value.length / burnsPerPage)));
+const burnHistoryPage = computed(() => {
+  const start = burnPage.value * burnsPerPage;
+  return burnHistoryAll.value.slice(start, start + burnsPerPage);
 });
 
 const shortHash = (hash?: string) => {
@@ -135,6 +144,7 @@ onMounted(() => {
 const refreshBurnHistory = async () => {
   if (!address.value) return;
   try {
+    burnPage.value = 0;
     await searchByAddress(address.value, 25, 0);
   } catch (err) {
     console.warn("Burn history fetch failed", err);
@@ -349,15 +359,27 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
           </div>
         </div>
         <span class="text-[11px] text-slate-400">{{ burnHistory.length || 0 }} shown</span>
+        <div class="flex items-center gap-2 text-[11px] text-slate-400">
+          <span>{{ burnHistoryAll.length || 0 }} total</span>
+          <div class="flex items-center gap-1">
+            <button class="btn text-[10px] px-2 py-1" :disabled="burnPage === 0" @click="burnPage = Math.max(0, burnPage - 1)">
+              Prev
+            </button>
+            <span>Page {{ burnPage + 1 }} / {{ totalBurnPages }}</span>
+            <button class="btn text-[10px] px-2 py-1" :disabled="burnPage + 1 >= totalBurnPages" @click="burnPage = Math.min(totalBurnPages - 1, burnPage + 1)">
+              Next
+            </button>
+          </div>
+        </div>
       </div>
       <div v-if="burnLoading" class="text-sm text-slate-400 flex items-center gap-2">
         <RcLoadingSpinner size="sm" text="Loading burn history…" />
       </div>
       <div v-else-if="!burnHistory.length" class="text-sm text-slate-500">No burns found for this wallet.</div>
       <div v-else class="space-y-2">
-        <div v-for="(burn, idx) in burnHistory" :key="burn.hash + idx" class="p-3 rounded-lg border border-white/10 bg-white/5 flex items-center justify-between">
+        <div v-for="(burn, idx) in burnHistoryPage" :key="burn.hash + idx" class="p-3 rounded-lg border border-white/10 bg-white/5 flex items-center justify-between">
           <div class="space-y-1">
-            <div class="text-sm text-white font-semibold">{{ burn.amount }} {{ burn.denom }}</div>
+            <div class="text-sm text-white font-semibold">{{ formatAmount(burn.amount || '0', 6) }} RETRO</div>
             <div class="text-[11px] text-slate-400 flex gap-3">
               <span>Block {{ burn.height }}</span>
               <span v-if="burn.timestamp">{{ burn.timestamp }}</span>
