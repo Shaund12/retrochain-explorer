@@ -768,7 +768,9 @@ const retroLauncherTypes: ReadonlyArray<[string, GeneratedType]> = [
 
 const tokenFactoryTypes: ReadonlyArray<[string, GeneratedType]> = [
   ["/retrochain.tokenfactory.v1beta1.MsgBurn", MsgTokenFactoryBurnType],
-  ["/osmosis.tokenfactory.v1beta1.MsgBurn", MsgTokenFactoryBurnType]
+  ["/retrochain.tokenfactory.v1.MsgBurn", MsgTokenFactoryBurnType],
+  ["/osmosis.tokenfactory.v1beta1.MsgBurn", MsgTokenFactoryBurnType],
+  ["/osmosis.tokenfactory.v1.MsgBurn", MsgTokenFactoryBurnType]
 ];
 
 function buildChainInfo() {
