@@ -19,6 +19,7 @@ const chainId = computed(() => (network.value === "mainnet" ? "retrochain-mainne
 const subdenom = ref("");
 const maxSupply = ref("");
 const graduationReserve = ref("");
+const tokenSymbol = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
 const params = ref<any | null>(null);
@@ -53,6 +54,11 @@ loadParams();
 const createFeeDisplay = computed(() => formatRetro(params.value?.create_launch_fee));
 const tradingFeeBps = computed(() => params.value?.fee_bps ?? params.value?.trading_fee_bps ?? "—");
 const feeRecipient = computed(() => params.value?.fee_recipient || "—");
+const resultingDenom = computed(() => {
+  const base = subdenom.value.trim() || "…";
+  const owner = address.value || "<your-address>";
+  return `factory/${owner}/${base}`;
+});
 
 const submit = async () => {
   if (!subdenom.value.trim()) {
