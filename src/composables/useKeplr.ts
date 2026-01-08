@@ -566,6 +566,11 @@ interface MsgSell {
   minAmountOutUretro: string;
 }
 
+interface MsgTokenFactoryBurn {
+  sender: string;
+  amount?: { denom: string; amount: string };
+}
+
 const MsgCreateLaunchType: GeneratedType = {
   encode(message: MsgCreateLaunch, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.creator) writer.uint32(10).string(message.creator);
@@ -698,10 +703,72 @@ const MsgSellType: GeneratedType = {
   }
 };
 
+const MsgTokenFactoryBurnType: GeneratedType = {
+  encode(message: MsgTokenFactoryBurn, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.sender) writer.uint32(10).string(message.sender);
+    if (message.amount?.denom || message.amount?.amount) {
+      const w = _m0.Writer.create();
+      if (message.amount?.denom) w.uint32(10).string(message.amount.denom);
+      if (message.amount?.amount) w.uint32(18).string(message.amount.amount);
+      writer.uint32(18).bytes(w.finish());
+    }
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgTokenFactoryBurn {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    let end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgTokenFactoryBurn = { sender: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.sender = reader.string();
+          break;
+        case 2: {
+          const bytes = reader.bytes();
+          const r = new _m0.Reader(bytes);
+          const denomAmount: { denom?: string; amount?: string } = {};
+          while (r.pos < r.len) {
+            const t = r.uint32();
+            switch (t >>> 3) {
+              case 1:
+                denomAmount.denom = r.string();
+                break;
+              case 2:
+                denomAmount.amount = r.string();
+                break;
+              default:
+                r.skipType(t & 7);
+                break;
+            }
+          }
+          message.amount = { denom: denomAmount.denom || "", amount: denomAmount.amount || "" };
+          break;
+        }
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgTokenFactoryBurn>): MsgTokenFactoryBurn {
+    return {
+      sender: object.sender ?? "",
+      amount: object.amount ? { denom: object.amount.denom ?? "", amount: object.amount.amount ?? "" } : undefined
+    };
+  }
+};
+
 const retroLauncherTypes: ReadonlyArray<[string, GeneratedType]> = [
   ["/retrochain.launcher.v1.MsgCreateLaunch", MsgCreateLaunchType],
   ["/retrochain.launcher.v1.MsgBuy", MsgBuyType],
   ["/retrochain.launcher.v1.MsgSell", MsgSellType]
+];
+
+const tokenFactoryTypes: ReadonlyArray<[string, GeneratedType]> = [
+  ["/retrochain.tokenfactory.v1beta1.MsgBurn", MsgTokenFactoryBurnType],
+  ["/osmosis.tokenfactory.v1beta1.MsgBurn", MsgTokenFactoryBurnType]
 ];
 
 function buildChainInfo() {
@@ -868,7 +935,7 @@ export function useKeplr() {
       const signerAddress = accounts[0].address;
       const signerPubkey = accounts[0].pubkey;
 
-      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes, ...retroDexTypes, ...retroLauncherTypes]);
+      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes, ...retroDexTypes, ...retroLauncherTypes, ...tokenFactoryTypes]);
       const anyMsgs = msgs.map((msg) => registry.encodeAsAny(msg));
       const txBody = TxBody.fromPartial({ messages: anyMsgs, memo: memo || "" });
       const txBodyBytes = TxBody.encode(txBody).finish();
@@ -1177,7 +1244,7 @@ export function useKeplr() {
       const offlineSigner = provider.getOfflineSigner(chainId);
       const accounts = await offlineSigner.getAccounts();
 
-      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes, ...retroDexTypes, ...retroLauncherTypes]);
+      const registry = new Registry([...defaultRegistryTypes, ...retroBtcStakeTypes, ...retroDexTypes, ...retroLauncherTypes, ...tokenFactoryTypes]);
       const client = await SigningStargateClient.connectWithSigner(rpcEndpoint, offlineSigner, { registry });
       return client.signAndBroadcast(accounts[0].address, msgs, feeNormalized, memo);
     };

@@ -50,6 +50,7 @@ import SlotsView from "@/views/SlotsView.vue";
 import LauncherListView from "@/views/LauncherListView.vue";
 import LauncherDetailView from "@/views/LauncherDetailView.vue";
 import LauncherCreateView from "@/views/LauncherCreateView.vue";
+import TokenBurnerView from "@/views/TokenBurnerView.vue";
 
 const launcherEnabled = import.meta.env.VITE_ENABLE_LAUNCHER === "true";
 const slotsEnabled = import.meta.env.VITE_ENABLE_SLOTS === "true";
@@ -100,6 +101,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/contracts", name: "contracts", component: ContractsView, meta: { title: "Contracts" } },
   { path: "/contracts/:address", name: "contract-detail", component: ContractDetailView, props: true, meta: { title: "Contract" } },
   { path: "/changelog", name: "changelog", component: ChangelogView },
+  { path: "/burn", name: "token-burner", component: TokenBurnerView, meta: { title: "Token Burner" } },
   { path: "/legal", name: "legal", component: LegalView },
   { path: "/api-test", name: "api-test", component: ApiTestView },
   { path: "/:pathMatch(.*)*", name: "not-found", component: NotFoundView, meta: { title: "Not Found" } }

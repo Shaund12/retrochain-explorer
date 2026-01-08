@@ -448,6 +448,7 @@ const navItems: NavItem[] = [
     items: [
       { label: "Tokens", to: { name: "tokens" } },
       { label: "Tokenomics", to: { name: "tokenomics" } },
+      { label: "Token Burner", to: { name: "token-burner" } },
       { label: "Docs", to: { name: "docs" } },
       { label: "API Docs", to: { name: "api" } },
       { label: "IBC", to: { name: "ibc-info" } }
