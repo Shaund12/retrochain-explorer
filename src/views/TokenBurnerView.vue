@@ -32,6 +32,10 @@ const factoryHoldings = computed(() => {
     .map((b) => ({ denom: b.denom, amount: b.amount }));
 });
 
+const nativeBalanceUretro = computed(() => balances.value.find((b) => b.denom === "uretro")?.amount || "0");
+const nativeBalanceDisplay = computed(() => `${formatAmount(nativeBalanceUretro.value, 6)} RETRO`);
+const nativeBurnAmount = ref("0");
+
 const formatAmount = (amount: string, decimals = 6) => {
   try {
     const raw = BigInt(amount || "0");
@@ -140,6 +144,43 @@ const burnFactory = async (denom: string, amount: string) => {
   toast.showError("Burn failed. Tokenfactory message type may differ on this chain.");
 };
 
+const burnNative = async () => {
+  if (!address.value) {
+    await connect();
+    if (!address.value) return;
+  }
+
+  const micro = parseRetroToUretro(nativeBurnAmount.value);
+  if (!micro || micro === "0") {
+    toast.showError("Enter a valid RETRO amount (max 6 decimals).");
+    return;
+  }
+
+  if (BigInt(micro) > BigInt(nativeBalanceUretro.value || "0")) {
+    toast.showError("Amount exceeds wallet balance.");
+    return;
+  }
+
+  const fee = { amount: [{ denom: "uretro", amount: "12000" }], gas: "160000" };
+  const msg = {
+    typeUrl: "/cosmos.bank.v1beta1.MsgSend",
+    value: {
+      fromAddress: address.value,
+      toAddress: BURN_SINK_ADDRESS,
+      amount: [{ denom: "uretro", amount: micro }]
+    }
+  };
+
+  try {
+    await signAndBroadcast(chainId.value, [msg], fee, "Burn native RETRO");
+    toast.showSuccess("Native burn submitted");
+    nativeBurnAmount.value = "0";
+    await refreshHoldings();
+  } catch (err: any) {
+    toast.showError(err?.message || "Native burn failed");
+  }
+};
+
 const burnCw20 = async (holding: { contract: string; balance: string }) => {
   if (!address.value) {
     await connect();
@@ -205,8 +246,8 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
             placeholder="Amount in RETRO"
           />
           <div class="flex gap-2">
-            <button class="btn text-xs" @click="nativeBurnAmount = formatAmount(nativeBalanceUretro, 6)">Max</button>
-            <button class="btn btn-primary text-xs" :disabled="!address" @click="burnNative">Burn</button>
+            <button class="btn text-xs" @click="nativeBurnAmount = formatAmount(nativeBalanceUretro.value, 6)">Max</button>
+            <button class="btn btn-primary text-xs" @click="burnNative">Burn</button>
           </div>
         </div>
       </div>
