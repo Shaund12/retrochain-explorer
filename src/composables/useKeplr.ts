@@ -707,10 +707,13 @@ const MsgSellType: GeneratedType = {
 const MsgTokenFactoryBurnType: GeneratedType = {
   encode(message: MsgTokenFactoryBurn, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.sender) writer.uint32(10).string(message.sender);
-    if (message.amount?.denom || message.amount?.amount) {
+    const amt = message.amount as any;
+    if (typeof amt === "string" && amt.trim()) {
+      writer.uint32(18).string(amt);
+    } else if (amt?.denom || amt?.amount) {
       const w = _m0.Writer.create();
-      if (message.amount?.denom) w.uint32(10).string(message.amount.denom);
-      if (message.amount?.amount) w.uint32(18).string(message.amount.amount);
+      if (amt?.denom) w.uint32(10).string(amt.denom);
+      if (amt?.amount) w.uint32(18).string(amt.amount);
       writer.uint32(18).bytes(w.finish());
     }
     return writer;
@@ -726,24 +729,33 @@ const MsgTokenFactoryBurnType: GeneratedType = {
           message.sender = reader.string();
           break;
         case 2: {
-          const bytes = reader.bytes();
-          const r = new _m0.Reader(bytes);
-          const denomAmount: { denom?: string; amount?: string } = {};
-          while (r.pos < r.len) {
-            const t = r.uint32();
-            switch (t >>> 3) {
-              case 1:
-                denomAmount.denom = r.string();
-                break;
-              case 2:
-                denomAmount.amount = r.string();
-                break;
-              default:
-                r.skipType(t & 7);
-                break;
+          // Try to read as string first
+          const len = reader.uint32();
+          const start = reader.pos;
+          const endPos = start + len;
+          try {
+            message.amount = reader.string();
+          } catch {
+            reader.pos = start;
+            const r = new _m0.Reader(reader.buf.slice(start, endPos));
+            const denomAmount: { denom?: string; amount?: string } = {};
+            while (r.pos < r.len) {
+              const t = r.uint32();
+              switch (t >>> 3) {
+                case 1:
+                  denomAmount.denom = r.string();
+                  break;
+                case 2:
+                  denomAmount.amount = r.string();
+                  break;
+                default:
+                  r.skipType(t & 7);
+                  break;
+              }
             }
+            message.amount = { denom: denomAmount.denom || "", amount: denomAmount.amount || "" };
           }
-          message.amount = { denom: denomAmount.denom || "", amount: denomAmount.amount || "" };
+          reader.pos = endPos;
           break;
         }
         default:
