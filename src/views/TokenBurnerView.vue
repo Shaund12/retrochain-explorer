@@ -10,6 +10,7 @@ import { useAssets } from "@/composables/useAssets";
 import { smartQueryContract } from "@/utils/wasmSmartQuery";
 import { stringToBase64 } from "@/utils/encoding";
 import { useApi } from "@/composables/useApi";
+import { useTxs } from "@/composables/useTxs";
 
 const { address, connect, signAndBroadcast } = useKeplr();
 const { current: network } = useNetwork();
@@ -17,6 +18,7 @@ const { balances, load, loading: accountLoading } = useAccount();
 const { cw20Tokens, fetchAssets, loading: assetsLoading } = useAssets();
 const api = useApi();
 const toast = useToast();
+const { txs: addressTxs, loading: burnLoading, searchByAddress } = useTxs();
 
 
 const chainId = computed(() => (network.value === "mainnet" ? "retrochain-mainnet" : "retrochain-devnet-1"));
@@ -34,6 +36,26 @@ const factoryHoldings = computed(() => {
 const nativeBalanceUretro = computed(() => balances.value.find((b) => b.denom === "uretro")?.amount || "0");
 const nativeBalanceDisplay = computed(() => `${formatAmount(nativeBalanceUretro.value, 6)} RETRO`);
 const nativeBurnAmount = ref("0");
+
+const burnHistory = computed(() => {
+  const list = Array.isArray(addressTxs.value) ? addressTxs.value : [];
+  const burns = list.flatMap((tx) =>
+    (tx.burns || []).map((b: any) => ({
+      hash: tx.hash,
+      height: tx.height,
+      timestamp: tx.timestamp,
+      amount: b.amount,
+      denom: b.denom
+    }))
+  );
+  burns.sort((a, b) => (b.height || 0) - (a.height || 0));
+  return burns.slice(0, 10);
+});
+
+const shortHash = (hash?: string) => {
+  if (!hash) return "";
+  return `${hash.slice(0, 6)}…${hash.slice(-4)}`;
+};
 
 // Native RETRO burn now uses tokenfactory MsgBurnNative (no sink address transfer).
 
@@ -77,6 +99,7 @@ const refreshHoldings = async () => {
 
     await load(address.value);
     await fetchAssets();
+    await refreshBurnHistory();
 
     const myAddrLower = address.value.toLowerCase();
     const mine = cw20Tokens.value.filter((t) => (t.minter || "").toLowerCase() === myAddrLower);
@@ -108,6 +131,15 @@ const refreshHoldings = async () => {
 onMounted(() => {
   refreshHoldings();
 });
+
+const refreshBurnHistory = async () => {
+  if (!address.value) return;
+  try {
+    await searchByAddress(address.value, 25, 0);
+  } catch (err) {
+    console.warn("Burn history fetch failed", err);
+  }
+};
 
 const factoryTypeUrls = [
   "/retrochain.tokenfactory.v1beta1.MsgBurn",
@@ -303,6 +335,35 @@ const burnCw20 = async (holding: { contract: string; balance: string }) => {
             <button class="btn text-xs" @click="nativeBurnAmount = formatAmount(nativeBalanceUretro.value, 6)">Max</button>
             <button class="btn btn-primary text-xs" @click="burnNative">Burn</button>
           </div>
+        </div>
+      </div>
+    </div>
+
+    <div class="card border-white/10 bg-slate-900/60 shadow-inner">
+      <div class="flex items-center justify-between mb-3">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">🧾</span>
+          <div>
+            <h2 class="text-base font-semibold text-white">Your burn history</h2>
+            <p class="text-[11px] text-slate-400">Recent burns linked to this wallet</p>
+          </div>
+        </div>
+        <span class="text-[11px] text-slate-400">{{ burnHistory.length || 0 }} shown</span>
+      </div>
+      <div v-if="burnLoading" class="text-sm text-slate-400 flex items-center gap-2">
+        <RcLoadingSpinner size="sm" text="Loading burn history…" />
+      </div>
+      <div v-else-if="!burnHistory.length" class="text-sm text-slate-500">No burns found for this wallet.</div>
+      <div v-else class="space-y-2">
+        <div v-for="(burn, idx) in burnHistory" :key="burn.hash + idx" class="p-3 rounded-lg border border-white/10 bg-white/5 flex items-center justify-between">
+          <div class="space-y-1">
+            <div class="text-sm text-white font-semibold">{{ burn.amount }} {{ burn.denom }}</div>
+            <div class="text-[11px] text-slate-400 flex gap-3">
+              <span>Block {{ burn.height }}</span>
+              <span v-if="burn.timestamp">{{ burn.timestamp }}</span>
+            </div>
+          </div>
+          <div class="text-[11px] text-emerald-300">{{ shortHash(burn.hash) }}</div>
         </div>
       </div>
     </div>
