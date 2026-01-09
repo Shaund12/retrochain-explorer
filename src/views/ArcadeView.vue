@@ -50,6 +50,7 @@ const resolveGameLaunchUrl = (game: any) => {
   if (gid === "retronoid") return "/retronoid/retronoid/";
   if (gid === "retroman") return "/retroman/retroman/";
   if (gid === "retrowar") return "/retrowar/retrowar/";
+  if (gid === "avoidtheretro") return "/avoidtheretro/avoidtheretro/";
 
   // API-provided launch URL (if present)
   const direct = (game?.launch_url || game?.play_url || game?.url) as string | undefined;

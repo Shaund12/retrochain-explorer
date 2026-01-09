@@ -26,6 +26,7 @@ const resolveGameLaunchUrl = (game: any) => {
   if (gid === "retronoid") return "/retronoid/retronoid/";
   if (gid === "retroman") return "/retroman/retroman/";
   if (gid === "retrowar") return "/retrowar/retrowar/";
+  if (gid === "avoidtheretro") return "/avoidtheretro/avoidtheretro/";
   const direct = (game?.launch_url || game?.play_url || game?.url) as string | undefined;
   if (direct && typeof direct === "string") return direct;
   return null;
