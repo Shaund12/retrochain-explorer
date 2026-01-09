@@ -113,15 +113,33 @@ const submit = async () => {
 <template>
   <div class="space-y-4">
     <div class="card relative overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-r from-emerald-600/20 via-purple-600/20 to-cyan-500/20 blur-3xl"></div>
-      <div class="relative flex flex-col gap-2">
+      <div class="absolute inset-0 bg-gradient-to-r from-emerald-600/30 via-purple-700/25 to-cyan-500/30 blur-3xl"></div>
+      <div class="relative flex flex-col gap-3">
         <div class="flex items-center gap-2 text-sm text-slate-300">
           <button class="text-emerald-200 hover:underline" @click="router.push({ name: 'launcher' })">Launcher</button>
           <span class="text-slate-500">/</span>
           <span>Create Launch</span>
         </div>
-        <h1 class="text-3xl font-bold text-white">Create a Launch</h1>
-        <p class="text-sm text-slate-300">Submit MsgCreateLaunch to x/launcher. Fees are shown from on-chain params.</p>
+        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
+          <div class="space-y-2">
+            <h1 class="text-3xl font-bold text-white flex items-center gap-2">
+              <span>🚀 Create a Launch</span>
+              <span class="text-sm text-emerald-200">x/launcher</span>
+            </h1>
+            <p class="text-sm text-slate-300 max-w-3xl">Set your subdenom, optional caps, and preview your resulting factory denom before broadcasting MsgCreateLaunch.</p>
+            <div class="flex flex-wrap gap-2 text-[11px] text-slate-200">
+              <span class="px-2 py-1 rounded-full border border-white/10 bg-white/5">Resulting: {{ resultingDenom }}</span>
+              <span class="px-2 py-1 rounded-full border border-emerald-400/40 text-emerald-100">Create fee: {{ createFeeDisplay }}</span>
+              <span class="px-2 py-1 rounded-full border border-cyan-400/40 text-cyan-100">Trading fee: {{ tradingFeeBps }} bps</span>
+              <span class="px-2 py-1 rounded-full border border-amber-400/40 text-amber-100">Recipient: {{ feeRecipient }}</span>
+            </div>
+          </div>
+          <div class="p-3 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-200 shadow-inner">
+            <div class="text-[11px] uppercase tracking-wider text-slate-400">Display symbol (UI only)</div>
+            <input v-model="tokenSymbol" class="input mt-2" placeholder="RETRO" />
+            <div class="text-[11px] text-slate-500 mt-1">For your dashboards; not written on-chain.</div>
+          </div>
+        </div>
       </div>
     </div>
 
@@ -129,37 +147,65 @@ const submit = async () => {
       <p>{{ error }}</p>
     </RcDisclaimer>
 
-    <div class="card space-y-3">
-      <div class="grid md:grid-cols-2 gap-3">
-        <div>
-          <label class="text-[11px] uppercase tracking-wider text-slate-400">Subdenom</label>
-          <input v-model="subdenom" class="input mt-1" placeholder="MYCOIN" />
-          <p class="text-[11px] text-slate-500 mt-1">Resulting denom: factory/&lt;you&gt;/{{ subdenom || '...' }}</p>
+    <div class="card space-y-4">
+      <div class="grid md:grid-cols-3 gap-3">
+        <div class="p-4 rounded-xl border border-emerald-400/50 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-slate-900/60 shadow-[0_10px_40px_-30px_rgba(16,185,129,0.8)] space-y-3">
+          <div class="text-[11px] uppercase tracking-wider text-emerald-200">Token identity</div>
+          <div class="space-y-2">
+            <label class="text-[11px] text-slate-400">Subdenom</label>
+            <input v-model="subdenom" class="input bg-slate-900/70 border-emerald-400/40 text-white" placeholder="MYCOIN" />
+            <p class="text-[11px] text-slate-500">Factory denom: {{ resultingDenom }}</p>
+          </div>
+          <div class="space-y-2">
+            <label class="text-[11px] text-slate-400">Display symbol (UI only)</label>
+            <input v-model="tokenSymbol" class="input bg-slate-900/70 border-emerald-400/40 text-white" placeholder="RETRO" />
+            <p class="text-[11px] text-slate-500">Not on-chain; for your dashboards.</p>
+          </div>
         </div>
-        <div>
-          <label class="text-[11px] uppercase tracking-wider text-slate-400">Max supply (optional)</label>
-          <input v-model="maxSupply" class="input mt-1" placeholder="(empty uses module default)" />
+
+        <div class="p-4 rounded-xl border border-amber-400/50 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-slate-900/60 shadow-[0_10px_40px_-30px_rgba(245,158,11,0.8)] space-y-3">
+          <div class="text-[11px] uppercase tracking-wider text-amber-200">Supply & Reserve</div>
+          <div class="space-y-2">
+            <label class="text-[11px] text-slate-400">Max supply (optional)</label>
+            <input v-model="maxSupply" class="input bg-slate-900/70 border-amber-400/40 text-white" placeholder="(module default)" />
+          </div>
+          <div class="space-y-2">
+            <label class="text-[11px] text-slate-400">Graduation reserve (uretro, optional)</label>
+            <input v-model="graduationReserve" class="input bg-slate-900/70 border-amber-400/40 text-white" placeholder="(module default)" />
+            <div class="flex flex-wrap gap-2 text-[11px]">
+              <button class="btn-secondary px-2 py-1" @click="graduationReserve = '1000000'">1M</button>
+              <button class="btn-secondary px-2 py-1" @click="graduationReserve = '10000000'">10M</button>
+              <button class="btn-secondary px-2 py-1" @click="graduationReserve = '100000000'">100M</button>
+            </div>
+            <p class="text-[11px] text-slate-500">Reserve backing at graduation.</p>
+          </div>
         </div>
-        <div>
-          <label class="text-[11px] uppercase tracking-wider text-slate-400">Graduation reserve uretro (optional)</label>
-          <input v-model="graduationReserve" class="input mt-1" placeholder="(empty uses module default)" />
-        </div>
-        <div class="rounded-lg bg-white/5 border border-white/10 p-3 text-sm text-slate-200">
-          <div class="flex items-center justify-between">
-            <span class="text-[11px] uppercase tracking-wider text-slate-400">Create launch fee</span>
+
+        <div class="p-4 rounded-xl border border-cyan-400/50 bg-gradient-to-br from-cyan-500/10 via-cyan-500/5 to-slate-900/60 shadow-[0_10px_40px_-30px_rgba(6,182,212,0.8)] space-y-3">
+          <div class="text-[11px] uppercase tracking-wider text-cyan-200">Fees & Params</div>
+          <div class="flex items-center justify-between text-sm text-slate-200">
+            <span>Create launch fee</span>
             <span class="font-semibold">{{ createFeeDisplay }}</span>
           </div>
-          <div class="text-[11px] text-slate-500 mt-1">Plus network gas fee in uretro.</div>
-          <div class="text-[11px] text-slate-500 mt-1">Trading fee: {{ tradingFeeBps }} bps · Recipient: {{ feeRecipient }}</div>
+          <div class="flex items-center justify-between text-sm text-slate-200">
+            <span>Trading fee</span>
+            <span class="font-semibold">{{ tradingFeeBps }} bps</span>
+          </div>
+          <div class="flex items-center justify-between text-xs text-slate-300">
+            <span>Fee recipient</span>
+            <span class="font-mono text-emerald-200">{{ feeRecipient }}</span>
+          </div>
+          <div class="text-[11px] text-slate-500">Plus network gas in uretro when broadcasting.</div>
         </div>
       </div>
-      <div class="flex items-center gap-3">
+
+      <div class="flex items-center gap-3 flex-wrap">
         <button class="btn" :disabled="loading" @click="submit">{{ loading ? 'Submitting…' : 'Create Launch' }}</button>
         <button class="btn-secondary" :disabled="loading" @click="router.push({ name: 'launcher' })">Cancel</button>
-      </div>
-      <div v-if="loading" class="flex items-center gap-2 text-sm text-slate-400">
-        <RcLoadingSpinner size="sm" />
-        <span>Broadcasting transaction…</span>
+        <span v-if="loading" class="flex items-center gap-2 text-sm text-slate-400">
+          <RcLoadingSpinner size="sm" />
+          <span>Broadcasting transaction…</span>
+        </span>
       </div>
     </div>
 
