@@ -83,8 +83,16 @@ const leaderboardList = computed(() =>
     ? leaderboard.value.filter((e: any) => e && typeof e === "object" && e.player !== undefined)
     : []
 );
-const sessionsList = computed(() => (Array.isArray(sessions.value) ? sessions.value : []));
-const achievementsList = computed(() => (Array.isArray(achievements.value) ? achievements.value : []));
+const sessionsList = computed(() =>
+  Array.isArray(sessions.value)
+    ? sessions.value.filter((s: any) => s && typeof s === "object")
+    : []
+);
+const achievementsList = computed(() =>
+  Array.isArray(achievements.value)
+    ? achievements.value.filter((a: any) => a && typeof a === "object" && a.player !== undefined)
+    : []
+);
 
 const refreshing = ref(false);
 const showSpaceInvadersNotice = ref(true);
