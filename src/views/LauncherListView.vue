@@ -28,7 +28,15 @@ const pageSize = 20;
 const formatRetro = (value?: string | number | null) => {
   if (value === undefined || value === null) return "—";
   try {
-    const raw = typeof value === "number" ? BigInt(Math.trunc(value)) : BigInt(value);
+    const str = value.toString();
+    // If already a decimal string, format directly.
+    if (str.includes(".")) {
+      const num = Number(str);
+      if (!Number.isFinite(num)) return "—";
+      return `${num.toLocaleString(undefined, { maximumFractionDigits: 6 })} RETRO`;
+    }
+
+    const raw = typeof value === "number" ? BigInt(Math.trunc(value)) : BigInt(str);
     const whole = raw / 1_000_000n;
     const frac = raw % 1_000_000n;
     const wholeStr = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
