@@ -49,6 +49,16 @@ const toUretro = (val?: string | number | null) => {
   return micro.toString();
 };
 
+const formatPrice = (value?: number | string | null) => {
+  if (value === undefined || value === null) return "—";
+  const num = typeof value === "number" ? value : Number(value);
+  if (!Number.isFinite(num)) return "—";
+  if (Math.abs(num) >= 1) return num.toFixed(6);
+  const precise = num.toPrecision(10);
+  if (precise.includes("e")) return num.toExponential(6);
+  return precise.replace(/0+$/, "").replace(/\.$/, "") || "0";
+};
+
 const buyAmountUretro = computed(() => toUretro(buyAmountRetro.value));
 const sellAmountTokensMicro = computed(() => toUretro(sellAmountToken.value));
 
@@ -356,7 +366,7 @@ const chartData = computed(() => {
     coords,
     labels: {
       x: [fmtTime(first?.time), fmtTime(mid?.time), fmtTime(last?.time)].filter(Boolean),
-      y: [max.toFixed(6), ((min + max) / 2).toFixed(6), min.toFixed(6)]
+      y: [formatPrice(max), formatPrice((min + max) / 2), formatPrice(min)]
     }
   };
 });
@@ -624,7 +634,7 @@ const chartData = computed(() => {
           </div>
           <div class="flex items-center gap-3 text-sm text-slate-200">
             <span>Last price</span>
-            <span class="font-semibold text-emerald-200">{{ livePrice || (lastPrice !== null ? lastPrice.toFixed(6) + ' RETRO' : '—') }}</span>
+            <span class="font-semibold text-emerald-200">{{ livePrice || (lastPrice !== null ? formatPrice(lastPrice) + ' RETRO' : '—') }}</span>
           </div>
         </div>
         <div class="flex flex-col md:flex-row gap-4">
@@ -632,8 +642,8 @@ const chartData = computed(() => {
             <div class="bg-slate-900/50 border border-white/10 rounded-xl p-3">
               <div class="flex items-center justify-between text-xs text-slate-300 mb-2">
                 <div class="flex gap-3">
-                  <span>Min: {{ chartData.min ? chartData.min.toFixed(6) : '—' }}</span>
-                  <span>Max: {{ chartData.max ? chartData.max.toFixed(6) : '—' }}</span>
+                  <span>Min: {{ chartData.min ? formatPrice(chartData.min) : '—' }}</span>
+                  <span>Max: {{ chartData.max ? formatPrice(chartData.max) : '—' }}</span>
                 </div>
                 <span>Points: {{ chartData.coords.length }}</span>
               </div>
@@ -679,7 +689,7 @@ const chartData = computed(() => {
                       {{ t.side }}
                     </span>
                   </td>
-                  <td>{{ Number.isFinite(t.price) ? t.price.toFixed(6) : '—' }}</td>
+                  <td>{{ Number.isFinite(t.price) ? formatPrice(t.price) : '—' }}</td>
                   <td>{{ t.amountIn }}</td>
                   <td>{{ t.amountOut }}</td>
                   <td class="text-[11px] text-slate-500">{{ new Date(t.time).toLocaleTimeString() }}</td>
