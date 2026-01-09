@@ -265,7 +265,15 @@ const sparkPath = computed(() => {
       </div>
     </div>
 
-    <template v-if="launch">
+    <RcDisclaimer v-if="error" type="warning" title="Launch not available">
+      <p>{{ error }}</p>
+    </RcDisclaimer>
+
+    <div v-else-if="loading" class="card">
+      <RcLoadingSpinner size="md" text="Loading launch…" />
+    </div>
+
+    <template v-else-if="launch">
       <div class="card">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-base font-semibold text-white">Launch snapshot</h2>
@@ -294,7 +302,6 @@ const sparkPath = computed(() => {
           </div>
         </div>
       </div>
-    </template>
 
       <div class="card">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
@@ -382,20 +389,19 @@ const sparkPath = computed(() => {
           </div>
         </div>
       </div>
-
-    <RcDisclaimer v-if="error" type="warning" title="Launch not available">
-      <p>{{ error }}</p>
-    </RcDisclaimer>
-
-    <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Loading launch…" />
-    </div>
-
-    <template v-else-if="launch">
       <div class="card">
         <div class="flex items-center justify-between mb-2">
-          <h2 class="text-base font-semibold text-white">Launch Pulse</h2>
-          <span class="text-[11px] text-slate-400">Live KPIs</span>
+          <div class="flex items-center gap-2">
+            <h2 class="text-base font-semibold text-white">Launch Pulse</h2>
+            <span class="text-[11px] text-slate-400">Live KPIs</span>
+          </div>
+          <div class="flex items-center gap-2 text-[11px] text-slate-300">
+            <span>Price chart</span>
+            <svg v-if="sparkPath" :width="160" :height="40" viewBox="0 0 160 40">
+              <path :d="sparkPath" fill="none" stroke="#22c55e" stroke-width="2" />
+            </svg>
+            <span v-else class="text-slate-500">No data</span>
+          </div>
         </div>
         <div class="grid gap-3 md:grid-cols-4">
           <div class="p-3 rounded-xl bg-white/5 border border-emerald-400/30">
