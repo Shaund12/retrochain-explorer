@@ -90,7 +90,6 @@ export function useArcade() {
         return mapped;
       });
 
-      // Ensure RetroWar appears even if not yet registered on-chain
       const hasRetroWar = normalized.some((g: any) => (g?.game_id ?? "").toString().toLowerCase() === "retrowar");
       if (!hasRetroWar) {
         normalized.push({
@@ -99,6 +98,18 @@ export function useArcade() {
           description: "Tribute to Spacewar! with RetroChain flavor",
           active: true,
           genre: "shooter"
+        });
+      }
+
+      // Ensure Avoid The Retro appears even if not yet registered on-chain
+      const hasAvoidTheRetro = normalized.some((g: any) => (g?.game_id ?? "").toString().toLowerCase() === "avoidtheretro");
+      if (!hasAvoidTheRetro) {
+        normalized.push({
+          game_id: "avoidtheretro",
+          name: "Avoid The Retro",
+          description: "Dodge the RETROs and climb the leaderboard!",
+          active: true,
+          genre: "arcade"
         });
       }
 
