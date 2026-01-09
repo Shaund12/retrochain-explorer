@@ -321,25 +321,45 @@ const submitSell = async () => {
 const pricePoints = computed(() => trades.value.map((t) => t.price).filter((p) => Number.isFinite(p)));
 const lastPrice = computed(() => (pricePoints.value.length ? pricePoints.value[pricePoints.value.length - 1] : null));
 
-const chartShape = computed(() => {
-  const pts = pricePoints.value.length ? pricePoints.value : [];
-  if (!pts.length) return { line: "", area: "", min: 0, max: 0 };
+const chartData = computed(() => {
   const width = 440;
   const height = 160;
-  const padding = 12;
-  const min = Math.min(...pts);
-  const max = Math.max(...pts);
+  const padding = 24;
+  const ordered = [...trades.value]
+    .filter((t) => Number.isFinite(t.price))
+    .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+
+  const pts = ordered.length ? ordered : launch.value?.computed?.spot_price_uretro_per_token ? [{ price: Number(launch.value.computed.spot_price_uretro_per_token) / 1_000_000, time: new Date().toISOString(), side: "buy", amountIn: "", amountOut: "" }] : [];
+  if (!pts.length) return { line: "", area: "", min: 0, max: 0, coords: [], labels: { x: [], y: [] } };
+
+  const prices = pts.map((p: any) => p.price);
+  const min = Math.min(...prices);
+  const max = Math.max(...prices);
   const span = max - min || 1;
-  const coords = pts.map((p, idx) => {
-    const x = padding + (idx / Math.max(pts.length - 1, 1)) * (width - padding * 2);
+  const coords = prices.map((p, idx) => {
+    const x = padding + (idx / Math.max(prices.length - 1, 1)) * (width - padding * 2);
     const y = padding + (1 - (p - min) / span) * (height - padding * 2);
-    return { x, y };
+    return { x, y, price: p, time: pts[idx].time };
   });
-  const line = coords
-    .map((c, idx) => `${idx === 0 ? "M" : "L"}${c.x.toFixed(2)},${c.y.toFixed(2)}`)
-    .join(" ");
+  const line = coords.map((c, idx) => `${idx === 0 ? "M" : "L"}${c.x.toFixed(2)},${c.y.toFixed(2)}`).join(" ");
   const area = `${line} L${coords[coords.length - 1].x.toFixed(2)},${(height - padding).toFixed(2)} L${coords[0].x.toFixed(2)},${(height - padding).toFixed(2)} Z`;
-  return { line, area, min, max };
+
+  const first = coords[0];
+  const mid = coords[Math.floor(coords.length / 2)];
+  const last = coords[coords.length - 1];
+  const fmtTime = (t?: string) => (t ? new Date(t).toLocaleTimeString() : "");
+
+  return {
+    line,
+    area,
+    min,
+    max,
+    coords,
+    labels: {
+      x: [fmtTime(first?.time), fmtTime(mid?.time), fmtTime(last?.time)].filter(Boolean),
+      y: [max.toFixed(6), ((min + max) / 2).toFixed(6), min.toFixed(6)]
+    }
+  };
 });
 </script>
 
@@ -613,20 +633,31 @@ const chartShape = computed(() => {
             <div class="bg-slate-900/50 border border-white/10 rounded-xl p-3">
               <div class="flex items-center justify-between text-xs text-slate-300 mb-2">
                 <div class="flex gap-3">
-                  <span>Min: {{ chartShape.min ? chartShape.min.toFixed(6) : '—' }}</span>
-                  <span>Max: {{ chartShape.max ? chartShape.max.toFixed(6) : '—' }}</span>
+                  <span>Min: {{ chartData.min ? chartData.min.toFixed(6) : '—' }}</span>
+                  <span>Max: {{ chartData.max ? chartData.max.toFixed(6) : '—' }}</span>
                 </div>
-                <span>Points: {{ pricePoints.length }}</span>
+                <span>Points: {{ chartData.coords.length }}</span>
               </div>
-              <svg v-if="chartShape.line" :width="460" :height="180" class="w-full" viewBox="0 0 460 180">
+              <svg v-if="chartData.line" :width="460" :height="180" class="w-full" viewBox="0 0 460 180">
                 <defs>
                   <linearGradient id="priceFill" x1="0" x2="0" y1="0" y2="1">
                     <stop offset="0%" stop-color="#22c55e" stop-opacity="0.35" />
                     <stop offset="100%" stop-color="#22c55e" stop-opacity="0.05" />
                   </linearGradient>
                 </defs>
-                <path :d="chartShape.area" fill="url(#priceFill)" stroke="none" />
-                <path :d="chartShape.line" fill="none" stroke="#22c55e" stroke-width="2.5" />
+                <path :d="chartData.area" fill="url(#priceFill)" stroke="none" />
+                <path :d="chartData.line" fill="none" stroke="#22c55e" stroke-width="2.5" />
+                <g fill="#22c55e" stroke="#0f172a" stroke-width="1">
+                  <circle v-for="(c, idx) in chartData.coords" :key="idx" :cx="c.x" :cy="c.y" r="2.5" />
+                </g>
+                <g font-size="9" fill="#94a3b8">
+                  <text :x="16" y="12">{{ chartData.labels.y[0] }}</text>
+                  <text :x="16" y="92">{{ chartData.labels.y[1] }}</text>
+                  <text :x="16" y="172">{{ chartData.labels.y[2] }}</text>
+                  <text :x="70" y="176">{{ chartData.labels.x[0] || '' }}</text>
+                  <text :x="220" y="176">{{ chartData.labels.x[1] || '' }}</text>
+                  <text :x="380" y="176">{{ chartData.labels.x[2] || '' }}</text>
+                </g>
               </svg>
               <div v-else class="text-xs text-slate-500">No trades yet.</div>
             </div>
