@@ -26,7 +26,7 @@ const launch = ref<LaunchWithComputed | null>(null);
 const params = ref<any | null>(null);
 const loading = ref(false);
 const error = ref<string | null>(null);
-const buyAmountUretro = ref("1000000");
+const buyAmountRetro = ref("1");
 const sellAmountToken = ref("1");
 const slippageBps = ref(100); // 1%
 const buyQuote = ref<any | null>(null);
@@ -35,6 +35,21 @@ const quotingBuy = ref(false);
 const quotingSell = ref(false);
 const trades = ref<Array<{ side: "buy" | "sell"; price: number; amountIn: string; amountOut: string; time: string }>>([]);
 let ws: WebSocket | null = null;
+
+const toUretro = (val?: string | number | null) => {
+  if (val === null || val === undefined || val === "") return "";
+  const str = typeof val === "number" ? val.toString() : val;
+  const parts = str.trim().replace(/,/g, "").split(".");
+  const whole = parts[0] || "0";
+  const frac = (parts[1] || "").padEnd(6, "0").slice(0, 6);
+  if (!/^[-+]?\d+$/.test(whole) || !/^\d+$/.test(frac)) return "";
+  const sign = whole.startsWith("-") || whole.startsWith("+") ? whole[0] : "";
+  const wholeNum = whole.replace(/^[-+]/, "") || "0";
+  const micro = BigInt(sign + wholeNum) * 1_000_000n + BigInt(frac || "0");
+  return micro.toString();
+};
+
+const buyAmountUretro = computed(() => toUretro(buyAmountRetro.value));
 
 const formatRetro = (value?: string | number | null) => {
   if (value === undefined || value === null) return "—";
@@ -164,7 +179,7 @@ const fetchSellQuote = async () => {
   }
 };
 
-watch([buyAmountUretro, denom], fetchBuyQuote, { immediate: true });
+watch([buyAmountRetro, denom], fetchBuyQuote, { immediate: true });
 watch([sellAmountToken, denom], fetchSellQuote, { immediate: true });
 
 const slippageMultiplier = computed(() => Math.max(0, 1 - (Number(slippageBps.value || 0) / 10000)));
@@ -182,7 +197,7 @@ const submitBuy = async () => {
       value: {
         buyer: address.value,
         denom: denom.value,
-        amountInUretro: buyAmountUretro.value,
+        amountInUretro: buyAmountUretro.value || "0",
         minAmountOut: minOut.toString()
       }
     };
@@ -327,12 +342,12 @@ const sparkPath = computed(() => {
               </div>
             </div>
             <div class="space-y-2">
-              <label class="text-[11px] uppercase tracking-wider text-slate-400">Amount in uretro</label>
-              <input v-model="buyAmountUretro" class="input" placeholder="1000000" />
+              <label class="text-[11px] uppercase tracking-wider text-slate-400">Amount in RETRO</label>
+              <input v-model="buyAmountRetro" class="input" placeholder="1" />
               <div class="flex flex-wrap gap-2 text-[11px]">
-                <button class="btn-secondary px-2 py-1" @click="buyAmountUretro = '1000000'">1M</button>
-                <button class="btn-secondary px-2 py-1" @click="buyAmountUretro = '5000000'">5M</button>
-                <button class="btn-secondary px-2 py-1" @click="buyAmountUretro = '10000000'">10M</button>
+                <button class="btn-secondary px-2 py-1" @click="buyAmountRetro = '1'">1</button>
+                <button class="btn-secondary px-2 py-1" @click="buyAmountRetro = '5'">5</button>
+                <button class="btn-secondary px-2 py-1" @click="buyAmountRetro = '10'">10</button>
               </div>
             </div>
             <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-200">
@@ -349,7 +364,7 @@ const sparkPath = computed(() => {
                 <div class="font-semibold">{{ formatRetro(buyQuote?.spot_price_uretro_per_token) }}</div>
               </div>
             </div>
-            <button class="btn btn-primary w-full" :disabled="quotingBuy || !buyAmountUretro" @click="submitBuy">Buy</button>
+            <button class="btn btn-primary w-full" :disabled="quotingBuy || !buyAmountRetro" @click="submitBuy">Buy</button>
           </div>
 
           <div class="p-4 rounded-xl border border-rose-400/50 bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-slate-900/50 shadow-lg shadow-rose-500/10 space-y-3">
