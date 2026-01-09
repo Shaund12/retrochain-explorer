@@ -15,6 +15,7 @@ import BuyView from "@/views/BuyView.vue";
 import IbcInfoView from "@/views/DexView.vue";
 import ArcadeView from "@/views/ArcadeView.vue";
 import ArcadeGamesView from "@/views/ArcadeGamesView.vue";
+import ArcadeRegisterGameView from "@/views/ArcadeRegisterGameView.vue";
 import TokenomicsView from "@/views/TokenomicsView.vue";
 import DocsTokenomicsView from "@/views/DocsTokenomicsView.vue";
 import DocsNetworkOverviewView from "@/views/DocsNetworkOverviewView.vue";
@@ -76,6 +77,7 @@ const routes: RouteRecordRaw[] = [
   { path: "/ibc-info", name: "ibc-info", component: IbcInfoView },
   { path: "/arcadedash", name: "arcade", component: ArcadeView },
   { path: "/arcade/games", name: "arcade-games", component: ArcadeGamesView, meta: { title: "Arcade Games" } },
+  { path: "/arcade/register", name: "arcade-register", component: ArcadeRegisterGameView, meta: { title: "Register Game" } },
   { path: "/arcade", redirect: { name: "arcade" } },
   { path: "/battlepoints", name: "battlepoints", component: BattlePointsView, meta: { title: "Battle Points" } },
   { path: "/battlepoints/tracker", name: "battlepoints-tracker", component: BattlePointsTrackerView, meta: { title: "Battle Points Tracker" } },

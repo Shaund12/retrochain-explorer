@@ -137,6 +137,7 @@ onMounted(async () => {
       <div class="flex gap-2 flex-wrap justify-end">
         <button class="btn text-xs" @click="router.push({ name: 'arcade' })">← Back to Arcade Dash</button>
         <a class="btn text-xs" href="/avoidtheretro/avoidtheretro/" target="_blank" rel="noopener">🚫 Play Avoid The Retro</a>
+        <button class="btn text-xs" @click="router.push({ name: 'arcade-register' })">Register Game</button>
         <button class="btn btn-primary text-xs" :disabled="!visibleGames.length" @click="selectedGame = visibleGames[0]; gameModalOpen = true">Play Now</button>
       </div>
     </div>

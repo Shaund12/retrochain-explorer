@@ -1216,11 +1216,11 @@ const myStreakRank = computed(() => {
         <h1 class="text-2xl font-bold text-white mt-1">Play, Compete, Win</h1>
         <p class="text-sm text-slate-300 mt-1">Live leaderboard, sessions, achievements, and trophies.</p>
         <div class="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-200">
-          <span class="badge border-emerald-400/60 text-emerald-200 bg-emerald-500/10">47e RetroVaders</span>
-          <span class="badge border-cyan-400/60 text-cyan-200 bg-cyan-500/10">9f1 RetroNoid</span>
-          <span class="badge border-amber-400/60 text-amber-200 bg-amber-500/10">5f9 RetroMan</span>
-          <span class="badge border-indigo-400/60 text-indigo-200 bg-indigo-500/10">94b RetroWar</span>
-          <span class="badge border-rose-400/60 text-rose-200 bg-rose-500/10">6ab Avoid The Retro</span>
+          <span class="badge border-emerald-400/60 text-emerald-200 bg-emerald-500/10">👾 RetroVaders</span>
+          <span class="badge border-cyan-400/60 text-cyan-200 bg-cyan-500/10">🧱 RetroNoid</span>
+          <span class="badge border-amber-400/60 text-amber-200 bg-amber-500/10">🕹️ RetroMan</span>
+          <span class="badge border-indigo-400/60 text-indigo-200 bg-indigo-500/10">⚔️ RetroWar</span>
+          <span class="badge border-rose-400/60 text-rose-200 bg-rose-500/10">🚫 Avoid The Retro</span>
         </div>
       </div>
       <div class="flex gap-2 flex-wrap justify-end">
@@ -1757,7 +1757,7 @@ const myStreakRank = computed(() => {
       </div>
     </div>
 
-    <div class="grid gap-3 lg:grid-cols-3">
+    <div class="grid gap-3 lg:grid-cols-2">
       <div class="card">
         <!-- Top Player Spotlight -->
         <div class="flex items-center justify-between mb-2">
@@ -1872,7 +1872,7 @@ const myStreakRank = computed(() => {
             <div class="flex items-center gap-2">
               <div class="text-lg">{{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉' }}</div>
               <div>
-                <div class="text-sm font-semibold text-white">{{ shortAddr(p.player, 12) }}</div>
+                <div class="text-sm font-semibold text-white">{{ shortAddr(entry.player, 14) }}</div>
                 <div class="text-[11px] text-slate-400">{{ p.count }} unlocks</div>
               </div>
             </div>
@@ -1941,6 +1941,7 @@ const myStreakRank = computed(() => {
         </div>
         <div class="flex items-center gap-2">
           <button class="btn text-[11px]" @click="router.push({ name: 'arcade-games' })">Open Full Games Page</button>
+          <button class="btn text-[11px]" @click="router.push({ name: 'arcade-register' })">Register Game</button>
         </div>
       </div>
       <div v-if="visibleGames.length === 0" class="text-xs text-slate-400">No games registered yet.</div>
