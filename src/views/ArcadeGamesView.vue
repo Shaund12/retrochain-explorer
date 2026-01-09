@@ -125,16 +125,18 @@ onMounted(async () => {
       <div>
         <div class="text-xs uppercase tracking-[0.18em] text-emerald-200">Arcade Library</div>
         <h1 class="text-2xl font-bold text-white">On-chain Games</h1>
-        <p class="text-sm text-slate-300">Four fully playable titles with live leaderboards and burns.</p>
+        <p class="text-sm text-slate-300">Playable titles with live leaderboards and burns.</p>
         <div class="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-300">
           <span class="badge border-emerald-400/60 text-emerald-200 bg-emerald-500/10">👾 RetroVaders</span>
           <span class="badge border-cyan-400/60 text-cyan-200 bg-cyan-500/10">🧱 RetroNoid</span>
           <span class="badge border-amber-400/60 text-amber-200 bg-amber-500/10">🕹️ RetroMan</span>
           <span class="badge border-indigo-400/60 text-indigo-200 bg-indigo-500/10">⚔️ RetroWar</span>
+          <span class="badge border-rose-400/60 text-rose-200 bg-rose-500/10">🚫 Avoid The Retro</span>
         </div>
       </div>
       <div class="flex gap-2 flex-wrap justify-end">
         <button class="btn text-xs" @click="router.push({ name: 'arcade' })">← Back to Arcade Dash</button>
+        <a class="btn text-xs" href="/avoidtheretro/avoidtheretro/" target="_blank" rel="noopener">🚫 Play Avoid The Retro</a>
         <button class="btn btn-primary text-xs" :disabled="!visibleGames.length" @click="selectedGame = visibleGames[0]; gameModalOpen = true">Play Now</button>
       </div>
     </div>

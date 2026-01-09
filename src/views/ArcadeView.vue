@@ -1215,9 +1215,17 @@ const myStreakRank = computed(() => {
         <div class="text-sm uppercase tracking-[0.2em] text-indigo-200">Arcade Dashboard</div>
         <h1 class="text-2xl font-bold text-white mt-1">Play, Compete, Win</h1>
         <p class="text-sm text-slate-300 mt-1">Live leaderboard, sessions, achievements, and trophies.</p>
+        <div class="mt-2 flex flex-wrap gap-2 text-[11px] text-slate-200">
+          <span class="badge border-emerald-400/60 text-emerald-200 bg-emerald-500/10">47e RetroVaders</span>
+          <span class="badge border-cyan-400/60 text-cyan-200 bg-cyan-500/10">9f1 RetroNoid</span>
+          <span class="badge border-amber-400/60 text-amber-200 bg-amber-500/10">5f9 RetroMan</span>
+          <span class="badge border-indigo-400/60 text-indigo-200 bg-indigo-500/10">94b RetroWar</span>
+          <span class="badge border-rose-400/60 text-rose-200 bg-rose-500/10">6ab Avoid The Retro</span>
+        </div>
       </div>
       <div class="flex gap-2 flex-wrap justify-end">
         <button class="btn text-xs" @click="router.push({ name: 'home' })">← Back to Home</button>
+        <a class="btn text-xs" href="/avoidtheretro/avoidtheretro/" target="_blank" rel="noopener">🚫 Play Avoid The Retro</a>
         <a class="btn text-xs" href="/arcade/arcade/" target="_blank" rel="noopener">🎮 Play RetroVaders</a>
         <button class="btn btn-primary text-xs" :disabled="refreshing || loading" @click="refreshAll">
           {{ refreshing ? 'Refreshing...' : 'Refresh Data' }}
