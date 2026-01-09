@@ -138,6 +138,14 @@ const tokensSoldPercent = computed(() => {
 });
 const tradingFeeBps = computed(() => (params.value?.fee_bps ?? params.value?.trading_fee_bps ?? null));
 
+const normalizeLaunch = (data: any): LaunchWithComputed | null => {
+  if (!data) return null;
+  if (data.launch_with_computed) return data.launch_with_computed;
+  if (data.launch && data.computed) return { launch: data.launch, computed: data.computed };
+  if (data.launch) return { launch: data.launch, computed: data.launch.computed ?? null };
+  return data;
+};
+
 const fetchDetail = async () => {
   if (!denom.value) return;
   loading.value = true;
@@ -147,7 +155,7 @@ const fetchDetail = async () => {
       api.get(`/retrochain/launcher/v1/launch/${denom.value}`),
       api.get(`/retrochain/launcher/v1/params`).catch(() => null)
     ]);
-    launch.value = launchRes.data?.launch || launchRes.data?.launch_with_computed || launchRes.data || null;
+    launch.value = normalizeLaunch(launchRes.data);
     params.value = paramsRes ? paramsRes.data?.params ?? paramsRes.data ?? null : null;
   } catch (err: any) {
     const status = err?.response?.status;
