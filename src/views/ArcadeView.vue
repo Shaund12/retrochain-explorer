@@ -1884,7 +1884,7 @@ const myStreakRank = computed(() => {
             <div class="flex items-center gap-2">
               <div class="text-lg">{{ idx === 0 ? '🥇' : idx === 1 ? '🥈' : '🥉' }}</div>
               <div>
-                <div class="text-sm font-semibold text-white">{{ shortAddr(entry.player, 14) }}</div>
+                <div class="text-sm font-semibold text-white">{{ shortAddr(p.player, 14) }}</div>
                 <div class="text-[11px] text-slate-400">{{ p.count }} unlocks</div>
               </div>
             </div>
