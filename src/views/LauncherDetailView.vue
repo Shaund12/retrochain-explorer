@@ -73,6 +73,28 @@ const formatRetro = (value?: string | number | null) => {
   }
 };
 
+const formatToken = (value?: string | number | null) => {
+  if (value === undefined || value === null) return "—";
+  try {
+    const str = value.toString();
+    if (str.includes(".")) {
+      const num = Number(str);
+      if (!Number.isFinite(num)) return "—";
+      return num.toLocaleString(undefined, { maximumFractionDigits: 6 });
+    }
+    const raw = typeof value === "number" ? BigInt(Math.trunc(value)) : BigInt(str);
+    const whole = raw / 1_000_000n;
+    const frac = raw % 1_000_000n;
+    const wholeStr = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
+    if (frac === 0n) return wholeStr;
+    let fracStr = frac.toString().padStart(6, "0");
+    fracStr = fracStr.replace(/0+$/, "");
+    return `${wholeStr}.${fracStr}`;
+  } catch {
+    return "—";
+  }
+};
+
 const formatInt = (value?: string | number | null) => {
   if (value === undefined || value === null) return "—";
   const num = typeof value === "number" ? value : Number(value);
@@ -353,7 +375,7 @@ const sparkPath = computed(() => {
             <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-200">
               <div class="p-2 rounded-lg bg-white/5 border border-white/10">
                 <div class="text-slate-400">Estimated out</div>
-                <div class="font-semibold">{{ formatInt(buyQuote?.amount_out) || '—' }} tokens</div>
+                <div class="font-semibold">{{ formatToken(buyQuote?.amount_out) }} tokens</div>
               </div>
               <div class="p-2 rounded-lg bg-white/5 border border-white/10">
                 <div class="text-slate-400">Fee</div>
