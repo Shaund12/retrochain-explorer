@@ -26,7 +26,7 @@ const dexOnly = ref(false);
 const pageSize = 20;
 
 const formatRetro = (value?: string | number | null) => {
-  if (value === undefined || value === null) return "—";
+  if (value === undefined || value === null) return "â€”";
   try {
     const raw = typeof value === "number" ? BigInt(Math.trunc(value)) : BigInt(value);
     const whole = raw / 1_000_000n;
@@ -37,19 +37,19 @@ const formatRetro = (value?: string | number | null) => {
     fracStr = fracStr.replace(/0+$/, "");
     return `${wholeStr}.${fracStr} RETRO`;
   } catch {
-    return "—";
+    return "â€”";
   }
 };
 
 const formatPercent = (value?: number | string | null) => {
-  if (value === null || value === undefined) return "—";
+  if (value === null || value === undefined) return "â€”";
   const num = typeof value === "number" ? value : Number(value);
-  if (!Number.isFinite(num)) return "—";
+  if (!Number.isFinite(num)) return "â€”";
   return `${(num * 100).toFixed(1)}%`;
 };
 
 const shortAddr = (addr?: string, size = 12) => {
-  if (!addr) return "—";
+  if (!addr) return "â€”";
   if (addr.length <= size) return addr;
   const half = Math.max(3, Math.floor((size - 3) / 2));
   return `${addr.slice(0, half)}...${addr.slice(-half)}`;
@@ -178,7 +178,7 @@ const gotoDetail = (denom?: string) => {
     </RcDisclaimer>
 
     <div v-if="loading" class="card">
-      <RcLoadingSpinner size="md" text="Syncing launcher list…" />
+      <RcLoadingSpinner size="md" text="Syncing launcher listâ€¦" />
     </div>
 
     <template v-else>
@@ -224,12 +224,12 @@ const gotoDetail = (denom?: string) => {
             </thead>
             <tbody>
               <tr v-for="entry in filteredLaunches" :key="entry.launch?.denom" class="text-sm">
-                <td class="font-mono text-xs text-emerald-200 break-all">{{ entry.launch?.denom || '—' }}</td>
+                <td class="font-mono text-xs text-emerald-200 break-all">{{ entry.launch?.denom || 'â€”' }}</td>
                 <td class="font-mono text-xs text-slate-300 break-all">
                   <RouterLink v-if="entry.launch?.creator" :to="{ name: 'account', params: { address: entry.launch.creator } }" class="hover:underline">
                     {{ shortAddr(entry.launch.creator) }}
                   </RouterLink>
-                  <span v-else>—</span>
+                  <span v-else>â€”</span>
                 </td>
                 <td class="text-slate-100">{{ spotPrice(entry) }}</td>
                 <td class="text-slate-100">{{ progress(entry) }}</td>
@@ -238,7 +238,7 @@ const gotoDetail = (denom?: string) => {
                     {{ entry.launch?.graduated ? 'Yes' : 'No' }}
                   </span>
                 </td>
-                <td class="text-xs text-slate-300">{{ entry.launch?.dex_pool_id || '—' }}</td>
+                <td class="text-xs text-slate-300">{{ entry.launch?.dex_pool_id || 'â€”' }}</td>
                 <td>
                   <button class="btn text-xs" @click="gotoDetail(entry.launch?.denom)">View</button>
                 </td>
