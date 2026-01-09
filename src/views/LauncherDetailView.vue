@@ -209,6 +209,59 @@ const fetchSellQuote = async () => {
   }
 };
 
+const extractAttr = (ev: any, key: string) => ev?.attributes?.find((a: any) => a.key === key)?.value;
+
+const parseTradesFromTxs = (txs: any[], side: "buy" | "sell") => {
+  const out: Array<{ side: "buy" | "sell"; price: number; amountIn: string; amountOut: string; time: string }> = [];
+  txs.forEach((tx: any) => {
+    const ts = tx?.timestamp || tx?.tx_response?.timestamp;
+    const events = tx?.events || tx?.tx_response?.events || [];
+    events
+      .filter((ev: any) => ev?.type === (side === "buy" ? "launcher_buy" : "launcher_sell"))
+      .forEach((ev: any) => {
+        const amtInU = extractAttr(ev, "amount_in_uretro") || extractAttr(ev, "amount_in_uretro") || extractAttr(ev, "amount_in_uretro");
+        const amtOutTokens = extractAttr(ev, "amount_out") || extractAttr(ev, "amount_out_tokens") || extractAttr(ev, "amount_out");
+        const amtInTokens = extractAttr(ev, "amount_in") || extractAttr(ev, "amount_in_tokens");
+        const amtOutU = extractAttr(ev, "amount_out_uretro");
+        let price = 0;
+        if (side === "buy" && amtInU && amtOutTokens) {
+          price = Number(amtInU) / Number(amtOutTokens);
+        } else if (side === "sell" && amtInTokens && amtOutU) {
+          price = Number(amtOutU) / Number(amtInTokens);
+        }
+        out.push({
+          side,
+          price,
+          amountIn: side === "buy" ? formatRetro(amtInU) : formatToken(amtInTokens),
+          amountOut: side === "buy" ? `${formatToken(amtOutTokens)} tokens` : formatRetro(amtOutU),
+          time: ts || new Date().toISOString()
+        });
+      });
+  });
+  return out;
+};
+
+const fetchRecentTrades = async () => {
+  if (!launch.value?.launch?.id) return;
+  try {
+    const id = launch.value.launch.id;
+    const [buysRes, sellsRes] = await Promise.all([
+      api.get(`/cosmos/tx/v1beta1/txs`, { params: { events: `launcher_buy.launch_id=${id}`, order_by: "ORDER_BY_DESC", limit: 20 } }),
+      api.get(`/cosmos/tx/v1beta1/txs`, { params: { events: `launcher_sell.launch_id=${id}`, order_by: "ORDER_BY_DESC", limit: 20 } }).catch(() => ({ data: { tx_responses: [] } }))
+    ]);
+    const buys = buysRes.data?.tx_responses || [];
+    const sells = sellsRes.data?.tx_responses || [];
+    const parsed = [...parseTradesFromTxs(buys, "buy"), ...parseTradesFromTxs(sells, "sell")] 
+      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .slice(0, 40);
+    trades.value = parsed;
+  } catch (e) {
+    trades.value = [];
+  }
+};
+
+watch(() => launch.value?.launch?.id, fetchRecentTrades);
+
 watch([buyAmountRetro, denom], fetchBuyQuote, { immediate: true });
 watch([sellAmountToken, denom], fetchSellQuote, { immediate: true });
 
