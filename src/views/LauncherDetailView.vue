@@ -293,61 +293,83 @@ const sparkPath = computed(() => {
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
           <div>
             <h2 class="text-base font-semibold text-white">Trading Desk</h2>
-            <p class="text-[11px] text-slate-400">Quotes from /quote/buy and /quote/sell with on-chain MsgBuy/MsgSell.</p>
+            <p class="text-[11px] text-slate-400">Live quotes with on-chain MsgBuy / MsgSell.</p>
           </div>
-          <div class="flex items-center gap-2 text-[11px] text-slate-400">
-            <span>Slippage</span>
+          <div class="flex items-center gap-2 text-[11px] text-slate-200 bg-white/5 border border-white/10 rounded-lg px-3 py-2">
+            <span class="text-slate-400">Slippage</span>
             <input v-model.number="slippageBps" type="number" min="0" max="5000" class="input w-20" />
-            <span>bps</span>
+            <span class="text-slate-400">bps</span>
           </div>
         </div>
         <div class="grid gap-3 md:grid-cols-2">
-          <div class="p-4 rounded-xl border border-emerald-400/40 bg-emerald-500/5 space-y-3">
+          <div class="p-4 rounded-xl border border-emerald-400/50 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-slate-900/50 shadow-lg shadow-emerald-500/10 space-y-3">
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-[11px] uppercase tracking-wider text-emerald-200">Buy Tokens</div>
                 <div class="text-xs text-slate-400">Pay in RETRO</div>
               </div>
-              <button class="btn text-xs" @click="fetchBuyQuote" :disabled="quotingBuy">Refresh quote</button>
+              <div class="flex gap-2">
+                <button class="btn text-xs" @click="fetchBuyQuote" :disabled="quotingBuy">Refresh</button>
+              </div>
             </div>
-            <label class="text-[11px] uppercase tracking-wider text-slate-400">Amount in uretro</label>
-            <input v-model="buyAmountUretro" class="input" placeholder="1000000" />
-            <div class="text-sm text-slate-200 flex justify-between">
-              <span>Estimated out</span>
-              <span class="font-semibold">{{ formatInt(buyQuote?.amount_out) || '—' }} tokens</span>
+            <div class="space-y-2">
+              <label class="text-[11px] uppercase tracking-wider text-slate-400">Amount in uretro</label>
+              <input v-model="buyAmountUretro" class="input" placeholder="1000000" />
+              <div class="flex flex-wrap gap-2 text-[11px]">
+                <button class="btn-secondary px-2 py-1" @click="buyAmountUretro = '1000000'">1M</button>
+                <button class="btn-secondary px-2 py-1" @click="buyAmountUretro = '5000000'">5M</button>
+                <button class="btn-secondary px-2 py-1" @click="buyAmountUretro = '10000000'">10M</button>
+              </div>
             </div>
-            <div class="text-[11px] text-slate-500 flex justify-between">
-              <span>Fee</span>
-              <span>{{ formatRetro(buyQuote?.fee_amount_uretro) }}</span>
-            </div>
-            <div class="text-[11px] text-slate-500 flex justify-between">
-              <span>Spot</span>
-              <span>{{ formatRetro(buyQuote?.spot_price_uretro_per_token) }}</span>
+            <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-200">
+              <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+                <div class="text-slate-400">Estimated out</div>
+                <div class="font-semibold">{{ formatInt(buyQuote?.amount_out) || '—' }} tokens</div>
+              </div>
+              <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+                <div class="text-slate-400">Fee</div>
+                <div class="font-semibold">{{ formatRetro(buyQuote?.fee_amount_uretro) }}</div>
+              </div>
+              <div class="p-2 rounded-lg bg-white/5 border border-white/10 col-span-2">
+                <div class="text-slate-400">Spot</div>
+                <div class="font-semibold">{{ formatRetro(buyQuote?.spot_price_uretro_per_token) }}</div>
+              </div>
             </div>
             <button class="btn btn-primary w-full" :disabled="quotingBuy || !buyAmountUretro" @click="submitBuy">Buy</button>
           </div>
 
-          <div class="p-4 rounded-xl border border-rose-400/40 bg-rose-500/5 space-y-3">
+          <div class="p-4 rounded-xl border border-rose-400/50 bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-slate-900/50 shadow-lg shadow-rose-500/10 space-y-3">
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-[11px] uppercase tracking-wider text-rose-200">Sell Tokens</div>
                 <div class="text-xs text-slate-400">Receive RETRO</div>
               </div>
-              <button class="btn text-xs" @click="fetchSellQuote" :disabled="quotingSell">Refresh quote</button>
+              <div class="flex gap-2">
+                <button class="btn text-xs" @click="fetchSellQuote" :disabled="quotingSell">Refresh</button>
+              </div>
             </div>
-            <label class="text-[11px] uppercase tracking-wider text-slate-400">Amount in tokens</label>
-            <input v-model="sellAmountToken" class="input" placeholder="10" />
-            <div class="text-sm text-slate-200 flex justify-between">
-              <span>Estimated out</span>
-              <span class="font-semibold">{{ formatRetro(sellQuote?.amount_out_uretro) }}</span>
+            <div class="space-y-2">
+              <label class="text-[11px] uppercase tracking-wider text-slate-400">Amount in tokens</label>
+              <input v-model="sellAmountToken" class="input" placeholder="10" />
+              <div class="flex flex-wrap gap-2 text-[11px]">
+                <button class="btn-secondary px-2 py-1" @click="sellAmountToken = '10'">10</button>
+                <button class="btn-secondary px-2 py-1" @click="sellAmountToken = '100'">100</button>
+                <button class="btn-secondary px-2 py-1" @click="sellAmountToken = '1000'">1,000</button>
+              </div>
             </div>
-            <div class="text-[11px] text-slate-500 flex justify-between">
-              <span>Fee</span>
-              <span>{{ formatRetro(sellQuote?.fee_amount_uretro) }}</span>
-            </div>
-            <div class="text-[11px] text-slate-500 flex justify-between">
-              <span>Spot</span>
-              <span>{{ formatRetro(sellQuote?.spot_price_uretro_per_token) }}</span>
+            <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-200">
+              <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+                <div class="text-slate-400">Estimated out</div>
+                <div class="font-semibold">{{ formatRetro(sellQuote?.amount_out_uretro) }}</div>
+              </div>
+              <div class="p-2 rounded-lg bg-white/5 border border-white/10">
+                <div class="text-slate-400">Fee</div>
+                <div class="font-semibold">{{ formatRetro(sellQuote?.fee_amount_uretro) }}</div>
+              </div>
+              <div class="p-2 rounded-lg bg-white/5 border border-white/10 col-span-2">
+                <div class="text-slate-400">Spot</div>
+                <div class="font-semibold">{{ formatRetro(sellQuote?.spot_price_uretro_per_token) }}</div>
+              </div>
             </div>
             <button class="btn w-full" :disabled="quotingSell || !sellAmountToken" @click="submitSell">Sell</button>
           </div>
