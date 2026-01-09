@@ -174,8 +174,8 @@ const fetchDetail = async () => {
 onMounted(fetchDetail);
 watch(() => route.params.denom, fetchDetail);
 
-const tokensSold = computed(() => formatInt(launch.value?.computed?.tokens_sold));
-const tokensRemaining = computed(() => formatInt(launch.value?.computed?.tokens_remaining));
+const tokensSold = computed(() => formatToken(launch.value?.computed?.tokens_sold));
+const tokensRemaining = computed(() => formatToken(launch.value?.computed?.tokens_remaining));
 
 const fetchBuyQuote = async () => {
   if (!denom.value || !buyAmountUretro.value) return;
@@ -343,7 +343,7 @@ const sparkPath = computed(() => {
           <div class="p-3 rounded-xl bg-indigo-500/5 border border-indigo-400/40">
             <div class="text-[11px] uppercase tracking-wider text-indigo-200">Creator</div>
             <div class="text-xs font-mono text-emerald-200 break-all">{{ shortAddr(launch.launch?.creator) }}</div>
-            <div class="text-[11px] text-indigo-100 mt-1">Max supply: {{ formatInt(launch.launch?.max_supply) }}</div>
+            <div class="text-[11px] text-indigo-100 mt-1">Max supply: {{ formatToken(launch.launch?.max_supply) }}</div>
           </div>
         </div>
       </div>
@@ -491,7 +491,7 @@ const sparkPath = computed(() => {
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">Max Supply</div>
-            <div class="font-semibold">{{ formatInt(launch.launch?.max_supply) }}</div>
+            <div class="font-semibold">{{ formatToken(launch.launch?.max_supply) }}</div>
           </div>
           <div>
             <div class="text-[11px] uppercase tracking-wider text-slate-400">Tokens Sold / Remaining</div>
