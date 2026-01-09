@@ -78,7 +78,7 @@ const selectedGameIcon = computed(() => {
 });
 
 const gamesList = computed(() => (Array.isArray(games.value) ? games.value : []));
-const leaderboardList = computed(() => (Array.isArray(leaderboard.value) ? leaderboard.value : []));
+const leaderboardList = computed(() => (Array.isArray(leaderboard.value) ? leaderboard.value.filter(Boolean) : []));
 const sessionsList = computed(() => (Array.isArray(sessions.value) ? sessions.value : []));
 const achievementsList = computed(() => (Array.isArray(achievements.value) ? achievements.value : []));
 
