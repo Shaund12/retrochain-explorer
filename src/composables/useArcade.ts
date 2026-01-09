@@ -83,7 +83,7 @@ export function useArcade() {
       // Normalize/alias known titles without mutating server data
       const normalized = dataGames.map((g: any) => {
         const mapped = { ...g } as Game;
-        const gid = (g?.game_id || "").toLowerCase();
+        const gid = (g?.game_id ?? "").toString().toLowerCase();
         if (gid === "space-invaders") {
           mapped.name = "RetroVaders";
         }
@@ -91,7 +91,7 @@ export function useArcade() {
       });
 
       // Ensure RetroWar appears even if not yet registered on-chain
-      const hasRetroWar = normalized.some((g: any) => (g?.game_id || "").toLowerCase() === "retrowar");
+      const hasRetroWar = normalized.some((g: any) => (g?.game_id ?? "").toString().toLowerCase() === "retrowar");
       if (!hasRetroWar) {
         normalized.push({
           game_id: "retrowar",

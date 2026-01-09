@@ -53,10 +53,13 @@ const formatPrice = (value?: number | string | null) => {
   if (value === undefined || value === null) return "—";
   const num = typeof value === "number" ? value : Number(value);
   if (!Number.isFinite(num)) return "—";
-  if (Math.abs(num) >= 1) return num.toFixed(6);
-  const precise = num.toPrecision(10);
-  if (precise.includes("e")) return num.toExponential(6);
-  return precise.replace(/0+$/, "").replace(/\.$/, "") || "0";
+  const abs = Math.abs(num);
+  if (abs >= 1) return num.toFixed(6);
+  if (abs >= 1e-12) {
+    const trimmed = num.toFixed(12).replace(/0+$/, "").replace(/\.$/, "");
+    return trimmed || "0";
+  }
+  return num.toExponential(6);
 };
 
 const buyAmountUretro = computed(() => toUretro(buyAmountRetro.value));
