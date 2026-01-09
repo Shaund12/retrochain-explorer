@@ -50,6 +50,7 @@ const toUretro = (val?: string | number | null) => {
 };
 
 const buyAmountUretro = computed(() => toUretro(buyAmountRetro.value));
+const sellAmountTokensMicro = computed(() => toUretro(sellAmountToken.value));
 
 const formatRetro = (value?: string | number | null) => {
   if (value === undefined || value === null) return "—";
@@ -194,12 +195,12 @@ const fetchBuyQuote = async () => {
 };
 
 const fetchSellQuote = async () => {
-  if (!denom.value || !sellAmountToken.value) return;
+  if (!denom.value || !sellAmountTokensMicro.value) return;
   quotingSell.value = true;
   sellQuote.value = null;
   try {
     const res = await api.get(`/retrochain/launcher/v1/quote/sell`, {
-      params: { denom: denom.value, amount_in: sellAmountToken.value }
+      params: { denom: denom.value, amount_in: sellAmountTokensMicro.value }
     });
     sellQuote.value = res.data;
   } catch (e) {
@@ -305,7 +306,7 @@ const submitSell = async () => {
       value: {
         seller: address.value,
         denom: denom.value,
-        amountIn: sellAmountToken.value,
+        amountIn: sellAmountTokensMicro.value,
         minAmountOutUretro: minOut.toString()
       }
     };
@@ -661,3 +662,5 @@ const chartShape = computed(() => {
     </template>
   </div>
 </template>
+
+
