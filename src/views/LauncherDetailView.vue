@@ -39,7 +39,13 @@ let ws: WebSocket | null = null;
 const formatRetro = (value?: string | number | null) => {
   if (value === undefined || value === null) return "—";
   try {
-    const raw = typeof value === "number" ? BigInt(Math.trunc(value)) : BigInt(value);
+    const str = value.toString();
+    if (str.includes(".")) {
+      const num = Number(str);
+      if (!Number.isFinite(num)) return "—";
+      return `${num.toLocaleString(undefined, { maximumFractionDigits: 6 })} RETRO`;
+    }
+    const raw = typeof value === "number" ? BigInt(Math.trunc(value)) : BigInt(str);
     const whole = raw / 1_000_000n;
     const frac = raw % 1_000_000n;
     const wholeStr = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
@@ -215,16 +221,17 @@ const submitSell = async () => {
 
 const pricePoints = computed(() => trades.value.map((t) => t.price).filter((p) => Number.isFinite(p)));
 const sparkPath = computed(() => {
-  const pts = pricePoints.value;
-  if (!pts.length) return "";
+  const pts = pricePoints.value.length ? pricePoints.value : [Number(launch.value?.computed?.spot_price_uretro_per_token || 0) / 1_000_000];
+  const clean = pts.filter((p) => Number.isFinite(p));
+  if (!clean.length) return "";
   const width = 220;
   const height = 60;
-  const min = Math.min(...pts);
-  const max = Math.max(...pts);
+  const min = Math.min(...clean);
+  const max = Math.max(...clean);
   const span = max - min || 1;
-  return pts
+  return clean
     .map((p, idx) => {
-      const x = (idx / Math.max(pts.length - 1, 1)) * width;
+      const x = (idx / Math.max(clean.length - 1, 1)) * width;
       const y = height - ((p - min) / span) * height;
       return `${idx === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
     })
@@ -235,47 +242,25 @@ const sparkPath = computed(() => {
 <template>
   <div class="space-y-4">
     <div class="card relative overflow-hidden">
-      <div class="absolute inset-0 bg-gradient-to-r from-emerald-600/25 via-indigo-700/20 to-cyan-500/25 blur-3xl"></div>
-      <div class="relative flex flex-col gap-3">
+      <div class="absolute inset-0 bg-gradient-to-r from-emerald-600/20 via-indigo-600/15 to-cyan-500/20 blur-3xl"></div>
+      <div class="relative flex flex-col gap-2">
         <div class="flex items-center gap-2 text-sm text-slate-300">
           <button class="text-emerald-200 hover:underline" @click="router.push({ name: 'launcher' })">Launcher</button>
           <span class="text-slate-500">/</span>
           <span class="font-mono text-xs text-emerald-200 break-all">{{ denom }}</span>
         </div>
-        <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
-          <div class="space-y-2">
-            <h1 class="text-3xl font-bold text-white flex items-center gap-3">
-              <span>🚀 Launch Detail</span>
-              <span class="text-xs px-2 py-1 rounded-full border border-white/10 bg-white/10 font-mono">{{ denom }}</span>
-              <span class="text-[11px] px-2 py-1 rounded-full border" :class="graduated ? 'border-emerald-400/60 text-emerald-200 bg-emerald-500/10' : 'border-sky-400/60 text-sky-200 bg-sky-500/10'">
-                {{ graduated ? 'Graduated' : 'Live' }}
-              </span>
-              <span v-if="dexPoolId" class="text-[11px] px-2 py-1 rounded-full border border-amber-400/60 text-amber-200 bg-amber-500/10">DEX Pool {{ dexPoolId }}</span>
-            </h1>
-            <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
-              <span class="px-2 py-1 rounded-full border border-white/10 bg-white/5">/retrochain/launcher/v1/launch/{denom}</span>
-              <button class="btn text-[11px] px-2 py-1" @click="copyText(denom, 'Denom')">Copy denom</button>
-              <button v-if="launch?.launch?.creator" class="btn text-[11px] px-2 py-1" @click="copyText(launch.launch.creator, 'Creator')">Copy creator</button>
-            </div>
-          </div>
-          <div class="grid grid-cols-2 sm:grid-cols-4 gap-2 text-[11px]">
-            <div class="px-3 py-2 rounded-lg bg-emerald-500/10 border border-emerald-400/40 text-emerald-100">
-              <div class="uppercase tracking-wider">Spot</div>
-              <div class="text-sm font-semibold text-white">{{ spotPrice }}</div>
-            </div>
-            <div class="px-3 py-2 rounded-lg bg-cyan-500/10 border border-cyan-400/40 text-cyan-100">
-              <div class="uppercase tracking-wider">Progress</div>
-              <div class="text-sm font-semibold text-white">{{ progress }}</div>
-            </div>
-            <div class="px-3 py-2 rounded-lg bg-amber-500/10 border border-amber-400/40 text-amber-100">
-              <div class="uppercase tracking-wider">Status</div>
-              <div class="text-sm font-semibold text-white">{{ graduated ? 'Graduated' : 'Live' }}</div>
-            </div>
-            <div class="px-3 py-2 rounded-lg bg-indigo-500/10 border border-indigo-400/40 text-indigo-100">
-              <div class="uppercase tracking-wider">Creator</div>
-              <div class="text-xs font-mono text-emerald-200 break-all">{{ shortAddr(launch?.launch?.creator) }}</div>
-            </div>
-          </div>
+        <h1 class="text-3xl font-bold text-white flex items-center gap-3">
+          <span>Launch Detail</span>
+          <span class="text-xs px-2 py-1 rounded-full border border-white/10 bg-white/5 font-mono">{{ denom }}</span>
+          <span class="text-[11px] px-2 py-1 rounded-full border" :class="graduated ? 'border-emerald-400/60 text-emerald-200 bg-emerald-500/10' : 'border-sky-400/60 text-sky-200 bg-sky-500/10'">
+            {{ graduated ? 'Graduated' : 'Live' }}
+          </span>
+          <span v-if="dexPoolId" class="text-[11px] px-2 py-1 rounded-full border border-amber-400/60 text-amber-200 bg-amber-500/10">DEX Pool {{ dexPoolId }}</span>
+        </h1>
+        <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+          <span class="px-2 py-1 rounded-full border border-white/10 bg-white/5">/retrochain/launcher/v1/launch/{denom}</span>
+          <button class="btn text-[11px] px-2 py-1" @click="copyText(denom, 'Denom')">Copy denom</button>
+          <button v-if="launch?.launch?.creator" class="btn text-[11px] px-2 py-1" @click="copyText(launch.launch.creator, 'Creator')">Copy creator</button>
         </div>
       </div>
     </div>
@@ -324,7 +309,7 @@ const sparkPath = computed(() => {
           </div>
         </div>
         <div class="grid gap-3 md:grid-cols-2">
-          <div class="p-4 rounded-xl border border-emerald-400/60 bg-gradient-to-br from-emerald-500/15 via-emerald-500/10 to-slate-900/60 shadow-[0_10px_50px_-30px_rgba(16,185,129,0.8)] space-y-3">
+          <div class="p-4 rounded-xl border border-emerald-400/50 bg-gradient-to-br from-emerald-500/10 via-emerald-500/5 to-slate-900/50 shadow-lg shadow-emerald-500/10 space-y-3">
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-[11px] uppercase tracking-wider text-emerald-200">Buy Tokens</div>
@@ -336,7 +321,7 @@ const sparkPath = computed(() => {
             </div>
             <div class="space-y-2">
               <label class="text-[11px] uppercase tracking-wider text-slate-400">Amount in uretro</label>
-              <input v-model="buyAmountUretro" class="input bg-slate-900/70 border-emerald-400/40 text-white" placeholder="1000000" />
+              <input v-model="buyAmountUretro" class="input" placeholder="1000000" />
               <div class="flex flex-wrap gap-2 text-[11px]">
                 <button class="btn-secondary px-2 py-1" @click="buyAmountUretro = '1000000'">1M</button>
                 <button class="btn-secondary px-2 py-1" @click="buyAmountUretro = '5000000'">5M</button>
@@ -360,7 +345,7 @@ const sparkPath = computed(() => {
             <button class="btn btn-primary w-full" :disabled="quotingBuy || !buyAmountUretro" @click="submitBuy">Buy</button>
           </div>
 
-          <div class="p-4 rounded-xl border border-rose-400/60 bg-gradient-to-br from-rose-500/15 via-rose-500/10 to-slate-900/60 shadow-[0_10px_50px_-30px_rgba(244,63,94,0.8)] space-y-3">
+          <div class="p-4 rounded-xl border border-rose-400/50 bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-slate-900/50 shadow-lg shadow-rose-500/10 space-y-3">
             <div class="flex items-center justify-between">
               <div>
                 <div class="text-[11px] uppercase tracking-wider text-rose-200">Sell Tokens</div>
@@ -372,7 +357,7 @@ const sparkPath = computed(() => {
             </div>
             <div class="space-y-2">
               <label class="text-[11px] uppercase tracking-wider text-slate-400">Amount in tokens</label>
-              <input v-model="sellAmountToken" class="input bg-slate-900/70 border-rose-400/40 text-white" placeholder="10" />
+              <input v-model="sellAmountToken" class="input" placeholder="10" />
               <div class="flex flex-wrap gap-2 text-[11px]">
                 <button class="btn-secondary px-2 py-1" @click="sellAmountToken = '10'">10</button>
                 <button class="btn-secondary px-2 py-1" @click="sellAmountToken = '100'">100</button>
