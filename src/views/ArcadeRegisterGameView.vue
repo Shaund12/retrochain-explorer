@@ -162,7 +162,7 @@ const submit = async () => {
         <div class="flex flex-col lg:flex-row lg:items-center lg:justify-between gap-3">
           <div class="space-y-2">
             <h1 class="text-3xl font-bold text-white flex items-center gap-2">
-              <span>??? Register an Arcade Game</span>
+              <span>üïπÔ∏è Register an Arcade Game</span>
               <span class="text-sm text-emerald-200">MsgRegisterGame</span>
             </h1>
             <p class="text-sm text-slate-300 max-w-3xl">
@@ -181,7 +181,7 @@ const submit = async () => {
           <div class="p-3 rounded-xl bg-white/5 border border-white/10 text-sm text-slate-200 shadow-inner min-w-[260px]">
             <div class="text-[11px] uppercase tracking-wider text-slate-400">Quick enums</div>
             <ul class="mt-1 space-y-1 text-[11px] text-slate-200">
-              <li v-for="g in genres" :key="g.value">{{ g.value }} ∑ {{ g.label }}</li>
+              <li v-for="g in genres" :key="g.value">{{ g.value }} ¬∑ {{ g.label }}</li>
             </ul>
           </div>
         </div>
@@ -192,32 +192,50 @@ const submit = async () => {
       <p>{{ error }}</p>
     </RcDisclaimer>
 
-    <div v-if="mode === 'form'" class="grid gap-3 lg:grid-cols-3">
-      <div class="card space-y-3 border border-emerald-400/40 bg-emerald-500/5">
-        <div class="text-[11px] uppercase tracking-wider text-emerald-200">Identity</div>
-        <label class="text-[11px] text-slate-400">Game ID</label>
-        <input v-model="gameId" class="input" placeholder="avoidtheretro" />
-        <label class="text-[11px] text-slate-400">Name</label>
-        <input v-model="name" class="input" placeholder="Avoid The Retro" />
-        <label class="text-[11px] text-slate-400">Description</label>
-        <textarea v-model="description" class="input min-h-[90px]" placeholder="Describe your game" />
+    <div v-if="mode === 'form'" class="grid gap-3 lg:grid-cols-3 items-start">
+      <div class="card space-y-3 border border-emerald-400/50 bg-emerald-500/10 shadow-[0_10px_40px_-32px_rgba(16,185,129,0.7)]">
+        <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-emerald-200">
+          <span>Identity</span>
+          <span class="px-2 py-[2px] rounded-full bg-emerald-500/10 border border-emerald-400/40 text-emerald-100">Step 1</span>
+        </div>
+        <div class="space-y-2">
+          <label class="text-[11px] text-slate-400">Game ID</label>
+          <input v-model="gameId" class="input w-full" placeholder="avoidtheretro" />
+        </div>
+        <div class="space-y-2">
+          <label class="text-[11px] text-slate-400">Name</label>
+          <input v-model="name" class="input w-full" placeholder="Avoid The Retro" />
+        </div>
+        <div class="space-y-2">
+          <label class="text-[11px] text-slate-400">Description</label>
+          <textarea v-model="description" class="input w-full min-h-[110px]" placeholder="Describe your game"></textarea>
+        </div>
         <div class="space-y-2">
           <label class="text-[11px] text-slate-400">Genre</label>
-          <select v-model="genre" class="input">
-            <option v-for="g in genres" :key="g.value" :value="g.value">{{ g.value }} ∑ {{ g.label }}</option>
+          <select v-model="genre" class="input w-full bg-slate-900/80 text-slate-100 border-slate-600/50">
+            <option v-for="g in genres" :key="g.value" :value="g.value">{{ g.value }} ¬∑ {{ g.label }}</option>
           </select>
         </div>
       </div>
 
-      <div class="card space-y-3 border border-cyan-400/40 bg-cyan-500/5">
-        <div class="text-[11px] uppercase tracking-wider text-cyan-200">Gameplay & Limits</div>
-        <label class="text-[11px] text-slate-400">Credits per play (uint64 string)</label>
-        <input v-model="creditsPerPlay" class="input" placeholder="1" />
-        <label class="text-[11px] text-slate-400">Max players (uint64 string)</label>
-        <input v-model="maxPlayers" class="input" placeholder="1" />
-        <label class="text-[11px] text-slate-400">Base difficulty (uint64 string)</label>
-        <input v-model="baseDifficulty" class="input" placeholder="1" />
-        <div class="flex items-center gap-2 text-sm text-slate-200">
+      <div class="card space-y-3 border border-cyan-400/50 bg-cyan-500/10 shadow-[0_10px_40px_-32px_rgba(6,182,212,0.7)]">
+        <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-cyan-200">
+          <span>Gameplay & Limits</span>
+          <span class="px-2 py-[2px] rounded-full bg-cyan-500/10 border border-cyan-400/40 text-cyan-100">Step 2</span>
+        </div>
+        <div class="space-y-2">
+          <label class="text-[11px] text-slate-400">Credits per play (uint64 string)</label>
+          <input v-model="creditsPerPlay" class="input w-full" placeholder="1" />
+        </div>
+        <div class="space-y-2">
+          <label class="text-[11px] text-slate-400">Max players (uint64 string)</label>
+          <input v-model="maxPlayers" class="input w-full" placeholder="1" />
+        </div>
+        <div class="space-y-2">
+          <label class="text-[11px] text-slate-400">Base difficulty (uint64 string)</label>
+          <input v-model="baseDifficulty" class="input w-full" placeholder="1" />
+        </div>
+        <div class="flex items-center justify-between gap-3 text-sm text-slate-200">
           <label class="flex items-center gap-2">
             <input type="checkbox" v-model="multiplayerEnabled" />
             <span>Multiplayer enabled</span>
@@ -229,15 +247,25 @@ const submit = async () => {
         </div>
       </div>
 
-      <div class="card space-y-3 border border-amber-400/40 bg-amber-500/5">
-        <div class="text-[11px] uppercase tracking-wider text-amber-200">Developer & Extras</div>
-        <label class="text-[11px] text-slate-400">Developer address (owner)</label>
-        <input v-model="developer" class="input" placeholder="your bech32 address" />
-        <label class="text-[11px] text-slate-400">Power-ups (comma separated)</label>
-        <input v-model="powerUps" class="input" placeholder="shield,speed" />
-        <div class="text-[11px] text-slate-500">Parsed: {{ powerUpsList.join(", ") || 'ó' }}</div>
-        <div class="text-[11px] text-slate-500">Fee: 8000 uretro ∑ Gas: 250000</div>
-        <div class="text-[11px] text-slate-500">Params: {{ params ? 'loaded' : 'unavailable' }}</div>
+      <div class="card space-y-3 border border-amber-400/50 bg-amber-500/10 shadow-[0_10px_40px_-32px_rgba(245,158,11,0.7)]">
+        <div class="flex items-center justify-between text-[11px] uppercase tracking-wider text-amber-200">
+          <span>Developer & Extras</span>
+          <span class="px-2 py-[2px] rounded-full bg-amber-500/10 border border-amber-400/40 text-amber-100">Step 3</span>
+        </div>
+        <div class="space-y-2">
+          <label class="text-[11px] text-slate-400">Developer address (owner)</label>
+          <input v-model="developer" class="input w-full" placeholder="your bech32 address" />
+        </div>
+        <div class="space-y-2">
+          <label class="text-[11px] text-slate-400">Power-ups (comma separated)</label>
+          <input v-model="powerUps" class="input w-full" placeholder="shield,speed" />
+          <div class="text-[11px] text-slate-500">Parsed: {{ powerUpsList.join(", ") || '‚Äî' }}</div>
+        </div>
+        <div class="flex flex-wrap gap-2 text-[11px] text-slate-500">
+          <span class="px-2 py-1 rounded-full bg-white/5 border border-white/10">Fee: 8000 uretro</span>
+          <span class="px-2 py-1 rounded-full bg-white/5 border border-white/10">Gas: 250000</span>
+          <span class="px-2 py-1 rounded-full bg-white/5 border border-white/10">Params: {{ params ? 'loaded' : 'unavailable' }}</span>
+        </div>
       </div>
     </div>
 
@@ -253,11 +281,11 @@ const submit = async () => {
     </div>
 
     <div class="card flex items-center gap-3 flex-wrap">
-      <button class="btn btn-primary" :disabled="loading" @click="submit">{{ loading ? 'SubmittingÖ' : 'Register Game' }}</button>
+      <button class="btn btn-primary" :disabled="loading" @click="submit">{{ loading ? 'Submitting‚Ä¶' : 'Register Game' }}</button>
       <button class="btn" :disabled="loading" @click="router.push({ name: 'arcade-games' })">Cancel</button>
       <span v-if="loading" class="flex items-center gap-2 text-sm text-slate-400">
         <RcLoadingSpinner size="sm" />
-        <span>Broadcasting transactionÖ</span>
+        <span>Broadcasting transaction‚Ä¶</span>
       </span>
     </div>
   </div>
