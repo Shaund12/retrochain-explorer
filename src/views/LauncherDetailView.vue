@@ -73,6 +73,16 @@ const shortAddr = (addr?: string, size = 14) => {
   return `${addr.slice(0, half)}...${addr.slice(-half)}`;
 };
 
+const copyText = async (text?: string, label = "") => {
+  if (!text) return;
+  try {
+    await navigator.clipboard.writeText(text);
+    toast.showSuccess(label ? `${label} copied` : "Copied to clipboard");
+  } catch (err: any) {
+    toast.showError(err?.message || "Copy failed");
+  }
+};
+
 const spotPrice = computed(() => formatRetro(launch.value?.computed?.spot_price_uretro_per_token));
 const progress = computed(() => formatPercent(launch.value?.computed?.graduation_progress));
 const graduated = computed(() => Boolean(launch.value?.launch?.graduated));
@@ -240,9 +250,44 @@ const sparkPath = computed(() => {
           </span>
           <span v-if="dexPoolId" class="text-[11px] px-2 py-1 rounded-full border border-amber-400/60 text-amber-200 bg-amber-500/10">DEX Pool {{ dexPoolId }}</span>
         </h1>
-        <p class="text-sm text-slate-300">On-chain data from /retrochain/launcher/v1/launch/{denom}</p>
+        <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+          <span class="px-2 py-1 rounded-full border border-white/10 bg-white/5">/retrochain/launcher/v1/launch/{denom}</span>
+          <button class="btn text-[11px] px-2 py-1" @click="copyText(denom, 'Denom')">Copy denom</button>
+          <button v-if="launch?.launch?.creator" class="btn text-[11px] px-2 py-1" @click="copyText(launch.launch.creator, 'Creator')">Copy creator</button>
+        </div>
       </div>
     </div>
+
+    <template v-if="launch">
+      <div class="card">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-base font-semibold text-white">Launch snapshot</h2>
+          <span class="text-[11px] text-slate-400">Key on-chain metrics</span>
+        </div>
+        <div class="grid gap-3 md:grid-cols-4">
+          <div class="p-3 rounded-xl bg-emerald-500/5 border border-emerald-400/40">
+            <div class="text-[11px] uppercase tracking-wider text-emerald-200">Spot Price</div>
+            <div class="text-xl font-bold text-white">{{ spotPrice }}</div>
+            <div class="text-[11px] text-emerald-100">RETRO per token</div>
+          </div>
+          <div class="p-3 rounded-xl bg-cyan-500/5 border border-cyan-400/40">
+            <div class="text-[11px] uppercase tracking-wider text-cyan-200">Progress</div>
+            <div class="text-xl font-bold text-white">{{ progress }}</div>
+            <div class="text-[11px] text-cyan-100">Graduation progress</div>
+          </div>
+          <div class="p-3 rounded-xl bg-amber-500/5 border border-amber-400/40">
+            <div class="text-[11px] uppercase tracking-wider text-amber-200">Status</div>
+            <div class="text-xl font-bold text-white">{{ graduated ? 'Graduated' : 'Live' }}</div>
+            <div class="text-[11px] text-amber-100">DEX Pool: {{ dexPoolId || '—' }}</div>
+          </div>
+          <div class="p-3 rounded-xl bg-indigo-500/5 border border-indigo-400/40">
+            <div class="text-[11px] uppercase tracking-wider text-indigo-200">Creator</div>
+            <div class="text-xs font-mono text-emerald-200 break-all">{{ shortAddr(launch.launch?.creator) }}</div>
+            <div class="text-[11px] text-indigo-100 mt-1">Max supply: {{ formatInt(launch.launch?.max_supply) }}</div>
+          </div>
+        </div>
+      </div>
+    </template>
 
       <div class="card">
         <div class="flex flex-col md:flex-row md:items-center md:justify-between gap-3 mb-4">
@@ -318,24 +363,6 @@ const sparkPath = computed(() => {
     </div>
 
     <template v-else-if="launch">
-      <div class="grid gap-3 md:grid-cols-3">
-        <div class="card border border-emerald-400/40 bg-emerald-500/5">
-          <p class="text-[11px] uppercase tracking-wider text-emerald-200">Spot Price</p>
-          <p class="text-2xl font-bold text-white">{{ spotPrice }}</p>
-          <p class="text-[11px] text-emerald-200/70">RETRO per token</p>
-        </div>
-        <div class="card border border-cyan-400/40 bg-cyan-500/5">
-          <p class="text-[11px] uppercase tracking-wider text-cyan-200">Progress</p>
-          <p class="text-2xl font-bold text-white">{{ progress }}</p>
-          <p class="text-[11px] text-cyan-200/70">Graduation progress</p>
-        </div>
-        <div class="card border border-amber-400/40 bg-amber-500/5">
-          <p class="text-[11px] uppercase tracking-wider text-amber-200">Graduated</p>
-          <p class="text-2xl font-bold text-white">{{ launch.launch?.graduated ? 'Yes' : 'No' }}</p>
-          <p class="text-[11px] text-amber-200/70">DEX Pool: {{ launch.launch?.dex_pool_id || '—' }}</p>
-        </div>
-      </div>
-
       <div class="card">
         <div class="flex items-center justify-between mb-2">
           <h2 class="text-base font-semibold text-white">Launch Pulse</h2>
