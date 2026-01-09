@@ -253,7 +253,7 @@ const fetchRecentTrades = async () => {
     const buys = buysRes.data?.tx_responses || [];
     const sells = sellsRes.data?.tx_responses || [];
     const parsed = [...parseTradesFromTxs(buys, "buy"), ...parseTradesFromTxs(sells, "sell")] 
-      .sort((a, b) => new Date(b.time).getTime() - new Date(a.time).getTime())
+      .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
       .slice(0, 40);
     trades.value = parsed;
   } catch (e) {
@@ -318,16 +318,15 @@ const submitSell = async () => {
   }
 };
 
-const pricePoints = computed(() => trades.value.map((t) => t.price).filter((p) => Number.isFinite(p)));
-const lastPrice = computed(() => (pricePoints.value.length ? pricePoints.value[pricePoints.value.length - 1] : null));
+const sortedTrades = computed(() => [...trades.value].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()));
+const pricePoints = computed(() => sortedTrades.value.map((t) => t.price).filter((p) => Number.isFinite(p)));
+const lastPrice = computed(() => (sortedTrades.value.length ? sortedTrades.value[sortedTrades.value.length - 1].price : null));
 
 const chartData = computed(() => {
   const width = 440;
   const height = 160;
   const padding = 24;
-  const ordered = [...trades.value]
-    .filter((t) => Number.isFinite(t.price))
-    .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+  const ordered = sortedTrades.value.filter((t) => Number.isFinite(t.price));
 
   const pts = ordered.length ? ordered : launch.value?.computed?.spot_price_uretro_per_token ? [{ price: Number(launch.value.computed.spot_price_uretro_per_token) / 1_000_000, time: new Date().toISOString(), side: "buy", amountIn: "", amountOut: "" }] : [];
   if (!pts.length) return { line: "", area: "", min: 0, max: 0, coords: [], labels: { x: [], y: [] } };
