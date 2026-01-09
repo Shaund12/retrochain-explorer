@@ -9,8 +9,9 @@ const emit = defineEmits<{
   select: [game: Game];
 }>();
 
-const getDifficultyColor = (difficulty?: string) => {
-  switch (difficulty?.toLowerCase()) {
+const getDifficultyColor = (difficulty?: string | number | null) => {
+  const diff = difficulty == null ? "" : difficulty.toString().toLowerCase();
+  switch (diff) {
     case "easy":
       return "text-emerald-300 border-emerald-500/40";
     case "medium":
@@ -24,8 +25,9 @@ const getDifficultyColor = (difficulty?: string) => {
   }
 };
 
-const getGameIcon = (genre?: string) => {
-  switch (genre?.toLowerCase()) {
+const getGameIcon = (genre?: string | number | null) => {
+  const g = genre == null ? "" : genre.toString().toLowerCase();
+  switch (g) {
     case "shooter":
       return "🎯";
     case "puzzle":
