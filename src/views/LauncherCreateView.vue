@@ -20,6 +20,7 @@ const subdenom = ref("");
 const maxSupply = ref("");
 const graduationReserve = ref("");
 const tokenSymbol = ref("");
+const tokenImage = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
 const params = ref<any | null>(null);
@@ -160,6 +161,17 @@ const submit = async () => {
             <label class="text-[11px] text-slate-400">Display symbol (UI only)</label>
             <input v-model="tokenSymbol" class="input bg-slate-900/70 border-emerald-400/40 text-white" placeholder="RETRO" />
             <p class="text-[11px] text-slate-500">Not on-chain; for your dashboards.</p>
+          </div>
+          <div class="space-y-2">
+            <label class="text-[11px] text-slate-400">Token image URL (UI only)</label>
+            <input v-model="tokenImage" class="input bg-slate-900/70 border-emerald-400/40 text-white" placeholder="https://...png" />
+            <div class="flex items-center gap-3">
+              <div class="w-14 h-14 rounded-lg border border-emerald-400/30 bg-slate-900/70 overflow-hidden flex items-center justify-center text-[11px] text-slate-500">
+                <img v-if="tokenImage" :src="tokenImage" alt="token" class="w-full h-full object-cover" />
+                <span v-else>Preview</span>
+              </div>
+              <p class="text-[11px] text-slate-500">Optional image shown in your UI; not stored on-chain.</p>
+            </div>
           </div>
         </div>
 
