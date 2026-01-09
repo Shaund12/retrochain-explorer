@@ -318,22 +318,27 @@ const submitSell = async () => {
 };
 
 const pricePoints = computed(() => trades.value.map((t) => t.price).filter((p) => Number.isFinite(p)));
-const sparkPath = computed(() => {
-  const pts = pricePoints.value.length ? pricePoints.value : [Number(launch.value?.computed?.spot_price_uretro_per_token || 0) / 1_000_000];
-  const clean = pts.filter((p) => Number.isFinite(p));
-  if (!clean.length) return "";
-  const width = 220;
-  const height = 60;
-  const min = Math.min(...clean);
-  const max = Math.max(...clean);
+const lastPrice = computed(() => (pricePoints.value.length ? pricePoints.value[pricePoints.value.length - 1] : null));
+
+const chartShape = computed(() => {
+  const pts = pricePoints.value.length ? pricePoints.value : [];
+  if (!pts.length) return { line: "", area: "", min: 0, max: 0 };
+  const width = 440;
+  const height = 160;
+  const padding = 12;
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
   const span = max - min || 1;
-  return clean
-    .map((p, idx) => {
-      const x = (idx / Math.max(clean.length - 1, 1)) * width;
-      const y = height - ((p - min) / span) * height;
-      return `${idx === 0 ? "M" : "L"}${x.toFixed(2)},${y.toFixed(2)}`;
-    })
+  const coords = pts.map((p, idx) => {
+    const x = padding + (idx / Math.max(pts.length - 1, 1)) * (width - padding * 2);
+    const y = padding + (1 - (p - min) / span) * (height - padding * 2);
+    return { x, y };
+  });
+  const line = coords
+    .map((c, idx) => `${idx === 0 ? "M" : "L"}${c.x.toFixed(2)},${c.y.toFixed(2)}`)
     .join(" ");
+  const area = `${line} L${coords[coords.length - 1].x.toFixed(2)},${(height - padding).toFixed(2)} L${coords[0].x.toFixed(2)},${(height - padding).toFixed(2)} Z`;
+  return { line, area, min, max };
 });
 </script>
 
@@ -599,15 +604,31 @@ const sparkPath = computed(() => {
           </div>
           <div class="flex items-center gap-3 text-sm text-slate-200">
             <span>Last price</span>
-            <span class="font-semibold text-emerald-200">{{ livePrice }}</span>
+            <span class="font-semibold text-emerald-200">{{ livePrice || (lastPrice !== null ? lastPrice.toFixed(6) + ' RETRO' : '—') }}</span>
           </div>
         </div>
         <div class="flex flex-col md:flex-row gap-4">
           <div class="flex-1">
-            <svg v-if="sparkPath" :width="240" :height="70" class="w-full" viewBox="0 0 240 70">
-              <path :d="sparkPath" fill="none" stroke="#22c55e" stroke-width="2" />
-            </svg>
-            <div v-else class="text-xs text-slate-500">No trades yet.</div>
+            <div class="bg-slate-900/50 border border-white/10 rounded-xl p-3">
+              <div class="flex items-center justify-between text-xs text-slate-300 mb-2">
+                <div class="flex gap-3">
+                  <span>Min: {{ chartShape.min ? chartShape.min.toFixed(6) : '—' }}</span>
+                  <span>Max: {{ chartShape.max ? chartShape.max.toFixed(6) : '—' }}</span>
+                </div>
+                <span>Points: {{ pricePoints.length }}</span>
+              </div>
+              <svg v-if="chartShape.line" :width="460" :height="180" class="w-full" viewBox="0 0 460 180">
+                <defs>
+                  <linearGradient id="priceFill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#22c55e" stop-opacity="0.35" />
+                    <stop offset="100%" stop-color="#22c55e" stop-opacity="0.05" />
+                  </linearGradient>
+                </defs>
+                <path :d="chartShape.area" fill="url(#priceFill)" stroke="none" />
+                <path :d="chartShape.line" fill="none" stroke="#22c55e" stroke-width="2.5" />
+              </svg>
+              <div v-else class="text-xs text-slate-500">No trades yet.</div>
+            </div>
           </div>
           <div class="flex-1 overflow-x-auto">
             <table class="table text-xs">
