@@ -279,7 +279,7 @@ watch(lpPositions, (positions) => {
 </script>
 
 <template>
-  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6">
+  <div class="max-w-6xl mx-auto px-4 sm:px-6 lg:px-8 py-10 space-y-6 overflow-hidden">
     <div class="space-y-2">
       <h1 class="text-2xl sm:text-3xl font-bold text-white">Retro DEX</h1>
       <p class="text-slate-300">Swap, add/remove liquidity, and inspect pools backed by the on-chain x/dex module.</p>
@@ -443,19 +443,19 @@ watch(lpPositions, (positions) => {
       </div>
     </div>
 
-    <div class="card">
+      <div class="card overflow-hidden">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-lg font-semibold text-white">Liquidity pools</h2>
         <span class="text-xs text-slate-500" v-if="loading">Loading…</span>
       </div>
       <div v-if="!pools.length" class="text-sm text-slate-400">No pools reported by the DEX module yet.</div>
-      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
-        <div v-for="pool in pools" :key="pool.id" class="p-4 rounded-xl bg-white/5 border border-white/10">
-          <div class="flex items-center justify-between text-sm text-white">
-            <span class="font-semibold">Pool #{{ pool.id }}</span>
-            <span class="text-xs text-emerald-300">LP: {{ pool.lp_denom || `dex/${pool.id}` }}</span>
-          </div>
-          <div class="mt-2 text-xs text-slate-300">{{ pool.denom_a }} / {{ pool.denom_b }}</div>
+        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
+          <div v-for="pool in pools" :key="pool.id" class="p-4 rounded-xl bg-white/5 border border-white/10 break-words">
+            <div class="flex items-center justify-between text-sm text-white gap-2">
+              <span class="font-semibold">Pool #{{ pool.id }}</span>
+              <span class="text-xs text-emerald-300 truncate" :title="pool.lp_denom || `dex/${pool.id}`">LP: {{ pool.lp_denom || `dex/${pool.id}` }}</span>
+            </div>
+            <div class="mt-2 text-xs text-slate-300 break-words">{{ pool.denom_a }} / {{ pool.denom_b }}</div>
             <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-400">
               <div>
                 <div class="text-slate-500">Reserve A</div>
