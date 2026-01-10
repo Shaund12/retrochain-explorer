@@ -23,6 +23,10 @@ if (WBTC_ON_COSMOS) {
   DENOMS[WBTC_ON_COSMOS] = { display: "WBTC", decimals: 8 };
 }
 
+export function getDenomMeta(denom: string): DenomMeta {
+  return DENOMS[denom] || { display: denom.toUpperCase(), decimals: 6 };
+}
+
 function splitAmount(amount: string, decimals: number) {
   if (!/^[0-9]+$/.test(amount)) amount = String(parseInt(amount || "0", 10) || 0);
   const neg = amount.startsWith("-");
@@ -61,10 +65,16 @@ export function formatNumberSmart(value: string, decimals: number, opts?: { minD
 }
 
 export function formatAmount(amount: string | number, denom: string, opts?: { minDecimals?: number; maxDecimals?: number; showZerosForIntegers?: boolean }) {
-  const meta = DENOMS[denom] || { display: denom.toUpperCase(), decimals: 6 };
+  const meta = getDenomMeta(denom);
   const amt = String(amount ?? "0");
   const out = formatNumberSmart(amt, meta.decimals, opts);
   return `${out} ${meta.display}`;
+}
+
+export function formatAtomicToDisplay(amount: string | number, denom: string, opts?: { minDecimals?: number; maxDecimals?: number; showZerosForIntegers?: boolean }) {
+  const meta = getDenomMeta(denom);
+  const amt = String(amount ?? "0");
+  return formatNumberSmart(amt, meta.decimals, opts);
 }
 
 export function formatCoins(coins: { amount: string; denom: string }[] | undefined | null, opts?: { minDecimals?: number; maxDecimals?: number; showZerosForIntegers?: boolean }) {

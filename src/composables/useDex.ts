@@ -3,6 +3,7 @@ import { computed, ref } from "vue";
 import { useApi } from "./useApi";
 import { useKeplr } from "./useKeplr";
 import { useNetwork } from "./useNetwork";
+import { getDenomMeta } from "@/utils/format";
 
 export interface Pool {
   id: string;
@@ -46,6 +47,7 @@ export function useDex() {
   const pools = ref<Pool[]>([]);
   const orderBooks = ref<OrderBook[]>([]);
   const userLiquidity = ref<any[]>([]);
+  const userBalances = ref<Record<string, string>>({});
   const loading = ref(false);
   const error = ref<string | null>(null);
   const isModuleAvailable = ref(true);
@@ -241,10 +243,15 @@ export function useDex() {
       // Bank balances for LP denoms
       const res = await api.get(`/cosmos/bank/v1beta1/balances/${addr}`);
       const balances = res.data?.balances || [];
+      userBalances.value = balances.reduce((acc: Record<string, string>, b: any) => {
+        if (b?.denom) acc[b.denom] = b.amount;
+        return acc;
+      }, {});
       const lpBalances = balances.filter((b: any) => typeof b?.denom === "string" && b.denom.startsWith("dex/"));
       userLiquidity.value = lpBalances.map((b: any) => ({ lp_denom: b.denom, amount: b.amount }));
     } catch (e: any) {
       console.warn("User liquidity not available:", e?.message);
+      userBalances.value = {};
       userLiquidity.value = [];
       markModuleUnavailable(e);
     } finally {
@@ -290,6 +297,7 @@ export function useDex() {
     pools,
     orderBooks,
     userLiquidity,
+    userBalances,
     lpPositions,
     loading,
     error,

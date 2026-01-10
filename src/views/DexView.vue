@@ -4,6 +4,7 @@ import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import { useDex, type Pool, type SwapRoute } from "@/composables/useDex";
 import { useKeplr } from "@/composables/useKeplr";
 import { useToast } from "@/composables/useToast";
+import { formatAmount, formatAtomicToDisplay, getDenomMeta } from "@/utils/format";
 
 const { address } = useKeplr();
 const toast = useToast();
@@ -11,6 +12,7 @@ const {
   pools,
   userLiquidity,
   lpPositions,
+  userBalances,
   loading,
   params,
   fetchPools,
@@ -60,8 +62,40 @@ const setDefaultsFromPools = (ps: Pool[]) => {
 const runSimulation = async () => {
   if (!tokenIn.value || !tokenOut.value || tokenIn.value === tokenOut.value) return;
   swapLoading.value = true;
-  simulation.value = await simulateSwap(tokenIn.value, tokenOut.value, amountIn.value || "0");
+  const atomic = displayToAtomic(amountIn.value || "0", tokenIn.value);
+  if (!atomic || BigInt(atomic) <= 0n) {
+    simulation.value = null;
+    swapLoading.value = false;
+    return;
+  }
+  simulation.value = await simulateSwap(tokenIn.value, tokenOut.value, atomic);
   swapLoading.value = false;
+};
+
+const fmtAmount = (amount: string | number | null | undefined, denom: string) => {
+  if (amount === null || amount === undefined) return "-";
+  return formatAmount(String(amount), denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false });
+};
+
+const getDecimals = (denom: string) => getDenomMeta(denom).decimals;
+
+const displayToAtomic = (val: string, denom: string) => {
+  const decimals = getDecimals(denom);
+  if (!val || !Number.isFinite(Number(val))) return null;
+  const str = String(val).trim();
+  const neg = str.startsWith("-");
+  const abs = neg ? str.slice(1) : str;
+  const parts = abs.split(".");
+  const whole = parts[0] || "0";
+  const frac = (parts[1] || "").slice(0, decimals).padEnd(decimals, "0");
+  if (!/^[0-9]+$/.test(whole) || !/^[0-9]*$/.test(parts[1] || "")) return null;
+  const combined = (neg ? "-" : "") + whole + frac;
+  return combined.replace(/^0+(\d)/, "$1");
+};
+
+const atomicToDisplay = (val: string | undefined, denom: string) => {
+  if (!val) return "0";
+  return formatAtomicToDisplay(val, denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false });
 };
 
 const parseBig = (val: string) => {
@@ -74,8 +108,10 @@ const parseBig = (val: string) => {
 
 const validateAddLiquidityAmounts = (pool: Pool | null) => {
   if (!pool) return false;
-  const a = parseBig(addAmountA.value || "0");
-  const b = parseBig(addAmountB.value || "0");
+  const aAtomic = displayToAtomic(addAmountA.value || "0", pool.denom_a);
+  const bAtomic = displayToAtomic(addAmountB.value || "0", pool.denom_b);
+  const a = aAtomic ? parseBig(aAtomic) : null;
+  const b = bAtomic ? parseBig(bAtomic) : null;
   if (a === null || b === null || a <= 0n || b <= 0n) {
     toast.showError("Enter positive integer amounts for both tokens.");
     return false;
@@ -100,7 +136,12 @@ const validateAddLiquidityAmounts = (pool: Pool | null) => {
 const submitSwap = async () => {
   if (!selectedPool.value) return;
   try {
-    await swapExactIn(selectedPool.value.id, tokenIn.value, amountIn.value || "0", tokenOut.value, slippageBps.value);
+    const atomic = displayToAtomic(amountIn.value || "0", tokenIn.value);
+    if (!atomic) {
+      toast.showError("Enter a valid amount.");
+      return;
+    }
+    await swapExactIn(selectedPool.value.id, tokenIn.value, atomic, tokenOut.value, slippageBps.value);
     toast.showSuccess("Swap submitted");
     runSimulation();
   } catch (e: any) {
@@ -112,7 +153,13 @@ const submitAdd = async () => {
   if (!selectedPool.value) return;
   try {
     if (!validateAddLiquidityAmounts(selectedPool.value)) return;
-    await addLiquidity(selectedPool.value, addAmountA.value || "0", addAmountB.value || "0", slippageBps.value);
+    const amtA = displayToAtomic(addAmountA.value || "0", selectedPool.value.denom_a);
+    const amtB = displayToAtomic(addAmountB.value || "0", selectedPool.value.denom_b);
+    if (!amtA || !amtB) {
+      toast.showError("Enter valid amounts for both tokens.");
+      return;
+    }
+    await addLiquidity(selectedPool.value, amtA, amtB, slippageBps.value);
     toast.showSuccess("Add liquidity submitted");
     fetchPools();
     if (address.value) fetchUserLiquidity(address.value);
@@ -124,7 +171,12 @@ const submitAdd = async () => {
 const submitRemove = async () => {
   if (!selectedPool.value) return;
   try {
-    await removeLiquidity(selectedPool.value, removeShares.value || "0", slippageBps.value);
+    const sharesAtomic = displayToAtomic(removeShares.value || "0", selectedPool.value.lp_denom || `dex/${selectedPool.value.id}`);
+    if (!sharesAtomic) {
+      toast.showError("Enter valid LP shares amount.");
+      return;
+    }
+    await removeLiquidity(selectedPool.value, sharesAtomic, slippageBps.value);
     toast.showSuccess("Remove liquidity submitted");
     fetchPools();
     if (address.value) fetchUserLiquidity(address.value);
@@ -134,6 +186,9 @@ const submitRemove = async () => {
 };
 
 const selectedPool = computed(() => pools.value.find((p) => p.id === selectedPoolId.value) || null);
+
+const tokenInBalance = computed(() => atomicToDisplay(userBalances[tokenIn.value], tokenIn.value));
+const tokenOutBalance = computed(() => atomicToDisplay(userBalances[tokenOut.value], tokenOut.value));
 
 watch(selectedPool, (p) => {
   if (p) {
@@ -157,6 +212,14 @@ watch(address, (addr) => {
 });
 
 watch(pools, (ps) => setDefaultsFromPools(ps));
+
+watch([amountIn, tokenIn, tokenOut], () => {
+  if (!tokenIn.value || !tokenOut.value || tokenIn.value === tokenOut.value) {
+    simulation.value = null;
+    return;
+  }
+  runSimulation();
+});
 </script>
 
 <template>
@@ -192,7 +255,7 @@ watch(pools, (ps) => setDefaultsFromPools(ps));
 
     <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="lg:col-span-2 space-y-4">
-        <div class="card">
+        <div class="card bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 border border-white/10 shadow-xl shadow-emerald-500/10">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
             <div>
               <h2 class="text-lg font-semibold text-white">Swap (exact-in)</h2>
@@ -222,8 +285,12 @@ watch(pools, (ps) => setDefaultsFromPools(ps));
               </select>
             </div>
             <div class="space-y-2 md:col-span-2">
-              <label class="text-xs text-slate-400">Amount In (base units)</label>
-              <input v-model="amountIn" type="number" min="0" step="0.000001" class="input w-full" />
+              <label class="text-xs text-slate-400">Amount In</label>
+              <div class="flex items-center gap-2">
+                <input v-model="amountIn" type="number" min="0" step="0.000001" class="input w-full" />
+                <button class="btn-secondary px-3" type="button" @click="amountIn = tokenInBalance || '0'">Max</button>
+              </div>
+              <div class="text-[11px] text-slate-400">Balance: {{ tokenInBalance }}</div>
             </div>
             <div class="md:col-span-2 flex items-center gap-3">
               <button class="btn" :disabled="swapLoading || loading" @click="runSimulation">Quote</button>
@@ -234,15 +301,18 @@ watch(pools, (ps) => setDefaultsFromPools(ps));
 
           <div v-if="simulation" class="mt-4 p-4 rounded-xl border border-white/10 bg-white/5">
             <div class="flex items-center justify-between text-sm text-slate-200">
-              <span>{{ simulation.amount_in }} {{ simulation.token_in }} → {{ simulation.amount_out }} {{ simulation.token_out }}</span>
+              <span>{{ fmtAmount(simulation.amount_in, simulation.token_in) }} → {{ fmtAmount(simulation.amount_out, simulation.token_out) }}</span>
               <span class="text-emerald-300 text-xs">Swap fee {{ params?.swap_fee_bps ?? '—' }} bps</span>
             </div>
             <div class="mt-2 text-xs text-slate-400">Route: {{ simulation.route.join(" → ") }}</div>
-            <div class="mt-1 text-xs text-amber-200">Min out @ slippage {{ slippageBps }} bps ≈ {{ simulation.amount_out ? Math.floor(Number(simulation.amount_out) * (1 - slippageBps / 10000)) : 0 }}</div>
+            <div class="mt-1 text-xs text-amber-200">
+              Min out @ slippage {{ slippageBps }} bps ≈
+              {{ simulation.amount_out ? fmtAmount(Math.floor(Number(simulation.amount_out) * (1 - slippageBps / 10000)), simulation.token_out) : '-' }}
+            </div>
           </div>
         </div>
 
-        <div class="card grid gap-4 md:grid-cols-2">
+        <div class="card grid gap-4 md:grid-cols-2 bg-gradient-to-br from-slate-900/60 via-slate-900/30 to-slate-800/50 border border-white/10 shadow-2xl shadow-emerald-500/10">
           <div class="space-y-3">
             <div class="flex items-center justify-between">
               <div>
@@ -253,11 +323,13 @@ watch(pools, (ps) => setDefaultsFromPools(ps));
             </div>
             <div class="space-y-2">
               <label class="text-[11px] text-slate-400">Amount {{ selectedPool?.denom_a || 'denom_a' }}</label>
-              <input v-model="addAmountA" class="input" placeholder="amount_a (base units)" />
+              <input v-model="addAmountA" class="input" placeholder="amount_a" />
+              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.denom_a || ''], selectedPool?.denom_a || '') }}</div>
             </div>
             <div class="space-y-2">
               <label class="text-[11px] text-slate-400">Amount {{ selectedPool?.denom_b || 'denom_b' }}</label>
-              <input v-model="addAmountB" class="input" placeholder="amount_b (base units)" />
+              <input v-model="addAmountB" class="input" placeholder="amount_b" />
+              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.denom_b || ''], selectedPool?.denom_b || '') }}</div>
             </div>
             <button class="btn btn-primary w-full" :disabled="!selectedPool" @click="submitAdd">Add liquidity</button>
           </div>
@@ -273,6 +345,7 @@ watch(pools, (ps) => setDefaultsFromPools(ps));
             <div class="space-y-2">
               <label class="text-[11px] text-slate-400">Shares (LP)</label>
               <input v-model="removeShares" class="input" placeholder="LP shares" />
+              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.lp_denom || `dex/${selectedPool?.id}`], selectedPool?.lp_denom || `dex/${selectedPool?.id}`) }}</div>
             </div>
             <button class="btn w-full" :disabled="!selectedPool" @click="submitRemove">Remove liquidity</button>
             <div class="text-[11px] text-slate-400">Slippage protection: {{ slippageBps }} bps</div>
@@ -280,7 +353,7 @@ watch(pools, (ps) => setDefaultsFromPools(ps));
         </div>
       </div>
 
-      <div class="card">
+        <div class="card bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 border border-white/10 shadow-xl shadow-cyan-500/10">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-lg font-semibold text-white">Your liquidity</h2>
           <span class="text-xs text-slate-500">{{ address ? address : "Not connected" }}</span>
@@ -290,7 +363,7 @@ watch(pools, (ps) => setDefaultsFromPools(ps));
         <div v-else class="space-y-3">
           <div v-for="pos in lpPositions" :key="pos.lp_denom" class="p-3 rounded-lg bg-white/5 border border-white/10">
             <div class="text-sm text-white font-semibold">Pool #{{ pos.pool.id }} — {{ pos.pool.denom_a }} / {{ pos.pool.denom_b }}</div>
-            <div class="text-xs text-slate-400 mt-1">Shares: {{ pos.shares }}</div>
+            <div class="text-xs text-slate-400 mt-1">Shares: {{ atomicToDisplay(pos.shares, pos.lp_denom) }}</div>
             <div class="text-xs text-emerald-300 mt-1">~{{ pos.percent.toFixed(4) }}% of pool</div>
             <div class="text-[11px] text-slate-500">LP denom: {{ pos.lp_denom }}</div>
           </div>
@@ -311,16 +384,16 @@ watch(pools, (ps) => setDefaultsFromPools(ps));
             <span class="text-xs text-emerald-300">LP: {{ pool.lp_denom || `dex/${pool.id}` }}</span>
           </div>
           <div class="mt-2 text-xs text-slate-300">{{ pool.denom_a }} / {{ pool.denom_b }}</div>
-          <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-400">
-            <div>
-              <div class="text-slate-500">Reserve A</div>
-              <div class="font-mono text-slate-200">{{ pool.reserve_a }}</div>
+            <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-400">
+              <div>
+                <div class="text-slate-500">Reserve A</div>
+                <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_a, pool.denom_a) }}</div>
+              </div>
+              <div>
+                <div class="text-slate-500">Reserve B</div>
+                <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_b, pool.denom_b) }}</div>
+              </div>
             </div>
-            <div>
-              <div class="text-slate-500">Reserve B</div>
-              <div class="font-mono text-slate-200">{{ pool.reserve_b }}</div>
-            </div>
-          </div>
           <div class="mt-3 text-xs text-emerald-300">Price: 1 {{ pool.denom_a }} ≈ {{ calculatePoolPrice(pool) }} {{ pool.denom_b }}</div>
         </div>
       </div>
