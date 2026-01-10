@@ -71,6 +71,21 @@ const powerUpsList = computed(() =>
     .filter(Boolean)
 );
 
+const parseErrorMessage = (err: any) => {
+  const apiMsg = err?.response?.data?.message || err?.response?.data?.error;
+  if (apiMsg) return apiMsg.toString();
+  const status = err?.response?.status;
+  if (status === 400) return "Request rejected (400). Check your fields and try again.";
+  const msg = err?.message;
+  if (typeof msg === "string") {
+    if (msg.toLowerCase().includes("status code 400")) {
+      return "Request rejected (400). Check your fields and try again.";
+    }
+    return msg;
+  }
+  return "Failed to register game";
+};
+
 const submit = async () => {
   if (mode.value === "form") {
     if (!gameId.value.trim()) {
@@ -141,7 +156,7 @@ const submit = async () => {
     toast.showSuccess("Game registered successfully");
     router.push({ name: "arcade-games" });
   } catch (e: any) {
-    error.value = e?.message || "Failed to register game";
+    error.value = parseErrorMessage(e);
     toast.showError(error.value);
   } finally {
     loading.value = false;
