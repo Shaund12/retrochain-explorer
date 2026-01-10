@@ -27,7 +27,11 @@ export function getDenomMeta(denom: string): DenomMeta {
   if (denom.startsWith("dex/")) {
     return { display: denom.toUpperCase(), decimals: 0 }; // LP shares are integer units
   }
-  return DENOMS[denom] || { display: denom.toUpperCase(), decimals: 0 };
+  if (denom.startsWith("factory/")) {
+    // Default to 0 decimals for factory tokens unless a mapping is defined elsewhere
+    return { display: denom.split("/").pop()?.toUpperCase() || denom.toUpperCase(), decimals: 0 };
+  }
+  return DENOMS[denom] || { display: denom.toUpperCase(), decimals: 6 };
 }
 
 function splitAmount(amount: string, decimals: number) {
