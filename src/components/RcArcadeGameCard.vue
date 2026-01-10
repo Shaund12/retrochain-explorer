@@ -48,43 +48,54 @@ const getGameIcon = (genre?: string | number | null) => {
 
 <template>
   <div
-    class="card cursor-pointer hover:scale-[1.02] transition-transform"
+    class="relative overflow-hidden rounded-2xl border border-white/10 bg-gradient-to-br from-emerald-500/10 via-slate-900/80 to-cyan-500/10 shadow-xl shadow-emerald-900/30 hover:shadow-cyan-900/30 cursor-pointer transition duration-200 hover:-translate-y-1"
     @click="emit('select', game)"
   >
-    <div class="flex items-start justify-between mb-3">
-      <div class="flex items-center gap-3">
-        <div class="text-4xl">{{ getGameIcon(game.genre) }}</div>
-        <div>
-          <h3 class="font-bold text-sm text-slate-100">{{ game.name }}</h3>
-          <p class="text-[11px] text-slate-400">{{ game.game_id }}</p>
+    <div class="absolute inset-0 pointer-events-none opacity-60 blur-2xl bg-gradient-to-r from-emerald-500/20 via-cyan-500/10 to-indigo-500/10"></div>
+    <div class="relative p-4 space-y-3">
+      <div class="flex items-start justify-between">
+        <div class="flex items-center gap-3">
+          <div class="text-4xl drop-shadow-sm">{{ getGameIcon(game.genre) }}</div>
+          <div>
+            <h3 class="font-bold text-base text-white leading-tight">{{ game.name }}</h3>
+            <p class="text-[11px] text-slate-400">ID: {{ game.game_id }}</p>
+          </div>
         </div>
+        <span
+          v-if="game.active"
+          class="badge text-[10px] border-emerald-400/50 text-emerald-200 bg-emerald-500/10"
+        >
+          🟢 Active
+        </span>
+        <span v-else class="badge text-[10px] border-slate-500/50 text-slate-300 bg-slate-500/10">
+          ⏸️ Inactive
+        </span>
       </div>
-      <span
-        v-if="game.active"
-        class="badge text-emerald-200 border-emerald-500/40 text-[10px]"
-      >
-        Active
-      </span>
-      <span v-else class="badge text-slate-400 border-slate-500/40 text-[10px]">
-        Inactive
-      </span>
-    </div>
 
-    <p v-if="game.description" class="text-xs text-slate-300 mb-3 line-clamp-2">
-      {{ game.description }}
-    </p>
+      <p v-if="game.description" class="text-sm text-slate-200/90 line-clamp-3">
+        {{ game.description }}
+      </p>
 
-    <div class="flex items-center justify-between">
-      <span
-        v-if="game.difficulty"
-        class="badge text-[10px]"
-        :class="getDifficultyColor(game.difficulty)"
-      >
-        {{ game.difficulty }}
-      </span>
-      <span v-if="game.max_score" class="text-[11px] text-slate-400">
-        Max: {{ game.max_score?.toLocaleString() }}
-      </span>
+      <div class="flex flex-wrap items-center gap-2 text-[11px]">
+        <span class="badge border-cyan-400/50 text-cyan-200 bg-cyan-500/10">{{ getGameIcon(game.genre) }} {{ game.genre || 'Arcade' }}</span>
+        <span
+          v-if="game.difficulty"
+          class="badge text-[10px] bg-white/5"
+          :class="getDifficultyColor(game.difficulty)"
+        >
+          Difficulty: {{ game.difficulty }}
+        </span>
+        <span v-if="game.max_score" class="badge text-[10px] border-amber-400/50 text-amber-200 bg-amber-500/10">
+          🏆 Max {{ game.max_score?.toLocaleString() }}
+        </span>
+      </div>
+
+      <div class="flex items-center justify-between pt-2">
+        <div class="text-[11px] text-slate-400">Tap for details & leaderboard</div>
+        <button class="btn btn-primary btn-xs" @click.stop="emit('select', game)">
+          ▶ Play
+        </button>
+      </div>
     </div>
   </div>
 </template>
