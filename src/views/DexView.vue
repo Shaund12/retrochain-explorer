@@ -387,7 +387,7 @@ watch(lpPositions, (positions) => {
                 v-model="addAmountA"
                 class="input"
                 placeholder="amount_a"
-                @input="lastEditedSide.value = 'A'; syncAddLiquidityRatio()"
+                @input="lastEditedSide = 'A'; syncAddLiquidityRatio()"
               />
               <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.denom_a || ''], selectedPool?.denom_a || '') }}</div>
             </div>
@@ -397,7 +397,7 @@ watch(lpPositions, (positions) => {
                 v-model="addAmountB"
                 class="input"
                 placeholder="amount_b"
-                @input="lastEditedSide.value = 'B'; syncAddLiquidityRatio()"
+                @input="lastEditedSide = 'B'; syncAddLiquidityRatio()"
               />
               <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.denom_b || ''], selectedPool?.denom_b || '') }}</div>
             </div>
