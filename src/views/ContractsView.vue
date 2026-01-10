@@ -10,6 +10,8 @@ const router = useRouter();
 const search = ref("");
 const codeFilter = ref("all");
 const adminOnly = ref(false);
+const page = ref(1);
+const pageSize = ref(25);
 
 const copy = async (value: string) => {
   try {
@@ -90,6 +92,21 @@ const filteredContracts = computed(() => {
     return Number(b.codeId) - Number(a.codeId);
   });
 });
+
+const totalPages = computed(() => Math.max(1, Math.ceil(filteredContracts.value.length / pageSize.value)));
+const pagedContracts = computed(() => {
+  const start = (page.value - 1) * pageSize.value;
+  return filteredContracts.value.slice(start, start + pageSize.value);
+});
+
+watch([filteredContracts, pageSize], () => {
+  page.value = 1;
+});
+
+const goPage = (direction: "prev" | "next") => {
+  if (direction === "prev") page.value = Math.max(1, page.value - 1);
+  else page.value = Math.min(totalPages.value, page.value + 1);
+};
 
 const refresh = async () => {
   await fetchContracts();
@@ -195,6 +212,17 @@ onMounted(async () => {
           <button class="btn text-[11px]" @click="adminOnly = true">Admin Only</button>
           <button class="btn text-[11px]" @click="adminOnly = false">All</button>
         </div>
+        <div class="flex items-center gap-2 text-xs">
+          <span class="text-slate-400">Per page</span>
+          <select
+            v-model.number="pageSize"
+            class="px-2 py-1 rounded bg-slate-900/80 border border-slate-700 text-slate-100"
+          >
+            <option :value="10">10</option>
+            <option :value="25">25</option>
+            <option :value="50">50</option>
+          </select>
+        </div>
       </div>
 
       <div v-if="error" class="mb-3 text-xs text-rose-300">
@@ -204,7 +232,15 @@ onMounted(async () => {
       <div v-else-if="filteredContracts.length === 0" class="text-xs text-slate-400">
         No contracts match the current filters.
       </div>
-      <div v-else class="overflow-auto">
+      <div v-else class="overflow-auto space-y-3">
+        <div class="flex items-center justify-between text-xs text-slate-400 px-1">
+          <span>Showing {{ pagedContracts.length }} of {{ filteredContracts.length }} contracts</span>
+          <div class="flex items-center gap-2">
+            <button class="btn text-[11px]" :disabled="page === 1" @click="goPage('prev')">← Prev</button>
+            <span class="text-slate-300">Page {{ page }} / {{ totalPages }}</span>
+            <button class="btn text-[11px]" :disabled="page === totalPages" @click="goPage('next')">Next →</button>
+          </div>
+        </div>
         <table class="table min-w-full">
           <thead>
             <tr class="text-slate-300 text-xs">
@@ -217,7 +253,7 @@ onMounted(async () => {
             </tr>
           </thead>
           <tbody>
-            <tr v-for="contract in filteredContracts" :key="contract.address" class="text-xs text-slate-200">
+            <tr v-for="contract in pagedContracts" :key="contract.address" class="text-xs text-slate-200">
               <td class="py-3">
                 <div class="font-semibold text-sm text-white">{{ contract.label }}</div>
                 <div class="font-mono text-[11px] text-slate-400 flex items-center gap-2">
@@ -227,6 +263,7 @@ onMounted(async () => {
               </td>
               <td class="py-3">
                 <span class="badge border-indigo-400/60 text-indigo-200">{{ contract.codeId }}</span>
+                <div class="text-[11px] text-slate-500" v-if="contract.createdTxIndex">TX #{{ contract.createdTxIndex }}</div>
               </td>
               <td class="py-3">
                 <div class="font-mono text-[11px] text-slate-300 flex items-center gap-2">
@@ -243,7 +280,7 @@ onMounted(async () => {
               </td>
               <td class="py-3">
                 <div class="text-slate-100">{{ formatHeight(contract.createdHeight) }}</div>
-                <div v-if="contract.createdTxIndex" class="text-[10px] text-slate-500">tx #{{ contract.createdTxIndex }}</div>
+                <div class="text-[10px] text-slate-500">Block</div>
               </td>
               <td class="py-3">
                 <button
