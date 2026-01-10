@@ -22,6 +22,109 @@ declare global {
       signAndBroadcast: (chainId: string, signer: string, msgs: any[], fee: any, memo?: string) => Promise<any>;
       getKey: (chainId: string) => Promise<any>;
     };
+
+const MsgSwapExactInType: GeneratedType = {
+  encode(message: MsgSwapExactIn, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.sender) writer.uint32(10).string(message.sender);
+    if (message.poolId) writer.uint32(16).uint64(message.poolId as any);
+    if (message.denomIn) writer.uint32(26).string(message.denomIn);
+    if (message.amountIn) writer.uint32(34).string(message.amountIn);
+    if (message.denomOut) writer.uint32(42).string(message.denomOut);
+    if (message.minAmountOut) writer.uint32(50).string(message.minAmountOut);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgSwapExactIn {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgSwapExactIn = { sender: "", poolId: "", denomIn: "", amountIn: "", denomOut: "", minAmountOut: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.sender = reader.string();
+          break;
+        case 2:
+          message.poolId = reader.uint64().toString();
+          break;
+        case 3:
+          message.denomIn = reader.string();
+          break;
+        case 4:
+          message.amountIn = reader.string();
+          break;
+        case 5:
+          message.denomOut = reader.string();
+          break;
+        case 6:
+          message.minAmountOut = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgSwapExactIn>): MsgSwapExactIn {
+    return {
+      sender: object.sender ?? "",
+      poolId: object.poolId ?? "",
+      denomIn: object.denomIn ?? "",
+      amountIn: object.amountIn ?? "",
+      denomOut: object.denomOut ?? "",
+      minAmountOut: object.minAmountOut ?? ""
+    };
+  }
+};
+
+const MsgRemoveLiquidityType: GeneratedType = {
+  encode(message: MsgRemoveLiquidity, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
+    if (message.sender) writer.uint32(10).string(message.sender);
+    if (message.poolId) writer.uint32(16).uint64(message.poolId as any);
+    if (message.shares) writer.uint32(26).string(message.shares);
+    if (message.minAmountA) writer.uint32(34).string(message.minAmountA);
+    if (message.minAmountB) writer.uint32(42).string(message.minAmountB);
+    return writer;
+  },
+  decode(input: Uint8Array | _m0.Reader, length?: number): MsgRemoveLiquidity {
+    const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
+    const end = length === undefined ? reader.len : reader.pos + length;
+    const message: MsgRemoveLiquidity = { sender: "", poolId: "", shares: "", minAmountA: "", minAmountB: "" };
+    while (reader.pos < end) {
+      const tag = reader.uint32();
+      switch (tag >>> 3) {
+        case 1:
+          message.sender = reader.string();
+          break;
+        case 2:
+          message.poolId = reader.uint64().toString();
+          break;
+        case 3:
+          message.shares = reader.string();
+          break;
+        case 4:
+          message.minAmountA = reader.string();
+          break;
+        case 5:
+          message.minAmountB = reader.string();
+          break;
+        default:
+          reader.skipType(tag & 7);
+          break;
+      }
+    }
+    return message;
+  },
+  fromPartial(object: Partial<MsgRemoveLiquidity>): MsgRemoveLiquidity {
+    return {
+      sender: object.sender ?? "",
+      poolId: object.poolId ?? "",
+      shares: object.shares ?? "",
+      minAmountA: object.minAmountA ?? "",
+      minAmountB: object.minAmountB ?? ""
+    };
+  }
+};
     getOfflineSigner?: (chainId: string) => any;
     getOfflineSignerAuto?: (chainId: string) => Promise<any>;
     leap?: any;
@@ -540,6 +643,8 @@ const MsgPlaceLimitOrderType: GeneratedType = {
 const retroDexTypes: ReadonlyArray<[string, GeneratedType]> = [
   ["/retrochain.dex.v1.MsgCreatePool", MsgCreatePoolType],
   ["/retrochain.dex.v1.MsgAddLiquidity", MsgAddLiquidityType],
+  ["/retrochain.dex.v1.MsgRemoveLiquidity", MsgRemoveLiquidityType],
+  ["/retrochain.dex.v1.MsgSwapExactIn", MsgSwapExactInType],
   ["/retrochain.dex.v1.MsgSwapExactAmountIn", MsgSwapExactAmountInType],
   ["/retrochain.dex.v1.MsgPlaceLimitOrder", MsgPlaceLimitOrderType]
 ];

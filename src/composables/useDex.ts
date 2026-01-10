@@ -75,7 +75,7 @@ export function useDex() {
       typeUrl: "/retrochain.dex.v1.MsgSwapExactIn",
       value: {
         sender,
-        poolId: poolId,
+        poolId,
         denomIn,
         amountIn,
         denomOut,

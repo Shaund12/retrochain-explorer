@@ -64,6 +64,39 @@ const runSimulation = async () => {
   swapLoading.value = false;
 };
 
+const parseBig = (val: string) => {
+  try {
+    return BigInt(val);
+  } catch {
+    return null;
+  }
+};
+
+const validateAddLiquidityAmounts = (pool: Pool | null) => {
+  if (!pool) return false;
+  const a = parseBig(addAmountA.value || "0");
+  const b = parseBig(addAmountB.value || "0");
+  if (a === null || b === null || a <= 0n || b <= 0n) {
+    toast.showError("Enter positive integer amounts for both tokens.");
+    return false;
+  }
+  const totalShares = parseBig(pool.total_shares || "0") || 0n;
+  const reserveA = parseBig(pool.reserve_a || "0") || 0n;
+  const reserveB = parseBig(pool.reserve_b || "0") || 0n;
+  if (totalShares === 0n || reserveA === 0n || reserveB === 0n) return true; // first liquidity can be arbitrary
+
+  const expectedB = (a * reserveB) / reserveA;
+  const tolerance = (expectedB * BigInt(Math.max(0, slippageBps.value || 0))) / 10000n;
+  const diff = expectedB > b ? expectedB - b : b - expectedB;
+  if (diff > tolerance) {
+    toast.showError(
+      `Pool ratio locked. For ${a} ${pool.denom_a}, provide ~${expectedB} ${pool.denom_b} (±${slippageBps.value} bps).`
+    );
+    return false;
+  }
+  return true;
+};
+
 const submitSwap = async () => {
   if (!selectedPool.value) return;
   try {
@@ -78,6 +111,7 @@ const submitSwap = async () => {
 const submitAdd = async () => {
   if (!selectedPool.value) return;
   try {
+    if (!validateAddLiquidityAmounts(selectedPool.value)) return;
     await addLiquidity(selectedPool.value, addAmountA.value || "0", addAmountB.value || "0", slippageBps.value);
     toast.showSuccess("Add liquidity submitted");
     fetchPools();
