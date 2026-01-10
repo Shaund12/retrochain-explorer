@@ -202,10 +202,12 @@ const fetchBuyQuote = async () => {
     const res = await api.get(`/retrochain/launcher/v1/quote/buy`, {
       params: { denom: denom.value, amount_in_uretro: buyAmountUretro.value }
     });
-    // Some APIs may return an error payload with HTTP 200; guard for that.
-    if (res?.data?.message && res?.data?.code) {
-      buyQuoteError.value = res.data.message;
-      toast.showError(res.data.message);
+    const apiMsg = res?.data?.message;
+    const apiCode = res?.data?.code;
+    // Treat any returned message as an error (even with HTTP 200).
+    if (typeof apiMsg === "string") {
+      buyQuoteError.value = apiMsg;
+      toast.showError(apiMsg);
       buyQuote.value = null;
       return;
     }
