@@ -24,7 +24,10 @@ if (WBTC_ON_COSMOS) {
 }
 
 export function getDenomMeta(denom: string): DenomMeta {
-  return DENOMS[denom] || { display: denom.toUpperCase(), decimals: 6 };
+  if (denom.startsWith("dex/")) {
+    return { display: denom.toUpperCase(), decimals: 0 }; // LP shares are integer units
+  }
+  return DENOMS[denom] || { display: denom.toUpperCase(), decimals: 0 };
 }
 
 function splitAmount(amount: string, decimals: number) {

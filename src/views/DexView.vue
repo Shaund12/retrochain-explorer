@@ -38,6 +38,7 @@ const slippageBps = ref(50); // 0.50%
 const addAmountA = ref("0");
 const addAmountB = ref("0");
 const removeShares = ref("0");
+const lastEditedSide = ref<"A" | "B" | null>(null);
 
 const tokenOptions = computed(() => {
   const set = new Set<string>();
@@ -96,6 +97,33 @@ const displayToAtomic = (val: string, denom: string) => {
 const atomicToDisplay = (val: string | undefined, denom: string) => {
   if (!val) return "0";
   return formatAtomicToDisplay(val, denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false });
+};
+
+const syncAddLiquidityRatio = () => {
+  const pool = selectedPool.value;
+  if (!pool) return;
+  const reserveA = BigInt(pool.reserve_a || "0");
+  const reserveB = BigInt(pool.reserve_b || "0");
+  const totalShares = BigInt(pool.total_shares || "0");
+  if (reserveA === 0n || reserveB === 0n || totalShares === 0n) return; // first LP can be arbitrary
+
+  try {
+    if (lastEditedSide.value === "A") {
+      const aAtomic = displayToAtomic(addAmountA.value || "0", pool.denom_a);
+      if (!aAtomic) return;
+      const a = BigInt(aAtomic);
+      const b = (a * reserveB) / reserveA;
+      addAmountB.value = atomicToDisplay(b.toString(), pool.denom_b);
+    } else if (lastEditedSide.value === "B") {
+      const bAtomic = displayToAtomic(addAmountB.value || "0", pool.denom_b);
+      if (!bAtomic) return;
+      const b = BigInt(bAtomic);
+      const a = (b * reserveA) / reserveB;
+      addAmountA.value = atomicToDisplay(a.toString(), pool.denom_a);
+    }
+  } catch (e) {
+    console.warn("syncAddLiquidityRatio failed", e);
+  }
 };
 
 const parseBig = (val: string) => {
@@ -355,12 +383,22 @@ watch(lpPositions, (positions) => {
             </div>
             <div class="space-y-2">
               <label class="text-[11px] text-slate-400">Amount {{ selectedPool?.denom_a || 'denom_a' }}</label>
-              <input v-model="addAmountA" class="input" placeholder="amount_a" />
+              <input
+                v-model="addAmountA"
+                class="input"
+                placeholder="amount_a"
+                @input="lastEditedSide.value = 'A'; syncAddLiquidityRatio()"
+              />
               <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.denom_a || ''], selectedPool?.denom_a || '') }}</div>
             </div>
             <div class="space-y-2">
               <label class="text-[11px] text-slate-400">Amount {{ selectedPool?.denom_b || 'denom_b' }}</label>
-              <input v-model="addAmountB" class="input" placeholder="amount_b" />
+              <input
+                v-model="addAmountB"
+                class="input"
+                placeholder="amount_b"
+                @input="lastEditedSide.value = 'B'; syncAddLiquidityRatio()"
+              />
               <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.denom_b || ''], selectedPool?.denom_b || '') }}</div>
             </div>
             <button class="btn btn-primary w-full" :disabled="!selectedPool" @click="submitAdd">Add liquidity</button>
