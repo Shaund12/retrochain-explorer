@@ -208,6 +208,18 @@ const transferFlows = computed(() => {
   return recent.map(([date, v]) => ({ date, incoming: v.incoming, outgoing: v.outgoing, net: v.incoming - v.outgoing, denom: v.denom }));
 });
 
+const transferFlowsPage = ref(1);
+const transferFlowsPageSize = ref(7);
+const transferFlowsHasMore = computed(() => transferFlows.value.length > transferFlowsPage.value * transferFlowsPageSize.value);
+const visibleTransferFlows = computed(() => {
+  const start = (transferFlowsPage.value - 1) * transferFlowsPageSize.value;
+  return transferFlows.value.slice(start, start + transferFlowsPageSize.value);
+});
+
+watch(transferFlows, () => {
+  transferFlowsPage.value = 1;
+});
+
 const activityByType = computed(() => {
   const counts: Record<string, { count: number; lastHeight: number }> = {};
   allTxs.value.forEach((tx) => {
@@ -976,11 +988,17 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
       <div class="card" v-if="transferFlows.length">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-sm font-semibold text-slate-100">Net Transfers (last 14 days)</h2>
-          <div class="text-[11px] text-slate-400">Incoming vs Outgoing (all denoms)</div>
+          <div class="flex items-center gap-3 text-[11px] text-slate-400">
+            <span>Incoming vs Outgoing (all denoms)</span>
+            <div class="flex items-center gap-2">
+              <button class="btn btn-xs" :disabled="transferFlowsPage <= 1" @click="transferFlowsPage = Math.max(1, transferFlowsPage - 1)">Prev</button>
+              <button class="btn btn-xs" :disabled="!transferFlowsHasMore" @click="transferFlowsPage += 1">Next</button>
+            </div>
+          </div>
         </div>
         <div class="space-y-2">
           <div
-            v-for="day in transferFlows"
+            v-for="day in visibleTransferFlows"
             :key="day.date"
             class="p-3 rounded-lg bg-slate-900/60 border border-slate-800"
           >
