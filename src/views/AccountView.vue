@@ -396,8 +396,8 @@ const decoratedBalances = computed<DecoratedBalance[]>(() => {
         meta: adjustedMeta,
         accent: ACCENT_CLASS_MAP[adjustedMeta.accent] ?? ACCENT_CLASS_MAP.slate,
         usdValue,
-        rawDenomDisplay: isFactory ? shortFactoryPath(coin.denom) : coin.denom,
-        rawDenomTitle: isFactory ? coin.denom : null
+        rawDenomDisplay: isFactory ? null : coin.denom,
+        rawDenomTitle: isFactory ? null : null
       } as DecoratedBalance & { usdValue: number | null };
     })
     .sort((a, b) => b.rawAmount - a.rawAmount);
@@ -828,7 +828,7 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
             <div class="mt-3 flex items-end justify-between gap-4">
               <div>
                 <div class="text-[10px] text-slate-500 uppercase tracking-widest">On-chain Amount</div>
-                <div class="font-mono text-sm text-slate-200 break-all">{{ bal.displayAmount }}</div>
+                <div class="font-mono text-sm text-slate-200">{{ bal.displayAmount }}</div>
                 <div v-if="bal.meta.description" class="text-[10px] text-slate-500 mt-1">
                   {{ bal.meta.description }}
                 </div>
