@@ -295,6 +295,27 @@ watch([buyAmountRetro, denom], fetchBuyQuote, { immediate: true });
 watch([sellAmountToken, denom], fetchSellQuote, { immediate: true });
 
 const slippageMultiplier = computed(() => Math.max(0, 1 - (Number(slippageBps.value || 0) / 10000)));
+const slippageNotice = computed(() => {
+  const bps = Number(slippageBps.value || 0);
+  if (bps >= 1500) return "Warning: very high slippage; you may get front-run.";
+  if (bps >= 800) return "High slippage; double-check expected output.";
+  if (bps <= 10) return "Low slippage; transaction may fail if price moves.";
+  return "";
+});
+
+const buyMinOutTokens = computed(() => {
+  if (!buyQuote.value) return null;
+  const amtOut = BigInt(buyQuote.value?.amount_out || 0);
+  const minOut = amtOut > 0n ? BigInt(Math.floor(Number(amtOut) * slippageMultiplier.value)) : 0n;
+  return formatToken(minOut.toString());
+});
+
+const sellMinOutRetro = computed(() => {
+  if (!sellQuote.value) return null;
+  const amtOut = BigInt(sellQuote.value?.amount_out_uretro || 0);
+  const minOut = amtOut > 0n ? BigInt(Math.floor(Number(amtOut) * slippageMultiplier.value)) : 0n;
+  return formatRetro(minOut.toString());
+});
 
 const submitBuy = async () => {
   if (!denom.value) return;
@@ -528,6 +549,9 @@ const chartData = computed(() => {
                 <button class="btn text-xs" @click="fetchBuyQuote" :disabled="quotingBuy">Refresh</button>
               </div>
             </div>
+            <div v-if="slippageNotice" class="text-[11px] text-amber-200 bg-amber-500/10 border border-amber-400/40 px-3 py-2 rounded-lg">
+              {{ slippageNotice }}
+            </div>
             <div class="space-y-2">
               <label class="text-[11px] uppercase tracking-wider text-slate-400">Amount in RETRO</label>
               <input v-model="buyAmountRetro" class="input" placeholder="1" />
@@ -545,6 +569,10 @@ const chartData = computed(() => {
               <div class="p-2 rounded-lg bg-white/5 border border-white/10">
                 <div class="text-slate-400">Fee</div>
                 <div class="font-semibold">{{ formatRetro(buyQuote?.fee_amount_uretro) }}</div>
+              </div>
+              <div class="p-2 rounded-lg bg-white/5 border border-emerald-400/30 col-span-2" v-if="buyMinOutTokens">
+                <div class="text-slate-400">Min received (after slippage)</div>
+                <div class="font-semibold text-emerald-200">{{ buyMinOutTokens }} tokens</div>
               </div>
               <div class="p-2 rounded-lg bg-white/5 border border-white/10 col-span-2">
                 <div class="text-slate-400">Spot</div>
@@ -567,6 +595,9 @@ const chartData = computed(() => {
                 <button class="btn text-xs" @click="fetchSellQuote" :disabled="quotingSell">Refresh</button>
               </div>
             </div>
+            <div v-if="slippageNotice" class="text-[11px] text-amber-200 bg-amber-500/10 border border-amber-400/40 px-3 py-2 rounded-lg">
+              {{ slippageNotice }}
+            </div>
             <div class="space-y-2">
               <label class="text-[11px] uppercase tracking-wider text-slate-400">Amount in tokens</label>
               <input v-model="sellAmountToken" class="input" placeholder="10" />
@@ -584,6 +615,10 @@ const chartData = computed(() => {
               <div class="p-2 rounded-lg bg-white/5 border border-white/10">
                 <div class="text-slate-400">Fee</div>
                 <div class="font-semibold">{{ formatRetro(sellQuote?.fee_amount_uretro) }}</div>
+              </div>
+              <div class="p-2 rounded-lg bg-white/5 border border-rose-400/30 col-span-2" v-if="sellMinOutRetro">
+                <div class="text-slate-400">Min received (after slippage)</div>
+                <div class="font-semibold text-rose-200">{{ sellMinOutRetro }}</div>
               </div>
               <div class="p-2 rounded-lg bg-white/5 border border-white/10 col-span-2">
                 <div class="text-slate-400">Spot</div>
