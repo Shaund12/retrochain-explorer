@@ -22,6 +22,20 @@ declare global {
       signAndBroadcast: (chainId: string, signer: string, msgs: any[], fee: any, memo?: string) => Promise<any>;
       getKey: (chainId: string) => Promise<any>;
     };
+  }
+}
+const isAvailable = ref(false);
+const address = ref<string | null>(null);
+const connecting = ref(false);
+const error = ref<string | null>(null);
+let keystoreListenerAttached = false;
+
+const KEPLR_DEFAULT_OPTS = {
+  sign: {
+    preferNoSetFee: true,
+    preferNoSetMemo: true
+  }
+};
 
 const MsgSwapExactInType: GeneratedType = {
   encode(message: MsgSwapExactIn, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
@@ -123,29 +137,6 @@ const MsgRemoveLiquidityType: GeneratedType = {
       minAmountA: object.minAmountA ?? "",
       minAmountB: object.minAmountB ?? ""
     };
-  }
-};
-    getOfflineSigner?: (chainId: string) => any;
-    getOfflineSignerAuto?: (chainId: string) => Promise<any>;
-    leap?: any;
-    cosmostation?: {
-      providers?: {
-        keplr?: any;
-      };
-    };
-  }
-}
-
-const isAvailable = ref(false);
-const address = ref<string | null>(null);
-const connecting = ref(false);
-const error = ref<string | null>(null);
-let keystoreListenerAttached = false;
-
-const KEPLR_DEFAULT_OPTS = {
-  sign: {
-    preferNoSetFee: true,
-    preferNoSetMemo: true
   }
 };
 
