@@ -237,6 +237,16 @@ const formatUsd = (value: number | null | undefined) => {
   return `$${value.toLocaleString(undefined, { minimumFractionDigits: 2, maximumFractionDigits: 2 })}`;
 };
 
+const shortDenomLabel = (denom: string) => {
+  if (!denom) return "—";
+  const lower = denom.toLowerCase();
+  if (lower.startsWith("factory/")) {
+    const parts = denom.split("/");
+    return parts[parts.length - 1] || denom;
+  }
+  return denom;
+};
+
 const priceOverrides = ref<Record<string, number>>({});
 
 const priceLookup = computed(() => ({ ...USD_PRICE_HINTS, ...priceOverrides.value }));
@@ -337,6 +347,7 @@ interface DecoratedBalance {
   rawAmount: number;
   meta: TokenMeta;
   accent: AccentClasses;
+  rawDenomDisplay: string | null;
 }
 
 const decoratedBalances = computed<DecoratedBalance[]>(() => {
@@ -351,17 +362,19 @@ const decoratedBalances = computed<DecoratedBalance[]>(() => {
         : formatAmount(coin.amount, coin.denom);
       const priceHint = meta.symbol ? priceLookup.value[meta.symbol.toUpperCase()] : undefined;
       const usdValue = Number.isFinite(numeric) && priceHint && priceHint > 0 ? numeric * priceHint : null;
+      const denomIsFactory = coin.denom?.toLowerCase().startsWith("factory/");
 
       return {
         denom: coin.denom,
         amount: coin.amount,
-        denomLabel: meta.symbol || coin.denom,
+        denomLabel: meta.symbol || shortDenomLabel(coin.denom),
         formatted: formatAmount(coin.amount, coin.denom),
         displayAmount: localeAmount,
         rawAmount: Number.isFinite(numeric) ? numeric : 0,
         meta,
         accent: ACCENT_CLASS_MAP[meta.accent] ?? ACCENT_CLASS_MAP.slate,
-        usdValue
+        usdValue,
+        rawDenomDisplay: meta.symbol ? null : denomIsFactory ? null : coin.denom
       } as DecoratedBalance & { usdValue: number | null };
     })
     .sort((a, b) => b.rawAmount - a.rawAmount);
@@ -780,7 +793,7 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
                 </div>
                 <p class="text-xs text-slate-400">{{ bal.meta.name }}</p>
                 <p class="text-[11px] text-slate-500 font-mono">{{ bal.denomLabel }}</p>
-                <p v-if="bal.denomLabel !== bal.denom" class="text-[10px] text-slate-600 font-mono break-all">{{ bal.denom }}</p>
+                <p v-if="bal.rawDenomDisplay" class="text-[10px] text-slate-600 font-mono break-all">{{ bal.rawDenomDisplay }}</p>
               </div>
             </div>
             <div class="mt-3 flex items-end justify-between gap-4">
