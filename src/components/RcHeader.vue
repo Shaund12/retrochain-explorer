@@ -418,6 +418,7 @@ type NavItem = NavLink | NavGroup;
 
 const launcherEnabled = import.meta.env.VITE_ENABLE_LAUNCHER === "true";
 const slotsEnabled = import.meta.env.VITE_ENABLE_SLOTS === "true";
+const dexEnabled = import.meta.env.VITE_ENABLE_DEX === "true";
 
 const navItems: NavItem[] = [
   { label: "Overview", to: { name: "home" } },
@@ -446,6 +447,7 @@ const navItems: NavItem[] = [
   {
     label: "Economy",
     items: [
+      ...(dexEnabled ? [{ label: "DEX", to: { name: "ibc-info" } }] : []),
       ...(launcherEnabled ? [{ label: "Launcher", to: { name: "launcher" } }] : []),
       { label: "Tokens", to: { name: "tokens" } },
       { label: "Tokenomics", to: { name: "tokenomics" } },
