@@ -379,6 +379,28 @@ const sortedTrades = computed(() => [...trades.value].sort((a, b) => new Date(a.
 const pricePoints = computed(() => sortedTrades.value.map((t) => t.price).filter((p) => Number.isFinite(p)));
 const lastPrice = computed(() => (sortedTrades.value.length ? sortedTrades.value[sortedTrades.value.length - 1].price : null));
 
+const sparkline = computed(() => {
+  const pts = pricePoints.value;
+  if (!pts.length) return { path: "", min: 0, max: 0 };
+  const w = 160;
+  const h = 40;
+  const pad = 4;
+  const min = Math.min(...pts);
+  const max = Math.max(...pts);
+  const span = max - min || 1;
+  const coords = pts.map((p, idx) => {
+    const x = pad + (idx / Math.max(pts.length - 1, 1)) * (w - pad * 2);
+    const y = pad + (1 - (p - min) / span) * (h - pad * 2);
+    return { x, y };
+  });
+  const path = coords.map((c, idx) => `${idx === 0 ? "M" : "L"}${c.x.toFixed(2)},${c.y.toFixed(2)}`).join(" ");
+  return { path, min, max };
+});
+
+const sparkPath = computed(() => sparkline.value.path);
+
+const hoverPoint = ref<{ x: number; y: number; price: number; time?: string } | null>(null);
+
 const chartData = computed(() => {
   const width = 440;
   const height = 160;
@@ -581,6 +603,13 @@ const chartData = computed(() => {
           <div class="flex items-center gap-2 text-[11px] text-slate-300">
             <span>Price chart</span>
             <svg v-if="sparkPath" :width="160" :height="40" viewBox="0 0 160 40">
+              <defs>
+                <linearGradient id="sparkFill" x1="0" x2="0" y1="0" y2="1">
+                  <stop offset="0%" stop-color="#22c55e" stop-opacity="0.45" />
+                  <stop offset="100%" stop-color="#22c55e" stop-opacity="0.05" />
+                </linearGradient>
+              </defs>
+              <path :d="sparkPath + ' V40 H0 Z'" fill="url(#sparkFill)" stroke="none" />
               <path :d="sparkPath" fill="none" stroke="#22c55e" stroke-width="2" />
             </svg>
             <span v-else class="text-slate-500">No data</span>
@@ -707,7 +736,21 @@ const chartData = computed(() => {
                 <path :d="chartData.area" fill="url(#priceFill)" stroke="none" />
                 <path :d="chartData.line" fill="none" stroke="#22c55e" stroke-width="2.5" />
                 <g fill="#22c55e" stroke="#0f172a" stroke-width="1">
-                  <circle v-for="(c, idx) in chartData.coords" :key="idx" :cx="c.x" :cy="c.y" r="2.5" />
+                  <circle
+                    v-for="(c, idx) in chartData.coords"
+                    :key="idx"
+                    :cx="c.x"
+                    :cy="c.y"
+                    r="2.5"
+                    class="cursor-pointer"
+                    @mouseenter="hoverPoint = c"
+                    @mouseleave="hoverPoint = null"
+                  />
+                </g>
+                <g v-if="hoverPoint" font-size="10" fill="#e2e8f0" stroke="#0f172a" stroke-width="0.3">
+                  <rect :x="hoverPoint.x - 48" :y="hoverPoint.y - 34" width="96" height="30" rx="6" fill="#0f172a" stroke="#22c55e" stroke-width="0.6" opacity="0.9" />
+                  <text :x="hoverPoint.x" :y="hoverPoint.y - 20" text-anchor="middle">{{ formatPrice(hoverPoint.price) }} RETRO</text>
+                  <text :x="hoverPoint.x" :y="hoverPoint.y - 8" text-anchor="middle" fill="#a5b4fc">{{ hoverPoint.time ? new Date(hoverPoint.time).toLocaleTimeString() : '' }}</text>
                 </g>
                 <g font-size="9" fill="#94a3b8">
                   <text :x="16" y="12">{{ chartData.labels.y[0] }}</text>
