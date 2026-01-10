@@ -147,7 +147,14 @@ export function useDex() {
     error.value = null;
     try {
       const res = await api.get("/retrochain/dex/v1/pools");
-      pools.value = res.data?.pools || res.data?.pools_with_tvl || [];
+      const rawPools = res.data?.pools || res.data?.pools_with_tvl || [];
+      pools.value = rawPools.filter((p: any) => {
+        try {
+          return BigInt(p?.id ?? 0) >= 0n; // allow pool_id 0 as valid per chain
+        } catch {
+          return false;
+        }
+      });
       isModuleAvailable.value = true;
     } catch (e: any) {
       console.warn("DEX pools not available:", e?.message);

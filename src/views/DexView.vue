@@ -99,6 +99,26 @@ const atomicToDisplay = (val: string | undefined, denom: string) => {
   return formatAtomicToDisplay(val, denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false });
 };
 
+const burnEstimate = computed(() => {
+  const pool = selectedPool.value;
+  if (!pool) return null;
+  const total = parseBig(pool.total_shares || "0") || 0n;
+  if (total === 0n) return null;
+  const shAtomicStr = displayToAtomic(removeShares.value || "0", pool.lp_denom || `dex/${pool.id}`);
+  if (!shAtomicStr) return null;
+  const sh = parseBig(shAtomicStr);
+  if (!sh || sh <= 0n) return null;
+  const reserveA = parseBig(pool.reserve_a || "0") || 0n;
+  const reserveB = parseBig(pool.reserve_b || "0") || 0n;
+  if (reserveA === 0n || reserveB === 0n) return null;
+  const amtA = ((reserveA * sh) / total).toString();
+  const amtB = ((reserveB * sh) / total).toString();
+  return {
+    a: atomicToDisplay(amtA, pool.denom_a),
+    b: atomicToDisplay(amtB, pool.denom_b)
+  };
+});
+
 const syncAddLiquidityRatio = () => {
   const pool = selectedPool.value;
   if (!pool) return;
@@ -417,6 +437,7 @@ watch(lpPositions, (positions) => {
               <label class="text-[11px] text-slate-400">Shares (LP)</label>
               <input v-model="removeShares" class="input" placeholder="LP shares" />
               <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.lp_denom || `dex/${selectedPool?.id}`], selectedPool?.lp_denom || `dex/${selectedPool?.id}`) }}</div>
+              <div class="text-[11px] text-slate-400" v-if="burnEstimate">Est. out (for this burn): {{ burnEstimate.a }} / {{ burnEstimate.b }}</div>
               <div class="text-[11px] text-slate-400">Underlying est: {{ selectedUnderlying.a }} / {{ selectedUnderlying.b }}</div>
             </div>
             <button class="btn w-full" :disabled="!selectedPool" @click="submitRemove">Remove liquidity</button>
