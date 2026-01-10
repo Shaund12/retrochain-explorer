@@ -107,8 +107,8 @@ export function useDex() {
       value: {
         sender,
         poolId: pool.id,
-        amountA,
-        amountB,
+        tokenA: { denom: pool.denom_a, amount: amountA },
+        tokenB: { denom: pool.denom_b, amount: amountB },
         minShares: minShares.toString()
       }
     };
