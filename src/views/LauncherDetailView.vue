@@ -299,7 +299,17 @@ const submitBuy = async () => {
       }
     };
     const fee = { amount: [{ denom: "uretro", amount: "8000" }], gas: "350000" };
-    await signAndBroadcast(chainId.value, [msg], fee, "");
+    const res = await signAndBroadcast(chainId.value, [msg], fee, "");
+    if (res?.code && Number(res.code) !== 0) {
+      const raw = (res.rawLog || res.raw_log || res.message || "Buy failed").toString();
+      const lower = raw.toLowerCase();
+      if (lower.includes("max buy exceeded")) {
+        toast.showError("Max buy exceeded. Lower the amount and try again.");
+        return;
+      }
+      toast.showError(raw);
+      return;
+    }
     toast.showSuccess("Buy submitted");
   } catch (e: any) {
     const apiMsg = e?.response?.data?.message || e?.message || "Buy failed";
@@ -330,7 +340,12 @@ const submitSell = async () => {
       }
     };
     const fee = { amount: [{ denom: "uretro", amount: "8000" }], gas: "350000" };
-    await signAndBroadcast(chainId.value, [msg], fee, "");
+    const res = await signAndBroadcast(chainId.value, [msg], fee, "");
+    if (res?.code && Number(res.code) !== 0) {
+      const raw = (res.rawLog || res.raw_log || res.message || "Sell failed").toString();
+      toast.showError(raw);
+      return;
+    }
     toast.showSuccess("Sell submitted");
   } catch (e: any) {
     toast.showError(e?.message || "Sell failed");
