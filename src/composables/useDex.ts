@@ -93,7 +93,7 @@ export function useDex() {
     const reserveA = BigInt(pool.reserve_a || "0");
     const reserveB = BigInt(pool.reserve_b || "0");
     const total = BigInt(pool.total_shares || "0");
-    let expectedShares = 0n;
+    let expectedShares = 0n; // Initialize expectedShares
     if (total === 0n) {
       expectedShares = BigInt(Math.floor(Math.sqrt(Number(BigInt(amountA) * BigInt(amountB)))));
     } else {
@@ -107,8 +107,8 @@ export function useDex() {
       value: {
         sender,
         poolId: pool.id,
-        tokenA: { denom: pool.denom_a, amount: amountA },
-        tokenB: { denom: pool.denom_b, amount: amountB },
+        amountA,
+        amountB,
         minShares: minShares.toString()
       }
     };
