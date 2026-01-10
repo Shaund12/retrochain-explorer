@@ -302,7 +302,13 @@ const submitBuy = async () => {
     await signAndBroadcast(chainId.value, [msg], fee, "");
     toast.showSuccess("Buy submitted");
   } catch (e: any) {
-    toast.showError(e?.message || "Buy failed");
+    const apiMsg = e?.response?.data?.message || e?.message || "Buy failed";
+    const lower = (apiMsg || "").toLowerCase();
+    if (lower.includes("max buy exceeded")) {
+      toast.showError("Max buy exceeded. Lower the amount and try again.");
+      return;
+    }
+    toast.showError(apiMsg);
   }
 };
 
