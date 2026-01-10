@@ -792,7 +792,7 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
           <article
             v-for="bal in decoratedBalances"
             :key="bal.denom"
-            class="p-4 rounded-2xl border shadow-inner animate-fade-in"
+            class="p-4 rounded-2xl border shadow-inner animate-fade-in min-w-0"
             :class="bal.accent.card"
           >
             <div class="flex items-center gap-3">
@@ -809,13 +809,13 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
                   {{ bal.meta.icon }}
                 </span>
               </div>
-              <div class="flex-1">
+              <div class="flex-1 min-w-0">
                 <div class="flex items-center gap-2 text-sm font-semibold text-white">
                   <span>{{ bal.meta.symbol }}</span>
                   <span class="badge text-[10px]" :class="bal.accent.badge">{{ bal.meta.chain }}</span>
                 </div>
                 <p class="text-xs text-slate-400">{{ bal.meta.name }}</p>
-                <p class="text-[11px] text-slate-500 font-mono">{{ bal.denomLabel }}</p>
+                <p class="text-[11px] text-slate-500 font-mono truncate max-w-[240px]">{{ bal.denomLabel }}</p>
                 <p
                   v-if="bal.rawDenomDisplay"
                   class="text-[10px] text-slate-600 font-mono truncate max-w-[220px]"
@@ -826,17 +826,17 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
               </div>
             </div>
             <div class="mt-3 flex items-end justify-between gap-4">
-              <div>
+              <div class="min-w-0">
                 <div class="text-[10px] text-slate-500 uppercase tracking-widest">On-chain Amount</div>
-                <div class="font-mono text-sm text-slate-200">{{ bal.displayAmount }}</div>
+                <div class="font-mono text-sm text-slate-200 truncate max-w-[240px]">{{ bal.displayAmount }}</div>
                 <div v-if="bal.meta.description" class="text-[10px] text-slate-500 mt-1">
                   {{ bal.meta.description }}
                 </div>
               </div>
-              <div class="text-right">
-                <div class="text-lg font-semibold text-white">{{ bal.displayAmount }}</div>
-                <div class="text-xs text-slate-400">{{ bal.formatted }}</div>
-                <div v-if="bal.usdValue !== null" class="text-[11px] text-emerald-300">≈ {{ formatUsd(bal.usdValue) }}</div>
+              <div class="text-right min-w-0">
+                <div class="text-lg font-semibold text-white truncate max-w-[200px] ml-auto">{{ bal.displayAmount }}</div>
+                <div class="text-xs text-slate-400 truncate max-w-[200px] ml-auto">{{ bal.formatted }}</div>
+                <div v-if="bal.usdValue !== null" class="text-[11px] text-emerald-300 truncate max-w-[200px] ml-auto">≈ {{ formatUsd(bal.usdValue) }}</div>
               </div>
             </div>
             <div class="mt-4 flex justify-end">
