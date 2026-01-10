@@ -423,62 +423,34 @@ const MsgCreatePoolType: GeneratedType = {
 const MsgAddLiquidityType: GeneratedType = {
   encode(message: MsgAddLiquidity, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.sender) writer.uint32(10).string(message.sender);
-    encodeDexCoin(message.tokenA, 2, writer);
-    encodeDexCoin(message.tokenB, 3, writer);
+    if (message.poolId) writer.uint32(18).string(message.poolId);
+    if (message.amountA) writer.uint32(26).string(message.amountA);
+    if (message.amountB) writer.uint32(34).string(message.amountB);
+    if (message.minShares) writer.uint32(42).string(message.minShares);
     return writer;
   },
   decode(input: Uint8Array | _m0.Reader, length?: number): MsgAddLiquidity {
     const reader = input instanceof _m0.Reader ? input : new _m0.Reader(input);
     const end = length === undefined ? reader.len : reader.pos + length;
-    const message: MsgAddLiquidity = { sender: "" };
+    const message: MsgAddLiquidity = { sender: "", poolId: "", amountA: "", amountB: "", minShares: "" } as any;
     while (reader.pos < end) {
       const tag = reader.uint32();
       switch (tag >>> 3) {
         case 1:
           message.sender = reader.string();
           break;
-        case 2: {
-          const bytes = reader.bytes();
-          const r = new _m0.Reader(bytes);
-          const coin: DexCoin = { denom: "", amount: "" };
-          while (r.pos < r.len) {
-            const t = r.uint32();
-            switch (t >>> 3) {
-              case 1:
-                coin.denom = r.string();
-                break;
-              case 2:
-                coin.amount = r.string();
-                break;
-              default:
-                r.skipType(t & 7);
-                break;
-            }
-          }
-          message.tokenA = coin;
+        case 2:
+          (message as any).poolId = reader.string();
           break;
-        }
-        case 3: {
-          const bytes = reader.bytes();
-          const r = new _m0.Reader(bytes);
-          const coin: DexCoin = { denom: "", amount: "" };
-          while (r.pos < r.len) {
-            const t = r.uint32();
-            switch (t >>> 3) {
-              case 1:
-                coin.denom = r.string();
-                break;
-              case 2:
-                coin.amount = r.string();
-                break;
-              default:
-                r.skipType(t & 7);
-                break;
-            }
-          }
-          message.tokenB = coin;
+        case 3:
+          (message as any).amountA = reader.string();
           break;
-        }
+        case 4:
+          (message as any).amountB = reader.string();
+          break;
+        case 5:
+          (message as any).minShares = reader.string();
+          break;
         default:
           reader.skipType(tag & 7);
           break;
@@ -487,7 +459,13 @@ const MsgAddLiquidityType: GeneratedType = {
     return message;
   },
   fromPartial(object: Partial<MsgAddLiquidity>): MsgAddLiquidity {
-    return { sender: object.sender ?? "", tokenA: object.tokenA, tokenB: object.tokenB };
+    return {
+      sender: object.sender ?? "",
+      poolId: (object as any).poolId ?? "",
+      amountA: (object as any).amountA ?? "",
+      amountB: (object as any).amountB ?? "",
+      minShares: (object as any).minShares ?? ""
+    } as any;
   }
 };
 

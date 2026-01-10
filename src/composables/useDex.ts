@@ -109,7 +109,7 @@ export function useDex() {
         poolId: pool.id,
         amountA,
         amountB,
-        minShares: minShares.toString()
+        shares: minShares.toString()
       }
     };
     const fee = { amount: [{ denom: "uretro", amount: "8000" }], gas: "450000" };
