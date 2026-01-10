@@ -190,6 +190,25 @@ const selectedPool = computed(() => pools.value.find((p) => p.id === selectedPoo
 const tokenInBalance = computed(() => atomicToDisplay(userBalances[tokenIn.value], tokenIn.value));
 const tokenOutBalance = computed(() => atomicToDisplay(userBalances[tokenOut.value], tokenOut.value));
 
+const selectedLpDenom = computed(() => selectedPool.value?.lp_denom || (selectedPool.value ? `dex/${selectedPool.value.id}` : ""));
+const selectedLpBalanceAtomic = computed(() => (selectedLpDenom.value ? userBalances[selectedLpDenom.value] || "0" : "0"));
+const selectedLpBalanceDisplay = computed(() =>
+  selectedLpDenom.value ? atomicToDisplay(selectedLpBalanceAtomic.value, selectedLpDenom.value) : "0"
+);
+
+const selectedUnderlying = computed(() => {
+  const pool = selectedPool.value;
+  if (!pool) return { a: "0", b: "0" };
+  const shares = BigInt(selectedLpBalanceAtomic.value || "0");
+  const total = BigInt(pool.total_shares || "0");
+  if (total === 0n || shares === 0n) return { a: "0", b: "0" };
+  const reserveA = BigInt(pool.reserve_a || "0");
+  const reserveB = BigInt(pool.reserve_b || "0");
+  const amtA = ((reserveA * shares) / total).toString();
+  const amtB = ((reserveB * shares) / total).toString();
+  return { a: atomicToDisplay(amtA, pool.denom_a), b: atomicToDisplay(amtB, pool.denom_b) };
+});
+
 watch(selectedPool, (p) => {
   if (p) {
     tokenIn.value = p.denom_a;
@@ -219,6 +238,15 @@ watch([amountIn, tokenIn, tokenOut], () => {
     return;
   }
   runSimulation();
+});
+
+watch(lpPositions, (positions) => {
+  if (!positions?.length) return;
+  // Prefer selecting a pool the user has LP for
+  const first = positions[0];
+  if (first?.pool?.id) {
+    selectedPoolId.value = first.pool.id;
+  }
 });
 </script>
 
@@ -288,7 +316,11 @@ watch([amountIn, tokenIn, tokenOut], () => {
               <label class="text-xs text-slate-400">Amount In</label>
               <div class="flex items-center gap-2">
                 <input v-model="amountIn" type="number" min="0" step="0.000001" class="input w-full" />
-                <button class="btn-secondary px-3" type="button" @click="amountIn = tokenInBalance || '0'">Max</button>
+                <div class="flex gap-1">
+                  <button class="btn-secondary px-3" type="button" @click="amountIn = ((Number(tokenInBalance) || 0) * 0.25).toString()">25%</button>
+                  <button class="btn-secondary px-3" type="button" @click="amountIn = ((Number(tokenInBalance) || 0) * 0.5).toString()">50%</button>
+                  <button class="btn-secondary px-3" type="button" @click="amountIn = tokenInBalance || '0'">Max</button>
+                </div>
               </div>
               <div class="text-[11px] text-slate-400">Balance: {{ tokenInBalance }}</div>
             </div>
@@ -332,6 +364,7 @@ watch([amountIn, tokenIn, tokenOut], () => {
               <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.denom_b || ''], selectedPool?.denom_b || '') }}</div>
             </div>
             <button class="btn btn-primary w-full" :disabled="!selectedPool" @click="submitAdd">Add liquidity</button>
+            <div class="text-[11px] text-slate-400">You own: {{ selectedLpBalanceDisplay }} LP</div>
           </div>
 
           <div class="space-y-3">
@@ -346,6 +379,7 @@ watch([amountIn, tokenIn, tokenOut], () => {
               <label class="text-[11px] text-slate-400">Shares (LP)</label>
               <input v-model="removeShares" class="input" placeholder="LP shares" />
               <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.lp_denom || `dex/${selectedPool?.id}`], selectedPool?.lp_denom || `dex/${selectedPool?.id}`) }}</div>
+              <div class="text-[11px] text-slate-400">Underlying est: {{ selectedUnderlying.a }} / {{ selectedUnderlying.b }}</div>
             </div>
             <button class="btn w-full" :disabled="!selectedPool" @click="submitRemove">Remove liquidity</button>
             <div class="text-[11px] text-slate-400">Slippage protection: {{ slippageBps }} bps</div>
