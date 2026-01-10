@@ -441,13 +441,13 @@ const navItems: NavItem[] = [
       { label: "Ecosystem Wallets", to: { name: "ecosystem-accounts" } },
       { label: "Validators", to: { name: "validators" } },
       { label: "Contracts", to: { name: "contracts" } },
-      { label: "IBC", to: { name: "ibc-info" } }
+      { label: "IBC", to: { name: "ibc" } }
     ]
   },
   {
     label: "Economy",
     items: [
-      ...(dexEnabled ? [{ label: "DEX", to: { name: "ibc-info" } }] : []),
+      ...(dexEnabled ? [{ label: "DEX", to: { name: "dex" } }] : []),
       ...(launcherEnabled ? [{ label: "Launcher", to: { name: "launcher" } }] : []),
       { label: "Tokens", to: { name: "tokens" } },
       { label: "Tokenomics", to: { name: "tokenomics" } },

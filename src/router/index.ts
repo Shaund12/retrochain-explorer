@@ -55,6 +55,7 @@ import TokenBurnerView from "@/views/TokenBurnerView.vue";
 
 const launcherEnabled = import.meta.env.VITE_ENABLE_LAUNCHER === "true";
 const slotsEnabled = import.meta.env.VITE_ENABLE_SLOTS === "true";
+const dexEnabled = import.meta.env.VITE_ENABLE_DEX === "true";
 
 const routes: RouteRecordRaw[] = [
   { path: "/", name: "home", component: HomeView, meta: { title: "Home" } },
@@ -128,6 +129,12 @@ if (launcherEnabled) {
     { path: "/launcher", name: "launcher", component: LauncherListView, meta: { title: "Launcher" } },
     { path: "/launcher/create", name: "launcher-create", component: LauncherCreateView, meta: { title: "Launcher" } },
     { path: "/launcher/:denom", name: "launcher-detail", component: LauncherDetailView, props: true, meta: { title: "Launcher" } }
+  );
+}
+
+if (dexEnabled) {
+  routes.splice(routes.length - 1, 0,
+    { path: "/dex", name: "dex", component: IbcInfoView, meta: { title: "DEX" } }
   );
 }
 
