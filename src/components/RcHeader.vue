@@ -427,7 +427,6 @@ const navItems: NavItem[] = [
       { label: "Arcade Dashboard", to: { name: "arcade" } },
       { label: "Arcade Games", to: { name: "arcade-games" } },
       ...(slotsEnabled ? [{ label: "Slots Dash", to: { name: "slots" } }] : []),
-      ...(launcherEnabled ? [{ label: "Launcher", to: { name: "launcher" } }] : []),
       { label: "Battle Points Tracker", to: { name: "battlepoints-tracker" } },
       { label: "Battle Points Store", to: { name: "battlepoints" } }
     ]
@@ -440,18 +439,24 @@ const navItems: NavItem[] = [
       { label: "Accounts", to: { name: "accounts" } },
       { label: "Ecosystem Wallets", to: { name: "ecosystem-accounts" } },
       { label: "Validators", to: { name: "validators" } },
-      { label: "Contracts", to: { name: "contracts" } }
+      { label: "Contracts", to: { name: "contracts" } },
+      { label: "IBC", to: { name: "ibc-info" } }
     ]
   },
   {
     label: "Economy",
     items: [
+      ...(launcherEnabled ? [{ label: "Launcher", to: { name: "launcher" } }] : []),
       { label: "Tokens", to: { name: "tokens" } },
       { label: "Tokenomics", to: { name: "tokenomics" } },
-      { label: "Token Burner", to: { name: "token-burner" } },
+      { label: "Token Burner", to: { name: "token-burner" } }
+    ]
+  },
+  {
+    label: "Docs",
+    items: [
       { label: "Docs", to: { name: "docs" } },
-      { label: "API Docs", to: { name: "api" } },
-      { label: "IBC", to: { name: "ibc-info" } }
+      { label: "API Docs", to: { name: "api" } }
     ]
   },
   {
