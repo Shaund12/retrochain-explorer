@@ -100,8 +100,36 @@ const atomicToDisplay = (val: string | undefined, denom: string) => {
 };
 
 const poolChartsOpen = ref<Record<string, boolean>>({});
+const priceHistory = ref<Record<string, number[]>>({});
 const togglePoolChart = (id: string) => {
   poolChartsOpen.value = { ...poolChartsOpen.value, [id]: !poolChartsOpen.value[id] };
+};
+
+const pushPriceHistory = (id: string, price: number) => {
+  if (!Number.isFinite(price)) return;
+  const arr = priceHistory.value[id] ? [...priceHistory.value[id]] : [];
+  arr.push(price);
+  if (arr.length > 50) arr.shift();
+  priceHistory.value = { ...priceHistory.value, [id]: arr };
+};
+
+const getPriceHistory = (id: string) => priceHistory.value[id] || [];
+
+const sparklinePoints = (id: string) => {
+  const data = getPriceHistory(id);
+  if (data.length < 2) return "";
+  const w = 120;
+  const h = 40;
+  const min = Math.min(...data);
+  const max = Math.max(...data);
+  const span = max - min || 1;
+  return data
+    .map((v, i) => {
+      const x = (i / (data.length - 1)) * w;
+      const y = h - ((v - min) / span) * h;
+      return `${x},${y}`;
+    })
+    .join(" ");
 };
 
 const calcSwapOut = (amountIn: bigint, reserveIn: bigint, reserveOut: bigint) => {
@@ -309,7 +337,16 @@ watch(address, (addr) => {
   }
 });
 
-watch(pools, (ps) => setDefaultsFromPools(ps));
+watch(pools, (ps) => {
+  setDefaultsFromPools(ps);
+  const nextCharts: Record<string, boolean> = {};
+  ps.forEach((p) => {
+    nextCharts[p.id] = true;
+    const price = Number(calculatePoolPrice(p));
+    pushPriceHistory(p.id, price);
+  });
+  poolChartsOpen.value = nextCharts;
+});
 
 watch([amountIn, tokenIn, tokenOut], () => {
   if (!tokenIn.value || !tokenOut.value || tokenIn.value === tokenOut.value) {
@@ -327,6 +364,7 @@ watch(lpPositions, (positions) => {
     selectedPoolId.value = first.pool.id;
   }
 });
+
 </script>
 
 <template>
@@ -505,7 +543,7 @@ watch(lpPositions, (positions) => {
           <div class="flex items-center justify-between text-sm text-white gap-2">
             <span class="font-semibold">Pool #{{ pool.id }}</span>
             <div class="flex items-center gap-2">
-              <button class="text-xs text-emerald-300" @click="togglePoolChart(pool.id)">
+              <button class="text-xs text-emerald-300 underline" @click="togglePoolChart(pool.id)">
                 {{ poolChartsOpen[pool.id] ? 'Hide charts' : 'Show charts' }}
               </button>
               <span class="text-xs text-emerald-300 truncate" :title="pool.lp_denom || `dex/${pool.id}`">LP: {{ pool.lp_denom || `dex/${pool.id}` }}</span>
@@ -540,6 +578,19 @@ watch(lpPositions, (positions) => {
               ~{{ poolImpactPreview(pool)?.in }} → {{ poolImpactPreview(pool)?.out }}
             </div>
             <div class="text-xs text-slate-500" v-else>Not enough depth to preview.</div>
+
+            <div class="text-[11px] uppercase tracking-[0.15em] text-slate-400">Price sparkline (session)</div>
+            <div class="text-xs text-slate-500" v-if="getPriceHistory(pool.id).length < 2">Collecting data…</div>
+            <svg v-else viewBox="0 0 120 40" class="w-full h-16">
+              <polyline :points="sparklinePoints(pool.id)" fill="none" stroke="url(#grad-{{pool.id}})" stroke-width="2" />
+              <defs>
+                <linearGradient :id="`grad-${pool.id}`" x1="0" y1="0" x2="1" y2="0">
+                  <stop offset="0%" stop-color="#34d399" />
+                  <stop offset="100%" stop-color="#22d3ee" />
+                </linearGradient>
+              </defs>
+            </svg>
+            <div class="text-[11px] text-slate-400">Last price: {{ calculatePoolPrice(pool) }} {{ pool.denom_b }} per {{ pool.denom_a }}</div>
           </div>
         </div>
       </div>
