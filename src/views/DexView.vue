@@ -476,8 +476,7 @@ watch(lpPositions, (positions) => {
           </div>
         </div>
       </div>
-
-        <div class="card bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 border border-white/10 shadow-xl shadow-cyan-500/10">
+      <div class="card bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 border border-white/10 shadow-xl shadow-cyan-500/10">
         <div class="flex items-center justify-between mb-3">
           <h2 class="text-lg font-semibold text-white">Your liquidity</h2>
           <span class="text-xs text-slate-500">{{ address ? address : "Not connected" }}</span>
@@ -495,53 +494,52 @@ watch(lpPositions, (positions) => {
       </div>
     </div>
 
-      <div class="card overflow-hidden">
+    <div class="card overflow-hidden">
       <div class="flex items-center justify-between mb-3">
         <h2 class="text-lg font-semibold text-white">Liquidity pools</h2>
         <span class="text-xs text-slate-500" v-if="loading">Loading…</span>
       </div>
       <div v-if="!pools.length" class="text-sm text-slate-400">No pools reported by the DEX module yet.</div>
-        <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
-          <div v-for="pool in pools" :key="pool.id" class="p-4 rounded-xl bg-white/5 border border-white/10 break-words">
-            <div class="flex items-center justify-between text-sm text-white gap-2">
-              <span class="font-semibold">Pool #{{ pool.id }}</span>
-              <div class="flex items-center gap-2">
-                <button class="text-xs text-emerald-300" @click="togglePoolChart(pool.id)">
-                  {{ poolChartsOpen[pool.id] ? 'Hide charts' : 'Show charts' }}
-                </button>
-                <span class="text-xs text-emerald-300 truncate" :title="pool.lp_denom || `dex/${pool.id}`">LP: {{ pool.lp_denom || `dex/${pool.id}` }}</span>
-              </div>
+      <div v-else class="grid grid-cols-1 md:grid-cols-2 gap-3">
+        <div v-for="pool in pools" :key="pool.id" class="p-4 rounded-xl bg-white/5 border border-white/10 break-words">
+          <div class="flex items-center justify-between text-sm text-white gap-2">
+            <span class="font-semibold">Pool #{{ pool.id }}</span>
+            <div class="flex items-center gap-2">
+              <button class="text-xs text-emerald-300" @click="togglePoolChart(pool.id)">
+                {{ poolChartsOpen[pool.id] ? 'Hide charts' : 'Show charts' }}
+              </button>
+              <span class="text-xs text-emerald-300 truncate" :title="pool.lp_denom || `dex/${pool.id}`">LP: {{ pool.lp_denom || `dex/${pool.id}` }}</span>
             </div>
-            <div class="mt-2 text-xs text-slate-300 break-words">{{ pool.denom_a }} / {{ pool.denom_b }}</div>
-            <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-400">
-              <div>
-                <div class="text-slate-500">Reserve A</div>
-                <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_a, pool.denom_a) }}</div>
-              </div>
-              <div>
-                <div class="text-slate-500">Reserve B</div>
-                <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_b, pool.denom_b) }}</div>
-              </div>
+          </div>
+          <div class="mt-2 text-xs text-slate-300 break-words">{{ pool.denom_a }} / {{ pool.denom_b }}</div>
+          <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-400">
+            <div>
+              <div class="text-slate-500">Reserve A</div>
+              <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_a, pool.denom_a) }}</div>
             </div>
-            <div class="mt-3 text-xs text-emerald-300">Price: 1 {{ pool.denom_a }} ≈ {{ calculatePoolPrice(pool) }} {{ pool.denom_b }}</div>
+            <div>
+              <div class="text-slate-500">Reserve B</div>
+              <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_b, pool.denom_b) }}</div>
+            </div>
+          </div>
+          <div class="mt-3 text-xs text-emerald-300">Price: 1 {{ pool.denom_a }} ≈ {{ calculatePoolPrice(pool) }} {{ pool.denom_b }}</div>
 
-            <div v-if="poolChartsOpen[pool.id]" class="mt-4 space-y-3 border-t border-white/10 pt-3">
-              <div class="text-[11px] uppercase tracking-[0.15em] text-slate-400">Composition</div>
-              <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden flex">
-                <div class="bg-emerald-400/70" :style="{ width: poolComposition(pool).aPct + '%' }"></div>
-                <div class="bg-cyan-400/70" :style="{ width: poolComposition(pool).bPct + '%' }"></div>
-              </div>
-              <div class="flex justify-between text-[11px] text-slate-400">
-                <span>{{ poolComposition(pool).aPct }}% {{ pool.denom_a }}</span>
-                <span>{{ poolComposition(pool).bPct }}% {{ pool.denom_b }}</span>
-              </div>
-
-              <div class="text-[11px] uppercase tracking-[0.15em] text-slate-400">Impact preview (1% in {{ pool.denom_a }})</div>
-              <div class="text-xs text-slate-200" v-if="poolImpactPreview(pool)">
-                ~{{ poolImpactPreview(pool)?.in }} → {{ poolImpactPreview(pool)?.out }}
-              </div>
-              <div class="text-xs text-slate-500" v-else>Not enough depth to preview.</div>
+          <div v-if="poolChartsOpen[pool.id]" class="mt-4 space-y-3 border-t border-white/10 pt-3">
+            <div class="text-[11px] uppercase tracking-[0.15em] text-slate-400">Composition</div>
+            <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden flex">
+              <div class="bg-emerald-400/70" :style="{ width: poolComposition(pool).aPct + '%' }"></div>
+              <div class="bg-cyan-400/70" :style="{ width: poolComposition(pool).bPct + '%' }"></div>
             </div>
+            <div class="flex justify-between text-[11px] text-slate-400">
+              <span>{{ poolComposition(pool).aPct }}% {{ pool.denom_a }}</span>
+              <span>{{ poolComposition(pool).bPct }}% {{ pool.denom_b }}</span>
+            </div>
+
+            <div class="text-[11px] uppercase tracking-[0.15em] text-slate-400">Impact preview (1% in {{ pool.denom_a }})</div>
+            <div class="text-xs text-slate-200" v-if="poolImpactPreview(pool)">
+              ~{{ poolImpactPreview(pool)?.in }} → {{ poolImpactPreview(pool)?.out }}
+            </div>
+            <div class="text-xs text-slate-500" v-else>Not enough depth to preview.</div>
           </div>
         </div>
       </div>
