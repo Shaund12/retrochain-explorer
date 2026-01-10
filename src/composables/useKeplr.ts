@@ -423,7 +423,7 @@ const MsgCreatePoolType: GeneratedType = {
 const MsgAddLiquidityType: GeneratedType = {
   encode(message: MsgAddLiquidity, writer: _m0.Writer = _m0.Writer.create()): _m0.Writer {
     if (message.sender) writer.uint32(10).string(message.sender);
-    if (message.poolId) writer.uint32(18).string(message.poolId);
+    if (message.poolId) writer.uint32(16).uint64(message.poolId as any);
     if (message.amountA) writer.uint32(26).string(message.amountA);
     if (message.amountB) writer.uint32(34).string(message.amountB);
     if (message.minShares) writer.uint32(42).string(message.minShares);
@@ -440,7 +440,7 @@ const MsgAddLiquidityType: GeneratedType = {
           message.sender = reader.string();
           break;
         case 2:
-          (message as any).poolId = reader.string();
+          (message as any).poolId = reader.uint64().toString();
           break;
         case 3:
           (message as any).amountA = reader.string();

@@ -106,7 +106,7 @@ export function useDex() {
       typeUrl: "/retrochain.dex.v1.MsgAddLiquidity",
       value: {
         sender,
-        poolId: pool.id,
+        poolId: pool.id, // No logic change needed; poolId already string-compatible.
         amountA,
         amountB,
         shares: minShares.toString()
