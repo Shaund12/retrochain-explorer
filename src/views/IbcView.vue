@@ -118,17 +118,24 @@ const pendingDelta = (c: any) => {
 <template>
   <div class="space-y-3">
     <div class="card-soft relative overflow-hidden">
-      <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/20 to-cyan-500/20 rounded-full blur-3xl"></div>
+      <div class="absolute -left-10 -top-10 w-64 h-64 bg-gradient-to-br from-emerald-500/20 via-cyan-500/10 to-indigo-500/20 rounded-full blur-3xl"></div>
+      <div class="absolute -right-10 -bottom-10 w-64 h-64 bg-gradient-to-tr from-amber-500/10 via-fuchsia-500/10 to-cyan-500/20 rounded-full blur-3xl"></div>
       <div class="relative">
-        <div class="flex items-baseline gap-2 mb-2">
+        <div class="flex items-center gap-2 mb-2">
+          <div class="text-lg">🛰️</div>
           <h1 class="text-2xl font-bold">
             <span class="bg-gradient-to-r from-indigo-400 via-cyan-400 to-emerald-400 bg-clip-text text-transparent">
               IBC Overview
             </span>
           </h1>
         </div>
-        <p class="text-sm text-slate-300 mb-4">Channels, sequences, and denom trace resolution</p>
-        <button class="btn text-xs" :disabled="loading" @click="fetchChannels(200)">
+        <p class="text-sm text-slate-300 mb-3">Channels, sequences, and denom trace resolution for Retro ↔ friends.</p>
+        <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
+          <span class="badge border-cyan-400/50 text-cyan-200 bg-cyan-500/10">🔗 Channels</span>
+          <span class="badge border-emerald-400/50 text-emerald-200 bg-emerald-500/10">🧭 Routes</span>
+          <span class="badge border-amber-400/50 text-amber-200 bg-amber-500/10">🔍 Denom traces</span>
+        </div>
+        <button class="btn text-xs mt-4" :disabled="loading" @click="fetchChannels(200)">
           {{ loading ? 'Loading...' : '↻ Refresh Channels' }}
         </button>
       </div>
@@ -155,7 +162,7 @@ const pendingDelta = (c: any) => {
 
     <div class="card">
       <div class="flex items-center justify-between mb-3">
-        <h2 class="text-sm font-semibold text-slate-100">Route Directory</h2>
+        <h2 class="text-sm font-semibold text-slate-100 flex items-center gap-2">🧭 Route Directory</h2>
         <span class="text-[11px] text-slate-500">Common IBC paths</span>
       </div>
 
@@ -200,7 +207,7 @@ const pendingDelta = (c: any) => {
         </div>
         <div class="mt-3 grid gap-2">
           <div class="flex items-center justify-between gap-2">
-            <span class="text-xs text-slate-400">Channel</span>
+            <span class="text-xs text-slate-400">Channel ({{ selectedDirection === 'outbound' ? 'outbound' : 'inbound' }})</span>
             <code class="text-xs font-mono text-slate-200">
               {{ selectedDirection === 'outbound' ? (selectedRouteInfo().outbound || '—') : (selectedRouteInfo().inbound || '—') }}
             </code>
