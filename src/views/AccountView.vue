@@ -247,6 +247,15 @@ const shortDenomLabel = (denom: string) => {
   return denom;
 };
 
+const shortFactoryPath = (denom: string) => {
+  if (!denom?.toLowerCase().startsWith("factory/")) return denom;
+  const parts = denom.split("/");
+  const addr = parts[1] || "";
+  const token = parts[2] || denom;
+  const shortAddr = addr ? `${addr.slice(0, 6)}...${addr.slice(-4)}` : addr;
+  return `factory/${shortAddr}/${token}`;
+};
+
 const priceOverrides = ref<Record<string, number>>({});
 
 const priceLookup = computed(() => ({ ...USD_PRICE_HINTS, ...priceOverrides.value }));
@@ -354,27 +363,38 @@ const decoratedBalances = computed<DecoratedBalance[]>(() => {
   return balances.value
     .map((coin) => {
       const meta = getTokenMeta(coin.denom);
+      const isFactory = coin.denom?.toLowerCase().startsWith("factory/");
+      const displaySymbol = meta.symbol || shortDenomLabel(coin.denom);
+      const displayName = meta.name || displaySymbol;
+      const displayChain = isFactory ? "Factory asset" : meta.chain;
+      const displayDescription = isFactory ? "Factory-issued token" : meta.description;
       const decimals = meta.decimals ?? 6;
       const divisor = Math.pow(10, decimals);
       const numeric = Number(coin.amount ?? "0") / divisor;
       const localeAmount = Number.isFinite(numeric)
-        ? `${numeric.toLocaleString(undefined, { maximumFractionDigits: Math.min(6, decimals) })} ${meta.symbol}`
+        ? `${numeric.toLocaleString(undefined, { maximumFractionDigits: Math.min(6, decimals) })} ${displaySymbol}`
         : formatAmount(coin.amount, coin.denom);
       const priceHint = meta.symbol ? priceLookup.value[meta.symbol.toUpperCase()] : undefined;
       const usdValue = Number.isFinite(numeric) && priceHint && priceHint > 0 ? numeric * priceHint : null;
-      const denomIsFactory = coin.denom?.toLowerCase().startsWith("factory/");
+      const adjustedMeta: TokenMeta = {
+        ...meta,
+        symbol: displaySymbol,
+        name: displayName,
+        chain: displayChain,
+        description: displayDescription
+      };
 
       return {
         denom: coin.denom,
         amount: coin.amount,
-        denomLabel: meta.symbol || shortDenomLabel(coin.denom),
+        denomLabel: displaySymbol,
         formatted: formatAmount(coin.amount, coin.denom),
         displayAmount: localeAmount,
         rawAmount: Number.isFinite(numeric) ? numeric : 0,
-        meta,
-        accent: ACCENT_CLASS_MAP[meta.accent] ?? ACCENT_CLASS_MAP.slate,
+        meta: adjustedMeta,
+        accent: ACCENT_CLASS_MAP[adjustedMeta.accent] ?? ACCENT_CLASS_MAP.slate,
         usdValue,
-        rawDenomDisplay: meta.symbol ? null : denomIsFactory ? null : coin.denom
+        rawDenomDisplay: isFactory ? shortFactoryPath(coin.denom) : coin.denom
       } as DecoratedBalance & { usdValue: number | null };
     })
     .sort((a, b) => b.rawAmount - a.rawAmount);
