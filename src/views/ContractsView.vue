@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, onMounted, ref } from "vue";
+import { computed, onMounted, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import { useContracts } from "@/composables/useContracts";
