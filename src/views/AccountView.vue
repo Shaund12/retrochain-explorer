@@ -364,8 +364,9 @@ const decoratedBalances = computed<DecoratedBalance[]>(() => {
     .map((coin) => {
       const meta = getTokenMeta(coin.denom);
       const isFactory = coin.denom?.toLowerCase().startsWith("factory/");
-      const displaySymbol = meta.symbol || shortDenomLabel(coin.denom);
-      const displayName = meta.name || displaySymbol;
+      const tokenLabel = shortDenomLabel(coin.denom);
+      const displaySymbol = isFactory ? tokenLabel : (meta.symbol || tokenLabel);
+      const displayName = isFactory ? tokenLabel : (meta.name || displaySymbol);
       const displayChain = isFactory ? "Factory asset" : meta.chain;
       const displayDescription = isFactory ? "Factory-issued token" : meta.description;
       const decimals = meta.decimals ?? 6;
