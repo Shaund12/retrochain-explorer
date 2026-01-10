@@ -106,10 +106,10 @@ export function useDex() {
       typeUrl: "/retrochain.dex.v1.MsgAddLiquidity",
       value: {
         sender,
-        poolId: pool.id, // No logic change needed; poolId already string-compatible.
-        amountA,
-        amountB,
-        shares: minShares.toString()
+        poolId: pool.id,
+        tokenA: { denom: pool.denom_a, amount: amountA },
+        tokenB: { denom: pool.denom_b, amount: amountB },
+        minShares: minShares.toString()
       }
     };
     const fee = { amount: [{ denom: "uretro", amount: "8000" }], gas: "450000" };
