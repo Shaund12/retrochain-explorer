@@ -99,6 +99,37 @@ const atomicToDisplay = (val: string | undefined, denom: string) => {
   return formatAtomicToDisplay(val, denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false });
 };
 
+const poolChartsOpen = ref<Record<string, boolean>>({});
+const togglePoolChart = (id: string) => {
+  poolChartsOpen.value = { ...poolChartsOpen.value, [id]: !poolChartsOpen.value[id] };
+};
+
+const calcSwapOut = (amountIn: bigint, reserveIn: bigint, reserveOut: bigint) => {
+  if (amountIn <= 0n || reserveIn <= 0n || reserveOut <= 0n) return 0n;
+  // Simple constant-product, no fee
+  return (reserveOut * amountIn) / (reserveIn + amountIn);
+};
+
+const poolComposition = (pool: Pool) => {
+  const a = parseFloat(pool.reserve_a || "0");
+  const b = parseFloat(pool.reserve_b || "0");
+  const total = a + b;
+  if (total === 0) return { aPct: 0, bPct: 0 };
+  return { aPct: Math.round((a / total) * 100), bPct: Math.round((b / total) * 100) };
+};
+
+const poolImpactPreview = (pool: Pool) => {
+  const reserveA = parseBig(pool.reserve_a || "0") || 0n;
+  const reserveB = parseBig(pool.reserve_b || "0") || 0n;
+  if (reserveA === 0n || reserveB === 0n) return null;
+  const inAmt = reserveA / 100n || 1n; // 1% of reserveA or minimum 1 atomic
+  const outAmt = calcSwapOut(inAmt, reserveA, reserveB);
+  return {
+    in: atomicToDisplay(inAmt.toString(), pool.denom_a),
+    out: atomicToDisplay(outAmt.toString(), pool.denom_b)
+  };
+};
+
 const burnEstimate = computed(() => {
   const pool = selectedPool.value;
   if (!pool) return null;
@@ -474,7 +505,12 @@ watch(lpPositions, (positions) => {
           <div v-for="pool in pools" :key="pool.id" class="p-4 rounded-xl bg-white/5 border border-white/10 break-words">
             <div class="flex items-center justify-between text-sm text-white gap-2">
               <span class="font-semibold">Pool #{{ pool.id }}</span>
-              <span class="text-xs text-emerald-300 truncate" :title="pool.lp_denom || `dex/${pool.id}`">LP: {{ pool.lp_denom || `dex/${pool.id}` }}</span>
+              <div class="flex items-center gap-2">
+                <button class="text-xs text-emerald-300" @click="togglePoolChart(pool.id)">
+                  {{ poolChartsOpen[pool.id] ? 'Hide charts' : 'Show charts' }}
+                </button>
+                <span class="text-xs text-emerald-300 truncate" :title="pool.lp_denom || `dex/${pool.id}`">LP: {{ pool.lp_denom || `dex/${pool.id}` }}</span>
+              </div>
             </div>
             <div class="mt-2 text-xs text-slate-300 break-words">{{ pool.denom_a }} / {{ pool.denom_b }}</div>
             <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-400">
@@ -487,7 +523,26 @@ watch(lpPositions, (positions) => {
                 <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_b, pool.denom_b) }}</div>
               </div>
             </div>
-          <div class="mt-3 text-xs text-emerald-300">Price: 1 {{ pool.denom_a }} ≈ {{ calculatePoolPrice(pool) }} {{ pool.denom_b }}</div>
+            <div class="mt-3 text-xs text-emerald-300">Price: 1 {{ pool.denom_a }} ≈ {{ calculatePoolPrice(pool) }} {{ pool.denom_b }}</div>
+
+            <div v-if="poolChartsOpen[pool.id]" class="mt-4 space-y-3 border-t border-white/10 pt-3">
+              <div class="text-[11px] uppercase tracking-[0.15em] text-slate-400">Composition</div>
+              <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden flex">
+                <div class="bg-emerald-400/70" :style="{ width: poolComposition(pool).aPct + '%' }"></div>
+                <div class="bg-cyan-400/70" :style="{ width: poolComposition(pool).bPct + '%' }"></div>
+              </div>
+              <div class="flex justify-between text-[11px] text-slate-400">
+                <span>{{ poolComposition(pool).aPct }}% {{ pool.denom_a }}</span>
+                <span>{{ poolComposition(pool).bPct }}% {{ pool.denom_b }}</span>
+              </div>
+
+              <div class="text-[11px] uppercase tracking-[0.15em] text-slate-400">Impact preview (1% in {{ pool.denom_a }})</div>
+              <div class="text-xs text-slate-200" v-if="poolImpactPreview(pool)">
+                ~{{ poolImpactPreview(pool)?.in }} → {{ poolImpactPreview(pool)?.out }}
+              </div>
+              <div class="text-xs text-slate-500" v-else>Not enough depth to preview.</div>
+            </div>
+          </div>
         </div>
       </div>
     </div>
