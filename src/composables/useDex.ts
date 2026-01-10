@@ -1,16 +1,18 @@
 // src/composables/useDex.ts
-import { ref } from "vue";
+import { computed, ref } from "vue";
 import { useApi } from "./useApi";
 import { useKeplr } from "./useKeplr";
+import { useNetwork } from "./useNetwork";
 
 export interface Pool {
   id: string;
-  token_a: string;
-  token_b: string;
+  denom_a: string;
+  denom_b: string;
   reserve_a: string;
   reserve_b: string;
   total_shares: string;
-  fee_rate: string;
+  lp_denom?: string;
+  fee_rate?: string;
 }
 
 export interface OrderBook {
@@ -28,9 +30,18 @@ export interface SwapRoute {
   route: string[];
 }
 
+export interface DexParams {
+  enabled: boolean;
+  swap_fee_bps?: number;
+  stakers_fee_bps?: number;
+  dev_fund_address?: string;
+}
+
 export function useDex() {
   const api = useApi();
-  const { address } = useKeplr();
+  const { address, connect, signAndBroadcast } = useKeplr();
+  const { current: network } = useNetwork();
+  const chainId = computed(() => (network.value === "mainnet" ? "retrochain-mainnet" : "retrochain-devnet-1"));
 
   const pools = ref<Pool[]>([]);
   const orderBooks = ref<OrderBook[]>([]);
@@ -38,6 +49,7 @@ export function useDex() {
   const loading = ref(false);
   const error = ref<string | null>(null);
   const isModuleAvailable = ref(true);
+  const params = ref<DexParams | null>(null);
 
   const markModuleUnavailable = (e: any) => {
     const status = e?.response?.status ?? e?.status;
@@ -46,13 +58,94 @@ export function useDex() {
     }
   };
 
+  const ensureWallet = async () => {
+    if (!address.value) await connect();
+    if (!address.value) throw new Error("Connect wallet");
+    return address.value;
+  };
+
+  const swapExactIn = async (poolId: string, denomIn: string, amountIn: string, denomOut: string, slippageBps = 50) => {
+    const sender = await ensureWallet();
+    const quote = await api.get(`/retrochain/dex/v1/pools/${poolId}/quote_exact_in`, {
+      params: { denom_in: denomIn, amount_in: amountIn, denom_out: denomOut }
+    });
+    const out = BigInt(quote.data?.amount_out || 0);
+    const minOut = out > 0n ? BigInt(Math.floor(Number(out) * (1 - slippageBps / 10_000))) : 0n;
+    const msg = {
+      typeUrl: "/retrochain.dex.v1.MsgSwapExactIn",
+      value: {
+        sender,
+        poolId: poolId,
+        denomIn,
+        amountIn,
+        denomOut,
+        minAmountOut: minOut.toString()
+      }
+    };
+    const fee = { amount: [{ denom: "uretro", amount: "8000" }], gas: "400000" };
+    return signAndBroadcast(chainId.value, [msg], fee, "");
+  };
+
+  const addLiquidity = async (pool: Pool, amountA: string, amountB: string, slippageBps = 100) => {
+    const sender = await ensureWallet();
+    const reserveA = BigInt(pool.reserve_a || "0");
+    const reserveB = BigInt(pool.reserve_b || "0");
+    const total = BigInt(pool.total_shares || "0");
+    let expectedShares = 0n;
+    if (total === 0n) {
+      expectedShares = BigInt(Math.floor(Math.sqrt(Number(BigInt(amountA) * BigInt(amountB)))));
+    } else {
+      const s1 = (BigInt(amountA) * total) / reserveA;
+      const s2 = (BigInt(amountB) * total) / reserveB;
+      expectedShares = s1 < s2 ? s1 : s2;
+    }
+    const minShares = expectedShares > 0n ? BigInt(Math.floor(Number(expectedShares) * (1 - slippageBps / 10_000))) : 0n;
+    const msg = {
+      typeUrl: "/retrochain.dex.v1.MsgAddLiquidity",
+      value: {
+        sender,
+        poolId: pool.id,
+        amountA,
+        amountB,
+        minShares: minShares.toString()
+      }
+    };
+    const fee = { amount: [{ denom: "uretro", amount: "8000" }], gas: "450000" };
+    return signAndBroadcast(chainId.value, [msg], fee, "");
+  };
+
+  const removeLiquidity = async (pool: Pool, shares: string, slippageBps = 100) => {
+    const sender = await ensureWallet();
+    const total = BigInt(pool.total_shares || "0");
+    if (total === 0n) throw new Error("Pool empty");
+    const reserveA = BigInt(pool.reserve_a || "0");
+    const reserveB = BigInt(pool.reserve_b || "0");
+    const sh = BigInt(shares);
+    const amtA = (reserveA * sh) / total;
+    const amtB = (reserveB * sh) / total;
+    const minA = amtA > 0n ? BigInt(Math.floor(Number(amtA) * (1 - slippageBps / 10_000))) : 0n;
+    const minB = amtB > 0n ? BigInt(Math.floor(Number(amtB) * (1 - slippageBps / 10_000))) : 0n;
+    const msg = {
+      typeUrl: "/retrochain.dex.v1.MsgRemoveLiquidity",
+      value: {
+        sender,
+        poolId: pool.id,
+        shares,
+        minAmountA: minA.toString(),
+        minAmountB: minB.toString()
+      }
+    };
+    const fee = { amount: [{ denom: "uretro", amount: "8000" }], gas: "450000" };
+    return signAndBroadcast(chainId.value, [msg], fee, "");
+  };
+
   // Fetch all liquidity pools
   const fetchPools = async () => {
     loading.value = true;
     error.value = null;
     try {
-      const res = await api.get("/dex/v1/pools");
-      pools.value = res.data?.pools || [];
+      const res = await api.get("/retrochain/dex/v1/pools");
+      pools.value = res.data?.pools || res.data?.pools_with_tvl || [];
       isModuleAvailable.value = true;
     } catch (e: any) {
       console.warn("DEX pools not available:", e?.message);
@@ -61,6 +154,18 @@ export function useDex() {
       markModuleUnavailable(e);
     } finally {
       loading.value = false;
+    }
+  };
+
+  const fetchParams = async () => {
+    try {
+      const res = await api.get("/retrochain/dex/v1/params");
+      params.value = res.data?.params || res.data || null;
+      isModuleAvailable.value = true;
+    } catch (e: any) {
+      console.warn("DEX params not available:", e?.message);
+      params.value = null;
+      markModuleUnavailable(e);
     }
   };
 
@@ -92,10 +197,24 @@ export function useDex() {
       } as SwapRoute;
     }
     try {
-      const res = await api.get("/dex/v1/simulate-swap", {
-        params: { token_in: tokenIn, token_out: tokenOut, amount_in: amountIn }
+      const pool = pools.value.find(
+        (p) =>
+          (p.denom_a === tokenIn && p.denom_b === tokenOut) ||
+          (p.denom_b === tokenIn && p.denom_a === tokenOut)
+      );
+      if (!pool) throw new Error("Pool not found");
+      const res = await api.get(`/retrochain/dex/v1/pools/${pool.id}/quote_exact_in`, {
+        params: { denom_in: tokenIn, amount_in: amountIn, denom_out: tokenOut }
       });
-      return res.data as SwapRoute;
+      const data = res.data || {};
+      return {
+        token_in: tokenIn,
+        token_out: tokenOut,
+        amount_in: amountIn,
+        amount_out: data.amount_out ?? "0",
+        price_impact: "",
+        route: [tokenIn, tokenOut]
+      } as SwapRoute;
     } catch (e: any) {
       console.warn("Swap simulation failed:", e?.message);
       markModuleUnavailable(e);
@@ -119,8 +238,11 @@ export function useDex() {
     loading.value = true;
     error.value = null;
     try {
-      const res = await api.get(`/dex/v1/liquidity/${addr}`);
-      userLiquidity.value = res.data?.positions || [];
+      // Bank balances for LP denoms
+      const res = await api.get(`/cosmos/bank/v1beta1/balances/${addr}`);
+      const balances = res.data?.balances || [];
+      const lpBalances = balances.filter((b: any) => typeof b?.denom === "string" && b.denom.startsWith("dex/"));
+      userLiquidity.value = lpBalances.map((b: any) => ({ lp_denom: b.denom, amount: b.amount }));
     } catch (e: any) {
       console.warn("User liquidity not available:", e?.message);
       userLiquidity.value = [];
@@ -146,18 +268,42 @@ export function useDex() {
     return (shares / total) * 100;
   };
 
+  const lpPositions = computed(() => {
+    if (!userLiquidity.value?.length || !pools.value?.length) return [] as any[];
+    return userLiquidity.value
+      .map((pos: any) => {
+        const pool = pools.value.find((p) => p.lp_denom === pos.lp_denom || `dex/${p.id}` === pos.lp_denom);
+        if (!pool) return null;
+        const shares = pos.amount;
+        const pct = calculateUserShare(pool, shares);
+        return {
+          pool,
+          shares,
+          percent: pct,
+          lp_denom: pos.lp_denom
+        };
+      })
+      .filter(Boolean);
+  });
+
   return {
     pools,
     orderBooks,
     userLiquidity,
+    lpPositions,
     loading,
     error,
     fetchPools,
+    fetchParams,
     fetchOrderBook,
     simulateSwap,
     fetchUserLiquidity,
     calculatePoolPrice,
     calculateUserShare,
-    isModuleAvailable
+    isModuleAvailable,
+    params,
+    swapExactIn,
+    addLiquidity,
+    removeLiquidity
   };
 }
