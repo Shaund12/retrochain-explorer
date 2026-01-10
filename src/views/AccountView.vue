@@ -357,6 +357,7 @@ interface DecoratedBalance {
   meta: TokenMeta;
   accent: AccentClasses;
   rawDenomDisplay: string | null;
+  rawDenomTitle: string | null;
 }
 
 const decoratedBalances = computed<DecoratedBalance[]>(() => {
@@ -395,7 +396,8 @@ const decoratedBalances = computed<DecoratedBalance[]>(() => {
         meta: adjustedMeta,
         accent: ACCENT_CLASS_MAP[adjustedMeta.accent] ?? ACCENT_CLASS_MAP.slate,
         usdValue,
-        rawDenomDisplay: isFactory ? shortFactoryPath(coin.denom) : coin.denom
+        rawDenomDisplay: isFactory ? shortFactoryPath(coin.denom) : coin.denom,
+        rawDenomTitle: isFactory ? coin.denom : null
       } as DecoratedBalance & { usdValue: number | null };
     })
     .sort((a, b) => b.rawAmount - a.rawAmount);
@@ -814,13 +816,19 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
                 </div>
                 <p class="text-xs text-slate-400">{{ bal.meta.name }}</p>
                 <p class="text-[11px] text-slate-500 font-mono">{{ bal.denomLabel }}</p>
-                <p v-if="bal.rawDenomDisplay" class="text-[10px] text-slate-600 font-mono break-all">{{ bal.rawDenomDisplay }}</p>
+                <p
+                  v-if="bal.rawDenomDisplay"
+                  class="text-[10px] text-slate-600 font-mono truncate max-w-[220px]"
+                  :title="bal.rawDenomTitle || bal.rawDenomDisplay"
+                >
+                  {{ bal.rawDenomDisplay }}
+                </p>
               </div>
             </div>
             <div class="mt-3 flex items-end justify-between gap-4">
               <div>
                 <div class="text-[10px] text-slate-500 uppercase tracking-widest">On-chain Amount</div>
-                <div class="font-mono text-sm text-slate-200">{{ bal.displayAmount }}</div>
+                <div class="font-mono text-sm text-slate-200 break-all">{{ bal.displayAmount }}</div>
                 <div v-if="bal.meta.description" class="text-[10px] text-slate-500 mt-1">
                   {{ bal.meta.description }}
                 </div>
