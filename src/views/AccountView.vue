@@ -786,7 +786,7 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
             <div class="mt-3 flex items-end justify-between gap-4">
               <div>
                 <div class="text-[10px] text-slate-500 uppercase tracking-widest">On-chain Amount</div>
-                <div class="font-mono text-sm text-slate-200">{{ bal.amount }}</div>
+                <div class="font-mono text-sm text-slate-200">{{ bal.displayAmount }}</div>
                 <div v-if="bal.meta.description" class="text-[10px] text-slate-500 mt-1">
                   {{ bal.meta.description }}
                 </div>
