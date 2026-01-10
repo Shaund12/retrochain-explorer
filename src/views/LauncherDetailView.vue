@@ -191,16 +191,29 @@ watch(() => route.params.denom, fetchDetail);
 const tokensSold = computed(() => formatToken(launch.value?.computed?.tokens_sold));
 const tokensRemaining = computed(() => formatToken(launch.value?.computed?.tokens_remaining));
 
+const buyQuoteError = ref<string | null>(null);
+
 const fetchBuyQuote = async () => {
   if (!denom.value || !buyAmountUretro.value) return;
   quotingBuy.value = true;
   buyQuote.value = null;
+  buyQuoteError.value = null;
   try {
     const res = await api.get(`/retrochain/launcher/v1/quote/buy`, {
       params: { denom: denom.value, amount_in_uretro: buyAmountUretro.value }
     });
+    // Some APIs may return an error payload with HTTP 200; guard for that.
+    if (res?.data?.message && res?.data?.code) {
+      buyQuoteError.value = res.data.message;
+      toast.showError(res.data.message);
+      buyQuote.value = null;
+      return;
+    }
     buyQuote.value = res.data;
-  } catch (e) {
+  } catch (e: any) {
+    const msg = e?.response?.data?.message || e?.message || "Failed to fetch buy quote";
+    buyQuoteError.value = msg;
+    toast.showError(msg);
     buyQuote.value = null;
   } finally {
     quotingBuy.value = false;
@@ -283,10 +296,18 @@ const slippageMultiplier = computed(() => Math.max(0, 1 - (Number(slippageBps.va
 
 const submitBuy = async () => {
   if (!denom.value) return;
+  if (buyQuoteError.value) {
+    toast.showError(buyQuoteError.value);
+    return;
+  }
   try {
     if (!address.value) await connect();
     if (!address.value) throw new Error("Connect wallet to buy");
     if (!buyQuote.value) await fetchBuyQuote();
+    if (buyQuoteError.value) {
+      toast.showError(buyQuoteError.value);
+      return;
+    }
     const amtOut = BigInt(buyQuote.value?.amount_out || 0n);
     const minOut = amtOut > 0n ? BigInt(Math.floor(Number(amtOut) * slippageMultiplier.value)) : 0n;
     const msg = {
@@ -505,8 +526,11 @@ const chartData = computed(() => {
                 <div class="text-slate-400">Spot</div>
                 <div class="font-semibold">{{ formatRetro(buyQuote?.spot_price_uretro_per_token) }}</div>
               </div>
+              <div v-if="buyQuoteError" class="p-2 rounded-lg bg-rose-500/10 border border-rose-400/30 col-span-2 text-rose-100">
+                {{ buyQuoteError }}
+              </div>
             </div>
-            <button class="btn btn-primary w-full" :disabled="quotingBuy || !buyAmountRetro" @click="submitBuy">Buy</button>
+            <button class="btn btn-primary w-full" :disabled="quotingBuy || !buyAmountRetro || !!buyQuoteError" @click="submitBuy">Buy</button>
           </div>
 
           <div class="p-4 rounded-xl border border-rose-400/50 bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-slate-900/50 shadow-lg shadow-rose-500/10 space-y-3">
