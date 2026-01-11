@@ -101,6 +101,12 @@ const atomicToDisplay = (val: string | undefined, denom: string) => {
   return formatAtomicToDisplay(val, denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false });
 };
 
+const balanceOf = (denom?: string) => {
+  if (!denom) return "0";
+  const map = userBalances.value || {};
+  return map[denom] || "0";
+};
+
 const poolChartsOpen = ref<Record<string, boolean>>({});
 const priceHistory = ref<Record<string, number[]>>({});
 const togglePoolChart = (id: string) => {
@@ -296,11 +302,11 @@ const submitRemove = async () => {
 
 const selectedPool = computed(() => pools.value.find((p) => p.id === selectedPoolId.value) || null);
 
-const tokenInBalance = computed(() => atomicToDisplay((userBalances.value || {})[tokenIn.value], tokenIn.value || ""));
-const tokenOutBalance = computed(() => atomicToDisplay((userBalances.value || {})[tokenOut.value], tokenOut.value || ""));
+const tokenInBalance = computed(() => atomicToDisplay(balanceOf(tokenIn.value), tokenIn.value || ""));
+const tokenOutBalance = computed(() => atomicToDisplay(balanceOf(tokenOut.value), tokenOut.value || ""));
 
 const selectedLpDenom = computed(() => selectedPool.value?.lp_denom || (selectedPool.value ? `dex/${selectedPool.value.id}` : ""));
-const selectedLpBalanceAtomic = computed(() => (selectedLpDenom.value ? (userBalances.value || {})[selectedLpDenom.value] || "0" : "0"));
+const selectedLpBalanceAtomic = computed(() => (selectedLpDenom.value ? balanceOf(selectedLpDenom.value) : "0"));
 const selectedLpBalanceDisplay = computed(() =>
   selectedLpDenom.value ? atomicToDisplay(selectedLpBalanceAtomic.value, selectedLpDenom.value) : "0"
 );
@@ -480,7 +486,7 @@ watch(lpPositions, (positions) => {
                 placeholder="amount_a"
                 @input="lastEditedSide = 'A'; syncAddLiquidityRatio()"
               />
-              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances.value[selectedPool?.denom_a || ''], selectedPool?.denom_a || '') }} {{ displayDenom(selectedPool?.denom_a) }}</div>
+              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(balanceOf(selectedPool?.denom_a || ''), selectedPool?.denom_a || '') }} {{ displayDenom(selectedPool?.denom_a) }}</div>
             </div>
             <div class="space-y-2">
               <label class="text-[11px] text-slate-400">Amount {{ displayDenom(selectedPool?.denom_b) }}</label>
@@ -490,7 +496,7 @@ watch(lpPositions, (positions) => {
                 placeholder="amount_b"
                 @input="lastEditedSide = 'B'; syncAddLiquidityRatio()"
               />
-              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances.value[selectedPool?.denom_b || ''], selectedPool?.denom_b || '') }} {{ displayDenom(selectedPool?.denom_b) }}</div>
+              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(balanceOf(selectedPool?.denom_b || ''), selectedPool?.denom_b || '') }} {{ displayDenom(selectedPool?.denom_b) }}</div>
             </div>
             <button class="btn btn-primary w-full" :disabled="!selectedPool" @click="submitAdd">Add liquidity</button>
             <div class="text-[11px] text-slate-400">You own: {{ selectedLpBalanceDisplay }} LP</div>
@@ -507,7 +513,7 @@ watch(lpPositions, (positions) => {
             <div class="space-y-2">
               <label class="text-[11px] text-slate-400">Shares (LP)</label>
               <input v-model="removeShares" class="input" placeholder="LP shares" />
-              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances.value[selectedPool?.lp_denom || `dex/${selectedPool?.id}`], selectedPool?.lp_denom || `dex/${selectedPool?.id}`) }} {{ selectedPool?.lp_denom || `dex/${selectedPool?.id}` }}</div>
+              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(balanceOf(selectedPool?.lp_denom || `dex/${selectedPool?.id}`), selectedPool?.lp_denom || `dex/${selectedPool?.id}`) }} {{ selectedPool?.lp_denom || `dex/${selectedPool?.id}` }}</div>
               <div class="text-[11px] text-slate-400" v-if="burnEstimate">Est. out (for this burn): {{ burnEstimate.a }} {{ displayDenom(selectedPool?.denom_a) }} / {{ burnEstimate.b }} {{ displayDenom(selectedPool?.denom_b) }}</div>
               <div class="text-[11px] text-slate-400">Underlying est: {{ selectedUnderlying.a }} {{ displayDenom(selectedPool?.denom_a) }} / {{ selectedUnderlying.b }} {{ displayDenom(selectedPool?.denom_b) }}</div>
             </div>
