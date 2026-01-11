@@ -28,20 +28,55 @@ const endpoints: Endpoint[] = [
 const testResults = ref<Record<string, TestResult>>({});
 const testing = ref(false);
 const lastRun = ref<number | null>(null);
+const running = ref<Record<string, boolean>>({});
+const copied = ref<Record<string, string>>({});
 
 const formatDuration = (ms: number) => `${ms.toFixed(0)} ms`;
 const formatTime = (ts: number) => new Date(ts).toLocaleTimeString();
+const formatBytes = (bytes: number) => {
+  if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
+  if (bytes < 1024) return `${bytes.toFixed(0)} B`;
+  if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
+  return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
+};
+const responseSize = (data: any) => {
+  try {
+    return JSON.stringify(data).length;
+  } catch {
+    return 0;
+  }
+};
+const previewKeys = (data: any) => {
+  if (!data || typeof data !== "object") return "";
+  const keys = Array.isArray(data) ? Object.keys(data[0] || {}) : Object.keys(data);
+  return keys.slice(0, 5).join(", ");
+};
+const copyJson = async (key: string, payload: any) => {
+  if (!payload || typeof navigator === "undefined" || !navigator.clipboard?.writeText) return;
+  try {
+    await navigator.clipboard.writeText(JSON.stringify(payload, null, 2));
+    copied.value = { ...copied.value, [key]: "copied" };
+  } catch (e) {
+    copied.value = { ...copied.value, [key]: "failed" };
+  }
+  setTimeout(() => {
+    copied.value = { ...copied.value, [key]: "" };
+  }, 1200);
+};
 
 const summary = computed(() => {
   const values = Object.values(testResults.value);
   const success = values.filter((v) => v.status === "success").length;
   const failed = values.filter((v) => v.status === "failed").length;
-  return { success, failed, total: values.length };
+  const avgMs = values.length ? values.reduce((acc, v) => acc + v.durationMs, 0) / values.length : 0;
+  const successRate = values.length ? Math.round((success / values.length) * 100) : 0;
+  return { success, failed, total: values.length, avgMs, successRate };
 });
 
 const testEndpoint = async (name: string, url: string) => {
   const started = performance.now();
   const timestamp = Date.now();
+  running.value = { ...running.value, [name]: true };
   try {
     const res = await api.get(url);
     const durationMs = performance.now() - started;
@@ -70,6 +105,11 @@ const testEndpoint = async (name: string, url: string) => {
       }
     };
   }
+  running.value = { ...running.value, [name]: false };
+};
+
+const rerunEndpoint = async (ep: Endpoint) => {
+  await testEndpoint(ep.name, ep.url);
 };
 
 const runTests = async () => {
@@ -105,6 +145,8 @@ onMounted(() => {
           <div class="flex gap-2 text-[11px] text-slate-300">
             <span class="px-2 py-1 rounded-full bg-emerald-500/10 border border-emerald-400/40 text-emerald-200">Success: {{ summary.success }}</span>
             <span class="px-2 py-1 rounded-full bg-rose-500/10 border border-rose-400/40 text-rose-200">Failed: {{ summary.failed }}</span>
+            <span class="px-2 py-1 rounded-full bg-slate-500/10 border border-white/10 text-slate-200">Avg: {{ formatDuration(summary.avgMs) }}</span>
+            <span class="px-2 py-1 rounded-full bg-indigo-500/10 border border-indigo-400/40 text-indigo-100">Pass rate: {{ summary.successRate }}%</span>
           </div>
         </div>
       </div>
