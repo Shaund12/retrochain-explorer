@@ -48,7 +48,16 @@ export function useAccounts() {
       return true;
     });
 
-    const preferred = sanitized.find((b: any) => b.denom === "uretro") || sanitized[0] || balances.find((b: any) => b.denom === "uretro") || balances[0];
+    // If nothing non-factory remains, fall back to zero uretro to avoid showing factory denoms on Accounts
+    if (!sanitized.length) {
+      const retro = balances.find((b: any) => b.denom === "uretro");
+      if (retro) {
+        return { denom: "uretro", amount: retro.amount ?? "0" };
+      }
+      return { denom: "uretro", amount: "0" };
+    }
+
+    const preferred = sanitized.find((b: any) => b.denom === "uretro") || sanitized[0];
 
     return {
       denom: preferred?.denom ?? "uretro",
