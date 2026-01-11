@@ -5,7 +5,7 @@
     import { useStaking } from "@/composables/useStaking";
     import { useValidators } from "@/composables/useValidators";
     import { useNetwork } from "@/composables/useNetwork";
-    import { formatAmount } from "@/utils/format";
+    import { formatAmount, getDenomMeta } from "@/utils/format";
     import { useToast } from "@/composables/useToast";
     import { useAccount } from "@/composables/useAccount";
     import { useApi } from "@/composables/useApi";
@@ -90,6 +90,10 @@
         return Array.from(map.entries()).map(([denom, amount]) => ({ denom, amount }));
     });
 
+    const factoryRewardTotals = computed(() =>
+        rewardsTotalByDenom.value.filter((t: any) => t.denom !== tokenDenom.value && parseFloat(t.amount || "0") > 0)
+    );
+
     const formattedRewards = computed(() =>
         rewards.value.map((r: any) => ({
             validator_address: r.validator_address,
@@ -100,11 +104,11 @@
         }))
     );
 
-    const rewardsTotalPages = computed(() => Math.max(1, Math.ceil((rewardsTotalByDenom.value.length || 0) / rewardsPageSize)));
+    const rewardsTotalPages = computed(() => Math.max(1, Math.ceil((factoryRewardTotals.value.length || 0) / rewardsPageSize)));
 
     const paginatedRewardsTotals = computed(() => {
         const start = (rewardsPage.value - 1) * rewardsPageSize;
-        return rewardsTotalByDenom.value.slice(start, start + rewardsPageSize);
+        return factoryRewardTotals.value.slice(start, start + rewardsPageSize);
     });
 
     const totalUnbonding = computed(() => {
@@ -294,7 +298,7 @@
         }
     );
 
-    watch(rewardsTotalByDenom, () => {
+    watch(factoryRewardTotals, () => {
         if (rewardsPage.value > rewardsTotalPages.value) {
             rewardsPage.value = rewardsTotalPages.value;
         }
@@ -515,8 +519,8 @@
                     </div>
                 </div>
 
-                <!-- Pending Reward Tokens (all denoms) -->
-                <div v-if="rewardsTotalByDenom.length" class="mb-4 p-4 rounded-2xl bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 border border-emerald-500/30 shadow-lg">
+                <!-- Pending Reward Tokens (factory-only) -->
+                <div v-if="factoryRewardTotals.length" class="mb-4 p-4 rounded-2xl bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 border border-emerald-500/30 shadow-lg">
                     <div class="flex items-center justify-between mb-3">
                         <div>
                             <h2 class="text-sm font-semibold text-emerald-200">Pending Reward Tokens</h2>
@@ -535,11 +539,15 @@
                         </div>
                     </div>
                     <div class="grid sm:grid-cols-2 gap-2">
-                        <div v-for="t in paginatedRewardsTotals" :key="t.denom" class="p-3 rounded-lg bg-slate-800/60 border border-emerald-500/20 flex items-center justify-between">
-                            <div class="text-[11px] text-slate-300 break-words">{{ t.denom }}</div>
-                            <div class="text-sm font-semibold text-emerald-200 text-right">
-                                {{ formatAmount(t.amount, t.denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false }) }}
+                        <div v-for="t in paginatedRewardsTotals" :key="t.denom" class="p-3 rounded-lg bg-slate-800/60 border border-emerald-500/20">
+                            <div class="flex items-center justify-between gap-2">
+                                <div class="text-[12px] font-semibold text-emerald-200">{{ getDenomMeta(t.denom).display }}</div>
+                                <div class="text-sm font-semibold text-emerald-200 text-right">
+                                    {{ formatAmount(t.amount, t.denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false }) }}
+                                </div>
                             </div>
+                            <div class="text-[11px] text-slate-400">Decimals: {{ getDenomMeta(t.denom).decimals }}</div>
+                            <div class="text-[10px] text-slate-500 break-words">Denom: {{ t.denom }}</div>
                         </div>
                     </div>
                 </div>
@@ -888,15 +896,18 @@
         <div v-if="address && activeTab === 'rewards'" class="card">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-sm font-semibold text-slate-100">Rewards Summary</h2>
-                <button v-if="rewardsTotalByDenom.length" class="btn btn-primary text-xs" @click="handleClaimRewards()" :disabled="txLoading">
+                <button v-if="factoryRewardTotals.length" class="btn btn-primary text-xs" @click="handleClaimRewards()" :disabled="txLoading">
                     {{ txLoading ? "Claiming..." : "Claim All Rewards" }}
                 </button>
             </div>
 
-            <div v-if="rewardsTotalByDenom.length" class="mb-4 p-3 rounded-lg bg-slate-900/50 border border-emerald-500/20 text-[12px] text-slate-200 grid sm:grid-cols-2 gap-2">
-                <div v-for="t in rewardsTotalByDenom" :key="t.denom" class="flex items-center justify-between bg-slate-800/50 rounded-lg px-3 py-2 border border-emerald-500/10">
-                    <span class="text-slate-400">{{ t.denom }}</span>
-                    <span class="font-semibold text-emerald-200">{{ formatAmount(t.amount, t.denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false }) }}</span>
+            <div v-if="factoryRewardTotals.length" class="mb-4 p-3 rounded-lg bg-slate-900/50 border border-emerald-500/20 text-[12px] text-slate-200 grid sm:grid-cols-2 gap-2">
+                <div v-for="t in factoryRewardTotals" :key="t.denom" class="flex flex-col gap-1 bg-slate-800/50 rounded-lg px-3 py-2 border border-emerald-500/10">
+                    <div class="flex items-center justify-between">
+                        <span class="text-slate-300 font-semibold">{{ getDenomMeta(t.denom).display }}</span>
+                        <span class="font-semibold text-emerald-200">{{ formatAmount(t.amount, t.denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false }) }}</span>
+                    </div>
+                    <div class="text-[11px] text-slate-500">Denom: {{ t.denom }} • Decimals: {{ getDenomMeta(t.denom).decimals }}</div>
                 </div>
             </div>
 
