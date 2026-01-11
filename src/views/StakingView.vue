@@ -6,6 +6,7 @@
     import { useValidators } from "@/composables/useValidators";
     import { useNetwork } from "@/composables/useNetwork";
     import { formatAmount, getDenomMeta } from "@/utils/format";
+    import { useAssets } from "@/composables/useAssets";
     import { useToast } from "@/composables/useToast";
     import { useAccount } from "@/composables/useAccount";
     import { useApi } from "@/composables/useApi";
@@ -43,6 +44,8 @@
     const txLoading = ref(false);
     const validatorSearch = ref("");
     const showInactive = ref(false);
+
+    const { bankTokens, loading: assetsLoading, fetchAssets } = useAssets();
 
     const rewardsPage = ref(1);
     const rewardsPageSize = 4;
@@ -93,6 +96,20 @@
     const factoryRewardTotals = computed(() =>
         rewardsTotalByDenom.value.filter((t: any) => t.denom !== tokenDenom.value && parseFloat(t.amount || "0") > 0)
     );
+
+    const findAssetByDenom = (denom: string) => bankTokens.value.find((t: any) => t.denom === denom) || null;
+
+    const tokenModalOpen = ref(false);
+    const tokenModalAsset = ref<any | null>(null);
+    const openTokenModal = (denom: string) => {
+        const asset = findAssetByDenom(denom);
+        tokenModalAsset.value = asset ? asset : { denom, tokenMeta: { symbol: getDenomMeta(denom).display } };
+        tokenModalOpen.value = true;
+    };
+    const closeTokenModal = () => {
+        tokenModalOpen.value = false;
+        tokenModalAsset.value = null;
+    };
 
     const formattedRewards = computed(() =>
         rewards.value.map((r: any) => ({
@@ -271,6 +288,8 @@
         await fetchValidators();
         await fetchNetworkStats();
         fetchDelegatorLeaderboard();
+
+        fetchAssets();
 
         fetchStakingRewardsVaultBalance();
         vaultTimer = window.setInterval(() => {
@@ -497,6 +516,47 @@
                                 <span class="w-2 h-2 rounded-full bg-emerald-300 animate-pulse"></span>
                                 Live Staking Rewards Vault
                             </div>
+
+    <!-- Token detail modal -->
+    <div
+      v-if="tokenModalOpen && tokenModalAsset"
+      class="fixed inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-sm"
+      @click.self="closeTokenModal"
+    >
+      <div class="card w-full max-w-xl">
+        <div class="flex items-start justify-between mb-3">
+          <div>
+            <div class="text-[11px] uppercase tracking-wider text-slate-500">Token Detail</div>
+            <div class="text-xl font-bold text-white">{{ tokenModalAsset.tokenMeta?.symbol || getDenomMeta(tokenModalAsset.denom || "").display }}</div>
+            <div class="text-xs text-slate-400 break-words">{{ tokenModalAsset.denom }}</div>
+          </div>
+          <button class="btn text-xs" @click="closeTokenModal">✖ Close</button>
+        </div>
+
+        <div class="grid gap-2 text-sm text-slate-200">
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
+            <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Symbol / Name</div>
+            <div class="font-semibold">{{ tokenModalAsset.tokenMeta?.symbol || getDenomMeta(tokenModalAsset.denom || "").display }}</div>
+            <div class="text-xs text-slate-400">{{ tokenModalAsset.tokenMeta?.name || tokenModalAsset.metadata?.name || tokenModalAsset.denom }}</div>
+          </div>
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
+            <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Decimals</div>
+            <div class="font-semibold">{{ tokenModalAsset.decimals ?? getDenomMeta(tokenModalAsset.denom || "").decimals }}</div>
+          </div>
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
+            <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Description</div>
+            <div class="text-xs text-slate-300">
+              {{ tokenModalAsset.tokenMeta?.description || tokenModalAsset.metadata?.description || 'No description available.' }}
+            </div>
+          </div>
+        </div>
+
+        <div class="mt-3 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-xs text-slate-400">
+          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Raw denom</div>
+          <code class="break-words">{{ tokenModalAsset.denom }}</code>
+        </div>
+      </div>
+    </div>
                             <div class="flex items-center gap-2 text-lg font-semibold text-white">
                                 <span>🏦</span>
                                 <span>Vault Balance</span>
@@ -539,7 +599,13 @@
                         </div>
                     </div>
                     <div class="grid sm:grid-cols-2 gap-2">
-                        <div v-for="t in paginatedRewardsTotals" :key="t.denom" class="p-3 rounded-lg bg-slate-800/60 border border-emerald-500/20">
+                        <button
+                          v-for="t in paginatedRewardsTotals"
+                          :key="t.denom"
+                          class="p-3 rounded-lg bg-slate-800/60 border border-emerald-500/20 w-full text-left hover:border-emerald-300/50 transition"
+                          type="button"
+                          @click="openTokenModal(t.denom)"
+                        >
                             <div class="flex items-center justify-between gap-2">
                                 <div class="text-[12px] font-semibold text-emerald-200">{{ getDenomMeta(t.denom).display }}</div>
                                 <div class="text-sm font-semibold text-emerald-200 text-right">
@@ -548,7 +614,7 @@
                             </div>
                             <div class="text-[11px] text-slate-400">Decimals: {{ getDenomMeta(t.denom).decimals }}</div>
                             <div class="text-[10px] text-slate-500 break-words">Denom: {{ t.denom }}</div>
-                        </div>
+                        </button>
                     </div>
                 </div>
 
@@ -902,13 +968,19 @@
             </div>
 
             <div v-if="factoryRewardTotals.length" class="mb-4 p-3 rounded-lg bg-slate-900/50 border border-emerald-500/20 text-[12px] text-slate-200 grid sm:grid-cols-2 gap-2">
-                <div v-for="t in factoryRewardTotals" :key="t.denom" class="flex flex-col gap-1 bg-slate-800/50 rounded-lg px-3 py-2 border border-emerald-500/10">
+                <button
+                  v-for="t in factoryRewardTotals"
+                  :key="t.denom"
+                  class="flex flex-col gap-1 bg-slate-800/50 rounded-lg px-3 py-2 border border-emerald-500/10 text-left hover:border-emerald-300/50 transition"
+                  type="button"
+                  @click="openTokenModal(t.denom)"
+                >
                     <div class="flex items-center justify-between">
                         <span class="text-slate-300 font-semibold">{{ getDenomMeta(t.denom).display }}</span>
                         <span class="font-semibold text-emerald-200">{{ formatAmount(t.amount, t.denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false }) }}</span>
                     </div>
                     <div class="text-[11px] text-slate-500">Denom: {{ t.denom }} • Decimals: {{ getDenomMeta(t.denom).decimals }}</div>
-                </div>
+                </button>
             </div>
 
             <div v-if="rewards.length === 0" class="text-xs text-slate-400 text-center py-8">
