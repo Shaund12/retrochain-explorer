@@ -79,6 +79,7 @@ const fmtAmount = (amount: string | number | null | undefined, denom: string) =>
 };
 
 const getDecimals = (denom: string) => getDenomMeta(denom).decimals;
+const displayDenom = (denom?: string) => (denom ? getDenomMeta(denom).display : "—");
 
 const displayToAtomic = (val: string, denom: string) => {
   const decimals = getDecimals(denom);
@@ -233,7 +234,7 @@ const validateAddLiquidityAmounts = (pool: Pool | null) => {
   const diff = expectedB > b ? expectedB - b : b - expectedB;
   if (diff > tolerance) {
     toast.showError(
-      `Pool ratio locked. For ${a} ${pool.denom_a}, provide ~${expectedB} ${pool.denom_b} (±${slippageBps.value} bps).`
+      `Pool ratio locked. For ${a} ${displayDenom(pool.denom_a)}, provide ~${expectedB} ${displayDenom(pool.denom_b)} (±${slippageBps.value} bps).`
     );
     return false;
   }
@@ -409,7 +410,7 @@ watch(lpPositions, (positions) => {
             <div class="flex items-center gap-2 text-xs text-slate-300">
               <label class="text-slate-400">Pool</label>
               <select v-model="selectedPoolId" class="input text-xs w-40">
-                <option v-for="p in pools" :key="p.id" :value="p.id">Pool #{{ p.id }} — {{ p.denom_a }} / {{ p.denom_b }}</option>
+                <option v-for="p in pools" :key="p.id" :value="p.id">Pool #{{ p.id }} — {{ displayDenom(p.denom_a) }} / {{ displayDenom(p.denom_b) }}</option>
               </select>
               <label class="text-slate-400">Slippage (bps)</label>
               <input v-model.number="slippageBps" type="number" min="1" max="3000" class="input w-20" />
@@ -420,13 +421,13 @@ watch(lpPositions, (positions) => {
             <div class="space-y-2">
               <label class="text-xs text-slate-400">Token In</label>
               <select v-model="tokenIn" class="input w-full">
-                <option v-for="t in tokenOptions" :key="`in-${t}`" :value="t">{{ t }}</option>
+                <option v-for="t in tokenOptions" :key="`in-${t}`" :value="t">{{ displayDenom(t) }}</option>
               </select>
             </div>
             <div class="space-y-2">
               <label class="text-xs text-slate-400">Token Out</label>
               <select v-model="tokenOut" class="input w-full">
-                <option v-for="t in tokenOptions" :key="`out-${t}`" :value="t">{{ t }}</option>
+                <option v-for="t in tokenOptions" :key="`out-${t}`" :value="t">{{ displayDenom(t) }}</option>
               </select>
             </div>
             <div class="space-y-2 md:col-span-2">
@@ -439,7 +440,7 @@ watch(lpPositions, (positions) => {
                   <button class="btn-secondary px-3" type="button" @click="amountIn = tokenInBalance || '0'">Max</button>
                 </div>
               </div>
-              <div class="text-[11px] text-slate-400">Balance: {{ tokenInBalance }}</div>
+              <div class="text-[11px] text-slate-400">Balance: {{ tokenInBalance }} {{ displayDenom(tokenIn) }}</div>
             </div>
             <div class="md:col-span-2 flex items-center gap-3">
               <button class="btn" :disabled="swapLoading || loading" @click="runSimulation">Quote</button>
@@ -453,7 +454,7 @@ watch(lpPositions, (positions) => {
               <span>{{ fmtAmount(simulation.amount_in, simulation.token_in) }} → {{ fmtAmount(simulation.amount_out, simulation.token_out) }}</span>
               <span class="text-emerald-300 text-xs">Swap fee {{ params?.swap_fee_bps ?? '—' }} bps</span>
             </div>
-            <div class="mt-2 text-xs text-slate-400">Route: {{ simulation.route.join(" → ") }}</div>
+            <div class="mt-2 text-xs text-slate-400">Route: {{ simulation.route.map(step => displayDenom(step)).join(" → ") }}</div>
             <div class="mt-1 text-xs text-amber-200">
               Min out @ slippage {{ slippageBps }} bps ≈
               {{ simulation.amount_out ? fmtAmount(Math.floor(Number(simulation.amount_out) * (1 - slippageBps / 10000)), simulation.token_out) : '-' }}
@@ -466,29 +467,29 @@ watch(lpPositions, (positions) => {
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-sm font-semibold text-white">Add Liquidity</h3>
-                <p class="text-[11px] text-slate-400">Uses pool canonical order (denom_a / denom_b)</p>
+                <p class="text-[11px] text-slate-400">Uses pool canonical order ({{ displayDenom(selectedPool?.denom_a) }} / {{ displayDenom(selectedPool?.denom_b) }})</p>
               </div>
               <span class="badge text-[11px] border-emerald-400/50 text-emerald-200">Pool #{{ selectedPool?.id || '—' }}</span>
             </div>
             <div class="space-y-2">
-              <label class="text-[11px] text-slate-400">Amount {{ selectedPool?.denom_a || 'denom_a' }}</label>
+              <label class="text-[11px] text-slate-400">Amount {{ displayDenom(selectedPool?.denom_a) }}</label>
               <input
                 v-model="addAmountA"
                 class="input"
                 placeholder="amount_a"
                 @input="lastEditedSide = 'A'; syncAddLiquidityRatio()"
               />
-              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.denom_a || ''], selectedPool?.denom_a || '') }}</div>
+              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.denom_a || ''], selectedPool?.denom_a || '') }} {{ displayDenom(selectedPool?.denom_a) }}</div>
             </div>
             <div class="space-y-2">
-              <label class="text-[11px] text-slate-400">Amount {{ selectedPool?.denom_b || 'denom_b' }}</label>
+              <label class="text-[11px] text-slate-400">Amount {{ displayDenom(selectedPool?.denom_b) }}</label>
               <input
                 v-model="addAmountB"
                 class="input"
                 placeholder="amount_b"
                 @input="lastEditedSide = 'B'; syncAddLiquidityRatio()"
               />
-              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.denom_b || ''], selectedPool?.denom_b || '') }}</div>
+              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.denom_b || ''], selectedPool?.denom_b || '') }} {{ displayDenom(selectedPool?.denom_b) }}</div>
             </div>
             <button class="btn btn-primary w-full" :disabled="!selectedPool" @click="submitAdd">Add liquidity</button>
             <div class="text-[11px] text-slate-400">You own: {{ selectedLpBalanceDisplay }} LP</div>
@@ -498,16 +499,16 @@ watch(lpPositions, (positions) => {
             <div class="flex items-center justify-between">
               <div>
                 <h3 class="text-sm font-semibold text-white">Remove Liquidity</h3>
-                <p class="text-[11px] text-slate-400">Outputs match pool order (denom_a / denom_b)</p>
+                <p class="text-[11px] text-slate-400">Outputs match pool order ({{ displayDenom(selectedPool?.denom_a) }} / {{ displayDenom(selectedPool?.denom_b) }})</p>
               </div>
               <span class="badge text-[11px] border-rose-400/50 text-rose-200">LP: {{ selectedPool?.lp_denom || 'dex/<id>' }}</span>
             </div>
             <div class="space-y-2">
               <label class="text-[11px] text-slate-400">Shares (LP)</label>
               <input v-model="removeShares" class="input" placeholder="LP shares" />
-              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.lp_denom || `dex/${selectedPool?.id}`], selectedPool?.lp_denom || `dex/${selectedPool?.id}`) }}</div>
-              <div class="text-[11px] text-slate-400" v-if="burnEstimate">Est. out (for this burn): {{ burnEstimate.a }} / {{ burnEstimate.b }}</div>
-              <div class="text-[11px] text-slate-400">Underlying est: {{ selectedUnderlying.a }} / {{ selectedUnderlying.b }}</div>
+              <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(userBalances[selectedPool?.lp_denom || `dex/${selectedPool?.id}`], selectedPool?.lp_denom || `dex/${selectedPool?.id}`) }} {{ selectedPool?.lp_denom || `dex/${selectedPool?.id}` }}</div>
+              <div class="text-[11px] text-slate-400" v-if="burnEstimate">Est. out (for this burn): {{ burnEstimate.a }} {{ displayDenom(selectedPool?.denom_a) }} / {{ burnEstimate.b }} {{ displayDenom(selectedPool?.denom_b) }}</div>
+              <div class="text-[11px] text-slate-400">Underlying est: {{ selectedUnderlying.a }} {{ displayDenom(selectedPool?.denom_a) }} / {{ selectedUnderlying.b }} {{ displayDenom(selectedPool?.denom_b) }}</div>
             </div>
             <button class="btn w-full" :disabled="!selectedPool" @click="submitRemove">Remove liquidity</button>
             <div class="text-[11px] text-slate-400">Slippage protection: {{ slippageBps }} bps</div>
@@ -523,8 +524,8 @@ watch(lpPositions, (positions) => {
         <div v-else-if="!lpPositions.length" class="text-sm text-slate-400">No LP balances found.</div>
         <div v-else class="space-y-3">
           <div v-for="pos in lpPositions" :key="pos.lp_denom" class="p-3 rounded-lg bg-white/5 border border-white/10">
-            <div class="text-sm text-white font-semibold">Pool #{{ pos.pool.id }} — {{ pos.pool.denom_a }} / {{ pos.pool.denom_b }}</div>
-            <div class="text-xs text-slate-400 mt-1">Shares: {{ atomicToDisplay(pos.shares, pos.lp_denom) }}</div>
+            <div class="text-sm text-white font-semibold">Pool #{{ pos.pool.id }} — {{ displayDenom(pos.pool.denom_a) }} / {{ displayDenom(pos.pool.denom_b) }}</div>
+            <div class="text-xs text-slate-400 mt-1">Shares: {{ atomicToDisplay(pos.shares, pos.lp_denom) }} {{ pos.lp_denom }}</div>
             <div class="text-xs text-emerald-300 mt-1">~{{ pos.percent.toFixed(4) }}% of pool</div>
             <div class="text-[11px] text-slate-500">LP denom: {{ pos.lp_denom }}</div>
           </div>
@@ -549,18 +550,18 @@ watch(lpPositions, (positions) => {
               <span class="text-xs text-emerald-300 truncate" :title="pool.lp_denom || `dex/${pool.id}`">LP: {{ pool.lp_denom || `dex/${pool.id}` }}</span>
             </div>
           </div>
-          <div class="mt-2 text-xs text-slate-300 break-words">{{ pool.denom_a }} / {{ pool.denom_b }}</div>
+          <div class="mt-2 text-xs text-slate-300 break-words">{{ displayDenom(pool.denom_a) }} / {{ displayDenom(pool.denom_b) }}</div>
           <div class="mt-2 grid grid-cols-2 gap-2 text-xs text-slate-400">
             <div>
-              <div class="text-slate-500">Reserve A</div>
+              <div class="text-slate-500">Reserve {{ displayDenom(pool.denom_a) }}</div>
               <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_a, pool.denom_a) }}</div>
             </div>
             <div>
-              <div class="text-slate-500">Reserve B</div>
+              <div class="text-slate-500">Reserve {{ displayDenom(pool.denom_b) }}</div>
               <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_b, pool.denom_b) }}</div>
             </div>
           </div>
-          <div class="mt-3 text-xs text-emerald-300">Price: 1 {{ pool.denom_a }} ≈ {{ calculatePoolPrice(pool) }} {{ pool.denom_b }}</div>
+          <div class="mt-3 text-xs text-emerald-300">Price: 1 {{ displayDenom(pool.denom_a) }} ≈ {{ calculatePoolPrice(pool) }} {{ displayDenom(pool.denom_b) }}</div>
 
           <div v-if="poolChartsOpen[pool.id]" class="mt-4 space-y-3 border-t border-white/10 pt-3">
             <div class="text-[11px] uppercase tracking-[0.15em] text-slate-400">Composition</div>
@@ -569,13 +570,13 @@ watch(lpPositions, (positions) => {
               <div class="bg-cyan-400/70" :style="{ width: poolComposition(pool).bPct + '%' }"></div>
             </div>
             <div class="flex justify-between text-[11px] text-slate-400">
-              <span>{{ poolComposition(pool).aPct }}% {{ pool.denom_a }}</span>
-              <span>{{ poolComposition(pool).bPct }}% {{ pool.denom_b }}</span>
+              <span>{{ poolComposition(pool).aPct }}% {{ displayDenom(pool.denom_a) }}</span>
+              <span>{{ poolComposition(pool).bPct }}% {{ displayDenom(pool.denom_b) }}</span>
             </div>
 
-            <div class="text-[11px] uppercase tracking-[0.15em] text-slate-400">Impact preview (1% in {{ pool.denom_a }})</div>
+            <div class="text-[11px] uppercase tracking-[0.15em] text-slate-400">Impact preview (1% in {{ displayDenom(pool.denom_a) }})</div>
             <div class="text-xs text-slate-200" v-if="poolImpactPreview(pool)">
-              ~{{ poolImpactPreview(pool)?.in }} → {{ poolImpactPreview(pool)?.out }}
+              ~{{ poolImpactPreview(pool)?.in }} {{ displayDenom(pool.denom_a) }} → {{ poolImpactPreview(pool)?.out }} {{ displayDenom(pool.denom_b) }}
             </div>
             <div class="text-xs text-slate-500" v-else>Not enough depth to preview.</div>
 
@@ -590,7 +591,7 @@ watch(lpPositions, (positions) => {
                 </linearGradient>
               </defs>
             </svg>
-            <div class="text-[11px] text-slate-400">Last price: {{ calculatePoolPrice(pool) }} {{ pool.denom_b }} per {{ pool.denom_a }}</div>
+            <div class="text-[11px] text-slate-400">Last price: {{ calculatePoolPrice(pool) }} {{ displayDenom(pool.denom_b) }} per {{ displayDenom(pool.denom_a) }}</div>
           </div>
         </div>
       </div>
