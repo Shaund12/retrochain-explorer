@@ -24,14 +24,17 @@ if (WBTC_ON_COSMOS) {
 }
 
 export function getDenomMeta(denom: string): DenomMeta {
-  if (denom.startsWith("dex/")) {
-    return { display: denom.toUpperCase(), decimals: 0 }; // LP shares are integer units
+  const d = denom || "";
+  const lc = d.toLowerCase();
+  if (lc.startsWith("dex/")) {
+    return { display: d.toUpperCase(), decimals: 0 }; // LP shares are integer units
   }
-  if (denom.startsWith("factory/")) {
-    // Default to 0 decimals for factory tokens unless a mapping is defined elsewhere
-    return { display: denom.split("/").pop()?.toUpperCase() || denom.toUpperCase(), decimals: 0 };
+  if (lc.startsWith("factory/")) {
+    // Factory tokens: show raw atomics (0 decimals) unless explicitly mapped
+    const suffix = d.split("/").pop() || d;
+    return { display: suffix.toUpperCase(), decimals: 0 };
   }
-  return DENOMS[denom] || { display: denom.toUpperCase(), decimals: 6 };
+  return DENOMS[d] || DENOMS[lc] || { display: d.toUpperCase(), decimals: 6 };
 }
 
 function splitAmount(amount: string, decimals: number) {
