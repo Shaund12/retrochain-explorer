@@ -97,6 +97,7 @@ const displayToAtomic = (val: string, denom: string) => {
 
 const atomicToDisplay = (val: string | undefined, denom: string) => {
   if (!val) return "0";
+  if (!denom) return "0";
   return formatAtomicToDisplay(val, denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false });
 };
 
@@ -295,11 +296,11 @@ const submitRemove = async () => {
 
 const selectedPool = computed(() => pools.value.find((p) => p.id === selectedPoolId.value) || null);
 
-const tokenInBalance = computed(() => atomicToDisplay(userBalances.value[tokenIn.value], tokenIn.value));
-const tokenOutBalance = computed(() => atomicToDisplay(userBalances.value[tokenOut.value], tokenOut.value));
+const tokenInBalance = computed(() => atomicToDisplay((userBalances.value || {})[tokenIn.value], tokenIn.value || ""));
+const tokenOutBalance = computed(() => atomicToDisplay((userBalances.value || {})[tokenOut.value], tokenOut.value || ""));
 
 const selectedLpDenom = computed(() => selectedPool.value?.lp_denom || (selectedPool.value ? `dex/${selectedPool.value.id}` : ""));
-const selectedLpBalanceAtomic = computed(() => (selectedLpDenom.value ? userBalances.value[selectedLpDenom.value] || "0" : "0"));
+const selectedLpBalanceAtomic = computed(() => (selectedLpDenom.value ? (userBalances.value || {})[selectedLpDenom.value] || "0" : "0"));
 const selectedLpBalanceDisplay = computed(() =>
   selectedLpDenom.value ? atomicToDisplay(selectedLpBalanceAtomic.value, selectedLpDenom.value) : "0"
 );
