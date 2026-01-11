@@ -76,6 +76,27 @@
         }, 0);
     });
 
+    const rewardsTotalByDenom = computed(() => {
+        const map = new Map<string, number>();
+        rewards.value.forEach((r: any) => {
+            (r.reward || []).forEach((rw: any) => {
+                const prev = map.get(rw.denom) || 0;
+                map.set(rw.denom, prev + parseFloat(rw.amount || "0"));
+            });
+        });
+        return Array.from(map.entries()).map(([denom, amount]) => ({ denom, amount }));
+    });
+
+    const formattedRewards = computed(() =>
+        rewards.value.map((r: any) => ({
+            validator_address: r.validator_address,
+            reward: (r.reward || []).map((rw: any) => ({
+                ...rw,
+                formatted: formatAmount(rw.amount || "0", rw.denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false }),
+            })),
+        }))
+    );
+
     const totalUnbonding = computed(() => {
         return unbonding.value.reduce((sum, u: any) => {
             return sum + (u.entries || []).reduce((eSum: number, e: any) => eSum + parseInt(e.balance || "0", 10), 0);
@@ -821,9 +842,16 @@
         <div v-if="address && activeTab === 'rewards'" class="card">
             <div class="flex items-center justify-between mb-3">
                 <h2 class="text-sm font-semibold text-slate-100">Rewards Summary</h2>
-                <button v-if="totalRewards > 0" class="btn btn-primary text-xs" @click="handleClaimRewards()" :disabled="txLoading">
+                <button v-if="rewardsTotalByDenom.length" class="btn btn-primary text-xs" @click="handleClaimRewards()" :disabled="txLoading">
                     {{ txLoading ? "Claiming..." : "Claim All Rewards" }}
                 </button>
+            </div>
+
+            <div v-if="rewardsTotalByDenom.length" class="mb-4 p-3 rounded-lg bg-slate-900/50 border border-emerald-500/20 text-[12px] text-slate-200 grid sm:grid-cols-2 gap-2">
+                <div v-for="t in rewardsTotalByDenom" :key="t.denom" class="flex items-center justify-between bg-slate-800/50 rounded-lg px-3 py-2 border border-emerald-500/10">
+                    <span class="text-slate-400">{{ t.denom }}</span>
+                    <span class="font-semibold text-emerald-200">{{ formatAmount(t.amount, t.denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false }) }}</span>
+                </div>
             </div>
 
             <div v-if="rewards.length === 0" class="text-xs text-slate-400 text-center py-8">
@@ -832,14 +860,17 @@
             </div>
 
             <div v-else class="space-y-2">
-                <div v-for="r in rewards" :key="r.validator_address" class="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
+                <div v-for="r in formattedRewards" :key="r.validator_address" class="p-3 rounded-lg bg-emerald-500/10 border border-emerald-500/20">
                     <div class="flex items-center justify-between">
                         <div class="flex-1">
                             <div class="text-sm text-slate-100 mb-1">
                                 {{ validators.find(v => v.operatorAddress === r.validator_address)?.description?.moniker || "Unknown" }}
                             </div>
-                            <div class="text-xs text-slate-400">
-                                {{ formatReward(parseFloat(r.reward.find(rw => rw.denom === tokenDenom)?.amount || "0")) }}
+                            <div class="space-y-1">
+                                <div v-for="coin in r.reward" :key="coin.denom" class="text-[11px] text-slate-300 flex items-center justify-between gap-2">
+                                    <span class="text-slate-400">{{ coin.denom }}</span>
+                                    <span class="font-mono text-emerald-200">{{ coin.formatted }}</span>
+                                </div>
                             </div>
                         </div>
                         <button class="btn text-[10px]" @click="handleClaimRewards(r.validator_address)" :disabled="txLoading">Claim</button>
