@@ -214,6 +214,15 @@
     const delegateAmountFloat = computed(() => parseFloat(delegateAmount.value || "0") || 0);
     const delegateAmountExceeds = computed(() => delegateAmountFloat.value > safeDelegateBalanceFloat.value);
 
+    const delegateButtonTooltip = computed(() => {
+        if (txLoading.value) return "Transaction in progress";
+        if (!delegateValidator.value) return "Select a validator to stake";
+        if (!delegateAmount.value || delegateAmountFloat.value <= 0) return "Enter an amount to stake";
+        if (delegateAmountExceeds.value)
+            return `Max stakeable now: ${safeDelegateBalanceDisplay.value} (keeps ~0.005 ${tokenSymbol.value} for fees)`;
+        return "";
+    });
+
     const setMaxDelegateAmount = () => {
         if (safeDelegateBalanceFloat.value <= 0) {
             toast.showError(`Not enough ${tokenSymbol.value} to cover fees (~0.005 ${tokenSymbol.value})`);
@@ -959,7 +968,10 @@
                     </div>
                 </div>
 
-                <button class="btn btn-primary w-full" @click="handleDelegate" :disabled="!delegateValidator || !delegateAmount || txLoading || delegateAmountExceeds">
+                <button class="btn btn-primary w-full"
+                        @click="handleDelegate"
+                        :disabled="!delegateValidator || !delegateAmount || txLoading || delegateAmountExceeds"
+                        :title="delegateButtonTooltip">
                     {{ txLoading ? "Processing..." : "Delegate" }}
                 </button>
             </div>
