@@ -49,6 +49,13 @@ const tokenOptions = computed(() => {
   return Array.from(set).sort();
 });
 
+const pickAlternateToken = (current: string) => {
+  const tokens = tokenOptions.value;
+  if (!tokens.length) return "";
+  const alt = tokens.find((t) => t !== current);
+  return alt || (tokens[0] || "");
+};
+
 const setDefaultsFromPools = (ps: Pool[]) => {
   if (!ps.length) return;
   const tokens = tokenOptions.value;
@@ -56,7 +63,7 @@ const setDefaultsFromPools = (ps: Pool[]) => {
   if (!tokenIn.value && tokens[0]) tokenIn.value = tokens[0];
   if (!tokenOut.value && tokens[1]) tokenOut.value = tokens[1];
   if (tokenIn.value === tokenOut.value && tokens.length > 1) {
-    tokenOut.value = tokens.find((t) => t !== tokenIn.value) || tokenOut.value;
+    tokenOut.value = pickAlternateToken(tokenIn.value) || tokenOut.value;
   }
 };
 
@@ -184,6 +191,15 @@ const burnEstimate = computed(() => {
     a: atomicToDisplay(amtA, pool.denom_a),
     b: atomicToDisplay(amtB, pool.denom_b)
   };
+});
+
+const slippagePercent = computed(() => (slippageBps.value || 0) / 100);
+const minOutDisplay = computed(() => {
+  if (!simulation.value?.amount_out) return "-";
+  const out = Number(simulation.value.amount_out || 0);
+  if (!Number.isFinite(out)) return "-";
+  const minOut = Math.floor(out * (1 - (slippageBps.value || 0) / 10_000));
+  return fmtAmount(minOut, simulation.value.token_out);
 });
 
 const syncAddLiquidityRatio = () => {
@@ -364,6 +380,20 @@ watch([amountIn, tokenIn, tokenOut], () => {
   runSimulation();
 });
 
+watch(tokenIn, (val) => {
+  if (!val) return;
+  if (val === tokenOut.value) {
+    tokenOut.value = pickAlternateToken(val);
+  }
+});
+
+watch(tokenOut, (val) => {
+  if (!val) return;
+  if (val === tokenIn.value) {
+    tokenIn.value = pickAlternateToken(val);
+  }
+});
+
 watch(lpPositions, (positions) => {
   if (!positions?.length) return;
   // Prefer selecting a pool the user has LP for
@@ -453,6 +483,7 @@ watch(lpPositions, (positions) => {
               <button class="btn" :disabled="swapLoading || loading" @click="runSimulation">Quote</button>
               <button class="btn btn-primary" :disabled="swapLoading || loading || tokenIn === tokenOut" @click="submitSwap">Swap</button>
               <span class="text-xs text-slate-400" v-if="tokenIn === tokenOut">Choose different tokens.</span>
+              <span class="text-[11px] text-slate-500" v-if="simulation">Min received @ {{ (slippagePercent * 100).toFixed(2) }}% slippage: {{ minOutDisplay }}</span>
             </div>
           </div>
 
@@ -466,6 +497,7 @@ watch(lpPositions, (positions) => {
               Min out @ slippage {{ slippageBps }} bps ≈
               {{ simulation.amount_out ? fmtAmount(Math.floor(Number(simulation.amount_out) * (1 - slippageBps / 10000)), simulation.token_out) : '-' }}
             </div>
+            <div class="mt-1 text-[11px] text-slate-500">Slippage tolerance: {{ (slippagePercent * 100).toFixed(2) }}%</div>
           </div>
         </div>
 
