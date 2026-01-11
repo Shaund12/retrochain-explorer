@@ -374,6 +374,13 @@ interface DecoratedBalance {
 
 const decoratedBalances = computed<DecoratedBalance[]>(() => {
   return balances.value
+    .filter((coin) => {
+      const denom = (coin.denom || "").toLowerCase();
+      // Hide factory tokens and LP (dex/) on Accounts page per UX request
+      if (denom.startsWith("factory/")) return false;
+      if (denom.startsWith("dex/")) return false;
+      return true;
+    })
     .map((coin) => {
       const meta = getTokenMeta(coin.denom);
       const isFactory = coin.denom?.toLowerCase().startsWith("factory/");

@@ -53,6 +53,7 @@ const nftSearch = ref("");
 const showAssetModal = ref(false);
 const modalKind = ref<"bank" | "ibc" | "cw20">("bank");
 const modalAsset = ref<any | null>(null);
+const modalTab = ref<"info" | "holders">("info");
 
 const formatUsd = (value: number | null | undefined) => {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
@@ -140,6 +141,7 @@ const filteredNfts = computed(() => {
 const openAssetModal = (asset: any, kind: "bank" | "ibc" | "cw20") => {
   modalAsset.value = asset;
   modalKind.value = kind;
+  modalTab.value = "info";
   showAssetModal.value = true;
 };
 
@@ -711,49 +713,61 @@ const nftSourceLabel = (cls: { source?: string }) => {
         <button class="btn text-xs" @click="closeAssetModal">✖ Close</button>
       </div>
 
-      <div class="grid gap-3 md:grid-cols-2 text-sm text-slate-300">
-        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
-          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Supply / Amount</div>
-          <div class="text-white font-semibold">
-            <template v-if="modalKind === 'bank'">{{ modalAsset.displayAmount }}</template>
-            <template v-else-if="modalKind === 'ibc'">{{ modalAsset.displayAmount }}</template>
-            <template v-else>{{ formatCw20Supply(modalAsset) }}</template>
+      <div class="flex gap-2 mb-4 text-xs">
+        <button class="btn" :class="modalTab === 'info' ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : ''" @click="modalTab = 'info'">Info</button>
+        <button class="btn" :class="modalTab === 'holders' ? 'border-cyan-400/60 bg-cyan-500/10 text-cyan-200' : ''" @click="modalTab = 'holders'">Holders</button>
+      </div>
+
+      <div v-if="modalTab === 'info'">
+        <div class="grid gap-3 md:grid-cols-2 text-sm text-slate-300">
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
+            <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Supply / Amount</div>
+            <div class="text-white font-semibold">
+              <template v-if="modalKind === 'bank'">{{ modalAsset.displayAmount }}</template>
+              <template v-else-if="modalKind === 'ibc'">{{ modalAsset.displayAmount }}</template>
+              <template v-else>{{ formatCw20Supply(modalAsset) }}</template>
+            </div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
+            <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Chain / Type</div>
+            <div class="text-white font-semibold">
+              <template v-if="modalKind === 'bank'">{{ tokenTypeLabel(modalAsset) }}</template>
+              <template v-else-if="modalKind === 'ibc'">IBC</template>
+              <template v-else>CW20</template>
+            </div>
+            <div class="text-xs text-slate-400" v-if="modalKind === 'ibc'">Base: {{ modalAsset.baseDenom || '—' }}</div>
+            <div class="text-xs text-slate-400" v-if="modalKind === 'ibc'">Path: {{ modalAsset.tracePath || '—' }}</div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700" v-if="modalKind === 'cw20'">
+            <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Decimals</div>
+            <div class="text-white font-semibold">{{ modalAsset.decimals }}</div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700" v-if="modalKind === 'cw20'">
+            <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Code ID / Minter</div>
+            <div class="text-white font-semibold">{{ modalAsset.codeId }}</div>
+            <div class="text-xs text-slate-400 break-all">{{ modalAsset.minter || '—' }}</div>
+          </div>
+
+          <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700" v-if="modalKind === 'bank'">
+            <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Metadata</div>
+            <div class="text-xs text-slate-200 break-words">
+              {{ modalAsset.tokenMeta?.description || modalAsset.metadata?.description || 'No description' }}
+            </div>
           </div>
         </div>
 
-        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700">
-          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Chain / Type</div>
-          <div class="text-white font-semibold">
-            <template v-if="modalKind === 'bank'">{{ tokenTypeLabel(modalAsset) }}</template>
-            <template v-else-if="modalKind === 'ibc'">IBC</template>
-            <template v-else>CW20</template>
-          </div>
-          <div class="text-xs text-slate-400" v-if="modalKind === 'ibc'">Base: {{ modalAsset.baseDenom || '—' }}</div>
-          <div class="text-xs text-slate-400" v-if="modalKind === 'ibc'">Path: {{ modalAsset.tracePath || '—' }}</div>
-        </div>
-
-        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700" v-if="modalKind === 'cw20'">
-          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Decimals</div>
-          <div class="text-white font-semibold">{{ modalAsset.decimals }}</div>
-        </div>
-
-        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700" v-if="modalKind === 'cw20'">
-          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Code ID / Minter</div>
-          <div class="text-white font-semibold">{{ modalAsset.codeId }}</div>
-          <div class="text-xs text-slate-400 break-all">{{ modalAsset.minter || '—' }}</div>
-        </div>
-
-        <div class="p-3 rounded-lg bg-slate-900/60 border border-slate-700" v-if="modalKind === 'bank'">
-          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Metadata</div>
-          <div class="text-xs text-slate-200 break-words">
-            {{ modalAsset.tokenMeta?.description || modalAsset.metadata?.description || 'No description' }}
-          </div>
+        <div class="mt-4 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-xs text-slate-300">
+          <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Raw JSON</div>
+          <pre class="whitespace-pre-wrap break-words max-h-72 overflow-auto">{{ JSON.stringify(modalAsset, null, 2) }}</pre>
         </div>
       </div>
 
-      <div class="mt-4 p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-xs text-slate-300">
-        <div class="text-[11px] uppercase tracking-wider text-slate-500 mb-1">Raw JSON</div>
-        <pre class="whitespace-pre-wrap break-words max-h-72 overflow-auto">{{ JSON.stringify(modalAsset, null, 2) }}</pre>
+      <div v-else class="p-4 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-300">
+        <p class="text-[11px] uppercase tracking-wider text-slate-500 mb-2">Holders</p>
+        <p class="text-xs text-slate-400">Holder breakdown is not available yet in this explorer.</p>
       </div>
     </div>
   </div>
