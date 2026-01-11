@@ -1,5 +1,18 @@
 # ?? RetroChain Explorer - Changelog
 
+## Version 2.3.0 - "API Test Revamp" 
+
+### ?? New & Improved
+
+#### ?? API Test Dashboard
+- Added richer endpoint list (supply, staking params, mint inflation, distribution params) with descriptions.
+- Each endpoint shows status code, latency, payload size, top-level keys, and quick fact chips (e.g., block height, validators count, proposals in voting, inflation rate).
+- Per-endpoint rerun button plus copy-to-clipboard for JSON data and errors.
+- Shows pass rate, average latency, and last-run time with refreshed badges.
+- Improved running indicators and UTF-8 safe labels.
+
+---
+
 ## Version 2.2.0 - "Arcade Polish & Nav"
 
 ### ? Improvements

@@ -171,6 +171,113 @@ interface Release {
 
 const releases: Release[] = [
   {
+    version: "2.4.2",
+    codename: "Nav & API Polish",
+    date: "2025-02-17",
+    summary: "Navigation regrouped under Economy/Network/Docs, API docs link hard-redirects correctly, and net transfers plus factory token labels stay tidy.",
+    changes: [
+      {
+        type: "improvement",
+        title: "Navbar regrouping",
+        description: "Launcher moved under Economy, IBC under Network, and Docs/API Docs split into their own dropdown for clearer navigation."
+      },
+      {
+        type: "fix",
+        title: "API docs link stability",
+        description: "Visiting /api now hard-redirects to /api/ so Swagger loads without a manual refresh or broken first render."
+      },
+      {
+        type: "improvement",
+        title: "Net transfers pagination",
+        description: "Account net transfers are paginated to keep the card compact and prevent overflow on long histories."
+      },
+      {
+        type: "improvement",
+        title: "Factory token display cleanup",
+        description: "Factory denoms use short labels, truncate long strings, and avoid overflow/squished layouts across balance cards."
+      }
+    ]
+  },
+  {
+    version: "2.4.1",
+    codename: "DEX Fee Clarity",
+    date: "2025-02-14",
+    summary: "Swap panel now shows live fee splits, fixes slippage math, and auto-switches output token when inputs match.",
+    changes: [
+      {
+        type: "feature",
+        title: "Live swap fee breakdown",
+        description: "DEX swap results display the on-chain swap fee, stakers/dev split, and effective percentages using /retrochain/dex/v1/params."
+      },
+      {
+        type: "fix",
+        title: "Slippage math corrected",
+        description: "Bps slippage is now interpreted as 1/10,000 so min-received and tolerance labels show accurate percentages."
+      },
+      {
+        type: "improvement",
+        title: "Auto token-out swap",
+        description: "When Token In is changed to match Token Out, the output token auto-selects an alternate to keep swaps valid."
+      }
+    ]
+  },
+  {
+    version: "2.4.0",
+    codename: "DEX & Rewards Polish",
+    date: "2025-02-10",
+    summary: "DEX UI now uses friendly token labels, sharper inputs, and staking shows factory reward tokens with detail modals.",
+    changes: [
+      {
+        type: "improvement",
+        title: "DEX token display cleanup",
+        description: "Swap and pool views now show human-friendly token names instead of raw factory hashes and label balances with denoms."
+      },
+      {
+        type: "improvement",
+        title: "Sharper form controls",
+        description: "Inputs/selects across the DEX use defined outlines, focus glow, and contrast for clearer affordance."
+      },
+      {
+        type: "feature",
+        title: "Staking factory rewards box",
+        description: "Pending DEX/factory reward tokens are highlighted with pagination and click-through rows."
+      },
+      {
+        type: "feature",
+        title: "Token detail modal in staking",
+        description: "Factory reward tokens open a modal with symbol, decimals, description, and raw denom for quick context."
+      }
+    ]
+  },
+  {
+    version: "2.3.0",
+    codename: "API Test Revamp",
+    date: "2025-01-27",
+    summary: "API test dashboard now surfaces rich metrics, quick facts, reruns, and copy actions for Cosmos REST endpoints.",
+    changes: [
+      {
+        type: "feature",
+        title: "Expanded endpoint coverage",
+        description: "Added supply, staking params, mint inflation, and distribution params endpoints with descriptions in the test grid."
+      },
+      {
+        type: "improvement",
+        title: "At-a-glance telemetry",
+        description: "Cards now show status code, latency, payload size, top-level keys, and quick fact chips like block height, validators count, proposals in voting, and inflation rate."
+      },
+      {
+        type: "feature",
+        title: "Per-endpoint rerun and copy actions",
+        description: "Each card has a rerun button plus copy-to-clipboard for JSON data and errors, with running indicators and UTF-8 safe labels."
+      },
+      {
+        type: "improvement",
+        title: "Better rollup metrics",
+        description: "Header shows pass rate, average latency, and last-run time with refreshed badges for a quick health snapshot."
+      }
+    ]
+  },
+  {
     version: "2.2.0",
     codename: "Arcade Polish & Nav",
     date: "2025-01-20",
