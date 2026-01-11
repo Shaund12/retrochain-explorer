@@ -6,9 +6,11 @@ import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import { useAssets, type BankToken, type Cw20Token } from "@/composables/useAssets";
 import { useTxs, type TxSummary } from "@/composables/useTxs";
 import type { TokenAccent } from "@/constants/tokens";
+import { useApi } from "@/composables/useApi";
 
 const { bankTokens, ibcTokens, cw20Tokens, nftClasses, loading, error, fetchAssets } = useAssets();
 const { txs: transferTxsRaw, searchRecent: fetchRecentTxs } = useTxs();
+const api = useApi();
 
 onMounted(() => {
   fetchAssets();
@@ -54,6 +56,10 @@ const showAssetModal = ref(false);
 const modalKind = ref<"bank" | "ibc" | "cw20">("bank");
 const modalAsset = ref<any | null>(null);
 const modalTab = ref<"info" | "holders">("info");
+const holders = ref<{ address: string; balance: string }[]>([]);
+const holdersLoading = ref(false);
+const holdersError = ref<string | null>(null);
+const holdersCache = ref<Record<string, { address: string; balance: string }[]>>({});
 
 const formatUsd = (value: number | null | undefined) => {
   if (value === null || value === undefined || Number.isNaN(value)) return "—";
@@ -142,12 +148,42 @@ const openAssetModal = (asset: any, kind: "bank" | "ibc" | "cw20") => {
   modalAsset.value = asset;
   modalKind.value = kind;
   modalTab.value = "info";
+  holders.value = [];
+  holdersError.value = null;
+  holdersLoading.value = false;
   showAssetModal.value = true;
 };
 
 const closeAssetModal = () => {
   showAssetModal.value = false;
   modalAsset.value = null;
+};
+
+const loadHolders = async (denom: string) => {
+  holdersLoading.value = true;
+  holdersError.value = null;
+  holders.value = [];
+
+  if (holdersCache.value[denom]) {
+    holders.value = holdersCache.value[denom];
+    holdersLoading.value = false;
+    return;
+  }
+
+  try {
+    const res = await api.get(`/cosmos/bank/v1beta1/denom_owners/${encodeURIComponent(denom)}`, {
+      params: { "pagination.limit": 50 }
+    });
+    const list: any[] = res.data?.denom_owners || res.data?.denom_owner || [];
+    const mapped = list.map((o) => ({ address: o?.address, balance: o?.balance?.amount || o?.balance || "0" }))
+      .filter((h) => h.address);
+    holders.value = mapped;
+    holdersCache.value = { ...holdersCache.value, [denom]: mapped };
+  } catch (err: any) {
+    holdersError.value = err?.message || "Failed to load holders";
+  } finally {
+    holdersLoading.value = false;
+  }
 };
 
 const stats = computed(() => ({
@@ -715,7 +751,13 @@ const nftSourceLabel = (cls: { source?: string }) => {
 
       <div class="flex gap-2 mb-4 text-xs">
         <button class="btn" :class="modalTab === 'info' ? 'border-emerald-400/60 bg-emerald-500/10 text-emerald-200' : ''" @click="modalTab = 'info'">Info</button>
-        <button class="btn" :class="modalTab === 'holders' ? 'border-cyan-400/60 bg-cyan-500/10 text-cyan-200' : ''" @click="modalTab = 'holders'">Holders</button>
+        <button
+          class="btn"
+          :class="modalTab === 'holders' ? 'border-cyan-400/60 bg-cyan-500/10 text-cyan-200' : ''"
+          @click="() => { modalTab = 'holders'; if (modalKind !== 'cw20') loadHolders(modalAsset?.denom || modalAsset?.baseDenom || modalAsset?.tokenMeta?.denom || '') }"
+        >
+          Holders
+        </button>
       </div>
 
       <div v-if="modalTab === 'info'">
@@ -767,7 +809,18 @@ const nftSourceLabel = (cls: { source?: string }) => {
 
       <div v-else class="p-4 rounded-lg bg-slate-900/60 border border-slate-700 text-sm text-slate-300">
         <p class="text-[11px] uppercase tracking-wider text-slate-500 mb-2">Holders</p>
-        <p class="text-xs text-slate-400">Holder breakdown is not available yet in this explorer.</p>
+        <div v-if="modalKind === 'cw20'" class="text-xs text-amber-300">CW20 holder lookup not supported in this modal.</div>
+        <div v-else>
+          <div v-if="holdersLoading" class="text-xs text-slate-400">Loading holders…</div>
+          <div v-else-if="holdersError" class="text-xs text-rose-300">{{ holdersError }}</div>
+          <div v-else-if="!holders.length" class="text-xs text-slate-400">No holders reported for this denom.</div>
+          <div v-else class="space-y-2 max-h-72 overflow-auto text-xs">
+            <div v-for="(h, idx) in holders" :key="h.address" class="flex items-center justify-between rounded border border-white/10 bg-white/5 px-2 py-1">
+              <div class="font-mono text-slate-200">{{ idx + 1 }}. {{ h.address }}</div>
+              <div class="font-mono text-emerald-200">{{ h.balance }}</div>
+            </div>
+          </div>
+        </div>
       </div>
     </div>
   </div>
