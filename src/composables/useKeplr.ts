@@ -142,9 +142,18 @@ const MsgRemoveLiquidityType: GeneratedType = {
 
 const KEYSTORE_EVENTS = ["keplr_keystorechange", "leap_keystorechange", "cosmostation_keystorechange"];
 
+const detectWalletType = () => {
+  if (typeof window === "undefined") return "unknown";
+  if ((window as any).keplr) return "keplr";
+  if ((window as any).leap) return "leap";
+  if ((window as any).cosmostation?.providers?.keplr) return "cosmostation";
+  return "unknown";
+};
+
 const getWalletProvider = () => {
   if (typeof window === "undefined") return null;
-  return window.keplr || window.leap || window.cosmostation?.providers?.keplr || null;
+  const w: any = window as any;
+  return w.keplr || w.leap || w.cosmostation?.providers?.keplr || null;
 };
 
 function configureKeplrDefaults() {
@@ -994,19 +1003,45 @@ export function useKeplr() {
     }
   };
 
-  const suggestChain = async () => {
-    const provider = getWalletProvider();
+const suggestChain = async (walletType: string) => {
+  const provider = getWalletProvider();
 
-    if (!provider) {
-      throw new Error("Keplr-compatible wallet not found.");
+  if (!provider) {
+    throw new Error("Keplr/Leap/Cosmostation wallet not found.");
+  }
+
+  const chainInfo = buildChainInfo();
+
+  if (provider.experimentalSuggestChain) {
+    await provider.experimentalSuggestChain(chainInfo);
+    return;
+  }
+
+  // Cosmostation specific flow
+  if (walletType === "cosmostation") {
+    const cosmo = (window as any).cosmostation?.cosmos;
+    if (cosmo?.request) {
+      const gasRate = { tiny: "0.01", low: "0.02", average: "0.03" };
+      const params = {
+        chainId: chainInfo.chainId,
+        chainName: chainInfo.chainName,
+        restURL: chainInfo.rest,
+        addressPrefix: chainInfo.bech32Config?.bech32PrefixAccAddr || "cosmos",
+        baseDenom: chainInfo.stakeCurrency?.coinMinimalDenom || "uretro",
+        displayDenom: chainInfo.stakeCurrency?.coinDenom || "RETRO",
+        coinType: `${chainInfo.bip44?.coinType ?? 118}`,
+        gasRate,
+        sendGas: `${Math.max(MIN_GAS_LIMIT, DEFAULT_GAS_PER_MSG)}`
+      };
+
+      await cosmo.request({ method: "cos_addChain", params });
+      return;
     }
+  }
 
-    if (!provider.experimentalSuggestChain) {
-      throw new Error("Wallet does not support experimentalSuggestChain.");
-    }
-
-    await provider.experimentalSuggestChain(buildChainInfo());
-  };
+  // If the wallet cannot auto-suggest, fall back to enable flow; the user may need to add manually.
+  console.warn("Wallet does not support automatic chain suggestion; proceeding to enable.");
+};
 
   const connect = async () => {
     try {
@@ -1015,11 +1050,16 @@ export function useKeplr() {
       checkAvailability();
 
       if (!isAvailable.value) {
-        throw new Error("Keplr-compatible wallet not detected. Install one and reload.");
+        throw new Error("Keplr/Leap/Cosmostation wallet not detected. Install one and reload.");
       }
 
       configureKeplrDefaults();
-      await suggestChain();
+      const walletType = detectWalletType();
+      try {
+        await suggestChain(walletType);
+      } catch (err) {
+        console.warn("Chain suggestion failed; continuing to enable", err);
+      }
       const provider = getWalletProvider();
       await provider!.enable(CHAIN_ID);
 

@@ -191,20 +191,37 @@
         return bal?.amount ?? "0";
     });
 
+    const DELEGATE_FEE_BUFFER = 5_000; // uretro (~0.005 RETRO) reserved for tx fees
+
+    const safeDelegateBalanceMicro = computed(() => {
+        const bal = parseInt(walletBalanceMicro.value || "0", 10);
+        return Math.max(0, bal - DELEGATE_FEE_BUFFER).toString();
+    });
+
     const walletBalanceDisplay = computed(() =>
         formatAmount(walletBalanceMicro.value, tokenDenom.value, { minDecimals: 2, maxDecimals: 2 })
     );
 
+    const safeDelegateBalanceDisplay = computed(() =>
+        formatAmount(safeDelegateBalanceMicro.value, tokenDenom.value, { minDecimals: 2, maxDecimals: 2 })
+    );
+
     const walletBalanceFloat = computed(() => parseInt(walletBalanceMicro.value || "0", 10) / 1_000_000);
+    const safeDelegateBalanceFloat = computed(
+        () => parseInt(safeDelegateBalanceMicro.value || "0", 10) / 1_000_000
+    );
 
     const setMaxDelegateAmount = () => {
-        if (walletBalanceFloat.value <= 0) return;
-        delegateAmount.value = walletBalanceFloat.value.toFixed(6);
+        if (safeDelegateBalanceFloat.value <= 0) {
+            toast.showError(`Not enough ${tokenSymbol.value} to cover fees (~0.005 ${tokenSymbol.value})`);
+            return;
+        }
+        delegateAmount.value = safeDelegateBalanceFloat.value.toFixed(6);
     };
 
     const setDelegateAmountPercent = (percent: number) => {
-        if (walletBalanceFloat.value <= 0) return;
-        const val = walletBalanceFloat.value * percent;
+        if (safeDelegateBalanceFloat.value <= 0) return;
+        const val = safeDelegateBalanceFloat.value * percent;
         delegateAmount.value = val.toFixed(6);
     };
 
@@ -339,13 +356,34 @@
     });
 
     const handleDelegate = async () => {
-        if (!delegateValidator.value || !delegateAmount.value) return;
+        if (!delegateValidator.value) {
+            toast.showError("Select a validator first");
+            return;
+        }
+
+        const amountFloat = parseFloat(delegateAmount.value);
+
+        if (!amountFloat || amountFloat <= 0) {
+            toast.showError("Enter an amount to delegate");
+            return;
+        }
+
+        if (safeDelegateBalanceFloat.value <= 0) {
+            toast.showError(`Not enough ${tokenSymbol.value} to cover fees`);
+            return;
+        }
+
+        if (amountFloat > safeDelegateBalanceFloat.value) {
+            toast.showError(`Please leave ~0.005 ${tokenSymbol.value} for fees`);
+            return;
+        }
+
         if (!address.value) return;
 
         txLoading.value = true;
         try {
             const chainId = "retrochain-mainnet";
-            const amountBase = Math.floor(parseFloat(delegateAmount.value) * 1_000_000).toString();
+            const amountBase = Math.floor(amountFloat * 1_000_000).toString();
 
             const msg = {
                 typeUrl: "/cosmos.staking.v1beta1.MsgDelegate",
@@ -898,13 +936,14 @@
                            class="w-full p-3 rounded-lg bg-slate-900/60 border border-slate-700 text-slate-200 text-sm" />
                     <div class="flex items-center justify-between text-[11px] text-slate-500 mt-1 flex-wrap gap-2">
                         <span>
-                            Available: <span class="font-mono text-slate-300">{{ walletBalanceDisplay }}</span>
+                            Available (leaves ~0.005 {{ tokenSymbol }} for fees):
+                            <span class="font-mono text-slate-300">{{ safeDelegateBalanceDisplay }}</span>
                         </span>
                         <div class="flex items-center gap-1">
-                            <button class="btn text-[10px]" @click="setDelegateAmountPercent(0.25)" :disabled="walletBalanceFloat <= 0">25%</button>
-                            <button class="btn text-[10px]" @click="setDelegateAmountPercent(0.5)" :disabled="walletBalanceFloat <= 0">50%</button>
-                            <button class="btn text-[10px]" @click="setDelegateAmountPercent(0.75)" :disabled="walletBalanceFloat <= 0">75%</button>
-                            <button class="btn text-[10px]" @click="setMaxDelegateAmount" :disabled="walletBalanceFloat <= 0">Max</button>
+                            <button class="btn text-[10px]" @click="setDelegateAmountPercent(0.25)" :disabled="safeDelegateBalanceFloat <= 0">25%</button>
+                            <button class="btn text-[10px]" @click="setDelegateAmountPercent(0.5)" :disabled="safeDelegateBalanceFloat <= 0">50%</button>
+                            <button class="btn text-[10px]" @click="setDelegateAmountPercent(0.75)" :disabled="safeDelegateBalanceFloat <= 0">75%</button>
+                            <button class="btn text-[10px]" @click="setMaxDelegateAmount" :disabled="safeDelegateBalanceFloat <= 0">Max</button>
                         </div>
                     </div>
                 </div>
