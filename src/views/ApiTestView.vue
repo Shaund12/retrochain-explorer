@@ -1,46 +1,4 @@
 <script setup lang="ts">
-import { ref, onMounted } from "vue";
-import { useApi } from "@/composables/useApi";
-
-const api = useApi();
-const testResults = ref<any>({});
-const testing = ref(false);
-
-const testEndpoint = async (name: string, url: string) => {
-  try {
-    const res = await api.get(url);
-    testResults.value[name] = {
-      status: "? Success",
-      data: res.data,
-      error: null
-    };
-  } catch (e: any) {
-    testResults.value[name] = {
-      status: "? Failed",
-      data: null,
-      error: e?.response?.data || e?.message || String(e)
-    };
-  }
-};
-
-const runTests = async () => {
-  testing.value = true;
-  testResults.value = {};
-  
-  await testEndpoint("Node Info", "/cosmos/base/tendermint/v1beta1/node_info");
-  await testEndpoint("Latest Block", "/cosmos/base/tendermint/v1beta1/blocks/latest");
-  await testEndpoint("Validators", "/cosmos/staking/v1beta1/validators?status=BOND_STATUS_BONDED");
-  await testEndpoint("Governance", "/cosmos/gov/v1beta1/proposals");
-  await testEndpoint("Transactions", "/cosmos/tx/v1beta1/txs?pagination.limit=5");
-  
-  testing.value = false;
-};
-
-onMounted(() => {
-  runTests();
-});
-</script>
-<script setup lang="ts">
 import { ref, onMounted, computed } from "vue";
 import { useApi } from "@/composables/useApi";
 
