@@ -40,7 +40,16 @@ export function useAccounts() {
     if (!Array.isArray(balances) || balances.length === 0) {
       return { denom: "uretro", amount: "0" };
     }
-    const preferred = balances.find((b: any) => b.denom === "uretro") || balances[0];
+
+    const sanitized = balances.filter((b: any) => {
+      const d = (b?.denom || "").toString();
+      if (d.startsWith("factory/")) return false;
+      if (d.startsWith("dex/")) return false;
+      return true;
+    });
+
+    const preferred = sanitized.find((b: any) => b.denom === "uretro") || sanitized[0] || balances.find((b: any) => b.denom === "uretro") || balances[0];
+
     return {
       denom: preferred?.denom ?? "uretro",
       amount: preferred?.amount ?? "0"
