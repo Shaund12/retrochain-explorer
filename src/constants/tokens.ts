@@ -207,6 +207,17 @@ export function getTokenMeta(denom: string | undefined | null): TokenMeta {
     return FALLBACK_META;
   }
   const key = toKey(denom);
+  if (key.startsWith("factory/")) {
+    const suffix = denom.split("/").pop() || denom;
+    return {
+      ...FALLBACK_META,
+      denom,
+      symbol: suffix.toUpperCase(),
+      name: suffix.toUpperCase(),
+      description: `Factory-issued token ${denom}`,
+      decimals: 0
+    };
+  }
   return TOKEN_META[key] ?? {
     ...FALLBACK_META,
     denom,
