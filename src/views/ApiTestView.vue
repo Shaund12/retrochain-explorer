@@ -124,7 +124,7 @@ onMounted(() => {
           </div>
         </div>
 
-        <div v-if="testing && !testResults[ep.name]" class="text-xs text-slate-400">Running…</div>
+        <div v-if="testing && !testResults[ep.name]" class="text-xs text-slate-400">Runningâ€¦</div>
 
         <div v-else-if="testResults[ep.name]" class="space-y-2">
           <div class="flex items-center gap-2">
