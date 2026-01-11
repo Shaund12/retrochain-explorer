@@ -39,6 +39,14 @@ const formatBytes = (bytes: number) => {
   if (bytes < 1024 * 1024) return `${(bytes / 1024).toFixed(1)} KB`;
   return `${(bytes / (1024 * 1024)).toFixed(2)} MB`;
 };
+const formatInt = (val: any) => {
+  const n = Number(val);
+  return Number.isFinite(n) ? n.toLocaleString() : String(val ?? "");
+};
+const formatPct = (val: any) => {
+  const n = Number(val);
+  return Number.isFinite(n) ? `${(n * 100).toFixed(2)}%` : String(val ?? "");
+};
 const responseSize = (data: any) => {
   try {
     return JSON.stringify(data).length;
@@ -50,6 +58,76 @@ const previewKeys = (data: any) => {
   if (!data || typeof data !== "object") return "";
   const keys = Array.isArray(data) ? Object.keys(data[0] || {}) : Object.keys(data);
   return keys.slice(0, 5).join(", ");
+};
+const quickFacts = (epName: string, data: any): string[] => {
+  if (!data) return [];
+  const facts: string[] = [];
+  switch (epName) {
+    case "Node Info": {
+      const info = data.default_node_info || {};
+      if (info.network) facts.push(`Network ${info.network}`);
+      if (info.version) facts.push(`Version ${info.version}`);
+      if (info?.other?.tx_index) facts.push(`Tx index: ${info.other.tx_index}`);
+      break;
+    }
+    case "Latest Block": {
+      const header = data.block?.header;
+      const txs = data.block?.data?.txs?.length ?? 0;
+      if (header?.height) facts.push(`Height #${formatInt(header.height)}`);
+      if (header?.time) facts.push(new Date(header.time).toLocaleString());
+      facts.push(`${txs} txs`);
+      break;
+    }
+    case "Validators (bonded)": {
+      const list = data.validators || data.validator || [];
+      facts.push(`${formatInt(list.length)} validators`);
+      const first = list[0];
+      if (first?.tokens) facts.push(`Top tokens: ${formatInt(first.tokens)}`);
+      break;
+    }
+    case "Governance Proposals": {
+      const list = data.proposals || [];
+      facts.push(`${formatInt(list.length)} proposals`);
+      const voting = list.filter((p: any) => p.status === "PROPOSAL_STATUS_VOTING_PERIOD").length;
+      if (voting) facts.push(`${voting} in voting`);
+      break;
+    }
+    case "Recent Transactions": {
+      const list = data.tx_responses || [];
+      facts.push(`${formatInt(list.length)} txs`);
+      const height = list[0]?.height;
+      if (height) facts.push(`Latest height #${formatInt(height)}`);
+      break;
+    }
+    case "Bank Supply (top)": {
+      const list = data.supply || [];
+      facts.push(`${formatInt(list.length)} denoms`);
+      const first = list[0];
+      if (first?.denom && first?.amount) facts.push(`${first.denom}: ${formatInt(first.amount)}`);
+      break;
+    }
+    case "Staking Params": {
+      const p = data.params || {};
+      if (p.bond_denom) facts.push(`Bond denom: ${p.bond_denom}`);
+      if (p.unbonding_time) facts.push(`Unbonding: ${p.unbonding_time}`);
+      break;
+    }
+    case "Mint Inflation": {
+      if (data.inflation) facts.push(`Inflation: ${formatPct(data.inflation)}`);
+      break;
+    }
+    case "Distribution Params": {
+      const p = data.params || {};
+      if (p.community_tax) facts.push(`Community tax: ${formatPct(p.community_tax)}`);
+      if (p.base_proposer_reward) facts.push(`Base reward: ${formatPct(p.base_proposer_reward)}`);
+      break;
+    }
+    default: {
+      const keys = previewKeys(data);
+      if (keys) facts.push(`Keys: ${keys}`);
+    }
+  }
+  return facts.filter(Boolean).slice(0, 4);
 };
 const copyJson = async (key: string, payload: any) => {
   if (!payload || typeof navigator === "undefined" || !navigator.clipboard?.writeText) return;
@@ -179,6 +257,19 @@ onMounted(() => {
               {{ testResults[ep.name].status === 'success' ? 'Success' : 'Failed' }}
             </span>
             <span class="text-[11px] text-slate-400" v-if="testResults[ep.name].statusCode">HTTP {{ testResults[ep.name].statusCode }}</span>
+            <span class="text-[11px] text-slate-400" v-if="running[ep.name]">Running…</span>
+            <span class="text-[11px] text-slate-400" v-if="testResults[ep.name].data">{{ formatBytes(responseSize(testResults[ep.name].data)) }}</span>
+            <span class="text-[11px] text-slate-400" v-if="testResults[ep.name].data">Keys: {{ previewKeys(testResults[ep.name].data) }}</span>
+          </div>
+
+          <div v-if="quickFacts(ep.name, testResults[ep.name].data).length" class="flex flex-wrap gap-2 text-[11px]">
+            <span
+              v-for="fact in quickFacts(ep.name, testResults[ep.name].data)"
+              :key="fact"
+              class="px-2 py-1 rounded-full bg-slate-700/50 text-slate-100 border border-white/10"
+            >
+              {{ fact }}
+            </span>
           </div>
 
           <div v-if="testResults[ep.name].error" class="text-xs text-rose-200 break-words">
