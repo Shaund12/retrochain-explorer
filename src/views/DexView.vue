@@ -202,6 +202,45 @@ const minOutDisplay = computed(() => {
   return fmtAmount(minOut, simulation.value.token_out);
 });
 
+const swapFeeDisplay = computed(() => {
+  const bps = params?.swap_fee_bps ?? null;
+  const amtIn = simulation.value?.amount_in;
+  const denomIn = simulation.value?.token_in;
+  if (!bps || !amtIn || !denomIn) return "-";
+  try {
+    const fee = (BigInt(amtIn) * BigInt(bps)) / 10_000n;
+    return fmtAmount(fee.toString(), denomIn);
+  } catch {
+    return "-";
+  }
+});
+
+const estimatedTxFeeDisplay = computed(() => {
+  // Mirrors the fixed fee used in swapExactIn: 8000 uretro
+  return formatAmount("8000", "uretro", { minDecimals: 3, maxDecimals: 6, showZerosForIntegers: false });
+});
+
+const stakersFeeBps = computed(() => params?.stakers_fee_bps ?? null);
+const swapFeeBps = computed(() => params?.swap_fee_bps ?? null);
+
+const feeSplitDisplay = computed(() => {
+  const totalBps = swapFeeBps.value;
+  const stakersBps = stakersFeeBps.value;
+  if (totalBps == null || stakersBps == null) return null;
+  const totalPct = (totalBps / 100).toFixed(2);
+  const stakersPctOfFee = (stakersBps / 100).toFixed(2);
+  const devPctOfFee = ((10000 - stakersBps) / 100).toFixed(2);
+  const stakersEff = ((totalBps * stakersBps) / 1_000_000).toFixed(4);
+  const devEff = ((totalBps * (10000 - stakersBps)) / 1_000_000).toFixed(4);
+  return {
+    totalPct,
+    stakersPctOfFee,
+    devPctOfFee,
+    stakersEff,
+    devEff
+  };
+});
+
 const syncAddLiquidityRatio = () => {
   const pool = selectedPool.value;
   if (!pool) return;
@@ -498,6 +537,13 @@ watch(lpPositions, (positions) => {
               {{ simulation.amount_out ? fmtAmount(Math.floor(Number(simulation.amount_out) * (1 - slippageBps / 10000)), simulation.token_out) : '-' }}
             </div>
             <div class="mt-1 text-[11px] text-slate-500">Slippage tolerance: {{ (slippagePercent * 100).toFixed(2) }}%</div>
+            <div class="mt-1 text-[11px] text-slate-500">Swap fee amount: {{ swapFeeDisplay }}</div>
+            <div class="mt-1 text-[11px] text-slate-500">Est. tx fee: {{ estimatedTxFeeDisplay }}</div>
+            <div class="mt-2 text-[11px] text-slate-400" v-if="feeSplitDisplay">
+              Swap fee {{ feeSplitDisplay.totalPct }}% ({{ params?.swap_fee_bps }} bps) of input.
+              Split of fee: stakers {{ feeSplitDisplay.stakersPctOfFee }}% (~{{ feeSplitDisplay.stakersEff }}% of input),
+              dev fund {{ feeSplitDisplay.devPctOfFee }}% (~{{ feeSplitDisplay.devEff }}% of input).
+            </div>
           </div>
         </div>
 
