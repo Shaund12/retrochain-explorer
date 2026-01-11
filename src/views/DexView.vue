@@ -193,7 +193,7 @@ const burnEstimate = computed(() => {
   };
 });
 
-const slippagePercent = computed(() => (slippageBps.value || 0) / 100);
+const slippagePercent = computed(() => (slippageBps.value || 0) / 10_000);
 const minOutDisplay = computed(() => {
   if (!simulation.value?.amount_out) return "-";
   const out = Number(simulation.value.amount_out || 0);
@@ -203,7 +203,7 @@ const minOutDisplay = computed(() => {
 });
 
 const swapFeeDisplay = computed(() => {
-  const bps = params?.swap_fee_bps ?? null;
+  const bps = params.value?.swap_fee_bps ?? null;
   const amtIn = simulation.value?.amount_in;
   const denomIn = simulation.value?.token_in;
   if (!bps || !amtIn || !denomIn) return "-";
@@ -220,8 +220,8 @@ const estimatedTxFeeDisplay = computed(() => {
   return formatAmount("8000", "uretro", { minDecimals: 3, maxDecimals: 6, showZerosForIntegers: false });
 });
 
-const stakersFeeBps = computed(() => params?.stakers_fee_bps ?? null);
-const swapFeeBps = computed(() => params?.swap_fee_bps ?? null);
+const stakersFeeBps = computed(() => params.value?.stakers_fee_bps ?? null);
+const swapFeeBps = computed(() => params.value?.swap_fee_bps ?? null);
 
 const feeSplitDisplay = computed(() => {
   const totalBps = swapFeeBps.value;
