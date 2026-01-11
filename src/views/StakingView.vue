@@ -44,6 +44,9 @@
     const validatorSearch = ref("");
     const showInactive = ref(false);
 
+    const rewardsPage = ref(1);
+    const rewardsPageSize = 4;
+
     const tokenDenom = computed(() => "uretro");
     const tokenSymbol = computed(() => "RETRO");
 
@@ -96,6 +99,13 @@
             })),
         }))
     );
+
+    const rewardsTotalPages = computed(() => Math.max(1, Math.ceil((rewardsTotalByDenom.value.length || 0) / rewardsPageSize)));
+
+    const paginatedRewardsTotals = computed(() => {
+        const start = (rewardsPage.value - 1) * rewardsPageSize;
+        return rewardsTotalByDenom.value.slice(start, start + rewardsPageSize);
+    });
 
     const totalUnbonding = computed(() => {
         return unbonding.value.reduce((sum, u: any) => {
@@ -283,6 +293,13 @@
             }
         }
     );
+
+    watch(rewardsTotalByDenom, () => {
+        if (rewardsPage.value > rewardsTotalPages.value) {
+            rewardsPage.value = rewardsTotalPages.value;
+        }
+        if (rewardsPage.value < 1) rewardsPage.value = 1;
+    });
 
     const syncUndelegateDefaults = () => {
         if (activeTab.value === "undelegate" && myDelegations.value.length) {
@@ -494,6 +511,35 @@
                             </div>
                             <div class="text-[11px] text-slate-500">Auto-refreshing every 10s</div>
                             <div v-if="stakingRewardsVaultError" class="text-[11px] text-rose-300 mt-1">{{ stakingRewardsVaultError }}</div>
+                        </div>
+                    </div>
+                </div>
+
+                <!-- Pending Reward Tokens (all denoms) -->
+                <div v-if="rewardsTotalByDenom.length" class="mb-4 p-4 rounded-2xl bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 border border-emerald-500/30 shadow-lg">
+                    <div class="flex items-center justify-between mb-3">
+                        <div>
+                            <h2 class="text-sm font-semibold text-emerald-200">Pending Reward Tokens</h2>
+                            <p class="text-[11px] text-slate-400">Includes DEX factory emissions and staking rewards</p>
+                        </div>
+                        <div class="text-[11px] text-slate-400 flex items-center gap-2">
+                            <span>Page {{ rewardsPage }} / {{ rewardsTotalPages }}</span>
+                            <div class="flex gap-1">
+                                <button class="btn text-[10px]" @click="rewardsPage = Math.max(1, rewardsPage - 1)" :disabled="rewardsPage === 1">
+                                    Prev
+                                </button>
+                                <button class="btn text-[10px]" @click="rewardsPage = Math.min(rewardsTotalPages, rewardsPage + 1)" :disabled="rewardsPage === rewardsTotalPages">
+                                    Next
+                                </button>
+                            </div>
+                        </div>
+                    </div>
+                    <div class="grid sm:grid-cols-2 gap-2">
+                        <div v-for="t in paginatedRewardsTotals" :key="t.denom" class="p-3 rounded-lg bg-slate-800/60 border border-emerald-500/20 flex items-center justify-between">
+                            <div class="text-[11px] text-slate-300 break-words">{{ t.denom }}</div>
+                            <div class="text-sm font-semibold text-emerald-200 text-right">
+                                {{ formatAmount(t.amount, t.denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false }) }}
+                            </div>
                         </div>
                     </div>
                 </div>
