@@ -211,6 +211,9 @@
         () => parseInt(safeDelegateBalanceMicro.value || "0", 10) / 1_000_000
     );
 
+    const delegateAmountFloat = computed(() => parseFloat(delegateAmount.value || "0") || 0);
+    const delegateAmountExceeds = computed(() => delegateAmountFloat.value > safeDelegateBalanceFloat.value);
+
     const setMaxDelegateAmount = () => {
         if (safeDelegateBalanceFloat.value <= 0) {
             toast.showError(`Not enough ${tokenSymbol.value} to cover fees (~0.005 ${tokenSymbol.value})`);
@@ -946,9 +949,17 @@
                             <button class="btn text-[10px]" @click="setMaxDelegateAmount" :disabled="safeDelegateBalanceFloat <= 0">Max</button>
                         </div>
                     </div>
+                    <div class="text-[11px] mt-1" :class="delegateAmountExceeds ? 'text-rose-300' : 'text-slate-500'">
+                        <template v-if="delegateAmountExceeds">
+                            You can stake up to {{ safeDelegateBalanceDisplay }} right now to leave ~0.005 {{ tokenSymbol }} for fees.
+                        </template>
+                        <template v-else>
+                            Max stakeable right now: {{ safeDelegateBalanceDisplay }} (fee buffer ~0.005 {{ tokenSymbol }}).
+                        </template>
+                    </div>
                 </div>
 
-                <button class="btn btn-primary w-full" @click="handleDelegate" :disabled="!delegateValidator || !delegateAmount || txLoading">
+                <button class="btn btn-primary w-full" @click="handleDelegate" :disabled="!delegateValidator || !delegateAmount || txLoading || delegateAmountExceeds">
                     {{ txLoading ? "Processing..." : "Delegate" }}
                 </button>
             </div>
