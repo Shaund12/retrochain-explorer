@@ -41,6 +41,7 @@ export function useAccounts() {
       return { denom: "uretro", amount: "0" };
     }
 
+    // Accounts list: exclude factory and LP from primary balance
     const sanitized = balances.filter((b: any) => {
       const d = (b?.denom || "").toString();
       if (d.startsWith("factory/")) return false;
@@ -48,12 +49,9 @@ export function useAccounts() {
       return true;
     });
 
-    // If nothing non-factory remains, fall back to zero uretro to avoid showing factory denoms on Accounts
     if (!sanitized.length) {
       const retro = balances.find((b: any) => b.denom === "uretro");
-      if (retro) {
-        return { denom: "uretro", amount: retro.amount ?? "0" };
-      }
+      if (retro) return { denom: "uretro", amount: retro.amount ?? "0" };
       return { denom: "uretro", amount: "0" };
     }
 

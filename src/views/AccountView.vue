@@ -374,15 +374,10 @@ interface DecoratedBalance {
 
 const decoratedBalances = computed<DecoratedBalance[]>(() => {
   return balances.value
-    .filter((coin) => {
-      const denom = (coin.denom || "").toLowerCase();
-      // Hide factory tokens and LP (dex/) on Accounts page per UX request
-      if (denom.startsWith("factory/")) return false;
-      if (denom.startsWith("dex/")) return false;
-      return true;
-    })
     .map((coin) => {
       const meta = getTokenMeta(coin.denom);
+      const denomLower = coin.denom?.toLowerCase() || "";
+      const isLp = denomLower.startsWith("dex/");
       const isFactory = coin.denom?.toLowerCase().startsWith("factory/");
       const tokenLabel = shortDenomLabel(coin.denom);
       const displaySymbol = isFactory ? tokenLabel : (meta.symbol || tokenLabel);
@@ -415,8 +410,8 @@ const decoratedBalances = computed<DecoratedBalance[]>(() => {
         meta: adjustedMeta,
         accent: ACCENT_CLASS_MAP[adjustedMeta.accent] ?? ACCENT_CLASS_MAP.slate,
         usdValue,
-        rawDenomDisplay: isFactory ? null : coin.denom,
-        rawDenomTitle: isFactory ? null : null
+        rawDenomDisplay: isLp ? null : coin.denom,
+        rawDenomTitle: isLp ? null : null
       } as DecoratedBalance & { usdValue: number | null };
     })
     .sort((a, b) => b.rawAmount - a.rawAmount);
