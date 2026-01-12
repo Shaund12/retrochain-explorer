@@ -42,31 +42,6 @@ const toMicro = (val: string): bigint | null => {
   return sign * (whole * SCALE + frac);
 };
 
-watch(
-  [maxSupplyRawInput, () => params.value?.default_max_supply, () => params.value?.default_graduation_reserve_uretro],
-  () => {
-    if (userSetGraduationReserve.value) return;
-    if (suggestedGraduationReserveRaw.value !== null) {
-      const nextVal = microToDisplay(suggestedGraduationReserveRaw.value);
-      graduationReserve.value = nextVal;
-    }
-  },
-  { immediate: true }
-);
-
-watch(
-  graduationReserve,
-  (val, old) => {
-    if (val === old) return;
-    // If user types something custom, stop auto-updating.
-    if (val.trim()) {
-      userSetGraduationReserve.value = true;
-    } else {
-      userSetGraduationReserve.value = false;
-    }
-  }
-);
-
 const formatMicroAmount = (raw: bigint | null, unit: string) => {
   if (raw === null || raw === undefined) return "—";
   const num = Number(raw) / Number(SCALE);
@@ -195,6 +170,31 @@ const tokensForSaleRawDisplay = computed(() => formatRawAmount(effectiveMaxSuppl
 const estimatedInitialSpotPriceDisplay = computed(() => formatRetPerToken(estimatedInitialSpotPriceScaled.value));
 const suggestedGraduationReserveDisplay = computed(() => formatMicroAmount(suggestedGraduationReserveRaw.value, "RETRO"));
 const suggestedGraduationReserveRawDisplay = computed(() => formatRawAmount(suggestedGraduationReserveRaw.value, "uretro (raw)"));
+
+watch(
+  [maxSupplyRawInput, () => params.value?.default_max_supply, () => params.value?.default_graduation_reserve_uretro],
+  () => {
+    if (userSetGraduationReserve.value) return;
+    if (suggestedGraduationReserveRaw.value !== null) {
+      const nextVal = microToDisplay(suggestedGraduationReserveRaw.value);
+      graduationReserve.value = nextVal;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  graduationReserve,
+  (val, old) => {
+    if (val === old) return;
+    // If user types something custom, stop auto-updating.
+    if (val.trim()) {
+      userSetGraduationReserve.value = true;
+    } else {
+      userSetGraduationReserve.value = false;
+    }
+  }
+);
 
 const submit = async () => {
   if (!subdenom.value.trim()) {
