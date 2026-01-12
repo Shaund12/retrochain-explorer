@@ -36,7 +36,10 @@ const { validators, fetchValidators } = useValidators();
 const api = useApi();
 
 const showSpaceInvadersNotice = ref(true);
+const showArcadeNoticeBody = ref(true);
 const spaceInvadersNoticeKey = "home-space-invaders-beta-dismissed";
+const showSafetyNotice = ref(true);
+const customizeDashboard = ref(false);
 
 const HOME_STATE_KEY = "rc_home_state_v1";
 type HomeState = {
@@ -259,6 +262,30 @@ const {
   efficiencyStatus,
   congestionLevel
 } = useGasTracker();
+
+const gasColorClassMap: Record<string, string> = {
+  emerald: "border-emerald-500/40 bg-emerald-500/5 text-emerald-100",
+  cyan: "border-cyan-500/40 bg-cyan-500/5 text-cyan-100",
+  amber: "border-amber-500/40 bg-amber-500/5 text-amber-100",
+  rose: "border-rose-500/40 bg-rose-500/5 text-rose-100"
+};
+
+const gasTierClasses = (tier: string) => {
+  const recs: any = (recommendations as any)?.value ?? recommendations;
+  const colorKey = getGasPriceColor(recs?.[tier] ?? 0);
+  return gasColorClassMap[colorKey] ?? gasColorClassMap.cyan;
+};
+
+const congestionTextClass = computed(() => {
+  const colorKey = (congestionLevel as any)?.value?.color ?? (congestionLevel as any)?.color;
+  const map: Record<string, string> = {
+    emerald: "text-emerald-300",
+    cyan: "text-cyan-300",
+    amber: "text-amber-300",
+    rose: "text-rose-300"
+  };
+  return map[colorKey] ?? "text-slate-300";
+});
 
 const loadGasStats = async () => {
   try {
@@ -556,44 +583,67 @@ function sparkPath(data: number[], width = 160, height = 40) {
       v-if="showSpaceInvadersNotice"
       class="card border border-emerald-400/70 bg-gradient-to-r from-emerald-500/15 via-cyan-500/15 to-amber-500/15 shadow-lg shadow-emerald-500/20"
     >
-      <div class="flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
-        <div class="flex items-start gap-3">
-          <div class="text-3xl sm:text-4xl">🚨👾🧱👻🚀</div>
+      <div class="flex items-start justify-between gap-3">
+        <div class="flex items-center gap-3">
+          <div class="text-2xl sm:text-3xl">🚨👾</div>
           <div>
             <div class="text-xs uppercase tracking-[0.2em] text-emerald-200">Arcade Alert</div>
             <div class="text-sm font-semibold text-emerald-100">RetroVaders · RetroNoid · RetroMan · RetroWar</div>
-            <p class="text-xs sm:text-sm text-slate-200 mt-1">
-              All four RetroChain arcade titles are live. Blast aliens, smash bricks, chase ghosts, or duel in space war—leaderboards are hot.
-            </p>
-            <p class="text-[11px] text-emerald-200/80 mt-1">Early access · Rewards flowing · Controller & keyboard friendly</p>
+            <p class="text-[11px] text-emerald-200/80">Early access · Rewards flowing · Controller & keyboard friendly</p>
           </div>
+        </div>
+        <div class="flex items-center gap-2 flex-wrap">
+          <button class="btn text-[11px]" @click="showArcadeNoticeBody = !showArcadeNoticeBody">
+            {{ showArcadeNoticeBody ? 'Hide' : 'Show' }} details
+          </button>
+          <button class="btn text-[11px]" @click="dismissSpaceInvadersNotice">Dismiss</button>
+        </div>
+      </div>
+      <div v-show="showArcadeNoticeBody" class="mt-3 flex flex-col gap-3 sm:flex-row sm:items-center sm:justify-between">
+        <div class="text-xs sm:text-sm text-slate-200 max-w-3xl">
+          All four RetroChain arcade titles are live. Blast aliens, smash bricks, chase ghosts, or duel in space war—leaderboards are hot.
         </div>
         <div class="flex items-center gap-2 flex-wrap">
           <button class="btn btn-primary text-xs" @click="router.push({ name: 'arcade' })">🎮 View Game List</button>
           <button class="btn text-xs" @click="router.push({ name: 'tokenomics' })">🔥 Burn Telemetry</button>
-          <button class="btn text-xs" @click="dismissSpaceInvadersNotice">Dismiss</button>
         </div>
       </div>
     </div>
 
-    <RcDisclaimer type="warning" title="⚠️ Experimental Mainnet Notice">
-      <p>
-        <strong>RetroChain is a live Cosmos SDK mainnet, but the network, modules, and contracts remain experimental.</strong>
-      </p>
-      <p>
-        Upgrades, validator rotations, and RPC changes can happen without notice. Expect occasional downtime while we harden the chain.
-      </p>
-      <p>
-        Transactions are irreversible—double-check recipients, fees, and any Keplr prompts, and only risk funds you can afford to lose.
-      </p>
-      <p class="mt-2 text-xs text-amber-200/80">
-        Read the full
-        <RouterLink to="/legal" class="underline underline-offset-2 hover:text-amber-100">
-          Terms &amp; Conditions
-        </RouterLink>
-        for detailed legal disclosures.
-      </p>
-    </RcDisclaimer>
+    <div class="card-soft border border-amber-500/40">
+      <div class="flex items-center justify-between gap-3">
+        <div class="flex items-center gap-2">
+          <span class="text-lg">⚠️</span>
+          <div>
+            <div class="text-sm font-semibold text-amber-100">Experimental Mainnet Notice</div>
+            <div class="text-[11px] text-amber-200/80">RetroChain is live but still hardening.</div>
+          </div>
+        </div>
+        <button class="btn text-[11px]" @click="showSafetyNotice = !showSafetyNotice">
+          {{ showSafetyNotice ? 'Hide' : 'Show' }} details
+        </button>
+      </div>
+      <div v-show="showSafetyNotice" class="mt-2">
+        <RcDisclaimer type="warning" title="⚠️ Experimental Mainnet Notice">
+          <p>
+            <strong>RetroChain is a live Cosmos SDK mainnet, but the network, modules, and contracts remain experimental.</strong>
+          </p>
+          <p>
+            Upgrades, validator rotations, and RPC changes can happen without notice. Expect occasional downtime while we harden the chain.
+          </p>
+          <p>
+            Transactions are irreversible—double-check recipients, fees, and any Keplr prompts, and only risk funds you can afford to lose.
+          </p>
+          <p class="mt-2 text-xs text-amber-200/80">
+            Read the full
+            <RouterLink to="/legal" class="underline underline-offset-2 hover:text-amber-100">
+              Terms &amp; Conditions
+            </RouterLink>
+            for detailed legal disclosures.
+          </p>
+        </RcDisclaimer>
+      </div>
+    </div>
 
     <div v-if="network === 'mainnet'" class="card-soft border-emerald-500/40">
       <div class="flex items-center justify-between">
@@ -607,75 +657,81 @@ function sparkPath(data: number[], width = 160, height = 40) {
     </div>
 
     <section class="flex flex-col gap-3 min-w-0">
-      <!-- Hero Welcome Card -->
+      <!-- Hero + Search -->
       <div class="card-soft relative overflow-hidden">
         <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
-        <div class="relative">
-          <div class="flex flex-wrap items-baseline gap-2 mb-2">
-            <h1 class="text-2xl font-bold">
-              <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
-                RetroChain Arcade Explorer
+        <div class="relative grid gap-4 lg:grid-cols-[2fr,1.2fr] items-start">
+          <div class="space-y-3">
+            <div class="flex flex-wrap items-baseline gap-2">
+              <h1 class="text-2xl font-bold">
+                <span class="bg-gradient-to-r from-indigo-400 via-purple-400 to-pink-400 bg-clip-text text-transparent">
+                  RetroChain Arcade Explorer
+                </span>
+              </h1>
+              <span class="badge text-emerald-200 border-emerald-500/40 text-xs">
+                {{ network === 'mainnet' ? 'mainnet' : 'testnet' }}
               </span>
-            </h1>
-            <span class="badge text-emerald-200 border-emerald-500/40 text-xs">
-              {{ network === 'mainnet' ? 'mainnet' : 'testnet' }}
-            </span>
-          </div>
-          <p class="text-sm text-slate-300 mb-4">
-            Custom Cosmos-SDK app chain for arcade-style gaming.
-            Now live on <span class="text-emerald-300 font-semibold">{{ network === 'mainnet' ? 'MAINNET' : 'TESTNET' }}</span> —
-            monitor chain health, blocks, transactions, validators, and governance in real-time.
-          </p>
-          
-          <!-- Quick Action Buttons -->
-          <div class="flex flex-wrap gap-2 mb-4">
-            <button 
-              class="btn btn-primary text-xs"
-              @click="router.push({ name: 'blocks' })"
-            >
-              Explore Blocks
-            </button>
-            <button 
-              class="btn text-xs"
-              @click="router.push({ name: 'validators' })"
-            >
-              Validators
-            </button>
-            <button 
-              class="btn text-xs"
-              @click="router.push({ name: 'account' })"
-            >
-              Account Lookup
-            </button>
+            </div>
+            <p class="text-sm text-slate-300">
+              Custom Cosmos-SDK app chain for arcade-style gaming.
+              Now live on <span class="text-emerald-300 font-semibold">{{ network === 'mainnet' ? 'MAINNET' : 'TESTNET' }}</span> —
+              monitor chain health, blocks, transactions, validators, and governance in real-time.
+            </p>
+
+            <!-- Quick Action Buttons -->
+            <div class="flex flex-wrap gap-2">
+              <button 
+                class="btn btn-primary text-xs"
+                @click="router.push({ name: 'blocks' })"
+              >
+                Explore Blocks
+              </button>
+              <button 
+                class="btn text-xs"
+                @click="router.push({ name: 'validators' })"
+              >
+                Validators
+              </button>
+              <button 
+                class="btn text-xs"
+                @click="router.push({ name: 'account' })"
+              >
+                Account Lookup
+              </button>
+            </div>
+
+            <!-- Network Info Tags -->
+            <div class="flex flex-wrap gap-2 text-[11px] text-slate-400">
+              <span class="badge">
+                REST: <code v-tooltip="REST_DISPLAY">{{ REST_DISPLAY }}</code>
+              </span>
+              <span class="badge">
+                RPC: <code v-tooltip="RPC_DISPLAY">{{ RPC_DISPLAY }}</code>
+              </span>
+              <span class="badge">Token: {{ network === 'mainnet' ? 'RETRO / uretro' : 'DRETRO / udretro' }}</span>
+            </div>
           </div>
 
-          <!-- Network Info Tags -->
-          <div class="flex flex-wrap gap-2 text-[11px] text-slate-400">
-            <span class="badge">
-              REST: <code v-tooltip="REST_DISPLAY">{{ REST_DISPLAY }}</code>
-            </span>
-            <span class="badge">
-              RPC: <code v-tooltip="RPC_DISPLAY">{{ RPC_DISPLAY }}</code>
-            </span>
-            <span class="badge">Token: {{ network === 'mainnet' ? 'RETRO / uretro' : 'DRETRO / udretro' }}</span>
+          <div class="rounded-2xl border border-white/10 bg-slate-900/70 p-4 shadow-lg shadow-indigo-500/10">
+            <div class="flex items-center justify-between mb-2">
+              <div>
+                <h2 class="text-sm font-semibold text-white">Universal Search</h2>
+                <p class="text-[11px] text-slate-400">Block height · Tx hash · Account</p>
+              </div>
+              <span class="text-[11px] text-emerald-200">Live</span>
+            </div>
+            <RcSearchBar />
           </div>
         </div>
       </div>
 
-      <!-- Search Bar -->
-      <div class="card overflow-visible relative z-50">
-        <div class="flex items-center gap-3 mb-3">
-          <div class="text-2xl"></div>
-          <div>
-            <h2 class="text-base font-bold bg-gradient-to-r from-indigo-400 to-purple-400 bg-clip-text text-transparent">
-              Universal Search
-            </h2>
-            <p class="text-xs text-slate-400">
-              Search by block height, transaction hash, or account address
-            </p>
-          </div>
+      <div class="flex items-center justify-between gap-3 px-1">
+        <div class="text-sm font-semibold text-slate-200">Dashboard</div>
+        <div class="flex items-center gap-2">
+          <button class="btn text-xs" @click="customizeDashboard = !customizeDashboard">
+            {{ customizeDashboard ? 'Done' : 'Customize Dashboard' }}
+          </button>
         </div>
-        <RcSearchBar />
       </div>
 
       <div class="flex flex-col gap-4" ref="cardsEl">
@@ -688,12 +744,14 @@ function sparkPath(data: number[], width = 160, height = 40) {
           <div class="flex items-center justify-between mb-3">
             <h2 class="text-sm font-semibold text-slate-100">{{ card.title }}</h2>
             <div class="flex items-center gap-1">
-              <button class="btn text-[10px]" v-tooltip="'Move up'" @click="moveCard(card.id, -1)">
-                <ArrowUp class="w-3.5 h-3.5" />
-              </button>
-              <button class="btn text-[10px]" v-tooltip="'Move down'" @click="moveCard(card.id, 1)">
-                <ArrowDown class="w-3.5 h-3.5" />
-              </button>
+              <div v-if="customizeDashboard" class="flex items-center gap-1">
+                <button class="btn text-[10px]" v-tooltip="'Move up'" @click="moveCard(card.id, -1)">
+                  <ArrowUp class="w-3.5 h-3.5" />
+                </button>
+                <button class="btn text-[10px]" v-tooltip="'Move down'" @click="moveCard(card.id, 1)">
+                  <ArrowDown class="w-3.5 h-3.5" />
+                </button>
+              </div>
               <button class="btn text-[10px]" @click="toggleCollapse(card.id)">
                 <span class="inline-flex items-center gap-1">
                   <component :is="isCollapsed(card.id) ? ChevronDown : ChevronUp" class="w-3.5 h-3.5" />
@@ -753,7 +811,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                         </div>
                         <div>
                           <div class="text-[11px] uppercase tracking-wider text-slate-400">Network Status</div>
-                          <div class="text-sm font-semibold" :class="congestionLevel?.color ? `text-${congestionLevel.color}-300` : 'text-slate-300'">
+                          <div class="text-sm font-semibold" :class="congestionTextClass">
                             {{ congestionLevel?.label || '—' }}
                           </div>
                         </div>
@@ -804,7 +862,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                         v-for="tier in ['slow', 'average', 'fast', 'instant']" 
                         :key="tier"
                         class="flex items-center justify-between p-2 rounded-lg border"
-                        :class="`border-${getGasPriceColor(recommendations[tier as keyof typeof recommendations])}-500/40 bg-${getGasPriceColor(recommendations[tier as keyof typeof recommendations])}-500/5 text-${getGasPriceColor(recommendations[tier as keyof typeof recommendations])}-100`"
+                        :class="gasTierClasses(tier)"
                       >
                         <div class="flex items-center gap-2">
                           <span 
