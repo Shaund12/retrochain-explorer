@@ -1,5 +1,5 @@
 <script setup lang="ts">
-import { computed, ref } from "vue";
+import { computed, ref, watch } from "vue";
 import { useRouter } from "vue-router";
 import RcDisclaimer from "@/components/RcDisclaimer.vue";
 import RcLoadingSpinner from "@/components/RcLoadingSpinner.vue";
