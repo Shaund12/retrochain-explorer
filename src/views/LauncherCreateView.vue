@@ -25,6 +25,33 @@ const loading = ref(false);
 const error = ref<string | null>(null);
 const params = ref<any | null>(null);
 
+const DECIMALS = 6n;
+const SCALE = 10n ** DECIMALS;
+
+const toMicro = (val: string): bigint | null => {
+  const s = (val || "").trim().replace(/,/g, "");
+  if (!s) return null;
+  if (!/^[+-]?\d+(\.\d+)?$/.test(s)) return null;
+  const sign = s.startsWith("-") ? -1n : 1n;
+  const clean = s.replace(/^[+-]/, "");
+  const [w, f = ""] = clean.split(".");
+  const whole = BigInt(w || "0");
+  const frac = BigInt((f + "000000").slice(0, 6));
+  return sign * (whole * SCALE + frac);
+};
+
+const formatMicroAmount = (raw: bigint | null, unit: string) => {
+  if (raw === null || raw === undefined) return "—";
+  const num = Number(raw) / Number(SCALE);
+  if (!Number.isFinite(num)) return "—";
+  return `${num.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} ${unit}`;
+};
+
+const formatRawAmount = (raw: bigint | null, unit: string) => {
+  if (raw === null || raw === undefined) return "—";
+  return `${raw.toString()} ${unit}`;
+};
+
 const formatRetro = (value?: string | number | null) => {
   if (value === undefined || value === null || value === "") return "—";
   try {
@@ -61,11 +88,67 @@ const resultingDenom = computed(() => {
   return `factory/${owner}/${base}`;
 });
 
+const maxSupplyRawInput = computed(() => toMicro(maxSupply.value));
+const graduationReserveRawInput = computed(() => toMicro(graduationReserve.value));
+
+const effectiveMaxSupplyRaw = computed(() => {
+  if (maxSupply.value.trim()) return maxSupplyRawInput.value;
+  const def = params.value?.default_max_supply;
+  return def !== null && def !== undefined ? BigInt(def) : null;
+});
+
+const effectiveGraduationReserveRaw = computed(() => {
+  if (graduationReserve.value.trim()) return graduationReserveRawInput.value;
+  const def = params.value?.default_graduation_reserve_uretro;
+  return def !== null && def !== undefined ? BigInt(def) : null;
+});
+
+const virtualReserveRaw = computed(() => {
+  const v = params.value?.default_virtual_reserve_uretro;
+  return v !== null && v !== undefined ? BigInt(v) : null;
+});
+
+const estimatedInitialSpotPrice = computed(() => {
+  const maxRaw = effectiveMaxSupplyRaw.value;
+  const virtRaw = virtualReserveRaw.value;
+  if (maxRaw === null || virtRaw === null || maxRaw === 0n) return null;
+  const ratio = Number(virtRaw) / Number(maxRaw);
+  return Number.isFinite(ratio) ? ratio : null;
+});
+
+const formatRetPerToken = (n?: number | null) => {
+  if (n === null || n === undefined) return "—";
+  return n >= 1 ? n.toFixed(6) : n.toPrecision(6);
+};
+
+const maxSupplyDisplay = computed(() => formatMicroAmount(effectiveMaxSupplyRaw.value, "tokens"));
+const maxSupplyRawDisplay = computed(() => formatRawAmount(effectiveMaxSupplyRaw.value, "micro (raw)"));
+const graduationReserveDisplay = computed(() => formatMicroAmount(effectiveGraduationReserveRaw.value, "RETRO"));
+const graduationReserveRawDisplay = computed(() => formatRawAmount(effectiveGraduationReserveRaw.value, "uretro (raw)"));
+const virtualReserveDisplay = computed(() => formatMicroAmount(virtualReserveRaw.value, "RETRO"));
+const virtualReserveRawDisplay = computed(() => formatRawAmount(virtualReserveRaw.value, "uretro (raw)"));
+const tokensForSaleDisplay = computed(() => formatMicroAmount(effectiveMaxSupplyRaw.value, "tokens"));
+const tokensForSaleRawDisplay = computed(() => formatRawAmount(effectiveMaxSupplyRaw.value, "micro (raw)"));
+const estimatedInitialSpotPriceDisplay = computed(() => formatRetPerToken(estimatedInitialSpotPrice.value));
+
 const submit = async () => {
   if (!subdenom.value.trim()) {
     toast.showError("Subdenom is required");
     return;
   }
+
+  const maxRaw = maxSupplyRawInput.value;
+  const gradRaw = graduationReserveRawInput.value;
+
+  if (maxSupply.value.trim() && maxRaw === null) {
+    toast.showError("Max supply must be a number (tokens, up to 6 decimals).");
+    return;
+  }
+  if (graduationReserve.value.trim() && gradRaw === null) {
+    toast.showError("Graduation reserve must be a number (RETRO, up to 6 decimals).");
+    return;
+  }
+
   try {
     loading.value = true;
     error.value = null;
@@ -79,8 +162,8 @@ const submit = async () => {
       value: {
         creator: address.value,
         subdenom: subdenom.value.trim(),
-        ...(maxSupply.value.trim() ? { maxSupply: maxSupply.value.trim() } : {}),
-        ...(graduationReserve.value.trim() ? { graduationReserveUretro: graduationReserve.value.trim() } : {})
+        ...(maxRaw !== null ? { maxSupply: maxRaw.toString() } : {}),
+        ...(gradRaw !== null ? { graduationReserveUretro: gradRaw.toString() } : {})
       }
     };
 
@@ -178,16 +261,16 @@ const submit = async () => {
         <div class="p-4 rounded-xl border border-amber-400/50 bg-gradient-to-br from-amber-500/10 via-amber-500/5 to-slate-900/60 shadow-[0_10px_40px_-30px_rgba(245,158,11,0.8)] space-y-3">
           <div class="text-[11px] uppercase tracking-wider text-amber-200">Supply & Reserve</div>
           <div class="space-y-2">
-            <label class="text-[11px] text-slate-400">Max supply (optional)</label>
+            <label class="text-[11px] text-slate-400">Max supply (tokens, e.g. 4200.000000)</label>
             <input v-model="maxSupply" class="input bg-slate-900/70 border-amber-400/40 text-white" placeholder="(module default)" />
           </div>
           <div class="space-y-2">
-            <label class="text-[11px] text-slate-400">Graduation reserve (uretro, optional)</label>
+            <label class="text-[11px] text-slate-400">Graduation reserve (RETRO, e.g. 10.000000)</label>
             <input v-model="graduationReserve" class="input bg-slate-900/70 border-amber-400/40 text-white" placeholder="(module default)" />
             <div class="flex flex-wrap gap-2 text-[11px]">
-              <button class="btn-secondary px-2 py-1" @click="graduationReserve = '1000000'">1M</button>
-              <button class="btn-secondary px-2 py-1" @click="graduationReserve = '10000000'">10M</button>
-              <button class="btn-secondary px-2 py-1" @click="graduationReserve = '100000000'">100M</button>
+              <button class="btn-secondary px-2 py-1" @click="graduationReserve = '1'">1</button>
+              <button class="btn-secondary px-2 py-1" @click="graduationReserve = '10'">10</button>
+              <button class="btn-secondary px-2 py-1" @click="graduationReserve = '100'">100</button>
             </div>
             <p class="text-[11px] text-slate-500">Reserve backing at graduation.</p>
           </div>
@@ -208,6 +291,55 @@ const submit = async () => {
             <span class="font-mono text-emerald-200">{{ feeRecipient }}</span>
           </div>
           <div class="text-[11px] text-slate-500">Plus network gas in uretro when broadcasting.</div>
+        </div>
+      </div>
+
+      <div class="p-4 rounded-xl border border-white/10 bg-slate-900/60 space-y-2">
+        <div class="flex items-center justify-between">
+          <h3 class="text-sm font-semibold text-white">On-chain preview</h3>
+          <span class="text-[11px] text-slate-400">Shows raw micro values and human-readable amounts</span>
+        </div>
+        <div class="grid md:grid-cols-2 gap-2 text-sm text-slate-200">
+          <div class="flex items-center justify-between">
+            <span>Max supply (tokens)</span>
+            <span class="font-semibold">{{ maxSupplyDisplay }}</span>
+          </div>
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>Max supply raw (micro tokens)</span>
+            <span class="font-mono text-emerald-200">{{ maxSupplyRawDisplay }}</span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span>Graduation reserve (RETRO)</span>
+            <span class="font-semibold">{{ graduationReserveDisplay }}</span>
+          </div>
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>Graduation reserve raw (uretro)</span>
+            <span class="font-mono text-emerald-200">{{ graduationReserveRawDisplay }}</span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span>Virtual reserve (RETRO)</span>
+            <span class="font-semibold">{{ virtualReserveDisplay }}</span>
+          </div>
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>Virtual reserve raw (uretro)</span>
+            <span class="font-mono text-emerald-200">{{ virtualReserveRawDisplay }}</span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span>Tokens for sale at launch</span>
+            <span class="font-semibold">{{ tokensForSaleDisplay }}</span>
+          </div>
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>Tokens for sale raw (micro tokens)</span>
+            <span class="font-mono text-emerald-200">{{ tokensForSaleRawDisplay }}</span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span>Estimated initial spot price</span>
+            <span class="font-semibold">{{ estimatedInitialSpotPriceDisplay }} RETRO / token</span>
+          </div>
         </div>
       </div>
 
