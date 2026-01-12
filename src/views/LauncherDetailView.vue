@@ -130,6 +130,18 @@ const shortAddr = (addr?: string, size = 14) => {
   return `${addr.slice(0, half)}...${addr.slice(-half)}`;
 };
 
+const parseBigInt = (s?: string | number | null) => {
+  if (s === null || s === undefined) return null;
+  const str = String(s).trim();
+  if (!str || str === "—") return null;
+  if (!/^-?\d+$/.test(str)) return null;
+  try {
+    return BigInt(str);
+  } catch {
+    return null;
+  }
+};
+
 const copyText = async (text?: string, label = "") => {
   if (!text) return;
   try {
@@ -140,9 +152,32 @@ const copyText = async (text?: string, label = "") => {
   }
 };
 
-const spotPrice = computed(() => formatRetro(launch.value?.computed?.spot_price_uretro_per_token));
-const progress = computed(() => formatPercent(launch.value?.computed?.graduation_progress));
+const spotPriceRaw = computed(() => {
+  const raw = launch.value?.computed?.spot_price_uretro_per_token;
+  if (raw === null || raw === undefined) return null;
+  const n = Number(raw);
+  return Number.isFinite(n) ? n : null;
+});
+const formatRetPerToken = (n?: number | null) => {
+  if (n === null || n === undefined) return "—";
+  return n >= 1 ? n.toFixed(6) : n.toPrecision(6);
+};
+const spotPrice = computed(() => formatRetPerToken(spotPriceRaw.value));
+
 const graduated = computed(() => Boolean(launch.value?.launch?.graduated));
+const graduationProgress = computed(() => {
+  if (graduated.value) return 1;
+  const reserveReal = parseBigInt(launch.value?.launch?.reserve_real_uretro);
+  const grad = parseBigInt(launch.value?.launch?.graduation_reserve_uretro);
+  if (reserveReal === null || grad === null || grad <= 0n) return null;
+  const p = Number(reserveReal) / Number(grad);
+  return Math.max(0, Math.min(1, p));
+});
+const progress = computed(() => {
+  if (graduated.value) return "100.00% (completed)";
+  const p = graduationProgress.value;
+  return p === null ? "—" : `${(p * 100).toFixed(2)}%`;
+});
 const dexPoolId = computed(() => launch.value?.launch?.dex_pool_id || null);
 const tokensSoldPercent = computed(() => {
   const sold = Number(launch.value?.computed?.tokens_sold ?? 0);
@@ -190,6 +225,7 @@ watch(() => route.params.denom, fetchDetail);
 
 const tokensSold = computed(() => formatToken(launch.value?.computed?.tokens_sold));
 const tokensRemaining = computed(() => formatToken(launch.value?.computed?.tokens_remaining));
+const tokensRemainingLabel = computed(() => (graduated.value ? "Tokens remaining (launch)" : "Tokens remaining (before graduation)"));
 
 const buyQuoteError = ref<string | null>(null);
 
@@ -428,7 +464,12 @@ const chartData = computed(() => {
   const padding = 24;
   const ordered = sortedTrades.value.filter((t) => Number.isFinite(t.price));
 
-  const pts = ordered.length ? ordered : launch.value?.computed?.spot_price_uretro_per_token ? [{ price: Number(launch.value.computed.spot_price_uretro_per_token) / 1_000_000, time: new Date().toISOString(), side: "buy", amountIn: "", amountOut: "" }] : [];
+  const spotFallback = spotPriceRaw.value;
+  const pts = ordered.length
+    ? ordered
+    : spotFallback !== null
+      ? [{ price: spotFallback, time: new Date().toISOString(), side: "buy", amountIn: "", amountOut: "" }]
+      : [];
   if (!pts.length) return { line: "", area: "", min: 0, max: 0, coords: [], labels: { x: [], y: [] } };
 
   const prices = pts.map((p: any) => p.price);
@@ -657,9 +698,9 @@ const chartData = computed(() => {
             <div class="text-[11px] text-emerald-100">{{ tokensSoldPercent }} of supply</div>
           </div>
           <div class="p-3 rounded-xl bg-white/5 border border-cyan-400/30">
-            <div class="text-[11px] uppercase tracking-wider text-cyan-200">Tokens Remaining</div>
+            <div class="text-[11px] uppercase tracking-wider text-cyan-200">{{ tokensRemainingLabel }}</div>
             <div class="text-xl font-bold text-white">{{ tokensRemaining }}</div>
-            <div class="text-[11px] text-cyan-100">to graduation</div>
+            <div class="text-[11px] text-cyan-100">&nbsp;</div>
           </div>
           <div class="p-3 rounded-xl bg-white/5 border border-amber-400/30">
             <div class="text-[11px] uppercase tracking-wider text-amber-200">Reserve (Real)</div>
@@ -692,11 +733,11 @@ const chartData = computed(() => {
             <div v-else class="font-mono text-xs text-emerald-200">—</div>
           </div>
           <div>
-            <div class="text-[11px] uppercase tracking-wider text-slate-400">Max Supply</div>
+            <div class="text-[11px] uppercase tracking-wider text-slate-400">Max Supply (tokens)</div>
             <div class="font-semibold">{{ formatToken(launch.launch?.max_supply) }}</div>
           </div>
           <div>
-            <div class="text-[11px] uppercase tracking-wider text-slate-400">Tokens Sold / Remaining</div>
+            <div class="text-[11px] uppercase tracking-wider text-slate-400">Tokens Sold / Remaining (tokens)</div>
             <div class="font-semibold">{{ tokensSold }} / {{ tokensRemaining }}</div>
           </div>
           <div>
@@ -708,7 +749,7 @@ const chartData = computed(() => {
             <div class="font-semibold">{{ formatRetro(launch.launch?.virtual_reserve_uretro) }}</div>
           </div>
           <div>
-            <div class="text-[11px] uppercase tracking-wider text-slate-400">Graduation Reserve</div>
+            <div class="text-[11px] uppercase tracking-wider text-slate-400">Graduation Reserve (RETRO)</div>
             <div class="font-semibold">{{ formatRetro(launch.launch?.graduation_reserve_uretro) }}</div>
           </div>
           <div>
