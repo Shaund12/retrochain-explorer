@@ -8,6 +8,14 @@ export type Transfer = {
 
 export type Coin = { amount: string; denom: string };
 
+export type ArcadeReward = {
+  amount: number;
+  sessionId?: string;
+  player?: string;
+  gameId?: string;
+  msgIndex?: string;
+};
+
 export const extractMessageTypes = (txResponse: any): string[] => {
   const messages: any[] | undefined = txResponse?.tx?.body?.messages;
   if (!Array.isArray(messages)) return [];
@@ -46,6 +54,43 @@ export const aggregateTransferTotals = (logs: any[] | undefined | null): Coin[] 
   });
 
   return Array.from(totals.entries()).map(([denom, amount]) => ({ denom, amount: amount.toString() }));
+};
+
+export const aggregateArcadeRewards = (resp: any): ArcadeReward[] => {
+  const collectEvents = (): any[] => {
+    const topLevel = Array.isArray(resp?.events) ? resp.events : [];
+    const fromLogs = Array.isArray(resp?.logs)
+      ? resp.logs.flatMap((log: any) => Array.isArray(log?.events) ? log.events : [])
+      : [];
+    return [...topLevel, ...fromLogs];
+  };
+
+  const events = collectEvents();
+  if (!events.length) return [];
+
+  const rewards: ArcadeReward[] = [];
+
+  events.forEach((ev) => {
+    if (ev?.type !== "arcade.reward_distributed") return;
+    const attrs: any[] = Array.isArray(ev?.attributes) ? ev.attributes : [];
+    const map = attrs.reduce((acc: Record<string, string>, curr: any) => {
+      if (curr?.key) acc[curr.key] = curr.value;
+      return acc;
+    }, {} as Record<string, string>);
+
+    const amount = Number(map.reward_amount ?? map.amount ?? map.tokens_burned);
+    if (!Number.isFinite(amount)) return;
+
+    rewards.push({
+      amount,
+      sessionId: map.session_id,
+      player: map.player,
+      gameId: map.game_id,
+      msgIndex: map.msg_index
+    });
+  });
+
+  return rewards;
 };
 
 export const aggregateBurnTotals = (resp: any): Coin[] => {
@@ -178,7 +223,7 @@ export const txContainsAddress = (txResponse: any, address: string) => {
   return inspect(txResponse?.tx?.body?.messages) || inspect(txResponse?.logs) || inspect(txResponse?.tx?.auth_info?.signer_infos);
 };
 
-export const buildSummaryFromResponse = <TSummary extends { hash: string; height: number; timestamp?: string }>(
+export const buildSummaryFromResponse = <TSummary extends { hash: string; height: number; timestamp?: string; arcadeRewards?: ArcadeReward[] }>(
   resp: any,
   fallback: { hash: string; height: number; timestamp?: string },
   build: (base: {
@@ -193,6 +238,7 @@ export const buildSummaryFromResponse = <TSummary extends { hash: string; height
     valueTransfers: Coin[];
     fees: Coin[];
     burns: Coin[];
+    arcadeRewards: ArcadeReward[];
   }) => TSummary
 ): TSummary => {
   return build({
@@ -206,6 +252,7 @@ export const buildSummaryFromResponse = <TSummary extends { hash: string; height
     messageTypes: extractMessageTypes(resp),
     valueTransfers: aggregateTransferTotals(resp?.logs),
     fees: resp?.tx?.auth_info?.fee?.amount || [],
-    burns: aggregateBurnTotals(resp)
+    burns: aggregateBurnTotals(resp),
+    arcadeRewards: aggregateArcadeRewards(resp)
   });
 };

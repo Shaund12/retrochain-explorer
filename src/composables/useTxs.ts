@@ -30,6 +30,7 @@ export interface TxSummary {
   valueTransfers?: Array<{ amount: string; denom: string }>;
   fees?: Array<{ amount: string; denom: string }>;
   burns?: Array<{ amount: string; denom: string }>;
+  arcadeRewards?: Array<{ amount: number; sessionId?: string; player?: string; gameId?: string; msgIndex?: string }>;
 }
 
 // Tx parsing/aggregation helpers are centralized in `src/utils/txParsing.ts`.
@@ -43,7 +44,8 @@ const hashFromBase64 = async (b64: string) => {
 const buildSummaryFromResponse = (resp: any, fallback: { hash: string; height: number; timestamp?: string }): TxSummary =>
   buildSummaryFromResponseBase<TxSummary>(resp, fallback, (base) => ({
     ...base,
-    transfers: []
+    transfers: [],
+    arcadeRewards: base.arcadeRewards
   }));
 
 const MAX_BLOCK_SCAN_MULTIPLIER = 8; // scan up to limit * multiplier blocks before giving up
@@ -135,7 +137,8 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
           messageTypes: Array.isArray(raw?.messageTypes) ? raw.messageTypes : [],
           gasUsed: raw?.gasUsed ?? raw?.gas_used,
           gasWanted: raw?.gasWanted ?? raw?.gas_wanted,
-          code: typeof raw?.code === "number" ? raw.code : undefined
+          code: typeof raw?.code === "number" ? raw.code : undefined,
+          arcadeRewards: []
         };
 
         try {

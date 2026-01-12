@@ -29,6 +29,15 @@ const txPageSize = ref(20);
 const txHasMore = computed(() => txs.value.length > txPageSize.value);
 const visibleTxs = computed(() => txs.value.slice(0, txPageSize.value));
 
+const arcadeRewards = computed(() => {
+  const rewards = allTxs.value.flatMap((tx) =>
+    (tx.arcadeRewards || []).map((r) => ({ ...r, hash: tx.hash, height: tx.height, timestamp: tx.timestamp }))
+  );
+  return rewards.sort((a, b) => (b.height || 0) - (a.height || 0));
+});
+
+const totalArcadeRewards = computed(() => arcadeRewards.value.reduce((sum, r) => sum + (r.amount || 0), 0));
+
 // Transfer state
 const showTransferModal = ref(false);
 const transferRecipient = ref("");
@@ -639,7 +648,7 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
 
     <!-- Account Data -->
     <template v-if="bech32Address">
-      <div class="grid gap-3 grid-cols-1 lg:grid-cols-3">
+      <div class="grid gap-3 grid-cols-1 lg:grid-cols-4">
         <!-- Balance Overview -->
         <div class="card">
           <div class="text-xs uppercase tracking-wider text-slate-400 mb-2">
@@ -724,6 +733,45 @@ const formatValueTransfers = (values?: Array<{ amount: string; denom: string }>)
           <div class="text-xs text-slate-400">
             Recent activities
           </div>
+        </div>
+
+        <!-- Arcade Rewards -->
+        <div class="card">
+          <div class="flex items-center justify-between mb-2">
+            <div>
+              <div class="text-xs uppercase tracking-wider text-slate-400">Arcade Rewards</div>
+              <div class="text-[11px] text-slate-500">From <code>arcade.reward_distributed</code> events</div>
+            </div>
+            <span class="badge border-emerald-400/60 text-emerald-200 text-[11px]">Game sessions</span>
+          </div>
+          <div class="text-2xl font-bold text-emerald-400 mb-1">
+            {{ totalArcadeRewards.toLocaleString() }} pts
+          </div>
+          <div class="text-xs text-slate-400 mb-2">
+            Earned across {{ arcadeRewards.length }} reward events
+          </div>
+          <div v-if="arcadeRewards.length" class="space-y-2 text-xs text-slate-300">
+            <div
+              v-for="reward in arcadeRewards.slice(0, 5)"
+              :key="reward.hash + (reward.sessionId || '') + (reward.msgIndex || '')"
+              class="p-2 rounded-lg bg-slate-900/60 border border-slate-800"
+            >
+              <div class="flex items-center justify-between">
+                <div class="font-semibold text-emerald-200">+{{ reward.amount }} pts</div>
+                <div class="text-[10px] text-slate-500">#{{ reward.height || '—' }}</div>
+              </div>
+              <div class="text-[11px] text-slate-400 flex flex-wrap gap-2">
+                <span v-if="reward.gameId">Game: {{ reward.gameId }}</span>
+                <span v-if="reward.sessionId">Session: {{ reward.sessionId }}</span>
+                <span v-if="reward.timestamp">{{ dayjs(reward.timestamp).fromNow?.() || reward.timestamp }}</span>
+              </div>
+            </div>
+          </div>
+          <div v-else class="text-xs text-slate-500">No arcade rewards found for this account yet.</div>
+          <p class="mt-2 text-[11px] text-slate-500">
+            Rewards are granted when a session ends (e.g., <code>MsgSubmitScore</code>) and are emitted as
+            <code>arcade.reward_distributed</code> events on-chain.
+          </p>
         </div>
 
         <!-- Faucet Quick Request (hidden on mainnet) -->
