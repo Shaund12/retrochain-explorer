@@ -322,7 +322,9 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
       const filters = [
         `message.sender='${address}'`,
         `transfer.recipient='${address}'`,
-        `transfer.sender='${address}'`
+        `transfer.sender='${address}'`,
+        // Capture arcade reward distributions that don't include the player in transfer sender/recipient
+        `arcade.reward_distributed.player='${address}'`
       ];
 
       const seen = new Set<string>();
