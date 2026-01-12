@@ -1,5 +1,5 @@
 // src/composables/useKeplr.ts
-import { ref } from "vue";
+import { ref, computed } from "vue";
 import { SigningStargateClient, defaultRegistryTypes } from "@cosmjs/stargate";
 import { Registry, encodePubkey, makeAuthInfoBytes, makeSignDoc as makeSignDocDirect, GeneratedType } from "@cosmjs/proto-signing";
 import { encodeSecp256k1Pubkey } from "@cosmjs/amino";
@@ -173,11 +173,11 @@ if (typeof window !== "undefined" && getWalletProvider()) {
   configureKeplrDefaults();
 }
 
-const { restBase, rpcBase } = useNetwork();
+const { restBase, rpcBase, current: network } = useNetwork();
 
-const CHAIN_ID = "retrochain-mainnet";
-const CHAIN_NAME = "RetroChain Mainnet";
-const DEFAULT_FEE_DENOM = "uretro";
+const CHAIN_ID = (import.meta.env.VITE_CHAIN_ID || "").trim() || (network.value === "mainnet" ? "retrochain-mainnet" : "retrochain-testnet");
+const CHAIN_NAME = (import.meta.env.VITE_CHAIN_NAME || "").trim() || (network.value === "mainnet" ? "RetroChain Mainnet" : "RetroChain Testnet");
+const DEFAULT_FEE_DENOM = (import.meta.env.VITE_FEE_DENOM || "").trim() || (network.value === "mainnet" ? "uretro" : "udretro");
 const DEFAULT_GAS_PRICE = 0.03; // uretro per gas unit
 const DEFAULT_GAS_ADJUSTMENT = 1.3;
 const DEFAULT_GAS_PER_MSG = 150000;
@@ -933,8 +933,15 @@ const tokenFactoryTypes: ReadonlyArray<[string, GeneratedType]> = [
 function buildChainInfo() {
   // Build absolute URLs - Keplr requires full URIs
   const origin = typeof window !== "undefined" ? window.location.origin : "http://localhost:5173";
-  const rpcUrl = rpcBase.value ? (rpcBase.value.startsWith('http') ? rpcBase.value : `${origin}${rpcBase.value}`) : `${origin}/rpc`;
-  const restUrl = restBase.value ? (restBase.value.startsWith('http') ? restBase.value : `${origin}${restBase.value}`) : `${origin}/api`;
+  const normalizeBaseUrl = (base: string | undefined | null, fallback: string) => {
+    if (!origin) return base || fallback;
+    if (!base) return `${origin}${fallback}`;
+    if (base.startsWith("http")) return base;
+    const path = base.startsWith("/") ? base : `/${base}`;
+    return `${origin}${path}`;
+  };
+  const rpcUrl = normalizeBaseUrl(rpcBase.value, "/rpc");
+  const restUrl = normalizeBaseUrl(restBase.value, "/api");
   
   return {
     chainId: CHAIN_ID,
@@ -1452,13 +1459,6 @@ const suggestChain = async (walletType: string) => {
       throw e;
     }
   };
-
-  if (typeof window !== "undefined" && window.keplr) {
-    // Always route signAndBroadcast through our normalized path (handles arcade submit-score gas bump)
-    window.keplr.signAndBroadcast = async (chainId: string, signer: string, msgs: any[], fee: any, memo = "") => {
-      return signAndBroadcast(chainId, msgs, fee, memo);
-    };
-  }
 
   checkAvailability();
 

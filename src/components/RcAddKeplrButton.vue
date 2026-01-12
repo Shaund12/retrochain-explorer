@@ -44,6 +44,13 @@ const resolveEndpoint = (value: string | undefined | null, fallbackPath: string)
 const restDisplay = computed(() => resolveEndpoint(restBase.value, "/api"));
 const rpcDisplay = computed(() => resolveEndpoint(rpcBase.value, "/rpc"));
 
+const detectedWalletName = computed(() => {
+  if (keplrDetected.value) return "Keplr";
+  if (leapDetected.value) return "Leap";
+  if (cosmoDetected.value) return "Cosmostation";
+  return "Keplr";
+});
+
 const buttonAttrs = computed(() => {
   const { class: _class, ...rest } = attrs;
   return rest;
@@ -64,7 +71,7 @@ const walletStatuses = computed(() => [
 const buttonLabel = computed(() => {
   if (connecting.value) return "Connecting…";
   if (address.value) return "Wallet Connected";
-  if (!isAvailable.value) return "Install Keplr";
+  if (!isAvailable.value) return `Install ${detectedWalletName.value}`;
   return "Connect Wallet";
 });
 
@@ -101,11 +108,11 @@ watch(
   { immediate: true }
 );
 
-const steps = [
-  { title: "Install Keplr", detail: "Browser extension or mobile app", action: () => window.open(installUrl, "_blank") },
+const steps = computed(() => [
+  { title: `Install ${detectedWalletName.value}`, detail: "Browser extension or mobile app", action: () => window.open(installUrl, "_blank") },
   { title: "Add RetroChain", detail: "Chain suggestion handles RPC/REST endpoints" },
   { title: "Approve Connection", detail: "Unlock wallet and approve access" }
-];
+]);
 
 const previousOverflow = ref<string | null>(null);
 const restoreBodyOverflow = () => {
@@ -289,7 +296,7 @@ onBeforeUnmount(() => {
                   :disabled="connecting"
                   @click="handleConnect"
                 >
-                  {{ address ? 'Reconnect Wallet' : 'Connect with Keplr' }}
+                  {{ address ? 'Reconnect Wallet' : `Connect with ${detectedWalletName}` }}
                 </button>
                 <a
                   :href="installUrl"
@@ -297,7 +304,7 @@ onBeforeUnmount(() => {
                   rel="noopener noreferrer"
                   class="inline-flex min-w-[160px] items-center justify-center rounded-2xl border border-white/10 px-5 py-3 text-sm font-semibold text-slate-100 hover:border-white/30"
                 >
-                  Install Keplr
+                  Install {{ detectedWalletName }}
                 </a>
                 <button type="button" class="rounded-2xl px-4 py-3 text-sm font-semibold text-slate-300 hover:text-white" @click="closeModal">
                   Cancel
