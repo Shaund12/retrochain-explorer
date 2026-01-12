@@ -36,10 +36,10 @@ const { validators, fetchValidators } = useValidators();
 const api = useApi();
 
 const showSpaceInvadersNotice = ref(true);
-const showArcadeNoticeBody = ref(true);
+const showArcadeNoticeBody = useStorage("rc_home_arcade_notice_detail_v1", true);
 const spaceInvadersNoticeKey = "home-space-invaders-beta-dismissed";
-const showSafetyNotice = ref(true);
-const customizeDashboard = ref(false);
+const showSafetyNotice = useStorage("rc_home_safety_notice_detail_v1", true);
+const customizeDashboard = useStorage("rc_home_customize_v1", false);
 
 const HOME_STATE_KEY = "rc_home_state_v1";
 type HomeState = {
@@ -267,24 +267,32 @@ const gasColorClassMap: Record<string, string> = {
   emerald: "border-emerald-500/40 bg-emerald-500/5 text-emerald-100",
   cyan: "border-cyan-500/40 bg-cyan-500/5 text-cyan-100",
   amber: "border-amber-500/40 bg-amber-500/5 text-amber-100",
-  rose: "border-rose-500/40 bg-rose-500/5 text-rose-100"
+  rose: "border-rose-500/40 bg-rose-500/5 text-rose-100",
+  slate: "border-slate-500/40 bg-slate-500/5 text-slate-100"
+};
+
+const normalizeGasColor = (color?: string) => {
+  const key = color && gasColorClassMap[color] ? color : "slate";
+  return key;
 };
 
 const gasTierClasses = (tier: string) => {
   const recs: any = (recommendations as any)?.value ?? recommendations;
-  const colorKey = getGasPriceColor(recs?.[tier] ?? 0);
-  return gasColorClassMap[colorKey] ?? gasColorClassMap.cyan;
+  const colorKey = normalizeGasColor(getGasPriceColor(recs?.[tier] ?? 0));
+  return gasColorClassMap[colorKey] ?? gasColorClassMap.slate;
 };
 
 const congestionTextClass = computed(() => {
-  const colorKey = (congestionLevel as any)?.value?.color ?? (congestionLevel as any)?.color;
+  const colorKeyRaw = (congestionLevel as any)?.value?.color ?? (congestionLevel as any)?.color;
+  const colorKey = normalizeGasColor(colorKeyRaw);
   const map: Record<string, string> = {
     emerald: "text-emerald-300",
     cyan: "text-cyan-300",
     amber: "text-amber-300",
-    rose: "text-rose-300"
+    rose: "text-rose-300",
+    slate: "text-slate-300"
   };
-  return map[colorKey] ?? "text-slate-300";
+  return map[colorKey] ?? map.slate;
 });
 
 const loadGasStats = async () => {
@@ -658,8 +666,8 @@ function sparkPath(data: number[], width = 160, height = 40) {
 
     <section class="flex flex-col gap-3 min-w-0">
       <!-- Hero + Search -->
-      <div class="card-soft relative overflow-hidden">
-        <div class="absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
+      <div class="card-soft relative overflow-visible">
+        <div class="pointer-events-none absolute top-0 right-0 w-64 h-64 bg-gradient-to-br from-indigo-500/20 to-purple-500/20 rounded-full blur-3xl"></div>
         <div class="relative grid gap-4 lg:grid-cols-[2fr,1.2fr] items-start">
           <div class="space-y-3">
             <div class="flex flex-wrap items-baseline gap-2">
@@ -698,6 +706,14 @@ function sparkPath(data: number[], width = 160, height = 40) {
               >
                 Account Lookup
               </button>
+              <a
+                class="btn text-xs"
+                href="https://discord.gg/retrochain"
+                target="_blank"
+                rel="noopener noreferrer"
+              >
+                Join Discord
+              </a>
             </div>
 
             <!-- Network Info Tags -->
@@ -1106,7 +1122,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                         <col style="width: 90px" />
                         <col style="width: 220px" />
                       </colgroup>
-                      <thead>
+                      <thead class="sticky top-0 bg-slate-900/90 backdrop-blur">
                         <tr class="text-slate-300 text-xs">
                           <th>Height</th>
                           <th>Hash</th>
@@ -1134,7 +1150,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                             </span>
                           </td>
                           <td class="text-xs text-slate-300 py-2 whitespace-nowrap">
-                            <span v-if="b.time">{{ dayjs(b.time).format('YYYY-MM-DD HH:mm:ss') }}</span>
+                            <span v-if="b.time" :title="dayjs(b.time).format('YYYY-MM-DD HH:mm:ss')">{{ formatTime(b.time) }}</span>
                             <span v-else>-</span>
                           </td>
                         </tr>
@@ -1171,7 +1187,7 @@ function sparkPath(data: number[], width = 160, height = 40) {
                   </div>
                   <div v-else class="overflow-x-auto">
                     <table class="table min-w-full">
-                      <thead>
+                      <thead class="sticky top-0 bg-slate-900/90 backdrop-blur">
                         <tr class="text-slate-300 text-xs">
                           <th>Hash</th>
                           <th>Height</th>
