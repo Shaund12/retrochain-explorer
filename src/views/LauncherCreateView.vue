@@ -24,6 +24,8 @@ const tokenImage = ref("");
 const loading = ref(false);
 const error = ref<string | null>(null);
 const params = ref<any | null>(null);
+const defaultsApplied = ref(false);
+const userSetGraduationReserve = ref(false);
 
 const DECIMALS = 6n;
 const SCALE = 10n ** DECIMALS;
@@ -40,11 +42,57 @@ const toMicro = (val: string): bigint | null => {
   return sign * (whole * SCALE + frac);
 };
 
+watch(
+  [maxSupplyRawInput, () => params.value?.default_max_supply, () => params.value?.default_graduation_reserve_uretro],
+  () => {
+    if (userSetGraduationReserve.value) return;
+    if (suggestedGraduationReserveRaw.value !== null) {
+      const nextVal = microToDisplay(suggestedGraduationReserveRaw.value);
+      graduationReserve.value = nextVal;
+    }
+  },
+  { immediate: true }
+);
+
+watch(
+  graduationReserve,
+  (val, old) => {
+    if (val === old) return;
+    // If user types something custom, stop auto-updating.
+    if (val.trim()) {
+      userSetGraduationReserve.value = true;
+    } else {
+      userSetGraduationReserve.value = false;
+    }
+  }
+);
+
 const formatMicroAmount = (raw: bigint | null, unit: string) => {
   if (raw === null || raw === undefined) return "—";
   const num = Number(raw) / Number(SCALE);
   if (!Number.isFinite(num)) return "—";
   return `${num.toLocaleString(undefined, { minimumFractionDigits: 6, maximumFractionDigits: 6 })} ${unit}`;
+};
+
+const microToDisplay = (raw: bigint | null) => {
+  if (raw === null || raw === undefined) return "";
+  const sign = raw < 0n ? "-" : "";
+  const val = raw < 0n ? -raw : raw;
+  const whole = val / SCALE;
+  const frac = val % SCALE;
+  const fracStr = frac.toString().padStart(6, "0");
+  return `${sign}${whole.toString()}.${fracStr}`;
+};
+
+const formatMicroAsDecimal = (raw: bigint | null, suffix = "") => {
+  if (raw === null || raw === undefined) return "—";
+  const sign = raw < 0n ? "-" : "";
+  const val = raw < 0n ? -raw : raw;
+  const whole = val / SCALE;
+  const frac = val % SCALE;
+  const fracStr = frac.toString().padStart(6, "0").replace(/0+$/, "");
+  const numStr = sign + whole.toString() + (fracStr ? `.${fracStr}` : "");
+  return suffix ? `${numStr}${suffix}` : numStr;
 };
 
 const formatRawAmount = (raw: bigint | null, unit: string) => {
@@ -72,6 +120,13 @@ const loadParams = async () => {
   try {
     const res = await api.get(`/retrochain/launcher/v1/params`);
     params.value = res.data?.params ?? res.data ?? null;
+    if (!defaultsApplied.value && params.value) {
+      const defMax = params.value?.default_max_supply;
+      if (!maxSupply.value.trim() && defMax !== null && defMax !== undefined) {
+        maxSupply.value = microToDisplay(BigInt(defMax));
+      }
+      defaultsApplied.value = true;
+    }
   } catch (err: any) {
     params.value = null;
   }
@@ -91,6 +146,17 @@ const resultingDenom = computed(() => {
 const maxSupplyRawInput = computed(() => toMicro(maxSupply.value));
 const graduationReserveRawInput = computed(() => toMicro(graduationReserve.value));
 
+const suggestedGraduationReserveRaw = computed(() => {
+  const defGrad = params.value?.default_graduation_reserve_uretro;
+  const defMax = params.value?.default_max_supply;
+  if (defGrad === null || defGrad === undefined) return null;
+  const maxRaw = maxSupplyRawInput.value ?? (defMax !== null && defMax !== undefined ? BigInt(defMax) : null);
+  if (maxRaw === null || defMax === null || defMax === undefined) return BigInt(defGrad);
+  const baseDefMax = BigInt(defMax);
+  if (baseDefMax === 0n) return BigInt(defGrad);
+  return (BigInt(defGrad) * maxRaw) / baseDefMax;
+});
+
 const effectiveMaxSupplyRaw = computed(() => {
   if (maxSupply.value.trim()) return maxSupplyRawInput.value;
   const def = params.value?.default_max_supply;
@@ -108,18 +174,15 @@ const virtualReserveRaw = computed(() => {
   return v !== null && v !== undefined ? BigInt(v) : null;
 });
 
-const estimatedInitialSpotPrice = computed(() => {
+const estimatedInitialSpotPriceScaled = computed(() => {
   const maxRaw = effectiveMaxSupplyRaw.value;
   const virtRaw = virtualReserveRaw.value;
   if (maxRaw === null || virtRaw === null || maxRaw === 0n) return null;
-  const ratio = Number(virtRaw) / Number(maxRaw);
-  return Number.isFinite(ratio) ? ratio : null;
+  // price scaled by 1e6 to preserve precision (RETRO per token)
+  return (virtRaw * SCALE) / maxRaw;
 });
 
-const formatRetPerToken = (n?: number | null) => {
-  if (n === null || n === undefined) return "—";
-  return n >= 1 ? n.toFixed(6) : n.toPrecision(6);
-};
+const formatRetPerToken = (scaled?: bigint | null) => formatMicroAsDecimal(scaled ?? null);
 
 const maxSupplyDisplay = computed(() => formatMicroAmount(effectiveMaxSupplyRaw.value, "tokens"));
 const maxSupplyRawDisplay = computed(() => formatRawAmount(effectiveMaxSupplyRaw.value, "micro (raw)"));
@@ -129,7 +192,9 @@ const virtualReserveDisplay = computed(() => formatMicroAmount(virtualReserveRaw
 const virtualReserveRawDisplay = computed(() => formatRawAmount(virtualReserveRaw.value, "uretro (raw)"));
 const tokensForSaleDisplay = computed(() => formatMicroAmount(effectiveMaxSupplyRaw.value, "tokens"));
 const tokensForSaleRawDisplay = computed(() => formatRawAmount(effectiveMaxSupplyRaw.value, "micro (raw)"));
-const estimatedInitialSpotPriceDisplay = computed(() => formatRetPerToken(estimatedInitialSpotPrice.value));
+const estimatedInitialSpotPriceDisplay = computed(() => formatRetPerToken(estimatedInitialSpotPriceScaled.value));
+const suggestedGraduationReserveDisplay = computed(() => formatMicroAmount(suggestedGraduationReserveRaw.value, "RETRO"));
+const suggestedGraduationReserveRawDisplay = computed(() => formatRawAmount(suggestedGraduationReserveRaw.value, "uretro (raw)"));
 
 const submit = async () => {
   if (!subdenom.value.trim()) {
@@ -316,6 +381,15 @@ const submit = async () => {
           <div class="flex items-center justify-between text-xs text-slate-400">
             <span>Graduation reserve raw (uretro)</span>
             <span class="font-mono text-emerald-200">{{ graduationReserveRawDisplay }}</span>
+          </div>
+
+          <div class="flex items-center justify-between">
+            <span>Suggested graduation reserve (scaled)</span>
+            <span class="font-semibold">{{ suggestedGraduationReserveDisplay }}</span>
+          </div>
+          <div class="flex items-center justify-between text-xs text-slate-400">
+            <span>Suggested raw (uretro)</span>
+            <span class="font-mono text-emerald-200">{{ suggestedGraduationReserveRawDisplay }}</span>
           </div>
 
           <div class="flex items-center justify-between">
