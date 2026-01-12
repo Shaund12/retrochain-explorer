@@ -173,7 +173,7 @@ const releases: Release[] = [
   {
     version: "2.4.2",
     codename: "Nav & API Polish",
-    date: "2025-02-17",
+    date: "2026-01-10",
     summary: "Navigation regrouped under Economy/Network/Docs, API docs link hard-redirects correctly, and net transfers plus factory token labels stay tidy.",
     changes: [
       {
@@ -201,7 +201,7 @@ const releases: Release[] = [
   {
     version: "2.4.1",
     codename: "DEX Fee Clarity",
-    date: "2025-02-14",
+    date: "2026-01-07",
     summary: "Swap panel now shows live fee splits, fixes slippage math, and auto-switches output token when inputs match.",
     changes: [
       {
@@ -224,7 +224,7 @@ const releases: Release[] = [
   {
     version: "2.4.0",
     codename: "DEX & Rewards Polish",
-    date: "2025-02-10",
+    date: "2026-01-04",
     summary: "DEX UI now uses friendly token labels, sharper inputs, and staking shows factory reward tokens with detail modals.",
     changes: [
       {
@@ -252,7 +252,7 @@ const releases: Release[] = [
   {
     version: "2.3.0",
     codename: "API Test Revamp",
-    date: "2025-01-27",
+    date: "2025-12-28",
     summary: "API test dashboard now surfaces rich metrics, quick facts, reruns, and copy actions for Cosmos REST endpoints.",
     changes: [
       {
@@ -280,7 +280,7 @@ const releases: Release[] = [
   {
     version: "2.2.0",
     codename: "Arcade Polish & Nav",
-    date: "2025-01-20",
+    date: "2025-12-22",
     summary: "Arcade Games page got richer modals, cleaned genre labels, and a fast nav link to the games catalog.",
     changes: [
       {
@@ -303,7 +303,7 @@ const releases: Release[] = [
   {
     version: "2025.01.05",
     codename: "Palette Refresh + Arcade UX",
-    date: "2025-01-05",
+    date: "2025-12-18",
     summary:
       "Refreshed the site-wide palette to cyan/emerald, improved arcade UX with controller messaging and in-page scrolling, ensured game launches open in new tabs, and cleaned UTF-8 placeholders.",
     changes: [
@@ -342,7 +342,7 @@ const releases: Release[] = [
   {
     version: "2025.12.30",
     codename: "Arcade BattlePoints Claims",
-    date: "2025-12-30",
+    date: "2025-12-12",
     summary:
       "Fixed BattlePoints quest claim tracking in the Arcade view by aligning smart queries with the on-chain contract interface and surfacing query failures for debugging.",
     changes: [
@@ -381,7 +381,7 @@ const releases: Release[] = [
   {
     version: "2025.12.22-2",
     codename: "GitBook Sprint",
-    date: "2025-12-22",
+    date: "2025-12-08",
     summary:
       "Introduced a GitBook-style Docs hub with a full explorer-focused documentation set, automatic IBC denom registry discovery, and consistent navigation between docs pages.",
     changes: [
@@ -438,7 +438,7 @@ const releases: Release[] = [
   {
     version: "2025.12.22",
     codename: "Stake & Trace",
-    date: "2025-12-22",
+    date: "2025-11-28",
     summary: "BTC staking UX got richer guidance, chain metadata adds stWBTC and Noble USDC, and tx details now surface parsed transfers with token context.",
     changes: [
       {
@@ -466,7 +466,7 @@ const releases: Release[] = [
   {
     version: "2025.12.20",
     codename: "Dashboard Flex",
-    date: "2025-12-20",
+    date: "2025-11-05",
     summary: "Home dashboard got movable cards, persisted layout, richer telemetry, and paginated blocks/txs while search added saved-query support.",
     changes: [
       {
