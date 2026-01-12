@@ -373,6 +373,21 @@ const hydrateFastTxs = async (list: any[], limit: number, address?: string): Pro
         }
       }
 
+      // Fallback: if the indexer returns nothing (or is disabled), scan recent blocks for this address.
+      if (!collected.length) {
+        try {
+          const scanned = await scanBlocksForAddress(address, fetchCount);
+          for (const s of scanned) {
+            if (!seen.has(s.hash)) {
+              seen.add(s.hash);
+              collected.push(s);
+            }
+          }
+        } catch (scanErr) {
+          console.warn("Block-scan fallback failed", scanErr);
+        }
+      }
+
       collected.sort((a, b) => b.height - a.height || b.timestamp?.localeCompare?.(a.timestamp || "") || 0);
       allTxs.value = collected;
       const start = pageIndex * pageSize;
