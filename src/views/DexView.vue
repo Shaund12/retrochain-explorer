@@ -85,6 +85,16 @@ const fmtAmount = (amount: string | number | null | undefined, denom: string) =>
   return formatAmount(String(amount), denom, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false });
 };
 
+const formatPercent = (v: number | null, digits = 3) => {
+  if (v === null || !Number.isFinite(v)) return "—";
+  return `${(v * 100).toFixed(digits)}%`;
+};
+
+const toNumberSafe = (val: string | number) => {
+  const n = Number(String(val).replace(/,/g, ""));
+  return Number.isFinite(n) ? n : 0;
+};
+
 const getDecimals = (denom: string) => getDenomMeta(denom).decimals;
 const displayDenom = (denom?: string) => (denom ? getDenomMeta(denom).display : "—");
 
@@ -201,6 +211,7 @@ const minOutDisplay = computed(() => {
   const minOut = Math.floor(out * (1 - (slippageBps.value || 0) / 10_000));
   return fmtAmount(minOut, simulation.value.token_out);
 });
+
 
 const swapFeeDisplay = computed(() => {
   const bps = params.value?.swap_fee_bps ?? null;
@@ -357,6 +368,26 @@ const submitRemove = async () => {
 
 const selectedPool = computed(() => pools.value.find((p) => p.id === selectedPoolId.value) || null);
 
+const poolSpotPrice = computed(() => {
+  if (!selectedPool.value) return null;
+  const p = Number(calculatePoolPrice(selectedPool.value));
+  return Number.isFinite(p) ? p : null;
+});
+
+const executionPrice = computed(() => {
+  if (!simulation.value) return null;
+  const outNum = Number(simulation.value.amount_out || 0);
+  const inNum = Number(simulation.value.amount_in || 0);
+  if (!Number.isFinite(outNum) || !Number.isFinite(inNum) || inNum === 0) return null;
+  return outNum / inNum;
+});
+
+const priceImpact = computed(() => {
+  if (executionPrice.value === null || poolSpotPrice.value === null || poolSpotPrice.value === 0) return null;
+  const impact = 1 - executionPrice.value / poolSpotPrice.value;
+  return Number.isFinite(impact) ? Math.max(-1, Math.min(1, impact)) : null;
+});
+
 const tokenInBalance = computed(() => atomicToDisplay(balanceOf(tokenIn.value), tokenIn.value || ""));
 const tokenOutBalance = computed(() => atomicToDisplay(balanceOf(tokenOut.value), tokenOut.value || ""));
 
@@ -489,7 +520,14 @@ watch(lpPositions, (positions) => {
                 <option v-for="p in pools" :key="p.id" :value="p.id">Pool #{{ p.id }} — {{ displayDenom(p.denom_a) }} / {{ displayDenom(p.denom_b) }}</option>
               </select>
               <label class="text-slate-400">Slippage (bps)</label>
-              <input v-model.number="slippageBps" type="number" min="1" max="3000" class="input w-20" />
+              <div class="flex items-center gap-1">
+                <input v-model.number="slippageBps" type="number" min="1" max="3000" class="input w-20" />
+                <div class="flex gap-1">
+                  <button class="btn-secondary px-2" type="button" @click="slippageBps = 25">0.25%</button>
+                  <button class="btn-secondary px-2" type="button" @click="slippageBps = 50">0.50%</button>
+                  <button class="btn-secondary px-2" type="button" @click="slippageBps = 100">1.00%</button>
+                </div>
+              </div>
             </div>
           </div>
 
@@ -539,6 +577,20 @@ watch(lpPositions, (positions) => {
             <div class="mt-1 text-[11px] text-slate-500">Slippage tolerance: {{ (slippagePercent * 100).toFixed(2) }}%</div>
             <div class="mt-1 text-[11px] text-slate-500">Swap fee amount: {{ swapFeeDisplay }}</div>
             <div class="mt-1 text-[11px] text-slate-500">Est. tx fee: {{ estimatedTxFeeDisplay }}</div>
+            <div class="mt-2 grid sm:grid-cols-2 gap-2 text-[11px] text-slate-400">
+              <div>
+                <div class="text-slate-500">Execution price</div>
+                <div class="text-slate-200">{{ executionPrice !== null ? executionPrice.toFixed(6) : '—' }} {{ displayDenom(simulation.token_out) }} / {{ displayDenom(simulation.token_in) }}</div>
+              </div>
+              <div>
+                <div class="text-slate-500">Pool spot price</div>
+                <div class="text-slate-200">{{ poolSpotPrice !== null ? poolSpotPrice.toFixed(6) : '—' }} {{ displayDenom(simulation.token_out) }} / {{ displayDenom(simulation.token_in) }}</div>
+              </div>
+              <div>
+                <div class="text-slate-500">Price impact</div>
+                <div class="text-slate-200">{{ formatPercent(priceImpact, 3) }}</div>
+              </div>
+            </div>
             <div class="mt-2 text-[11px] text-slate-400" v-if="feeSplitDisplay">
               Swap fee {{ feeSplitDisplay.totalPct }}% ({{ params?.swap_fee_bps }} bps) of input.
               Split of fee: stakers {{ feeSplitDisplay.stakersPctOfFee }}% (~{{ feeSplitDisplay.stakersEff }}% of input),
@@ -564,6 +616,10 @@ watch(lpPositions, (positions) => {
                 placeholder="amount_a"
                 @input="lastEditedSide = 'A'; syncAddLiquidityRatio()"
               />
+              <div class="flex gap-1 text-[11px] text-slate-400">
+                <button class="btn-secondary px-2" type="button" @click="addAmountA = atomicToDisplay(balanceOf(selectedPool?.denom_a || ''), selectedPool?.denom_a || '')">Max</button>
+                <button class="btn-secondary px-2" type="button" @click="addAmountA = (toNumberSafe(atomicToDisplay(balanceOf(selectedPool?.denom_a || ''), selectedPool?.denom_a || '')) * 0.5).toString()">50%</button>
+              </div>
               <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(balanceOf(selectedPool?.denom_a || ''), selectedPool?.denom_a || '') }} {{ displayDenom(selectedPool?.denom_a) }}</div>
             </div>
             <div class="space-y-2">
@@ -574,6 +630,10 @@ watch(lpPositions, (positions) => {
                 placeholder="amount_b"
                 @input="lastEditedSide = 'B'; syncAddLiquidityRatio()"
               />
+              <div class="flex gap-1 text-[11px] text-slate-400">
+                <button class="btn-secondary px-2" type="button" @click="addAmountB = atomicToDisplay(balanceOf(selectedPool?.denom_b || ''), selectedPool?.denom_b || '')">Max</button>
+                <button class="btn-secondary px-2" type="button" @click="addAmountB = (toNumberSafe(atomicToDisplay(balanceOf(selectedPool?.denom_b || ''), selectedPool?.denom_b || '')) * 0.5).toString()">50%</button>
+              </div>
               <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(balanceOf(selectedPool?.denom_b || ''), selectedPool?.denom_b || '') }} {{ displayDenom(selectedPool?.denom_b) }}</div>
             </div>
             <button class="btn btn-primary w-full" :disabled="!selectedPool" @click="submitAdd">Add liquidity</button>
@@ -591,6 +651,16 @@ watch(lpPositions, (positions) => {
             <div class="space-y-2">
               <label class="text-[11px] text-slate-400">Shares (LP)</label>
               <input v-model="removeShares" class="input" placeholder="LP shares" />
+              <div class="flex gap-1 text-[11px] text-slate-400">
+                <button class="btn-secondary px-2" type="button" @click="removeShares = selectedLpBalanceDisplay">Max</button>
+                <button
+                  class="btn-secondary px-2"
+                  type="button"
+                  @click="removeShares = (toNumberSafe(selectedLpBalanceDisplay) * 0.5 || 0).toString()"
+                >
+                  50%
+                </button>
+              </div>
               <div class="text-[11px] text-slate-400">Balance: {{ atomicToDisplay(balanceOf(selectedPool?.lp_denom || `dex/${selectedPool?.id}`), selectedPool?.lp_denom || `dex/${selectedPool?.id}`) }} {{ selectedPool?.lp_denom || `dex/${selectedPool?.id}` }}</div>
               <div class="text-[11px] text-slate-400" v-if="burnEstimate">Est. out (for this burn): {{ burnEstimate.a }} {{ displayDenom(selectedPool?.denom_a) }} / {{ burnEstimate.b }} {{ displayDenom(selectedPool?.denom_b) }}</div>
               <div class="text-[11px] text-slate-400">Underlying est: {{ selectedUnderlying.a }} {{ displayDenom(selectedPool?.denom_a) }} / {{ selectedUnderlying.b }} {{ displayDenom(selectedPool?.denom_b) }}</div>
