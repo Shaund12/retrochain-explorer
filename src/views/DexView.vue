@@ -637,6 +637,23 @@ watch(lpPositions, (positions) => {
 
     <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="lg:col-span-2 space-y-4">
+        <div class="card bg-gradient-to-br from-slate-900/60 via-slate-900/30 to-slate-800/50 border border-white/10 shadow-2xl shadow-emerald-500/10">
+          <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
+            <div>
+              <h2 class="text-lg font-semibold text-white">Liquidity</h2>
+              <p class="text-xs text-slate-400">Add or remove liquidity for any pool</p>
+            </div>
+            <div class="flex items-center gap-2 text-xs text-slate-300">
+              <label class="text-slate-400">Pool</label>
+              <select v-model="selectedPoolId" class="input text-xs w-48">
+                <option v-for="p in pools" :key="p.id" :value="p.id">Pool #{{ p.id }} — {{ displayDenom(p.denom_a) }} / {{ displayDenom(p.denom_b) }}</option>
+              </select>
+              <label class="text-slate-400">Slippage (bps)</label>
+              <input v-model.number="slippageBps" type="number" min="1" max="3000" class="input w-20" />
+            </div>
+          </div>
+        </div>
+
         <div class="card grid gap-4 md:grid-cols-2 bg-gradient-to-br from-slate-900/60 via-slate-900/30 to-slate-800/50 border border-white/10 shadow-2xl shadow-emerald-500/10">
           <div class="space-y-3">
             <div class="flex items-center justify-between">
