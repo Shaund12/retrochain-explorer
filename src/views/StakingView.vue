@@ -5,7 +5,7 @@
     import { useStaking } from "@/composables/useStaking";
     import { useValidators } from "@/composables/useValidators";
     import { useNetwork } from "@/composables/useNetwork";
-    import { formatAmount, getDenomMeta } from "@/utils/format";
+    import { formatAmount, getDenomMeta, displayToAtomic, atomicToDisplayNumber } from "@/utils/format";
     import { useAssets } from "@/composables/useAssets";
     import { useToast } from "@/composables/useToast";
     import { useAccount } from "@/composables/useAccount";
@@ -206,10 +206,8 @@
         formatAmount(safeDelegateBalanceMicro.value, tokenDenom.value, { minDecimals: 2, maxDecimals: 2 })
     );
 
-    const walletBalanceFloat = computed(() => parseInt(walletBalanceMicro.value || "0", 10) / 1_000_000);
-    const safeDelegateBalanceFloat = computed(
-        () => parseInt(safeDelegateBalanceMicro.value || "0", 10) / 1_000_000
-    );
+    const walletBalanceFloat = computed(() => atomicToDisplayNumber(walletBalanceMicro.value || "0", tokenDenom.value));
+    const safeDelegateBalanceFloat = computed(() => atomicToDisplayNumber(safeDelegateBalanceMicro.value || "0", tokenDenom.value));
 
     const delegateAmountFloat = computed(() => parseFloat(delegateAmount.value || "0") || 0);
     const delegateAmountExceeds = computed(() => delegateAmountFloat.value > safeDelegateBalanceFloat.value);
@@ -396,7 +394,8 @@
         txLoading.value = true;
         try {
             const chainId = "retrochain-mainnet";
-            const amountBase = Math.floor(amountFloat * 1_000_000).toString();
+            const amountBase = displayToAtomic(delegateAmount.value, tokenDenom.value);
+            if (!amountBase) throw new Error("Invalid amount");
 
             const msg = {
                 typeUrl: "/cosmos.staking.v1beta1.MsgDelegate",
@@ -487,7 +486,8 @@
         txLoading.value = true;
         try {
             const chainId = "retrochain-mainnet";
-            const amountBase = Math.floor(parseFloat(undelegateAmount.value) * 1_000_000).toString();
+            const amountBase = displayToAtomic(undelegateAmount.value, tokenDenom.value);
+            if (!amountBase) throw new Error("Invalid amount");
 
             const msg = {
                 typeUrl: "/cosmos.staking.v1beta1.MsgUndelegate",

@@ -87,6 +87,32 @@ export function formatAtomicToDisplay(amount: string | number, denom: string, op
   return formatNumberSmart(amt, meta.decimals, opts);
 }
 
+// Convert a human-readable (display) amount to atomics using denom decimals.
+// Returns null when the input is invalid.
+export function displayToAtomic(val: string | number, denom: string): string | null {
+  const meta = getDenomMeta(denom);
+  const str = String(val ?? "").trim();
+  if (!str) return null;
+  const neg = str.startsWith("-");
+  const abs = neg ? str.slice(1) : str;
+  const parts = abs.split(".");
+  if (parts.length > 2) return null;
+  const whole = parts[0] || "0";
+  const fracRaw = parts[1] || "";
+  if (!/^[0-9]+$/.test(whole) || (fracRaw && !/^[0-9]+$/.test(fracRaw))) return null;
+  const frac = fracRaw.slice(0, meta.decimals).padEnd(meta.decimals, "0");
+  const combined = (neg ? "-" : "") + whole + frac;
+  return combined.replace(/^0+(\d)/, "$1");
+}
+
+// Convert atomics to a floating display number (no denom suffix).
+export function atomicToDisplayNumber(amount: string | number, denom: string): number {
+  const meta = getDenomMeta(denom);
+  const n = Number(String(amount ?? "0"));
+  if (!Number.isFinite(n)) return 0;
+  return n / 10 ** meta.decimals;
+}
+
 export function formatCoins(coins: { amount: string; denom: string }[] | undefined | null, opts?: { minDecimals?: number; maxDecimals?: number; showZerosForIntegers?: boolean }) {
   if (!Array.isArray(coins) || coins.length === 0) return "-";
   return coins.map(c => formatAmount(c.amount, c.denom, opts)).join(", ");
