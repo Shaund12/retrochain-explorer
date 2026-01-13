@@ -268,6 +268,16 @@ onMounted(() => {
                 </a>
               </li>
               <li>
+                <a href="https://retrochain.ddns.net/sdk/sdk/" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                  <span></span> Arcade SDK
+                </a>
+              </li>
+              <li>
+                <a href="https://retrochain.ddns.net/whitepaper/whitepaper/" target="_blank" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
+                  <span></span> Whitepaper
+                </a>
+              </li>
+              <li>
                 <a href="/api-test" class="text-slate-400 hover:text-indigo-400 transition-colors flex items-center gap-2">
                   <span></span> API Test
                 </a>
