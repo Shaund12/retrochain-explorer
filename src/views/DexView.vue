@@ -30,6 +30,7 @@ const {
 const tokenIn = ref("");
 const tokenOut = ref("");
 const amountIn = ref("1");
+const activeTab = ref<"swap" | "liquidity">("swap");
 const simulation = ref<SwapRoute | null>(null);
 const swapLoading = ref(false);
 const selectedPoolId = ref<string>("");
@@ -506,7 +507,24 @@ watch(lpPositions, (positions) => {
       </div>
     </div>
 
-    <div class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+    <div class="flex items-center gap-2 mt-2">
+      <button
+        class="btn-secondary px-3 py-2"
+        :class="activeTab === 'swap' ? 'ring-2 ring-emerald-400/60 text-emerald-200' : ''"
+        @click="activeTab = 'swap'"
+      >
+        Swap
+      </button>
+      <button
+        class="btn-secondary px-3 py-2"
+        :class="activeTab === 'liquidity' ? 'ring-2 ring-cyan-400/60 text-cyan-200' : ''"
+        @click="activeTab = 'liquidity'"
+      >
+        Liquidity
+      </button>
+    </div>
+
+    <div v-if="activeTab === 'swap'" class="grid grid-cols-1 lg:grid-cols-3 gap-4">
       <div class="lg:col-span-2 space-y-4">
         <div class="card bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 border border-white/10 shadow-xl shadow-emerald-500/10">
           <div class="flex flex-wrap items-center justify-between gap-3 mb-3">
@@ -598,7 +616,27 @@ watch(lpPositions, (positions) => {
             </div>
           </div>
         </div>
+      </div>
+      <div class="card bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 border border-white/10 shadow-xl shadow-cyan-500/10">
+        <div class="flex items-center justify-between mb-3">
+          <h2 class="text-lg font-semibold text-white">Your liquidity</h2>
+          <span class="text-xs text-slate-500">{{ address ? address : "Not connected" }}</span>
+        </div>
+        <div v-if="!address" class="text-sm text-slate-400">Connect wallet to view positions.</div>
+        <div v-else-if="!lpPositions.length" class="text-sm text-slate-400">No LP balances found.</div>
+        <div v-else class="space-y-3">
+          <div v-for="pos in lpPositions" :key="pos.lp_denom" class="p-3 rounded-lg bg-white/5 border border-white/10">
+            <div class="text-sm text-white font-semibold">Pool #{{ pos.pool.id }} — {{ displayDenom(pos.pool.denom_a) }} / {{ displayDenom(pos.pool.denom_b) }}</div>
+            <div class="text-xs text-slate-400 mt-1">Shares: {{ atomicToDisplay(pos.shares, pos.lp_denom) }} {{ pos.lp_denom }}</div>
+            <div class="text-xs text-emerald-300 mt-1">~{{ pos.percent.toFixed(4) }}% of pool</div>
+            <div class="text-[11px] text-slate-500">LP denom: {{ pos.lp_denom }}</div>
+          </div>
+        </div>
+      </div>
+    </div>
 
+    <div v-else class="grid grid-cols-1 lg:grid-cols-3 gap-4">
+      <div class="lg:col-span-2 space-y-4">
         <div class="card grid gap-4 md:grid-cols-2 bg-gradient-to-br from-slate-900/60 via-slate-900/30 to-slate-800/50 border border-white/10 shadow-2xl shadow-emerald-500/10">
           <div class="space-y-3">
             <div class="flex items-center justify-between">
@@ -667,22 +705,6 @@ watch(lpPositions, (positions) => {
             </div>
             <button class="btn w-full" :disabled="!selectedPool" @click="submitRemove">Remove liquidity</button>
             <div class="text-[11px] text-slate-400">Slippage protection: {{ slippageBps }} bps</div>
-          </div>
-        </div>
-      </div>
-      <div class="card bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 border border-white/10 shadow-xl shadow-cyan-500/10">
-        <div class="flex items-center justify-between mb-3">
-          <h2 class="text-lg font-semibold text-white">Your liquidity</h2>
-          <span class="text-xs text-slate-500">{{ address ? address : "Not connected" }}</span>
-        </div>
-        <div v-if="!address" class="text-sm text-slate-400">Connect wallet to view positions.</div>
-        <div v-else-if="!lpPositions.length" class="text-sm text-slate-400">No LP balances found.</div>
-        <div v-else class="space-y-3">
-          <div v-for="pos in lpPositions" :key="pos.lp_denom" class="p-3 rounded-lg bg-white/5 border border-white/10">
-            <div class="text-sm text-white font-semibold">Pool #{{ pos.pool.id }} — {{ displayDenom(pos.pool.denom_a) }} / {{ displayDenom(pos.pool.denom_b) }}</div>
-            <div class="text-xs text-slate-400 mt-1">Shares: {{ atomicToDisplay(pos.shares, pos.lp_denom) }} {{ pos.lp_denom }}</div>
-            <div class="text-xs text-emerald-300 mt-1">~{{ pos.percent.toFixed(4) }}% of pool</div>
-            <div class="text-[11px] text-slate-500">LP denom: {{ pos.lp_denom }}</div>
           </div>
         </div>
       </div>
