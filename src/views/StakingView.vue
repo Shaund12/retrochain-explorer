@@ -262,23 +262,22 @@
         }
     };
 
-    const refreshUserState = async () => {
-        if (!address.value) return;
+    const refreshUserState = async (addrOverride?: string) => {
+        const addr = addrOverride || address.value;
+        if (!addr) return;
 
         const run = async () => {
-            const addr = address.value;
-            if (!addr) return;
-            await Promise.all([fetchAll(addr), loadAccount(addr), fetchNetworkStats()]);
+            await Promise.all([fetchAll(addr), loadAccount(addr), fetchNetworkStats(), fetchAssets()]);
         };
 
         await run();
 
-        // slight follow-up refresh to capture state after the next block commit
+        // follow-up refresh after the next block for post-tx state
         window.setTimeout(() => {
             run().catch(() => {
                 /* best-effort refresh */
             });
-        }, 1200);
+        }, 2000);
     };
 
     const shortAddress = (addr: string, size = 10) => `${addr?.slice(0, size)}...${addr?.slice(-6)}`;
@@ -340,9 +339,11 @@
     watch(
         () => address.value,
         async (newAddress, oldAddress) => {
-            if (newAddress && newAddress !== oldAddress) {
-                await Promise.all([fetchAll(newAddress), loadAccount(newAddress)]);
-            }
+            if (!newAddress || newAddress === oldAddress) return;
+            delegations.value = [];
+            rewards.value = [];
+            unbonding.value = [];
+            await refreshUserState(newAddress);
         }
     );
 
