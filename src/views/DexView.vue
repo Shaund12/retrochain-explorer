@@ -507,6 +507,55 @@ watch(lpPositions, (positions) => {
       </div>
     </div>
 
+    <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
+      <div v-for="pool in pools" :key="pool.id" class="card bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 border border-white/10 shadow-xl shadow-indigo-500/10">
+        <div class="flex items-center justify-between text-sm text-white gap-2 mb-2">
+          <div>
+            <div class="font-semibold">Pool #{{ pool.id }}</div>
+            <div class="text-xs text-slate-400">{{ displayDenom(pool.denom_a) }} / {{ displayDenom(pool.denom_b) }}</div>
+          </div>
+          <div class="text-xs text-emerald-300 truncate" :title="pool.lp_denom || `dex/${pool.id}`">LP: {{ pool.lp_denom || `dex/${pool.id}` }}</div>
+        </div>
+        <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-400 mb-2">
+          <div>
+            <div class="text-slate-500">Reserve {{ displayDenom(pool.denom_a) }}</div>
+            <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_a, pool.denom_a) }}</div>
+          </div>
+          <div>
+            <div class="text-slate-500">Reserve {{ displayDenom(pool.denom_b) }}</div>
+            <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_b, pool.denom_b) }}</div>
+          </div>
+          <div>
+            <div class="text-slate-500">Price</div>
+            <div class="text-slate-200">1 {{ displayDenom(pool.denom_a) }} ≈ {{ calculatePoolPrice(pool) }} {{ displayDenom(pool.denom_b) }}</div>
+          </div>
+          <div>
+            <div class="text-slate-500">Composition</div>
+            <div class="flex items-center gap-2">
+              <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden flex">
+                <div class="bg-emerald-400/70" :style="{ width: poolComposition(pool).aPct + '%' }"></div>
+                <div class="bg-cyan-400/70" :style="{ width: poolComposition(pool).bPct + '%' }"></div>
+              </div>
+              <span class="text-slate-400">{{ poolComposition(pool).aPct }}% / {{ poolComposition(pool).bPct }}%</span>
+            </div>
+          </div>
+        </div>
+        <div class="text-[11px] uppercase tracking-[0.15em] text-slate-400">Price chart</div>
+        <div class="text-xs text-slate-500" v-if="getPriceHistory(pool.id).length < 2">Collecting data…</div>
+        <svg v-else viewBox="0 0 300 120" class="w-full h-32">
+          <polyline :points="sparklinePoints(pool.id)" fill="none" stroke="url(#grad-chart-{{pool.id}})" stroke-width="2" />
+          <defs>
+            <linearGradient :id="`grad-chart-${pool.id}`" x1="0" y1="0" x2="1" y2="0">
+              <stop offset="0%" stop-color="#818cf8" />
+              <stop offset="100%" stop-color="#22d3ee" />
+            </linearGradient>
+          </defs>
+        </svg>
+        <div class="mt-2 text-[11px] text-slate-400">Last price: {{ calculatePoolPrice(pool) }} {{ displayDenom(pool.denom_b) }} per {{ displayDenom(pool.denom_a) }}</div>
+        <div class="mt-1 text-[11px] text-slate-500">Data points: {{ getPriceHistory(pool.id).length }}</div>
+      </div>
+    </div>
+
     <div class="flex items-center gap-2 mt-2">
       <button
         class="btn-secondary px-3 py-2"
@@ -660,55 +709,6 @@ watch(lpPositions, (positions) => {
             </div>
           </div>
         </div>
-
-    <div v-else class="grid grid-cols-1 lg:grid-cols-2 gap-4">
-      <div v-for="pool in pools" :key="pool.id" class="card bg-gradient-to-br from-slate-900/70 via-slate-900/40 to-slate-800/60 border border-white/10 shadow-xl shadow-indigo-500/10">
-        <div class="flex items-center justify-between text-sm text-white gap-2 mb-2">
-          <div>
-            <div class="font-semibold">Pool #{{ pool.id }}</div>
-            <div class="text-xs text-slate-400">{{ displayDenom(pool.denom_a) }} / {{ displayDenom(pool.denom_b) }}</div>
-          </div>
-          <div class="text-xs text-emerald-300 truncate" :title="pool.lp_denom || `dex/${pool.id}`">LP: {{ pool.lp_denom || `dex/${pool.id}` }}</div>
-        </div>
-        <div class="grid grid-cols-2 gap-2 text-[11px] text-slate-400 mb-2">
-          <div>
-            <div class="text-slate-500">Reserve {{ displayDenom(pool.denom_a) }}</div>
-            <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_a, pool.denom_a) }}</div>
-          </div>
-          <div>
-            <div class="text-slate-500">Reserve {{ displayDenom(pool.denom_b) }}</div>
-            <div class="font-mono text-slate-200">{{ fmtAmount(pool.reserve_b, pool.denom_b) }}</div>
-          </div>
-          <div>
-            <div class="text-slate-500">Price</div>
-            <div class="text-slate-200">1 {{ displayDenom(pool.denom_a) }} ≈ {{ calculatePoolPrice(pool) }} {{ displayDenom(pool.denom_b) }}</div>
-          </div>
-          <div>
-            <div class="text-slate-500">Composition</div>
-            <div class="flex items-center gap-2">
-              <div class="w-full h-2 rounded-full bg-white/10 overflow-hidden flex">
-                <div class="bg-emerald-400/70" :style="{ width: poolComposition(pool).aPct + '%' }"></div>
-                <div class="bg-cyan-400/70" :style="{ width: poolComposition(pool).bPct + '%' }"></div>
-              </div>
-              <span class="text-slate-400">{{ poolComposition(pool).aPct }}% / {{ poolComposition(pool).bPct }}%</span>
-            </div>
-          </div>
-        </div>
-        <div class="text-[11px] uppercase tracking-[0.15em] text-slate-400">Price chart</div>
-        <div class="text-xs text-slate-500" v-if="getPriceHistory(pool.id).length < 2">Collecting data…</div>
-        <svg v-else viewBox="0 0 300 120" class="w-full h-32">
-          <polyline :points="sparklinePoints(pool.id)" fill="none" stroke="url(#grad-chart-{{pool.id}})" stroke-width="2" />
-          <defs>
-            <linearGradient :id="`grad-chart-${pool.id}`" x1="0" y1="0" x2="1" y2="0">
-              <stop offset="0%" stop-color="#818cf8" />
-              <stop offset="100%" stop-color="#22d3ee" />
-            </linearGradient>
-          </defs>
-        </svg>
-        <div class="mt-2 text-[11px] text-slate-400">Last price: {{ calculatePoolPrice(pool) }} {{ displayDenom(pool.denom_b) }} per {{ displayDenom(pool.denom_a) }}</div>
-        <div class="mt-1 text-[11px] text-slate-500">Data points: {{ getPriceHistory(pool.id).length }}</div>
-      </div>
-    </div>
 
         <div class="card grid gap-4 md:grid-cols-2 bg-gradient-to-br from-slate-900/60 via-slate-900/30 to-slate-800/50 border border-white/10 shadow-2xl shadow-emerald-500/10">
           <div class="space-y-3">
