@@ -1,12 +1,15 @@
 <script setup lang="ts">
-import { onMounted, computed, ref } from "vue";
+import { onMounted, computed, ref, watch } from "vue";
 import { useBlocks } from "@/composables/useBlocks";
 import { useAutoRefresh } from "@/composables/useAutoRefresh";
 import { useRouter } from "vue-router";
 import { useNetwork } from "@/composables/useNetwork";
 import dayjs from "dayjs";
+import relativeTime from "dayjs/plugin/relativeTime";
 import RcIconButton from "@/components/RcIconButton.vue";
-import { Copy, Pause, Play, RefreshCw, Plus } from "lucide-vue-next";
+import { Copy, Pause, Play, RefreshCw, ChevronLeft, ChevronRight } from "lucide-vue-next";
+
+dayjs.extend(relativeTime);
 
 const copy = async (text: string) => {
   try { await navigator.clipboard?.writeText?.(text); } catch {}
@@ -14,10 +17,20 @@ const copy = async (text: string) => {
 
 const router = useRouter();
 const { blocks, loading, error, fetchLatest } = useBlocks();
-const displayLimit = ref(50);
+const pageSize = ref(50);
+const page = ref(1);
+const tipHeight = ref<number | null>(null);
 
 const refreshBlocks = async () => {
-  await fetchLatest(displayLimit.value);
+  const start = tipHeight.value && page.value > 1
+    ? Math.max(1, tipHeight.value - (page.value - 1) * pageSize.value)
+    : undefined;
+  await fetchLatest(pageSize.value, start);
+  if (blocks.value.length) {
+    if (!tipHeight.value || page.value === 1) {
+      tipHeight.value = blocks.value[0].height;
+    }
+  }
 };
 
 const { enabled: autoRefreshEnabled, countdown, toggle: toggleAutoRefresh } = useAutoRefresh(
@@ -32,11 +45,36 @@ onMounted(async () => {
 const latestHeight = computed(() =>
   blocks.value.length ? blocks.value[0].height : null
 );
+const showingRange = computed(() => {
+  if (!blocks.value.length) return "–";
+  const high = blocks.value[0].height;
+  const low = blocks.value[blocks.value.length - 1].height;
+  return `#${high} – #${low}`;
+});
 
-const loadMore = () => {
-  displayLimit.value += 50;
-  refreshBlocks();
+const pageCountDisplay = computed(() => {
+  if (!tipHeight.value) return "–";
+  return Math.ceil(tipHeight.value / pageSize.value);
+});
+
+const canPrev = computed(() => page.value > 1);
+const canNext = computed(() => {
+  if (!tipHeight.value) return false;
+  const nextStart = tipHeight.value - page.value * pageSize.value;
+  return nextStart > 0;
+});
+
+const goPage = async (dir: "prev" | "next") => {
+  if (dir === "prev" && !canPrev.value) return;
+  if (dir === "next" && !canNext.value) return;
+  page.value = dir === "prev" ? Math.max(1, page.value - 1) : page.value + 1;
+  await refreshBlocks();
 };
+
+watch(pageSize, async () => {
+  page.value = 1;
+  await refreshBlocks();
+});
 
 const { current: network } = useNetwork();
 const REST_DISPLAY = import.meta.env.VITE_REST_API_URL || "/api";
@@ -135,8 +173,17 @@ const formatPercent = (value?: number | null, digits = 1) => {
         <p class="text-sm text-slate-400 mt-2">
           Latest RetroChain blocks  {{ network === 'mainnet' ? 'mainnet' : 'testnet' }}
         </p>
+        <div class="text-[11px] text-slate-500 mt-1">Showing {{ showingRange }} • Page {{ page }} / {{ pageCountDisplay }}</div>
       </div>
       <div class="flex items-center gap-2">
+        <label class="text-[11px] text-slate-400 flex items-center gap-2">
+          Page size
+          <select v-model.number="pageSize" class="input text-[11px] w-24">
+            <option :value="25">25</option>
+            <option :value="50">50</option>
+            <option :value="100">100</option>
+          </select>
+        </label>
         <div
           v-if="latestHeight"
           class="badge text-xs border-emerald-400/60 text-emerald-200"
@@ -160,6 +207,24 @@ const formatPercent = (value?: number | null, digits = 1) => {
           @click="refreshBlocks"
         >
           <RefreshCw class="h-4 w-4" />
+        </RcIconButton>
+        <RcIconButton
+          variant="ghost"
+          size="sm"
+          title="Prev page"
+          :disabled="loading || !canPrev"
+          @click="goPage('prev')"
+        >
+          <ChevronLeft class="h-4 w-4" />
+        </RcIconButton>
+        <RcIconButton
+          variant="ghost"
+          size="sm"
+          title="Next page"
+          :disabled="loading || !canNext"
+          @click="goPage('next')"
+        >
+          <ChevronRight class="h-4 w-4" />
         </RcIconButton>
       </div>
     </div>
@@ -274,18 +339,15 @@ const formatPercent = (value?: number | null, digits = 1) => {
                 </span>
               </td>
               <td class="text-xs text-slate-300 py-2 whitespace-nowrap">
-                <span v-if="b.time">{{ dayjs(b.time).format('YYYY-MM-DD HH:mm:ss') }}</span>
+                <div v-if="b.time" class="space-y-0.5">
+                  <div>{{ dayjs(b.time).format('YYYY-MM-DD HH:mm:ss') }}</div>
+                  <div class="text-[10px] text-slate-500">{{ dayjs(b.time).fromNow() }}</div>
+                </div>
                 <span v-else>-</span>
               </td>
             </tr>
           </tbody>
         </table>
-      </div>
-      
-      <div class="mt-4 text-center">
-        <RcIconButton variant="ghost" size="sm" title="Load more" @click="loadMore" :disabled="loading">
-          <Plus class="h-4 w-4" />
-        </RcIconButton>
       </div>
     </div>
   </div>
