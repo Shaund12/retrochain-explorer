@@ -8,6 +8,7 @@ import { useValidators, type ValidatorWithVotingPower } from "@/composables/useV
 import { decodeConsensusAddress } from "@/utils/consensus";
 import { getAccountLabel } from "@/constants/accountLabels";
 import dayjs from "dayjs";
+import { Copy, ChevronLeft, ChevronRight, Share2 } from "lucide-vue-next";
 
 const route = useRoute();
 const router = useRouter();
@@ -25,6 +26,8 @@ const error = ref<string | null>(null);
 const block = ref<any | null>(null);
 const commit = ref<any | null>(null);
 const blockTxs = ref<any[]>([]);
+const latestHeight = ref<number | null>(null);
+const jumpTarget = ref<string>("");
 
 const height = ref<number>(Number(route.params.height || 0));
 
@@ -86,6 +89,24 @@ const gasStats = computed(() => {
     utilization: totals.wanted > 0 ? totals.used / totals.wanted : null
   };
 });
+
+const avgGasPerTx = computed(() => {
+  if (!blockTxs.value.length || !gasStats.value.used) return null;
+  return gasStats.value.used / blockTxs.value.length;
+});
+
+const signaturesTotal = computed(() => commit.value?.signatures?.length ?? 0);
+const signaturesSigned = computed(() => (commit.value?.signatures || []).filter((s: any) => s?.signature).length);
+
+const loadLatestHeight = async () => {
+  try {
+    const res = await api.get("/cosmos/base/tendermint/v1beta1/blocks/latest");
+    const h = Number(res.data?.block?.header?.height ?? 0);
+    if (Number.isFinite(h) && h > 0) latestHeight.value = h;
+  } catch (e) {
+    latestHeight.value = null;
+  }
+};
 
 // Compute fallback tx hashes from base64 (when tx_responses not available)
 const fallbackTxs = ref<{ hash: string; raw: string }[]>([]);
@@ -153,6 +174,7 @@ const loadBlock = async () => {
 
 onMounted(() => {
   fetchValidatorsList();
+  loadLatestHeight();
   loadBlock();
 });
 
@@ -178,9 +200,29 @@ watch(
           <p class="text-xs text-slate-400">
             RetroChain block details
           </p>
+          <div class="text-[11px] text-slate-500 mt-1" v-if="latestHeight">
+            Latest tip: #{{ latestHeight }}
+          </div>
         </div>
 
         <div class="flex items-center gap-2">
+          <input
+            v-model="jumpTarget"
+            type="number"
+            min="1"
+            class="input text-[11px] w-28"
+            placeholder="Go to height"
+            @keyup.enter="jumpToTarget"
+          />
+          <RcIconButton
+            variant="ghost"
+            size="sm"
+            title="Jump"
+            :disabled="loading || !jumpTarget"
+            @click="jumpToTarget"
+          >
+            <Share2 class="h-4 w-4" />
+          </RcIconButton>
           <RcIconButton
             variant="ghost"
             size="sm"
@@ -194,7 +236,7 @@ watch(
             variant="ghost"
             size="sm"
             title="Next"
-            :disabled="loading"
+            :disabled="loading || (latestHeight && height >= latestHeight)"
             @click="goToHeight(height + 1)"
           >
             <ChevronRight class="h-4 w-4" />
@@ -283,6 +325,8 @@ watch(
             </div>
             <div class="text-right text-xs text-slate-400">
               {{ formatNumber(gasStats.used) }} used / {{ formatNumber(gasStats.wanted) }} wanted
+              <div v-if="avgGasPerTx !== null" class="text-[10px] text-slate-500">Avg gas/tx: {{ formatNumber(Math.round(avgGasPerTx)) }}</div>
+              <div v-if="signaturesTotal" class="text-[10px] text-slate-500">Precommits: {{ signaturesSigned }}/{{ signaturesTotal }}</div>
             </div>
           </div>
           <div class="h-2 bg-slate-900 rounded overflow-hidden mt-2">
