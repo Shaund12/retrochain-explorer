@@ -326,7 +326,7 @@ const fetchRecentTrades = async () => {
     const sells = sellsRes.data?.tx_responses || [];
     const parsed = [...parseTradesFromTxs(buys, "buy"), ...parseTradesFromTxs(sells, "sell")] 
       .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
-      .slice(0, 40);
+      .slice(0, 120);
     trades.value = parsed;
   } catch (e) {
     trades.value = [];
@@ -443,6 +443,19 @@ const submitSell = async () => {
 const sortedTrades = computed(() => [...trades.value].sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime()));
 const pricePoints = computed(() => sortedTrades.value.map((t) => t.price).filter((p) => Number.isFinite(p)));
 const lastPrice = computed(() => (sortedTrades.value.length ? sortedTrades.value[sortedTrades.value.length - 1].price : null));
+
+const tradesPerPage = 10;
+const tradesPage = ref(1);
+const tradesTotalPages = computed(() => Math.max(1, Math.ceil(trades.value.length / tradesPerPage)));
+const paginatedTrades = computed(() => {
+  const list = [...trades.value].reverse(); // newest first
+  const start = (tradesPage.value - 1) * tradesPerPage;
+  return list.slice(start, start + tradesPerPage);
+});
+watch(trades, () => {
+  if (tradesPage.value > tradesTotalPages.value) tradesPage.value = tradesTotalPages.value;
+  if (tradesPage.value < 1) tradesPage.value = 1;
+});
 
 const sparkline = computed(() => {
   const pts = pricePoints.value;
@@ -813,8 +826,8 @@ const chartData = computed(() => {
             <div class="bg-slate-900/50 border border-white/10 rounded-xl p-3">
               <div class="flex items-center justify-between text-xs text-slate-300 mb-2">
                 <div class="flex gap-3">
-                  <span>Min: {{ chartData.min ? formatPrice(chartData.min) : '—' }}</span>
-                  <span>Max: {{ chartData.max ? formatPrice(chartData.max) : '—' }}</span>
+                  <span>Min: {{ Number.isFinite(chartData.min) ? formatPrice(chartData.min) : '—' }}</span>
+                  <span>Max: {{ Number.isFinite(chartData.max) ? formatPrice(chartData.max) : '—' }}</span>
                 </div>
                 <span>Points: {{ chartData.coords.length }}</span>
               </div>
@@ -868,7 +881,7 @@ const chartData = computed(() => {
                 </tr>
               </thead>
               <tbody>
-                <tr v-for="t in [...trades].reverse()" :key="t.time + t.amountIn" class="text-slate-200">
+                <tr v-for="t in paginatedTrades" :key="t.time + t.amountIn" class="text-slate-200">
                   <td>
                     <span class="badge text-[11px]" :class="t.side === 'buy' ? 'border-emerald-400/60 text-emerald-200' : 'border-rose-400/60 text-rose-200'">
                       {{ t.side }}
@@ -881,6 +894,13 @@ const chartData = computed(() => {
                 </tr>
               </tbody>
             </table>
+            <div class="flex items-center justify-between mt-2 text-[11px] text-slate-400">
+              <div>Page {{ tradesPage }} / {{ tradesTotalPages }}</div>
+              <div class="flex gap-2">
+                <button class="btn text-[10px]" :disabled="tradesPage <= 1" @click="tradesPage = Math.max(1, tradesPage - 1)">Prev</button>
+                <button class="btn text-[10px]" :disabled="tradesPage >= tradesTotalPages" @click="tradesPage = Math.min(tradesTotalPages, tradesPage + 1)">Next</button>
+              </div>
+            </div>
           </div>
         </div>
       </div>
