@@ -179,6 +179,14 @@ const progress = computed(() => {
   return p === null ? "—" : `${(p * 100).toFixed(2)}%`;
 });
 const dexPoolId = computed(() => launch.value?.launch?.dex_pool_id || null);
+const dexLpDenom = computed(() => launch.value?.launch?.dex_lp_denom || "");
+const dexModuleTarget = computed(() => {
+  const ref = dexLpDenom.value || "";
+  if (ref.startsWith("dexv3pos:")) return "dexv3";
+  if (ref.startsWith("dex/")) return "dex";
+  return null;
+});
+const dexCtaLink = computed(() => ({ name: "dex", query: dexPoolId.value ? { pool: dexPoolId.value } : {} }));
 const tokensSoldPercent = computed(() => {
   const sold = Number(launch.value?.computed?.tokens_sold ?? 0);
   const max = Number(launch.value?.launch?.max_supply ?? 0);
@@ -520,6 +528,13 @@ const chartData = computed(() => {
             {{ graduated ? 'Graduated' : 'Live' }}
           </span>
           <span v-if="dexPoolId" class="text-[11px] px-2 py-1 rounded-full border border-amber-400/60 text-amber-200 bg-amber-500/10">DEX Pool {{ dexPoolId }}</span>
+          <button
+            v-if="graduated"
+            class="btn text-[11px] px-3 py-1"
+            @click="router.push(dexCtaLink)"
+          >
+            Trade on DEX {{ dexModuleTarget === 'dexv3' ? 'v3' : '' }}
+          </button>
         </h1>
         <div class="flex flex-wrap items-center gap-2 text-[11px] text-slate-300">
           <span class="px-2 py-1 rounded-full border border-white/10 bg-white/5">/retrochain/launcher/v1/launch/{denom}</span>
@@ -558,6 +573,7 @@ const chartData = computed(() => {
             <div class="text-[11px] uppercase tracking-wider text-amber-200">Status</div>
             <div class="text-xl font-bold text-white">{{ graduated ? 'Graduated' : 'Live' }}</div>
             <div class="text-[11px] text-amber-100">DEX Pool: {{ dexPoolId || '—' }}</div>
+            <div class="text-[10px] text-slate-400 mt-1" v-if="dexLpDenom">DEX ref: {{ dexLpDenom }}</div>
           </div>
           <div class="p-3 rounded-xl bg-indigo-500/5 border border-indigo-400/40">
             <div class="text-[11px] uppercase tracking-wider text-indigo-200">Creator</div>
