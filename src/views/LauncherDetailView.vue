@@ -240,9 +240,14 @@ const fetchBuyQuote = async () => {
     }
     buyQuote.value = data;
   } catch (e: any) {
-    const msg = e?.response?.data?.message || e?.response?.data?.error || e?.message || "Failed to fetch buy quote";
-    buyQuoteError.value = msg;
-    toast.showError(msg);
+    const data = e?.response?.data;
+    const status = e?.response?.status;
+    const statusText = e?.response?.statusText;
+    const msgFromData = typeof data === "string" ? data : data?.message || data?.error;
+    const msg = msgFromData || statusText || e?.message || "Failed to fetch buy quote";
+    const finalMsg = status ? `${msg} (HTTP ${status})` : msg;
+    buyQuoteError.value = finalMsg;
+    toast.showError(finalMsg);
     buyQuote.value = null;
   } finally {
     quotingBuy.value = false;
