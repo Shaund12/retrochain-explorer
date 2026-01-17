@@ -321,22 +321,6 @@ const fetchRecentTrades = async () => {
 
 watch(() => launch.value?.launch?.id, fetchRecentTrades);
 
-watch(autoRefresh, (val) => {
-  if (val) {
-    startTradesAutoRefresh();
-  } else {
-    stopTradesAutoRefresh();
-  }
-});
-
-onMounted(() => {
-  startTradesAutoRefresh();
-});
-
-onBeforeUnmount(() => {
-  stopTradesAutoRefresh();
-});
-
 watch([buyAmountRetro, denom], fetchBuyQuote, { immediate: true });
 watch([sellAmountToken, denom], fetchSellQuote, { immediate: true });
 
@@ -478,6 +462,22 @@ const stopTradesAutoRefresh = () => {
     tradesInterval = null;
   }
 };
+
+watch(autoRefresh, (val) => {
+  if (val) {
+    startTradesAutoRefresh();
+  } else {
+    stopTradesAutoRefresh();
+  }
+});
+
+onMounted(() => {
+  startTradesAutoRefresh();
+});
+
+onBeforeUnmount(() => {
+  stopTradesAutoRefresh();
+});
 
 const sparkline = computed(() => {
   const pts = pricePoints.value;
