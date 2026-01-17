@@ -335,6 +335,10 @@ const loadTokenomics = async () => {
     await loadArcadeBurns();
   });
 
+  await runTask("other burn telemetry", async () => {
+    await loadOtherBurns();
+  });
+
   const latestHeightNumber = latestBlock.value?.height ? Number(latestBlock.value.height) : null;
   if (latestHeightNumber && Number.isFinite(latestHeightNumber)) {
     await runTask("burn sink telemetry", async () => {
@@ -468,6 +472,75 @@ const arcadeBurnLatestDisplay = computed(() => {
   return `${formatRetro(arcadeBurnLatest.value.amount, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
 });
 
+// Generic burn telemetry (non-arcade)
+type BurnTotals = { total: number; count: number };
+const bankBurnTotals = ref<BurnTotals | null>(null);
+const nftBurnTotals = ref<BurnTotals | null>(null);
+const allBurnTotals = computed(() => {
+  const parts = [arcadeBurnTotal.value, bankBurnTotals.value?.total, nftBurnTotals.value?.total];
+  const totals = parts.filter((v) => v !== null && v !== undefined) as number[];
+  if (!totals.length) return null;
+  const sum = totals.reduce((a, b) => a + b, 0);
+  const counts = [arcadeBurnCount.value, bankBurnTotals.value?.count, nftBurnTotals.value?.count].filter(
+    (v) => v !== null && v !== undefined
+  ) as number[];
+  const countSum = counts.reduce((a, b) => a + b, 0);
+  return { total: sum, count: countSum };
+});
+
+const allBurnDisplay = computed(() => {
+  if (!allBurnTotals.value) return "—";
+  return `${formatRetro(allBurnTotals.value.total, { maximumFractionDigits: 2, minimumFractionDigits: 2 })} RETRO`;
+});
+
+const parseBurnAmount = (tx: any, keys: string[]) => {
+  const events = Array.isArray(tx?.events) ? tx.events : [];
+  for (const ev of events) {
+    const attrs = Array.isArray(ev?.attributes) ? ev.attributes : [];
+    for (const attr of attrs) {
+      const k = attr?.key;
+      if (!k || !keys.includes(k)) continue;
+      const raw = String(attr?.value ?? "");
+      const match = raw.match(/(\d+)/);
+      if (!match) continue;
+      const amt = Number(match[1]);
+      if (Number.isFinite(amt)) return amt;
+    }
+  }
+  return null;
+};
+
+const loadBurnCategory = async (action: string, amountKeys: string[]): Promise<BurnTotals | null> => {
+  const collected: number[] = [];
+  const pageLimit = 100;
+  const maxPages = 20;
+  let nextKey: string | undefined = undefined;
+  let page = 0;
+  while (page < maxPages) {
+    const { data } = await api.get("/cosmos/tx/v1beta1/txs", {
+      params: {
+        events: `message.action='${action}'`,
+        order_by: "ORDER_BY_DESC",
+        "pagination.limit": String(pageLimit),
+        "pagination.key": nextKey
+      }
+    });
+    const txs = Array.isArray(data?.tx_responses) ? data.tx_responses : [];
+    for (const tx of txs) {
+      const amt = parseBurnAmount(tx, amountKeys);
+      if (amt !== null) collected.push(amt);
+    }
+    nextKey = data?.pagination?.next_key || undefined;
+    if (!nextKey || !txs.length) break;
+    page += 1;
+  }
+  if (!collected.length) return { total: 0, count: 0 };
+  return {
+    total: collected.reduce((a, b) => a + b, 0),
+    count: collected.length
+  };
+};
+
 const parseArcadeBurn = (tx: any) => {
   const events = Array.isArray(tx?.events) ? tx.events : [];
   let tokensBurned: number | null = null;
@@ -543,6 +616,22 @@ const loadArcadeBurns = async () => {
     console.warn("Failed to load arcade burn data", err);
   } finally {
     arcadeBurnLoading.value = false;
+  }
+};
+
+const loadOtherBurns = async () => {
+  try {
+    bankBurnTotals.value = await loadBurnCategory("/cosmos.bank.v1beta1.MsgBurn", ["amount", "amount_burned", "tokens_burned"]);
+  } catch (err) {
+    console.warn("Failed to load bank burns", err);
+    bankBurnTotals.value = null;
+  }
+
+  try {
+    nftBurnTotals.value = await loadBurnCategory("/cosmos.nft.v1beta1.MsgBurn", ["amount", "amount_burned", "tokens_burned"]);
+  } catch (err) {
+    console.warn("Failed to load NFT burns", err);
+    nftBurnTotals.value = null;
   }
 };
 </script>
@@ -776,10 +865,30 @@ const loadArcadeBurns = async () => {
             <p class="text-[11px] text-amber-200/70" v-if="arcadeBurnLatest?.player">Player: {{ arcadeBurnLatest?.player }}</p>
             <p class="text-[11px] text-amber-200/70" v-if="arcadeBurnLatest?.timestamp">{{ arcadeBurnLatest?.timestamp }}</p>
           </div>
-          <div class="text-xs text-emerald-100/80 leading-relaxed">
-            Buying arcade credits via <strong>Insert Coin</strong> consumes <code>uretro</code> and routes it straight into the burn module—no treasury capture.
-            Player activity adds a deflationary sink on top of fee and provision burns. By default 80% of each Insert Coin spend is burned and 20% is paid to the game developer; if the game is unregistered or has no developer wallet, 100% is burned. Game developers must register their game with a payout wallet to receive the 20% share. Data above is derived directly from
-            <code>arcade.credits_inserted</code> events (tokens_burned).
+          <div class="rounded-xl border border-cyan-400/40 bg-cyan-500/10 p-3 text-sm text-slate-200 space-y-2">
+            <p class="text-[11px] uppercase tracking-wider text-cyan-200">Other burns</p>
+            <div class="flex items-center justify-between">
+              <span>Bank MsgBurn</span>
+              <span class="font-semibold">{{ bankBurnTotals?.total ? formatRetro(bankBurnTotals.total, { maximumFractionDigits: 2, minimumFractionDigits: 2 }) + ' RETRO' : '—' }}</span>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-cyan-200/70">
+              <span>Txs</span>
+              <span>{{ bankBurnTotals?.count ?? '—' }}</span>
+            </div>
+            <div class="flex items-center justify-between mt-1">
+              <span>NFT MsgBurn</span>
+              <span class="font-semibold">{{ nftBurnTotals?.total ? formatRetro(nftBurnTotals.total, { maximumFractionDigits: 2, minimumFractionDigits: 2 }) + ' RETRO' : '—' }}</span>
+            </div>
+            <div class="flex items-center justify-between text-[11px] text-cyan-200/70">
+              <span>Txs</span>
+              <span>{{ nftBurnTotals?.count ?? '—' }}</span>
+            </div>
+            <div class="h-px bg-white/10"></div>
+            <div class="flex items-center justify-between">
+              <span class="text-[11px] uppercase tracking-wider text-emerald-200">All RETRO burned</span>
+              <span class="font-semibold text-emerald-100">{{ allBurnDisplay }}</span>
+            </div>
+            <p class="text-[11px] text-emerald-200/60" v-if="allBurnTotals?.count !== undefined">Events counted: {{ allBurnTotals?.count ?? '—' }}</p>
           </div>
         </div>
       </div>
