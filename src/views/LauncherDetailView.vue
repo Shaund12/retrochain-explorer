@@ -227,18 +227,20 @@ const fetchBuyQuote = async () => {
     const res = await api.get(`/retrochain/launcher/v1/quote/buy`, {
       params: { denom: denom.value, amount_in_uretro: buyAmountUretro.value }
     });
-    const apiMsg = res?.data?.message;
-    const apiCode = res?.data?.code;
-    // Treat any returned message as an error (even with HTTP 200).
-    if (typeof apiMsg === "string") {
-      buyQuoteError.value = apiMsg;
-      toast.showError(apiMsg);
+    const data = res?.data;
+    const apiMsg = data?.message;
+    const apiCode = Number(data?.code);
+    // Treat any returned message or non-zero code as an error (even with HTTP 200).
+    if (typeof apiMsg === "string" || (Number.isFinite(apiCode) && apiCode !== 0)) {
+      const errText = apiMsg || `Quote failed (code ${apiCode})`;
+      buyQuoteError.value = errText;
+      toast.showError(errText);
       buyQuote.value = null;
       return;
     }
-    buyQuote.value = res.data;
+    buyQuote.value = data;
   } catch (e: any) {
-    const msg = e?.response?.data?.message || e?.message || "Failed to fetch buy quote";
+    const msg = e?.response?.data?.message || e?.response?.data?.error || e?.message || "Failed to fetch buy quote";
     buyQuoteError.value = msg;
     toast.showError(msg);
     buyQuote.value = null;
