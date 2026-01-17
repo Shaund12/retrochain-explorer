@@ -7,6 +7,7 @@ import { useApi } from "@/composables/useApi";
 import { useKeplr } from "@/composables/useKeplr";
 import { useToast } from "@/composables/useToast";
 import { useNetwork } from "@/composables/useNetwork";
+import { displayToAtomic, formatAmount, formatAtomicToDisplay, getDenomMeta } from "@/utils/format";
 
 interface LaunchWithComputed {
   launch?: any;
@@ -36,18 +37,9 @@ const quotingSell = ref(false);
 const trades = ref<Array<{ side: "buy" | "sell"; price: number; amountIn: string; amountOut: string; time: string }>>([]);
 let ws: WebSocket | null = null;
 
-const toUretro = (val?: string | number | null) => {
-  if (val === null || val === undefined || val === "") return "";
-  const str = typeof val === "number" ? val.toString() : val;
-  const parts = str.trim().replace(/,/g, "").split(".");
-  const whole = parts[0] || "0";
-  const frac = (parts[1] || "").padEnd(6, "0").slice(0, 6);
-  if (!/^[-+]?\d+$/.test(whole) || !/^\d+$/.test(frac)) return "";
-  const sign = whole.startsWith("-") || whole.startsWith("+") ? whole[0] : "";
-  const wholeNum = whole.replace(/^[-+]/, "") || "0";
-  const micro = BigInt(sign + wholeNum) * 1_000_000n + BigInt(frac || "0");
-  return micro.toString();
-};
+const resolveTokenDenom = computed(() => launch.value?.launch?.denom || "");
+
+const toUretro = (val?: string | number | null) => displayToAtomic(val ?? "", "uretro") || "";
 
 const formatPrice = (value?: number | string | null) => {
   if (value === undefined || value === null) return "—";
@@ -63,50 +55,18 @@ const formatPrice = (value?: number | string | null) => {
 };
 
 const buyAmountUretro = computed(() => toUretro(buyAmountRetro.value));
-const sellAmountTokensMicro = computed(() => toUretro(sellAmountToken.value));
+const sellAmountTokensMicro = computed(() => displayToAtomic(sellAmountToken.value || "", resolveTokenDenom.value) || "");
 
 const formatRetro = (value?: string | number | null) => {
   if (value === undefined || value === null) return "—";
-  try {
-    const str = value.toString();
-    if (str.includes(".")) {
-      const num = Number(str);
-      if (!Number.isFinite(num)) return "—";
-      return `${num.toLocaleString(undefined, { maximumFractionDigits: 6 })} RETRO`;
-    }
-    const raw = typeof value === "number" ? BigInt(Math.trunc(value)) : BigInt(str);
-    const whole = raw / 1_000_000n;
-    const frac = raw % 1_000_000n;
-    const wholeStr = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    if (frac === 0n) return `${wholeStr} RETRO`;
-    let fracStr = frac.toString().padStart(6, "0");
-    fracStr = fracStr.replace(/0+$/, "");
-    return `${wholeStr}.${fracStr} RETRO`;
-  } catch {
-    return "—";
-  }
+  return formatAmount(String(value), "uretro", { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false });
 };
 
 const formatToken = (value?: string | number | null) => {
+  const denomForToken = resolveTokenDenom.value || "";
   if (value === undefined || value === null) return "—";
-  try {
-    const str = value.toString();
-    if (str.includes(".")) {
-      const num = Number(str);
-      if (!Number.isFinite(num)) return "—";
-      return num.toLocaleString(undefined, { maximumFractionDigits: 6 });
-    }
-    const raw = typeof value === "number" ? BigInt(Math.trunc(value)) : BigInt(str);
-    const whole = raw / 1_000_000n;
-    const frac = raw % 1_000_000n;
-    const wholeStr = whole.toString().replace(/\B(?=(\d{3})+(?!\d))/g, ",");
-    if (frac === 0n) return wholeStr;
-    let fracStr = frac.toString().padStart(6, "0");
-    fracStr = fracStr.replace(/0+$/, "");
-    return `${wholeStr}.${fracStr}`;
-  } catch {
-    return "—";
-  }
+  // Keep number-only output (no suffix) but use shared decimal handling
+  return formatAtomicToDisplay(String(value), denomForToken, { minDecimals: 0, maxDecimals: 6, showZerosForIntegers: false });
 };
 
 const formatInt = (value?: string | number | null) => {
@@ -185,6 +145,18 @@ const dexModuleTarget = computed(() => {
   if (ref.startsWith("dexv3pos:")) return "dexv3";
   if (ref.startsWith("dex/")) return "dex";
   return null;
+});
+const dexV3Position = computed(() => {
+  if (!dexLpDenom.value.startsWith("dexv3pos:")) return null;
+  const raw = dexLpDenom.value.slice("dexv3pos:".length);
+  const [classId, nftId] = raw.split("/");
+  if (!classId || !nftId) return null;
+  return { classId, nftId };
+});
+const dexLabel = computed(() => {
+  if (dexModuleTarget.value === "dexv3") return "DEX v3 position";
+  if (dexModuleTarget.value === "dex") return "Legacy DEX LP";
+  return "—";
 });
 const dexCtaLink = computed(() => ({ name: "dex", query: dexPoolId.value ? { pool: dexPoolId.value } : {} }));
 const tokensSoldPercent = computed(() => {
@@ -305,8 +277,8 @@ const parseTradesFromTxs = (txs: any[], side: "buy" | "sell") => {
         out.push({
           side,
           price,
-          amountIn: side === "buy" ? formatRetro(amtInU) : formatToken(amtInTokens),
-          amountOut: side === "buy" ? `${formatToken(amtOutTokens)} tokens` : formatRetro(amtOutU),
+          amountIn: side === "buy" ? formatRetro(amtInU) : `${formatToken(amtInTokens)} ${getDenomMeta(resolveTokenDenom.value || "").display}`,
+          amountOut: side === "buy" ? `${formatToken(amtOutTokens)} ${getDenomMeta(resolveTokenDenom.value || "").display}` : formatRetro(amtOutU),
           time: ts || new Date().toISOString()
         });
       });
@@ -324,10 +296,15 @@ const fetchRecentTrades = async () => {
     ]);
     const buys = buysRes.data?.tx_responses || [];
     const sells = sellsRes.data?.tx_responses || [];
-    const parsed = [...parseTradesFromTxs(buys, "buy"), ...parseTradesFromTxs(sells, "sell")] 
-      .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime())
-      .slice(0, 120);
-    trades.value = parsed;
+    const parsed = [...parseTradesFromTxs(buys, "buy"), ...parseTradesFromTxs(sells, "sell")]
+      .sort((a, b) => new Date(a.time).getTime() - new Date(b.time).getTime());
+    const now = Date.now();
+    const filtered = parsed.filter((t) => {
+      const ts = new Date(t.time).getTime();
+      return Number.isFinite(ts) ? now - ts <= tradeWindowMs : true;
+    });
+    trades.value = filtered.slice(-120);
+    tradesLastUpdated.value = new Date().toISOString();
   } catch (e) {
     trades.value = [];
   }
@@ -362,7 +339,7 @@ const sellMinOutRetro = computed(() => {
 });
 
 const submitBuy = async () => {
-  if (!denom.value) return;
+  if (!denom.value || graduated.value) return;
   if (buyQuoteError.value) {
     toast.showError(buyQuoteError.value);
     return;
@@ -411,7 +388,7 @@ const submitBuy = async () => {
 };
 
 const submitSell = async () => {
-  if (!denom.value) return;
+  if (!denom.value || graduated.value) return;
   try {
     if (!address.value) await connect();
     if (!address.value) throw new Error("Connect wallet to sell");
@@ -456,6 +433,9 @@ watch(trades, () => {
   if (tradesPage.value > tradesTotalPages.value) tradesPage.value = tradesTotalPages.value;
   if (tradesPage.value < 1) tradesPage.value = 1;
 });
+
+const tradesLastUpdated = ref<string | null>(null);
+const tradeWindowMs = 2 * 60 * 60 * 1000; // 2h window for displayed trades
 
 const sparkline = computed(() => {
   const pts = pricePoints.value;
@@ -586,7 +566,16 @@ const chartData = computed(() => {
             <div class="text-[11px] uppercase tracking-wider text-amber-200">Status</div>
             <div class="text-xl font-bold text-white">{{ graduated ? 'Graduated' : 'Live' }}</div>
             <div class="text-[11px] text-amber-100">DEX Pool: {{ dexPoolId || '—' }}</div>
-            <div class="text-[10px] text-slate-400 mt-1" v-if="dexLpDenom">DEX ref: {{ dexLpDenom }}</div>
+            <div class="text-[10px] text-slate-400 mt-1" v-if="dexLpDenom">{{ dexLabel }}: {{ dexLpDenom }}</div>
+            <div class="text-[10px] text-emerald-200 mt-1" v-if="dexV3Position">
+              NFT ref:
+              <RouterLink :to="{ name: 'nft', params: { classId: dexV3Position.classId, nftId: dexV3Position.nftId } }" class="hover:underline">
+                {{ dexV3Position.classId }} / {{ dexV3Position.nftId }}
+              </RouterLink>
+            </div>
+            <div class="mt-2 flex flex-wrap gap-2" v-if="dexPoolId">
+              <button class="btn text-[11px] px-2 py-1" @click="router.push(dexCtaLink)">Trade on DEX {{ dexModuleTarget === 'dexv3' ? 'v3' : '' }}</button>
+            </div>
           </div>
           <div class="p-3 rounded-xl bg-indigo-500/5 border border-indigo-400/40">
             <div class="text-[11px] uppercase tracking-wider text-indigo-200">Creator</div>
@@ -652,7 +641,7 @@ const chartData = computed(() => {
                 {{ buyQuoteError }}
               </div>
             </div>
-            <button class="btn btn-primary w-full" :disabled="quotingBuy || !buyAmountRetro || !!buyQuoteError" @click="submitBuy">Buy</button>
+            <button class="btn btn-primary w-full" :disabled="graduated || quotingBuy || !buyAmountRetro || !!buyQuoteError" @click="submitBuy">Buy</button>
           </div>
 
           <div class="p-4 rounded-xl border border-rose-400/50 bg-gradient-to-br from-rose-500/10 via-rose-500/5 to-slate-900/50 shadow-lg shadow-rose-500/10 space-y-3">
@@ -695,7 +684,7 @@ const chartData = computed(() => {
                 <div class="font-semibold">{{ formatRetro(sellQuote?.spot_price_uretro_per_token) }}</div>
               </div>
             </div>
-            <button class="btn w-full" :disabled="quotingSell || !sellAmountToken" @click="submitSell">Sell</button>
+            <button class="btn w-full" :disabled="graduated || quotingSell || !sellAmountToken" @click="submitSell">Sell</button>
           </div>
         </div>
       </div>
@@ -705,19 +694,30 @@ const chartData = computed(() => {
             <h2 class="text-base font-semibold text-white">Launch Pulse</h2>
             <span class="text-[11px] text-slate-400">Live KPIs</span>
           </div>
-          <div class="flex items-center gap-2 text-[11px] text-slate-300">
-            <span>Price chart</span>
-            <svg v-if="sparkPath" :width="160" :height="40" viewBox="0 0 160 40">
-              <defs>
-                <linearGradient id="sparkFill" x1="0" x2="0" y1="0" y2="1">
-                  <stop offset="0%" stop-color="#22c55e" stop-opacity="0.45" />
-                  <stop offset="100%" stop-color="#22c55e" stop-opacity="0.05" />
-                </linearGradient>
-              </defs>
-              <path :d="sparkPath + ' V40 H0 Z'" fill="url(#sparkFill)" stroke="none" />
-              <path :d="sparkPath" fill="none" stroke="#22c55e" stroke-width="2" />
-            </svg>
-            <span v-else class="text-slate-500">No data</span>
+          <div class="flex items-center gap-3 text-[11px] text-slate-300 flex-wrap justify-end">
+            <div class="flex items-center gap-2">
+              <span>Last price</span>
+              <span class="font-semibold text-emerald-200">{{ livePrice || (lastPrice !== null ? formatPrice(lastPrice) + ' RETRO' : '—') }}</span>
+            </div>
+            <div class="flex items-center gap-2">
+              <span>Updated</span>
+              <span class="text-slate-200">{{ tradesLastUpdated ? new Date(tradesLastUpdated).toLocaleTimeString() : '—' }}</span>
+              <button class="btn text-[10px] px-2 py-1" @click="fetchRecentTrades">Refresh</button>
+            </div>
+            <div class="flex items-center gap-2">
+              <span>Price chart</span>
+              <svg v-if="sparkPath" :width="160" :height="40" viewBox="0 0 160 40">
+                <defs>
+                  <linearGradient id="sparkFill" x1="0" x2="0" y1="0" y2="1">
+                    <stop offset="0%" stop-color="#22c55e" stop-opacity="0.45" />
+                    <stop offset="100%" stop-color="#22c55e" stop-opacity="0.05" />
+                  </linearGradient>
+                </defs>
+                <path :d="sparkPath + ' V40 H0 Z'" fill="url(#sparkFill)" stroke="none" />
+                <path :d="sparkPath" fill="none" stroke="#22c55e" stroke-width="2" />
+              </svg>
+              <span v-else class="text-slate-500">No data</span>
+            </div>
           </div>
         </div>
         <div class="grid gap-3 md:grid-cols-4">
@@ -815,10 +815,6 @@ const chartData = computed(() => {
           <div>
             <h2 class="text-base font-semibold text-white">Live Activity</h2>
             <p class="text-[11px] text-slate-400">Tx events from CometBFT WS (MsgBuy/MsgSell)</p>
-          </div>
-          <div class="flex items-center gap-3 text-sm text-slate-200">
-            <span>Last price</span>
-            <span class="font-semibold text-emerald-200">{{ livePrice || (lastPrice !== null ? formatPrice(lastPrice) + ' RETRO' : '—') }}</span>
           </div>
         </div>
         <div class="flex flex-col md:flex-row gap-4">
