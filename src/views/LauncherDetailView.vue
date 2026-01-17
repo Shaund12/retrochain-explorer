@@ -167,6 +167,15 @@ const tokensSoldPercent = computed(() => {
 });
 const tradingFeeBps = computed(() => (params.value?.fee_bps ?? params.value?.trading_fee_bps ?? null));
 
+const chartRanges = [
+  { label: "15m", ms: 15 * 60 * 1000 },
+  { label: "1h", ms: 60 * 60 * 1000 },
+  { label: "4h", ms: 4 * 60 * 60 * 1000 },
+  { label: "24h", ms: 24 * 60 * 60 * 1000 },
+  { label: "All", ms: null }
+];
+const selectedRangeMs = ref<number | null>(60 * 60 * 1000);
+
 const normalizeLaunch = (data: any): LaunchWithComputed | null => {
   if (!data) return null;
   if (data.launch_with_computed) return data.launch_with_computed;
@@ -312,6 +321,22 @@ const fetchRecentTrades = async () => {
 
 watch(() => launch.value?.launch?.id, fetchRecentTrades);
 
+watch(autoRefresh, (val) => {
+  if (val) {
+    startTradesAutoRefresh();
+  } else {
+    stopTradesAutoRefresh();
+  }
+});
+
+onMounted(() => {
+  startTradesAutoRefresh();
+});
+
+onBeforeUnmount(() => {
+  stopTradesAutoRefresh();
+});
+
 watch([buyAmountRetro, denom], fetchBuyQuote, { immediate: true });
 watch([sellAmountToken, denom], fetchSellQuote, { immediate: true });
 
@@ -436,6 +461,23 @@ watch(trades, () => {
 
 const tradesLastUpdated = ref<string | null>(null);
 const tradeWindowMs = 2 * 60 * 60 * 1000; // 2h window for displayed trades
+const autoRefresh = ref(true);
+let tradesInterval: ReturnType<typeof setInterval> | null = null;
+
+const startTradesAutoRefresh = () => {
+  if (tradesInterval) clearInterval(tradesInterval);
+  if (!autoRefresh.value) return;
+  tradesInterval = setInterval(() => {
+    fetchRecentTrades();
+  }, 15000);
+};
+
+const stopTradesAutoRefresh = () => {
+  if (tradesInterval) {
+    clearInterval(tradesInterval);
+    tradesInterval = null;
+  }
+};
 
 const sparkline = computed(() => {
   const pts = pricePoints.value;
@@ -463,7 +505,13 @@ const chartData = computed(() => {
   const width = 440;
   const height = 160;
   const padding = 24;
-  const ordered = sortedTrades.value.filter((t) => Number.isFinite(t.price));
+  const ordered = sortedTrades.value
+    .filter((t) => Number.isFinite(t.price))
+    .filter((t) => {
+      if (selectedRangeMs.value === null) return true;
+      const ts = new Date(t.time).getTime();
+      return Number.isFinite(ts) ? Date.now() - ts <= selectedRangeMs.value : true;
+    });
 
   const spotFallback = spotPriceRaw.value;
   const pts = ordered.length
@@ -480,10 +528,36 @@ const chartData = computed(() => {
   const coords = prices.map((p, idx) => {
     const x = padding + (idx / Math.max(prices.length - 1, 1)) * (width - padding * 2);
     const y = padding + (1 - (p - min) / span) * (height - padding * 2);
-    return { x, y, price: p, time: pts[idx].time };
+    return {
+      x,
+      y,
+      price: p,
+      time: pts[idx].time,
+      side: pts[idx].side,
+      amountIn: pts[idx].amountIn,
+      amountOut: pts[idx].amountOut
+    };
   });
   const line = coords.map((c, idx) => `${idx === 0 ? "M" : "L"}${c.x.toFixed(2)},${c.y.toFixed(2)}`).join(" ");
   const area = `${line} L${coords[coords.length - 1].x.toFixed(2)},${(height - padding).toFixed(2)} L${coords[0].x.toFixed(2)},${(height - padding).toFixed(2)} Z`;
+
+  // Simple SMA overlay (5-point window)
+  const smaWindow = 5;
+  const smaPoints: { x: number; y: number }[] = [];
+  for (let i = 0; i < prices.length; i++) {
+    const start = Math.max(0, i - smaWindow + 1);
+    const slice = prices.slice(start, i + 1);
+    if (slice.length < smaWindow) {
+      smaPoints.push({ x: coords[i].x, y: coords[i].y });
+      continue;
+    }
+    const avg = slice.reduce((a, b) => a + b, 0) / slice.length;
+    const y = padding + (1 - (avg - min) / span) * (height - padding * 2);
+    smaPoints.push({ x: coords[i].x, y });
+  }
+  const smaLine = smaPoints.length
+    ? smaPoints.map((c, idx) => `${idx === 0 ? "M" : "L"}${c.x.toFixed(2)},${c.y.toFixed(2)}`).join(" ")
+    : "";
 
   const first = coords[0];
   const mid = coords[Math.floor(coords.length / 2)];
@@ -496,6 +570,7 @@ const chartData = computed(() => {
     min,
     max,
     coords,
+    smaLine,
     labels: {
       x: [fmtTime(first?.time), fmtTime(mid?.time), fmtTime(last?.time)].filter(Boolean),
       y: [formatPrice(max), formatPrice((min + max) / 2), formatPrice(min)]
@@ -703,6 +778,23 @@ const chartData = computed(() => {
               <span>Updated</span>
               <span class="text-slate-200">{{ tradesLastUpdated ? new Date(tradesLastUpdated).toLocaleTimeString() : '—' }}</span>
               <button class="btn text-[10px] px-2 py-1" @click="fetchRecentTrades">Refresh</button>
+              <button class="btn-secondary text-[10px] px-2 py-1" :class="autoRefresh ? 'border-emerald-400/50 text-emerald-200' : ''" @click="autoRefresh = !autoRefresh">
+                Auto {{ autoRefresh ? 'On' : 'Off' }}
+              </button>
+            </div>
+            <div class="flex items-center gap-2 flex-wrap">
+              <span>Range</span>
+              <div class="flex gap-1">
+                <button
+                  v-for="r in chartRanges"
+                  :key="r.label"
+                  class="btn-secondary text-[10px] px-2 py-1"
+                  :class="selectedRangeMs === r.ms ? 'border-emerald-400/60 text-emerald-200' : ''"
+                  @click="selectedRangeMs = r.ms"
+                >
+                  {{ r.label }}
+                </button>
+              </div>
             </div>
             <div class="flex items-center gap-2">
               <span>Price chart</span>
@@ -836,6 +928,7 @@ const chartData = computed(() => {
                 </defs>
                 <path :d="chartData.area" fill="url(#priceFill)" stroke="none" />
                 <path :d="chartData.line" fill="none" stroke="#22c55e" stroke-width="2.5" />
+                <path v-if="chartData.smaLine" :d="chartData.smaLine" fill="none" stroke="#38bdf8" stroke-width="1.5" stroke-dasharray="4 2" />
                 <g fill="#22c55e" stroke="#0f172a" stroke-width="1">
                   <circle
                     v-for="(c, idx) in chartData.coords"
@@ -849,9 +942,15 @@ const chartData = computed(() => {
                   />
                 </g>
                 <g v-if="hoverPoint" font-size="10" fill="#e2e8f0" stroke="#0f172a" stroke-width="0.3">
-                  <rect :x="hoverPoint.x - 48" :y="hoverPoint.y - 34" width="96" height="30" rx="6" fill="#0f172a" stroke="#22c55e" stroke-width="0.6" opacity="0.9" />
-                  <text :x="hoverPoint.x" :y="hoverPoint.y - 20" text-anchor="middle">{{ formatPrice(hoverPoint.price) }} RETRO</text>
-                  <text :x="hoverPoint.x" :y="hoverPoint.y - 8" text-anchor="middle" fill="#a5b4fc">{{ hoverPoint.time ? new Date(hoverPoint.time).toLocaleTimeString() : '' }}</text>
+                  <rect :x="hoverPoint.x - 70" :y="hoverPoint.y - 50" width="140" height="46" rx="6" fill="#0f172a" stroke="#22c55e" stroke-width="0.6" opacity="0.9" />
+                  <text :x="hoverPoint.x" :y="hoverPoint.y - 32" text-anchor="middle">{{ formatPrice(hoverPoint.price) }} RETRO</text>
+                  <text :x="hoverPoint.x" :y="hoverPoint.y - 20" text-anchor="middle" :fill="hoverPoint.side === 'buy' ? '#34d399' : '#fca5a5'">
+                    {{ hoverPoint.side ? hoverPoint.side.toUpperCase() : '' }}
+                  </text>
+                  <text :x="hoverPoint.x" :y="hoverPoint.y - 8" text-anchor="middle" fill="#a5b4fc">
+                    {{ hoverPoint.amountIn ? hoverPoint.amountIn + ' → ' + hoverPoint.amountOut : '' }}
+                  </text>
+                  <text :x="hoverPoint.x" :y="hoverPoint.y + 4" text-anchor="middle" fill="#a5b4fc">{{ hoverPoint.time ? new Date(hoverPoint.time).toLocaleTimeString() : '' }}</text>
                 </g>
                 <g font-size="9" fill="#94a3b8">
                   <text :x="16" y="12">{{ chartData.labels.y[0] }}</text>
