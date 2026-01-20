@@ -28,6 +28,17 @@ const RAW_TOKEN_META: Record<string, TokenMeta> = {
     description: "Primary staking and gas token for RetroChain.",
     logo: "/RCTokenICO1.png"
   },
+  "ibc/3fc580a6aabaf56fc631022cc151f348e6df3544bdbdb79dc01f8fc73d84896f": {
+    denom: "ibc/3FC580A6AABAF56FC631022CC151F348E6DF3544BDBDB79DC01F8FC73D84896F",
+    symbol: "RETRO (EVM)",
+    name: "Retro (EVM)",
+    chain: "RetroChain-EVM via IBC",
+    icon: "🎮",
+    decimals: 6,
+    accent: "emerald",
+    description: "RETRO bridged from RetroChain-EVM into RetroChain over IBC (transfer/channel-2/uretro).",
+    logo: "/RCTokenICO1.png"
+  },
   udretro: {
     denom: "udretro",
     symbol: "DRETRO",
