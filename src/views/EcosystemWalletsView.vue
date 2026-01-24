@@ -10,6 +10,7 @@ const { accounts, loading, error, fetchAccounts } = useAccounts();
 
 const TARGETS_URETRO: Record<string, string> = {
   foundation_validator: "10000000000000", // 10,000,000
+  foundation_validator_2: "", // Foundation Validator 2 (no target configured)
   ecosystem_rewards: "35000000000000", // 35,000,000
   liquidity_fund: "10000000000000", // 10,000,000
   community_pool: "20000000000000", // 20,000,000

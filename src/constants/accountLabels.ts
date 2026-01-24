@@ -14,6 +14,12 @@ const RAW_LABELS: Record<string, AccountLabelMeta> = {
     description: "Target: 10,000,000.000000 RETRO (~10.11%). Bonded stake for chain stability—not a spendable treasury.",
     icon: "🛡️"
   },
+  "cosmos1fx4dn48e74lvpd8anc60psrxzru5pk6t3ft5u9": {
+    id: "foundation_validator_2",
+    label: "Foundation Validator 2",
+    description: "Foundation ecosystem validator / security bond wallet (Validator 2).",
+    icon: "🛡️"
+  },
   "cosmos1exqr633rjzls2h4txrpu0cxhnxx0dquylf074x": {
     id: "ecosystem_rewards",
     label: "Community Distribution Reserve",
