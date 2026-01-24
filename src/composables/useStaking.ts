@@ -6,7 +6,8 @@ import { ACCOUNT_LABELS } from "@/constants/accountLabels";
 
 const DEFAULT_BURN_RATE = 0.008; // 0.8% burn by default when module params unavailable
 const BASE_BLOCKED_DELEGATORS = [
-  "cosmos1fscvf7rphx477z6vd4sxsusm2u8a70kewvc8wy"
+  "cosmos1fscvf7rphx477z6vd4sxsusm2u8a70kewvc8wy",
+  "cosmos1fx4dn48e74lvpd8anc60psrxzru5pk6t3ft5u9"
 ];
 
 const BLOCKED_DELEGATORS = new Set(
