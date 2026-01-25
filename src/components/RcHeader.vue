@@ -117,6 +117,18 @@
                 {{ level.charAt(0).toUpperCase() + level.slice(1) }}
               </button>
             </div>
+            <div v-if="activeHoliday === 'newyear'" class="px-4 pt-2 pb-1 text-[11px] uppercase tracking-wider text-slate-500">Firework Intensity</div>
+            <div v-if="activeHoliday === 'newyear'" class="px-3 pb-2 flex gap-2">
+              <button
+                v-for="level in ['light','medium','blizzard']"
+                :key="level"
+                class="flex-1 px-2 py-1 rounded-lg border text-[11px]"
+                :class="snowLevel === level ? 'border-amber-400/60 bg-amber-500/10 text-amber-200' : 'border-white/10 text-slate-300 hover:border-amber-300/50 hover:text-white'"
+                @click="$emit('set-snow-level', level); showHolidayMenu = false"
+              >
+                {{ level === 'blizzard' ? 'Party!' : level.charAt(0).toUpperCase() + level.slice(1) }}
+              </button>
+            </div>
           </div>
         </div>
         <div v-if="!address" class="hidden lg:block w-[260px]">
@@ -262,6 +274,18 @@
                 {{ level.charAt(0).toUpperCase() + level.slice(1) }}
               </button>
             </div>
+            <div v-if="activeHoliday === 'newyear'" class="px-4 pt-2 pb-1 text-[11px] uppercase tracking-wider text-slate-500">Firework Intensity</div>
+            <div v-if="activeHoliday === 'newyear'" class="px-3 pb-3 grid grid-cols-3 gap-2">
+              <button
+                v-for="level in ['light','medium','blizzard']"
+                :key="level"
+                class="px-2 py-1 rounded-lg border text-[11px]"
+                :class="snowLevel === level ? 'border-amber-400/60 bg-amber-500/10 text-amber-200' : 'border-white/10 text-slate-300 hover:border-amber-300/50 hover:text-white'"
+                @click="$emit('set-snow-level', level); showHolidayMenuMobile = false"
+              >
+                {{ level === 'blizzard' ? 'Party!' : level.charAt(0).toUpperCase() + level.slice(1) }}
+              </button>
+            </div>
           </div>
           <RcAddKeplrButton class="w-full inline-flex justify-center" />
         </div>
@@ -294,9 +318,14 @@ const holidayOptions = [
   { value: "auto", label: "Auto", icon: "⏱️" },
   { value: "off", label: "Off", icon: "🚫" },
   { value: "christmas", label: "Christmas", icon: "🎄" },
+  { value: "newyear", label: "New Year", icon: "🎆" },
+  { value: "valentines", label: "Valentine's", icon: "💕" },
+  { value: "stpatricks", label: "St. Patrick's", icon: "☘️" },
+  { value: "easter", label: "Easter", icon: "🥚" },
+  { value: "summer", label: "Summer", icon: "☀️" },
+  { value: "july4th", label: "July 4th", icon: "🇺🇸" },
   { value: "halloween", label: "Halloween", icon: "🎃" },
-  { value: "thanksgiving", label: "Thanksgiving", icon: "🦃" },
-  { value: "easter", label: "Easter", icon: "🥚" }
+  { value: "thanksgiving", label: "Thanksgiving", icon: "🦃" }
 ];
 
 const holidayIcon = computed(() => {
@@ -309,6 +338,16 @@ const holidayIcon = computed(() => {
       return "🦃";
     case "easter":
       return "🥚";
+    case "newyear":
+      return "🎆";
+    case "valentines":
+      return "💕";
+    case "stpatricks":
+      return "☘️";
+    case "july4th":
+      return "🇺🇸";
+    case "summer":
+      return "☀️";
     default:
       return "⏱️";
   }

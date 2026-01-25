@@ -10,7 +10,7 @@ import { Toaster } from "vue-sonner";
 const { restBase, rpcBase } = useNetwork();
 const { info, refresh } = useChainInfo();
 
-type HolidayMode = "auto" | "off" | "christmas" | "halloween" | "thanksgiving" | "easter";
+type HolidayMode = "auto" | "off" | "christmas" | "halloween" | "thanksgiving" | "easter" | "newyear" | "valentines" | "stpatricks" | "july4th" | "summer";
 const holidayMode = ref<HolidayMode>("off");
 type SnowLevel = "light" | "medium" | "blizzard";
 const snowLevel = ref<SnowLevel>("medium");
@@ -45,8 +45,31 @@ const detectHolidayForDate = (date: Date): HolidayMode => {
   const m = date.getMonth() + 1; // 1-12
   const d = date.getDate();
 
-  // Christmas season: Dec 1-31
-  if (m === 12) return "christmas";
+  // New Year: Dec 28 - Jan 7
+  if ((m === 12 && d >= 28) || (m === 1 && d <= 7)) return "newyear";
+
+  // Christmas season: Dec 1-27
+  if (m === 12 && d <= 27) return "christmas";
+
+  // Valentine's Day: Feb 10-16
+  if (m === 2 && d >= 10 && d <= 16) return "valentines";
+
+  // St. Patrick's Day: Mar 14-20
+  if (m === 3 && d >= 14 && d <= 20) return "stpatricks";
+
+  // Easter (approx): first Sunday of April window
+  if (m === 3 || m === 4) {
+    const easterStart = new Date(date.getFullYear(), 3, 1); // April 1
+    const day = easterStart.getDay();
+    const firstSunday = day === 0 ? 1 : 8 - day;
+    if (m === 4 && d >= firstSunday - 3 && d <= firstSunday + 7) return "easter";
+  }
+
+  // Summer vibes: Jun 15 - Aug 31
+  if ((m === 6 && d >= 15) || m === 7 || m === 8) return "summer";
+
+  // July 4th: Jul 1-7 (overrides summer briefly)
+  if (m === 7 && d >= 1 && d <= 7) return "july4th";
 
   // Halloween: October
   if (m === 10) return "halloween";
@@ -57,14 +80,6 @@ const detectHolidayForDate = (date: Date): HolidayMode => {
     const firstThursday = 1 + ((11 - firstDay.getDay()) % 7); // day of month of first Thursday
     const thanksgiving = firstThursday + 21; // 4th Thursday
     if (d >= thanksgiving - 3 && d <= thanksgiving + 3) return "thanksgiving";
-  }
-
-  // Easter (approx): first Sunday of April window
-  if (m === 3 || m === 4) {
-    const easterStart = new Date(date.getFullYear(), 3, 1); // April 1
-    const day = easterStart.getDay();
-    const firstSunday = day === 0 ? 1 : 8 - day;
-    if (m === 4 && d >= firstSunday - 3 && d <= firstSunday + 7) return "easter";
   }
 
   return "off";
@@ -87,6 +102,16 @@ const themeClass = computed(() => {
       return "fall-bg";
     case "easter":
       return "easter-bg";
+    case "newyear":
+      return "newyear-bg";
+    case "valentines":
+      return "valentines-bg";
+    case "stpatricks":
+      return "stpatricks-bg";
+    case "july4th":
+      return "july4th-bg";
+    case "summer":
+      return "summer-bg";
     default:
       return "";
   }
@@ -102,6 +127,16 @@ const holidayDisplay = computed(() => {
       return { label: "Harvest Thanks", emoji: "🦃" };
     case "easter":
       return { label: "Easter Bloom", emoji: "🐣" };
+    case "newyear":
+      return { label: "Happy New Year!", emoji: "🎆" };
+    case "valentines":
+      return { label: "Love is in the Air", emoji: "💕" };
+    case "stpatricks":
+      return { label: "Luck of the Irish", emoji: "☘️" };
+    case "july4th":
+      return { label: "Independence Day", emoji: "🇺🇸" };
+    case "summer":
+      return { label: "Summer Vibes", emoji: "☀️" };
     default:
       return null;
   }
@@ -119,7 +154,7 @@ const setSnowLevel = (level: SnowLevel) => {
 
 onMounted(() => {
   const storedMode = safeRead(STORAGE_KEYS.holidayMode) as HolidayMode | null;
-  if (storedMode && ["auto", "off", "christmas", "halloween", "thanksgiving", "easter"].includes(storedMode)) {
+  if (storedMode && ["auto", "off", "christmas", "halloween", "thanksgiving", "easter", "newyear", "valentines", "stpatricks", "july4th", "summer"].includes(storedMode)) {
     holidayMode.value = storedMode;
   }
   const storedSnow = safeRead(STORAGE_KEYS.snowLevel) as SnowLevel | null;
@@ -162,6 +197,23 @@ onMounted(() => {
   <div v-if="activeHoliday === 'thanksgiving'" class="thankful-glow" aria-hidden="true"></div>
   <div v-if="activeHoliday === 'easter'" class="easter-eggs" aria-hidden="true"></div>
   <div v-if="activeHoliday === 'easter'" class="easter-confetti" aria-hidden="true"></div>
+  <!-- New Year -->
+  <div v-if="activeHoliday === 'newyear'" class="newyear-fireworks" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'newyear'" class="newyear-confetti" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'newyear'" class="newyear-sparkle" aria-hidden="true"></div>
+  <!-- Valentine's Day -->
+  <div v-if="activeHoliday === 'valentines'" class="valentines-hearts" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'valentines'" class="valentines-glow" aria-hidden="true"></div>
+  <!-- St. Patrick's Day -->
+  <div v-if="activeHoliday === 'stpatricks'" class="stpatricks-clovers" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'stpatricks'" class="stpatricks-gold" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'stpatricks'" class="stpatricks-rainbow" aria-hidden="true"></div>
+  <!-- July 4th -->
+  <div v-if="activeHoliday === 'july4th'" class="july4th-fireworks" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'july4th'" class="july4th-stars" aria-hidden="true"></div>
+  <!-- Summer -->
+  <div v-if="activeHoliday === 'summer'" class="summer-rays" aria-hidden="true"></div>
+  <div v-if="activeHoliday === 'summer'" class="summer-waves" aria-hidden="true"></div>
   <div v-if="holidayDisplay" class="holiday-banner">
     <span class="text-xl">{{ holidayDisplay.emoji }}</span>
     <span class="font-semibold">{{ holidayDisplay.label }}</span>
@@ -645,4 +697,298 @@ onMounted(() => {
               radial-gradient(circle at 50% 80%, rgba(16, 185, 129, 0.08), transparent 40%),
               #030712;
 }
+
+/* ===== NEW YEAR ===== */
+.newyear-bg {
+  background: radial-gradient(circle at 30% 20%, rgba(251, 191, 36, 0.15), transparent 40%),
+              radial-gradient(circle at 70% 30%, rgba(147, 51, 234, 0.12), transparent 35%),
+              radial-gradient(circle at 50% 80%, rgba(14, 165, 233, 0.1), transparent 45%),
+              #050510;
+}
+
+.newyear-fireworks {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(4px 4px at 20% 15%, rgba(251, 191, 36, 0.9), transparent),
+    radial-gradient(5px 5px at 40% 25%, rgba(236, 72, 153, 0.8), transparent),
+    radial-gradient(4px 4px at 60% 10%, rgba(14, 165, 233, 0.85), transparent),
+    radial-gradient(6px 6px at 80% 20%, rgba(16, 185, 129, 0.8), transparent),
+    radial-gradient(3px 3px at 15% 30%, rgba(147, 51, 234, 0.7), transparent),
+    radial-gradient(5px 5px at 85% 35%, rgba(251, 146, 60, 0.75), transparent);
+  animation: fireworksBurst 3s ease-out infinite;
+  z-index: 5;
+}
+
+@keyframes fireworksBurst {
+  0% { opacity: 0; transform: scale(0.3); }
+  20% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.5); }
+}
+
+.newyear-confetti {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(3px 3px at 10% 10%, rgba(251, 191, 36, 0.8), transparent),
+    radial-gradient(2px 2px at 25% 30%, rgba(236, 72, 153, 0.7), transparent),
+    radial-gradient(3px 3px at 45% 15%, rgba(14, 165, 233, 0.75), transparent),
+    radial-gradient(2px 2px at 65% 25%, rgba(16, 185, 129, 0.7), transparent),
+    radial-gradient(3px 3px at 85% 10%, rgba(147, 51, 234, 0.8), transparent);
+  animation: confettiFall 6s linear infinite;
+  z-index: 4;
+}
+
+@keyframes confettiFall {
+  0% { transform: translateY(-20px) rotate(0deg); }
+  100% { transform: translateY(40px) rotate(360deg); }
+}
+
+.newyear-sparkle {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(2px 2px at 30% 40%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(3px 3px at 50% 60%, rgba(251, 191, 36, 0.85), transparent),
+    radial-gradient(2px 2px at 70% 35%, rgba(255, 255, 255, 0.8), transparent);
+  animation: sparkleGlow 2s ease-in-out infinite alternate;
+  z-index: 4;
+}
+
+@keyframes sparkleGlow {
+  0% { opacity: 0.4; filter: blur(0px); }
+  100% { opacity: 1; filter: blur(1px); }
+}
+
+.newyear-bg .holiday-banner { border-color: rgba(251, 191, 36, 0.5); box-shadow: 0 10px 30px rgba(251,191,36,0.3); }
+
+/* ===== VALENTINE'S DAY ===== */
+.valentines-bg {
+  background: radial-gradient(circle at 25% 25%, rgba(236, 72, 153, 0.18), transparent 40%),
+              radial-gradient(circle at 75% 20%, rgba(244, 114, 182, 0.12), transparent 35%),
+              radial-gradient(circle at 50% 75%, rgba(190, 24, 93, 0.1), transparent 45%),
+              #0a0812;
+}
+
+.valentines-hearts {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(8px 8px at 15% 20%, rgba(236, 72, 153, 0.7), transparent),
+    radial-gradient(6px 6px at 35% 35%, rgba(244, 114, 182, 0.6), transparent),
+    radial-gradient(10px 10px at 55% 15%, rgba(251, 113, 133, 0.65), transparent),
+    radial-gradient(7px 7px at 75% 30%, rgba(236, 72, 153, 0.55), transparent),
+    radial-gradient(5px 5px at 85% 45%, rgba(244, 114, 182, 0.5), transparent);
+  animation: heartsFloat 8s ease-in-out infinite;
+  z-index: 4;
+}
+
+@keyframes heartsFloat {
+  0%, 100% { transform: translateY(0) scale(1); opacity: 0.6; }
+  50% { transform: translateY(-15px) scale(1.1); opacity: 1; }
+}
+
+.valentines-glow {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background: radial-gradient(circle at 40% 30%, rgba(236, 72, 153, 0.25), transparent 50%),
+              radial-gradient(circle at 60% 60%, rgba(244, 114, 182, 0.2), transparent 45%);
+  filter: blur(20px);
+  animation: valentinesGlowPulse 4s ease-in-out infinite alternate;
+  z-index: 3;
+}
+
+@keyframes valentinesGlowPulse {
+  0% { opacity: 0.5; }
+  100% { opacity: 0.9; }
+}
+
+.valentines-bg .holiday-banner { border-color: rgba(236, 72, 153, 0.5); box-shadow: 0 10px 30px rgba(236,72,153,0.3); }
+
+/* ===== ST. PATRICK'S DAY ===== */
+.stpatricks-bg {
+  background: radial-gradient(circle at 20% 30%, rgba(16, 185, 129, 0.18), transparent 40%),
+              radial-gradient(circle at 70% 20%, rgba(34, 197, 94, 0.12), transparent 35%),
+              radial-gradient(circle at 50% 80%, rgba(251, 191, 36, 0.08), transparent 40%),
+              #050a08;
+}
+
+.stpatricks-clovers {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(6px 6px at 10% 15%, rgba(34, 197, 94, 0.7), transparent),
+    radial-gradient(8px 8px at 30% 40%, rgba(16, 185, 129, 0.65), transparent),
+    radial-gradient(5px 5px at 50% 20%, rgba(34, 197, 94, 0.6), transparent),
+    radial-gradient(7px 7px at 70% 35%, rgba(16, 185, 129, 0.55), transparent),
+    radial-gradient(6px 6px at 90% 25%, rgba(34, 197, 94, 0.5), transparent);
+  animation: cloversDrift 10s ease-in-out infinite;
+  z-index: 4;
+}
+
+@keyframes cloversDrift {
+  0%, 100% { transform: translateX(0) translateY(0); }
+  25% { transform: translateX(5px) translateY(-8px); }
+  50% { transform: translateX(-3px) translateY(5px); }
+  75% { transform: translateX(8px) translateY(-3px); }
+}
+
+.stpatricks-gold {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(4px 4px at 25% 50%, rgba(251, 191, 36, 0.8), transparent),
+    radial-gradient(5px 5px at 60% 65%, rgba(234, 179, 8, 0.7), transparent),
+    radial-gradient(3px 3px at 80% 55%, rgba(251, 191, 36, 0.65), transparent);
+  animation: goldSparkle 3s ease-in-out infinite;
+  z-index: 4;
+}
+
+@keyframes goldSparkle {
+  0%, 100% { opacity: 0.4; transform: scale(1); }
+  50% { opacity: 1; transform: scale(1.2); }
+}
+
+.stpatricks-rainbow {
+  position: fixed;
+  top: 0;
+  right: 0;
+  width: 50%;
+  height: 200px;
+  pointer-events: none;
+  background: linear-gradient(180deg, 
+    rgba(239, 68, 68, 0.15) 0%,
+    rgba(249, 115, 22, 0.12) 16%,
+    rgba(234, 179, 8, 0.12) 33%,
+    rgba(34, 197, 94, 0.12) 50%,
+    rgba(14, 165, 233, 0.12) 66%,
+    rgba(99, 102, 241, 0.12) 83%,
+    rgba(168, 85, 247, 0.1) 100%
+  );
+  filter: blur(30px);
+  opacity: 0.6;
+  border-radius: 0 0 0 100%;
+  z-index: 3;
+}
+
+.stpatricks-bg .holiday-banner { border-color: rgba(34, 197, 94, 0.5); box-shadow: 0 10px 30px rgba(34,197,94,0.25); }
+
+/* ===== JULY 4TH ===== */
+.july4th-bg {
+  background: radial-gradient(circle at 20% 20%, rgba(239, 68, 68, 0.12), transparent 35%),
+              radial-gradient(circle at 80% 15%, rgba(59, 130, 246, 0.12), transparent 35%),
+              radial-gradient(circle at 50% 70%, rgba(255, 255, 255, 0.05), transparent 40%),
+              #03050a;
+}
+
+.july4th-fireworks {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(5px 5px at 15% 15%, rgba(239, 68, 68, 0.9), transparent),
+    radial-gradient(6px 6px at 40% 20%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(5px 5px at 65% 12%, rgba(59, 130, 246, 0.9), transparent),
+    radial-gradient(4px 4px at 85% 25%, rgba(239, 68, 68, 0.8), transparent),
+    radial-gradient(6px 6px at 25% 30%, rgba(59, 130, 246, 0.85), transparent),
+    radial-gradient(5px 5px at 75% 35%, rgba(255, 255, 255, 0.8), transparent);
+  animation: patrioticBurst 2.5s ease-out infinite;
+  z-index: 5;
+}
+
+@keyframes patrioticBurst {
+  0% { opacity: 0.2; transform: scale(0.5); }
+  30% { opacity: 1; transform: scale(1); }
+  100% { opacity: 0; transform: scale(1.8); }
+}
+
+.july4th-stars {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  background-image:
+    radial-gradient(2px 2px at 10% 20%, rgba(255, 255, 255, 0.9), transparent),
+    radial-gradient(3px 3px at 30% 15%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(2px 2px at 50% 25%, rgba(255, 255, 255, 0.8), transparent),
+    radial-gradient(2px 2px at 70% 10%, rgba(255, 255, 255, 0.85), transparent),
+    radial-gradient(3px 3px at 90% 20%, rgba(255, 255, 255, 0.9), transparent);
+  animation: starsFlicker 1.5s ease-in-out infinite alternate;
+  z-index: 4;
+}
+
+@keyframes starsFlicker {
+  0% { opacity: 0.5; }
+  100% { opacity: 1; }
+}
+
+.july4th-bg .holiday-banner { border-color: rgba(239, 68, 68, 0.4); box-shadow: 0 10px 30px rgba(59,130,246,0.25); }
+
+/* ===== SUMMER ===== */
+.summer-bg {
+  background: radial-gradient(circle at 80% 10%, rgba(251, 191, 36, 0.18), transparent 45%),
+              radial-gradient(circle at 20% 30%, rgba(14, 165, 233, 0.12), transparent 40%),
+              radial-gradient(circle at 50% 90%, rgba(6, 182, 212, 0.1), transparent 45%),
+              #030810;
+}
+
+.summer-rays {
+  position: fixed;
+  top: -50%;
+  right: -20%;
+  width: 80%;
+  height: 100%;
+  pointer-events: none;
+  background: conic-gradient(
+    from 200deg at 50% 100%,
+    transparent 0deg,
+    rgba(251, 191, 36, 0.08) 15deg,
+    transparent 30deg,
+    rgba(251, 191, 36, 0.06) 45deg,
+    transparent 60deg,
+    rgba(251, 191, 36, 0.08) 75deg,
+    transparent 90deg
+  );
+  animation: sunRays 20s linear infinite;
+  z-index: 3;
+}
+
+@keyframes sunRays {
+  0% { transform: rotate(0deg); }
+  100% { transform: rotate(360deg); }
+}
+
+.summer-waves {
+  position: fixed;
+  bottom: 0;
+  left: 0;
+  right: 0;
+  height: 120px;
+  pointer-events: none;
+  background: 
+    linear-gradient(90deg, 
+      transparent 0%,
+      rgba(14, 165, 233, 0.15) 25%,
+      rgba(6, 182, 212, 0.12) 50%,
+      rgba(14, 165, 233, 0.15) 75%,
+      transparent 100%
+    );
+  mask-image: url("data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 1200 120'%3E%3Cpath d='M0,60 Q150,0 300,60 T600,60 T900,60 T1200,60 V120 H0 Z' fill='white'/%3E%3C/svg%3E");
+  mask-size: 100% 100%;
+  animation: wavesFlow 8s ease-in-out infinite;
+  z-index: 3;
+}
+
+@keyframes wavesFlow {
+  0%, 100% { transform: translateX(-20px); opacity: 0.6; }
+  50% { transform: translateX(20px); opacity: 0.9; }
+}
+
+.summer-bg .holiday-banner { border-color: rgba(251, 191, 36, 0.4); box-shadow: 0 10px 30px rgba(251,191,36,0.2); }
 </style>
