@@ -134,6 +134,9 @@
         <div v-if="!address" class="hidden lg:block w-[260px]">
           <RcAddKeplrButton class="w-full" />
         </div>
+        <div class="hidden lg:block">
+          <RcAddEvmChainButton />
+        </div>
 
         <button
           v-if="address"
@@ -252,7 +255,7 @@
             <span>{{ holidayIcon }}</span>
             <span>{{ holidayLabel }}</span>
           </button>
-          <div v-if="showHolidayMenuMobile" class="border border-white/10 rounded-xl overflow-hidden bg-white/5">
+          <div v-if="showHolidayMenuMobile" class="border border-white/10 rounded-xl overflow-hidden bg-white/5 mb-2">
             <button
               v-for="option in holidayOptions"
               :key="option.value"
@@ -287,7 +290,8 @@
               </button>
             </div>
           </div>
-          <RcAddKeplrButton class="w-full inline-flex justify-center" />
+          <RcAddKeplrButton class="w-full inline-flex justify-center mb-2" />
+          <RcAddEvmChainButton class="w-full" />
         </div>
       </nav>
     </div>
@@ -302,6 +306,7 @@ import { useAccount } from "@/composables/useAccount";
 import { useNetwork } from "@/composables/useNetwork";
 import { formatAmount } from "@/utils/format";
 import RcAddKeplrButton from "@/components/RcAddKeplrButton.vue";
+import RcAddEvmChainButton from "@/components/RcAddEvmChainButton.vue";
 import { getTokenMeta } from "@/constants/tokens";
 
 const props = defineProps<{ holidayMode?: string; activeHoliday?: string; snowLevel?: string }>();
