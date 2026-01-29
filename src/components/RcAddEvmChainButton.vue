@@ -19,12 +19,12 @@ const chainInfo = {
     bech32PrefixConsPub: "ethmvalconspub"
   },
   currencies: [
-    { coinDenom: "RETRO", coinMinimalDenom: "aretro", coinDecimals: 18 }
+    { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 18 }
   ],
   feeCurrencies: [
-    { coinDenom: "RETRO", coinMinimalDenom: "aretro", coinDecimals: 18 }
+    { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 18 }
   ],
-  stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "aretro", coinDecimals: 18 },
+  stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 18 },
   features: ["eth-address-gen", "eth-key-sign"]
 };
 
