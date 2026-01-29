@@ -6,17 +6,17 @@ const toast = useToast();
 
 const chainInfo = {
   chainId: "retrochainevm_2026011501-1",
-  chainName: "RetroChain EVM (Cosmos)",
+  chainName: "RetroChain EVM",
   rpc: "https://retrochain-evm.ddns.net/cosmos-rpc",
   rest: "https://retrochain-evm.ddns.net/cosmos-rest",
   bip44: { coinType: 60 },
   bech32Config: {
-    bech32PrefixAccAddr: "cosmos",
-    bech32PrefixAccPub: "cosmospub",
-    bech32PrefixValAddr: "cosmosvaloper",
-    bech32PrefixValPub: "cosmosvaloperpub",
-    bech32PrefixConsAddr: "cosmosvalcons",
-    bech32PrefixConsPub: "cosmosvalconspub"
+    bech32PrefixAccAddr: "ethm",
+    bech32PrefixAccPub: "ethmpub",
+    bech32PrefixValAddr: "ethmvaloper",
+    bech32PrefixValPub: "ethmvaloperpub",
+    bech32PrefixConsAddr: "ethmvalcons",
+    bech32PrefixConsPub: "ethmvalconspub"
   },
   currencies: [
     { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 }
@@ -25,7 +25,7 @@ const chainInfo = {
     { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 }
   ],
   stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
-  features: ["stargate", "ibc-transfer", "eth-address-gen", "eth-key-sign"]
+  features: ["eth-address-gen", "eth-key-sign"]
 };
 
 const isKeplrAvailable = computed(() => typeof window !== "undefined" && !!window.keplr);
