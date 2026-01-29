@@ -7,8 +7,8 @@ const toast = useToast();
 const chainInfo = {
   chainId: "retrochainevm_2026011501-1",
   chainName: "RetroChain EVM",
-  rpc: "https://retrochain-evm.ddns.net/cosmos-rpc",
-  rest: "https://retrochain-evm.ddns.net/cosmos-rest",
+  rpc: "https://retrochain-evm.ddns.net/cosmos-rpc/",
+  rest: "https://retrochain-evm.ddns.net/cosmos-rest/",
   bip44: { coinType: 60 },
   bech32Config: {
     bech32PrefixAccAddr: "ethm",
@@ -19,12 +19,12 @@ const chainInfo = {
     bech32PrefixConsPub: "ethmvalconspub"
   },
   currencies: [
-    { coinDenom: "RETRO", coinMinimalDenom: "aretro", coinDecimals: 18 }
+    { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 }
   ],
   feeCurrencies: [
-    { coinDenom: "RETRO", coinMinimalDenom: "aretro", coinDecimals: 18 }
+    { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 }
   ],
-  stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "aretro", coinDecimals: 18 },
+  stakeCurrency: { coinDenom: "RETRO", coinMinimalDenom: "uretro", coinDecimals: 6 },
   features: ["eth-address-gen", "eth-key-sign"]
 };
 
